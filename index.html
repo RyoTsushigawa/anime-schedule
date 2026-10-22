@@ -82,7 +82,6 @@ const QUERY = `query ($page: Int, $from: Int, $to: Int) {
         synonyms
         coverImage { medium }
         externalLinks { site url }
-        streamingEpisodes { title url site }
       }
     }
   }
@@ -128,14 +127,30 @@ function parseCsv(text) {
   return rows;
 }
 
-// All "Guckplan <Season> <Year>" tabs with their start dates, newest first.
+// Returns the copy saved in this browser right away (if there is one) and downloads a fresh one in
+// the background; onChange runs when the fresh copy differs. Without a saved copy it waits for the download.
+function savedOrFresh(key, download, onChange) {
+  let saved = null;
+  try { saved = localStorage.getItem(key); } catch {}
+  const fresh = download().then(value => {
+    const json = JSON.stringify(value);
+    try { localStorage.setItem(key, json); } catch {}
+    if (saved && json !== saved) onChange(value);
+    return value;
+  });
+  if (!saved) return fresh;
+  fresh.catch(e => console.warn(`${key}: kept the saved copy,`, e));
+  return Promise.resolve(JSON.parse(saved));
+}
+
+// All "Guckplan <Season> <Year>" tabs with their start dates (as timestamps), newest first.
 async function guckplanTabs() {
   const html = await (await fetch(SHEET + '/htmlview')).text();
   const tabs = [];
   for (const [, name, gid] of html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)) {
     const m = name.match(/^Guckplan\s+(\S+)\s+(\d{4})/i);
     const month = m && SEASON_MONTH[m[1].toLowerCase()];
-    if (month !== undefined && month !== null) tabs.push({ name, gid, start: new Date(Number(m[2]), month, 1) });
+    if (month !== undefined && month !== null) tabs.push({ name, gid, start: new Date(Number(m[2]), month, 1).getTime() });
   }
   return tabs.sort((a, b) => b.start - a.start);
 }
@@ -154,8 +169,13 @@ function activeTabs(tabs, date) {
 }
 
 const sheets = new Map();
+// A tab's Guckplan: the last copy shown in this browser at once, then the current one when it arrives.
 const sheetFor = tab => {
-  if (!sheets.has(tab.gid)) sheets.set(tab.gid, loadSheet(tab.gid).catch(e => { sheets.delete(tab.gid); throw e; }));
+  if (!sheets.has(tab.gid)) {
+    const onChange = fresh => { sheets.set(tab.gid, Promise.resolve(fresh)); load(true); };
+    sheets.set(tab.gid, savedOrFresh('sheet:' + tab.gid, () => loadSheet(tab.gid), onChange)
+      .catch(e => { sheets.delete(tab.gid); throw e; }));
+  }
   return sheets.get(tab.gid);
 };
 
@@ -221,9 +241,20 @@ function weekStart(offset) {
   return d;
 }
 
-async function fetchWeek(start) {
+// One week of airings. Kept in memory, and in the browser for 30 minutes so reloads are instant.
+const WEEK_CACHE_MS = 30 * 60 * 1000;
+function fetchWeek(start) {
   const key = start.getTime();
-  if (cache.has(key)) return cache.get(key);
+  if (!cache.has(key)) cache.set(key, downloadWeek(start).catch(e => { cache.delete(key); throw e; }));
+  return cache.get(key);
+}
+
+async function downloadWeek(start) {
+  const storeKey = 'week:' + start.getTime();
+  try {
+    const saved = JSON.parse(localStorage.getItem(storeKey));
+    if (saved && Date.now() - saved.time < WEEK_CACHE_MS) return saved.items;
+  } catch {}
   const from = Math.floor(start / 1000) - 1;
   const to = from + 7 * 86400 + 1;
   const items = [];
@@ -239,12 +270,19 @@ async function fetchWeek(start) {
     items.push(...data.Page.airingSchedules);
     if (!data.Page.pageInfo.hasNextPage) break;
   }
-  cache.set(key, items);
+  try {
+    // Drop old weeks first so the browser storage doesn't fill up.
+    for (const k of Object.keys(localStorage)) if (k.startsWith('week:') && k !== storeKey) {
+      const t = JSON.parse(localStorage.getItem(k))?.time;
+      if (!t || Date.now() - t > WEEK_CACHE_MS) localStorage.removeItem(k);
+    }
+    localStorage.setItem(storeKey, JSON.stringify({ time: Date.now(), items }));
+  } catch {}
   return items;
 }
 
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
-function streamLinks(media, episode, wo, searchTitle) {
+function streamLinks(media, wo, searchTitle) {
   const links = [];
   // German availability from LiveChart (tools/build-streams.mjs) wins over AniList's worldwide links.
   const de = streamsDe?.byAnilist[media.id];
@@ -259,11 +297,8 @@ function streamLinks(media, episode, wo, searchTitle) {
   for (const s of SERVICES) {
     // AniList's YouTube links are mostly trailer channels; only trust them when the sheet says Y.
     if (s.wo === 'Y' && wo !== 'Y') continue;
-    const eps = (media.streamingEpisodes || []).filter(e => s.match.test(e.site));
-    const match = eps.find(e => Number((e.title.match(/Episode\s+(\d+)/i) || [])[1]) === episode);
     const series = (media.externalLinks || []).find(l => s.match.test(l.site));
-    const url = match?.url || series?.url || eps[0]?.url;
-    if (url) links.push({ url, label: s.label + (match ? ' Ep ' + episode : ''), color: s.color, main: !!s.main, first: s.wo === wo });
+    if (series) links.push({ url: series.url, label: s.label, color: s.color, main: !!s.main, first: s.wo === wo });
   }
   // The sheet says where it streams but AniList has no link: fall back to that service's search.
   const service = SERVICES.find(s => s.wo === wo);
@@ -333,7 +368,7 @@ function render(items, start, plans) {
       if (show) break;
     }
     if (chosen && !(show && chosen.get(sheet).has(show))) continue;
-    const links = streamLinks(m, it.episode, show?.wo, m.title.english || m.title.romaji);
+    const links = streamLinks(m, show?.wo, m.title.english || m.title.romaji);
     if (!chosen && !links.some(l => l.main || $('others').checked)) continue;
     const day = days.find(d => d.date.toDateString() === watchDay(when, show?.tag).toDateString());
     if (!day) continue;
@@ -374,7 +409,8 @@ function render(items, start, plans) {
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 }
 
-async function load() {
+// refresh: re-render after newer sheet data arrived, without jumping to today.
+async function load(refresh = false) {
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -382,23 +418,26 @@ async function load() {
   if (!cache.has(start.getTime())) $('list').innerHTML = '<div class="status">Loading…</div>';
   // Last week too: an episode airing after its watch day is watched the following week.
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
+  // Start AniList right away; it runs while the sheet loads.
+  const airings = Promise.all([fetchWeek(lastWeek), fetchWeek(start)]);
+  airings.catch(() => {}); // handled below
+  await ready;
 
-  // Every tab that can be active from last week to the end of this one.
+  // Every tab that can be active from last week to the end of this one, loaded side by side.
   const needed = new Map();
   for (const date of [lastWeek, start, end]) for (const t of activeTabs(tabs, date)) needed.set(t.gid, t);
   const plans = new Map();
-  for (const t of needed.values()) {
-    try { plans.set(t.gid, await sheetFor(t)); }
-    catch (e) { console.warn(`${t.name} not loaded:`, e); }
-  }
+  await Promise.all([...needed.values()].map(t => sheetFor(t)
+    .then(sheet => plans.set(t.gid, sheet))
+    .catch(e => console.warn(`${t.name} not loaded:`, e))));
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
   $('tabName').textContent = weekTabs.map(t => t.name).join(' / ');
   fillPeople([...new Set(weekTabs.flatMap(t => plans.get(t.gid)?.people || []))]);
 
   try {
-    const items = [...await fetchWeek(lastWeek), ...await fetchWeek(start)];
+    const items = (await airings).flat();
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
-    if (weekOffset === 0) document.querySelector('.is-today')?.scrollIntoView({ block: 'start' });
+    if (weekOffset === 0 && !refresh) document.querySelector('.is-today')?.scrollIntoView({ block: 'start' });
   } catch (e) {
     $('list').innerHTML = `<div class="status">Couldn't load the schedule: ${esc(e.message)}</div>`;
   }
@@ -417,19 +456,14 @@ $('person').onchange = () => {
   load();
 };
 
-(async () => {
-  try {
-    streamsDe = await (await fetch('streams-de.json', { cache: 'no-cache' })).json();
-  } catch (e) {
-    console.warn('streams-de.json not loaded:', e);
-  }
-  try {
-    tabs = await guckplanTabs();
-  } catch (e) {
-    console.warn('Sheet tabs not loaded:', e);
-  }
-  load();
-})();
+// The German links and the sheet's tab list, fetched side by side; load() waits for both.
+const ready = Promise.all([
+  fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
+    .then(json => { streamsDe = json; }, e => console.warn('streams-de.json not loaded:', e)),
+  savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
+    .then(list => { tabs = list; }, e => console.warn('Sheet tabs not loaded:', e)),
+]);
+load();
 
 // Person dropdown: rebuilt when a season's tab has different people, keeping the choice.
 function fillPeople(people) {
