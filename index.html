@@ -40,7 +40,7 @@
   .cr { flex: none; background: var(--accent); color: var(--accent-text); text-decoration: none; font-weight: 600; font-size: 13px; padding: 7px 12px; border-radius: 8px; white-space: nowrap; }
   .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
   .cr.other { background: transparent; border: 1px solid; font-weight: 500; }
-  .cr.none { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 400; }
+  .cr.none { background: #1e1e22; color: #ffffff; box-shadow: inset 0 0 0 1px #3a3a42; }
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
   details { color: var(--muted); font-size: 13px; margin-top: 28px; }
   details ul { margin: 6px 0 0; padding-left: 20px; }
@@ -295,7 +295,7 @@ function linkButtons(links) {
     : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${esc(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${esc(l.label)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked);
   // The piracy label is a rickroll, nothing more.
-  return (links.some(l => l.main) ? '' : '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any of our services">🏴‍☠️ Piracy</a>')
+  return (links.some(l => l.main) ? '' : '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any of our services">Piracy</a>')
     + shown.map(button).join('');
 }
 
@@ -349,7 +349,7 @@ function render(items, start, plans) {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     const body = rows.length ? rows.map(({ it, m, links, when, episodes }) => `
       <div class="row${it.airingAt < now ? ' aired' : ''}">
-        <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
           <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
