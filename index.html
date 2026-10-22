@@ -62,6 +62,10 @@
   .day.is-today h2 { background: var(--today); color: var(--accent); }
   .row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 6px; }
   .row.aired { opacity: .6; }
+  /* Shows sharing one watch slot: one card, rows split by a thin line */
+  .shared { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
+  .shared .row { border: 0; border-radius: 0; margin: 0; }
+  .shared .row + .row { border-top: 1px dashed var(--line); }
   .countdown:not(:empty)::before { content: ' · '; }
   .info .ep { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row.next .countdown { color: var(--accent); font-weight: 600; }
@@ -268,16 +272,22 @@ async function loadSheet(gid) {
   return { people, shows };
 }
 
-// The sheet shows one person watches: Ja / Vielleicht / Wenn Belly dabei ist,
-// plus any show named in that person's column.
+// The sheet shows one person watches, each with the slot ({ tag, time }) it's watched in:
+// Ja / Vielleicht / Wenn Belly dabei ist in their own row's slot, and a show named in that
+// person's column in the slot of the row that names it (watched there instead).
 function picks(sheet, person) {
-  const result = new Set();
+  const result = new Map();
+  const add = (show, slot) => { if (!result.get(show)?.time) result.set(show, slot); };
   for (const show of sheet.shows) {
     const v = show.votes[person] || '';
-    if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) result.add(show);
+    if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) add(show, { tag: show.tag, time: show.time });
     else if (v && !/^(nein|default|allein)$/i.test(v)) {
-      const named = sheet.shows.find(s => titleMatches([s.romaji, s.english], [v]));
-      if (named) result.add(named);
+      // People write short names ("Apothecary Diaries" for "The Apothecary Diaries Season 3"),
+      // so a name contained in a title counts too.
+      const short = norm(v);
+      const named = sheet.shows.find(s => titleMatches([s.romaji, s.english], [v]))
+        || (short.length >= 6 && sheet.shows.find(s => [s.romaji, s.english].some(t => norm(t).includes(short))));
+      if (named) add(named, { tag: show.tag || named.tag, time: show.time });
     }
   }
   return result;
@@ -459,16 +469,25 @@ function tick() {
 }
 setInterval(tick, 30000);
 
-// When a row fades out: at its watch time — the sheet's "Uhrzeit", else the evening slots
-// (first show 19:00, then every 30 minutes) — but never before the episode is out.
+// Watch time for each show of a day, then the day sorted by it: the sheet's "Uhrzeit" where
+// there is one; the rest fill the free evening slots (19:00, then every 30 minutes) in release
+// order. Rows fade at their watch time, but never before the episode is out.
 const FIRST_SLOT = [19, 0];
 const SLOT_MINUTES = 30;
-function fadeAt(released, day, sheetTime, slot) {
-  const watch = new Date(day);
-  const [h, m] = (sheetTime || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).map(Number)
-    || [FIRST_SLOT[0], FIRST_SLOT[1] + slot * SLOT_MINUTES];
-  watch.setHours(h, m, 0, 0);
-  return Math.max(released.getTime(), watch.getTime());
+function assignWatchTimes(day) {
+  const at = (h, m) => new Date(day.date).setHours(h, m, 0, 0);
+  const taken = new Set();
+  for (const r of day.rows) {
+    const hm = (r.slot.time || '').match(/^(\d{1,2})[:.](\d{2})/);
+    r.watchAt = hm ? at(Number(hm[1]), Number(hm[2])) : null;
+    if (hm) taken.add(r.watchAt);
+  }
+  let i = 0;
+  for (const r of day.rows.filter(r => r.watchAt === null).sort((a, b) => a.when - b.when)) {
+    do r.watchAt = at(FIRST_SLOT[0], FIRST_SLOT[1] + SLOT_MINUTES * i++); while (taken.has(r.watchAt));
+    taken.add(r.watchAt);
+  }
+  day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
 }
 
 function duration(ms) {
@@ -489,11 +508,14 @@ function render(items, start, plans) {
     $('list').innerHTML = '<div class="status">Pick at least one person above.</div>';
     return;
   }
-  const chosen = people.length
-    ? new Map([...plans.values()].map(s => [s, new Set(people.flatMap(p => [...picks(s, p)]))]))
-    : null;
+  // Per tab: show → slot, merged over the selected people (a slot with a time wins).
+  const chosen = new Map([...plans.values()].map(s => {
+    const merged = new Map();
+    for (const p of people)
+      for (const [show, slot] of picks(s, p)) if (!merged.get(show)?.time) merged.set(show, slot);
+    return [s, merged];
+  }));
   const found = new Set();
-  const now = Date.now() / 1000;
   const today = new Date().toDateString();
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -520,18 +542,18 @@ function render(items, start, plans) {
       show = sheet?.shows.find(s => best.get(s) > 0 && score(s, m) === best.get(s));
       if (show) break;
     }
-    if (chosen && !(show && chosen.get(sheet).has(show))) continue;
-    const links = streamLinks(m, show?.wo, m.title.english || m.title.romaji);
-    if (!chosen && !links.some(l => l.main || $('others').checked)) continue;
-    const day = days.find(d => d.date.toDateString() === watchDay(when, show?.tag).toDateString());
+    const slot = show && chosen.get(sheet).get(show);
+    if (!slot) continue;
+    const links = streamLinks(m, show.wo, m.title.english || m.title.romaji);
+    const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag).toDateString());
     if (!day) continue;
-    if (show) found.add(show);
+    found.add(show);
     // One entry per show and week; several episodes (batch drops, double episodes) are merged.
     const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
     if (existing) existing.episodes.push(it.episode);
-    else day.rows.push({ it, m, links, when, show, episodes: [it.episode] });
+    else day.rows.push({ it, m, links, when, slot, episodes: [it.episode] });
   }
-  for (const d of days) d.rows.sort((a, b) => a.when - b.when);
+  for (const d of days) assignWatchTimes(d);
 
   // "Today first": today on top, then the rest of the week, the days already past at the end.
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
@@ -540,8 +562,8 @@ function render(items, start, plans) {
     : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-    const body = rows.length ? rows.map(({ it, m, links, when, show, episodes }, slot) => `
-      <div class="row" data-at="${when.getTime()}" data-fade-at="${fadeAt(when, date, show?.time, slot)}">
+    const row = ({ it, m, links, when, watchAt, episodes }) => `
+      <div class="row" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}">
         <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
@@ -549,14 +571,23 @@ function render(items, start, plans) {
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}<span class="countdown"></span></div>
         </div>
         <div class="links">${linkButtons(links)}</div>
-      </div>`).join('') : '<div class="ep" style="padding:0 10px">Nothing airing</div>';
+      </div>`;
+    // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
+    const groups = [];
+    for (const r of rows) {
+      if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
+      else groups.push([r]);
+    }
+    const body = groups.length
+      ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
+      : '<div class="ep" style="padding:0 10px">Nothing airing</div>';
     return `<section class="day${date.toDateString() === today ? ' is-today' : ''}"><h2>${heading}</h2>${body}</section>`;
   }).join('');
 
   if (chosen) {
     // Only the tab(s) this week's dates belong to, not the neighbours.
     const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
-    const missing = [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : []).filter(s => !found.has(s));
+    const missing = [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid)).keys()] : []).filter(s => !found.has(s));
     if (missing.length) html += `<details><summary>${missing.length} shows from the Guckplan aren't airing this week (or couldn't be matched)</summary>
       <ul>${missing.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>`;
   }
