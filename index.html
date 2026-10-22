@@ -452,12 +452,21 @@ function tick() {
   const next = Math.min(...upcoming.map(r => Number(r.dataset.at)));
   for (const r of rows) {
     const left = Number(r.dataset.at) - now;
-    r.classList.toggle('aired', left <= 0);
+    r.classList.toggle('aired', now >= Number(r.dataset.fadeAt));
     r.classList.toggle('next', left > 0 && Number(r.dataset.at) === next);
     r.querySelector('.countdown').textContent = left > 0 ? 'in ' + duration(left) : '';
   }
 }
 setInterval(tick, 30000);
+
+// When a row fades out: at release when it's shown on its release day, or at the end of the
+// watch day when it was moved to a later day.
+function fadeAt(released, day) {
+  if (released.toDateString() === day.toDateString()) return released.getTime();
+  const end = new Date(day);
+  end.setDate(end.getDate() + 1);
+  return end.getTime();
+}
 
 function duration(ms) {
   const min = Math.ceil(ms / 60000);
@@ -529,7 +538,7 @@ function render(items, start, plans) {
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     const body = rows.length ? rows.map(({ it, m, links, when, episodes }) => `
-      <div class="row${when / 1000 < now ? ' aired' : ''}" data-at="${when.getTime()}">
+      <div class="row" data-at="${when.getTime()}" data-fade-at="${fadeAt(when, date)}">
         <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
