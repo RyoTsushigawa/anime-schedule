@@ -62,6 +62,10 @@
   .day.is-today h2 { background: var(--today); color: var(--accent); }
   .row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 6px; }
   .row.aired { opacity: .6; }
+  .row.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .countdown:not(:empty)::before { content: ' · '; }
+  .info .ep { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row.next .countdown { color: var(--accent); font-weight: 600; }
   .row img { width: 44px; height: 62px; object-fit: cover; border-radius: 6px; flex: none; background: var(--line); }
   .time { width: var(--time-width, auto); flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
   .info { flex: 1; min-width: 0; }
@@ -440,6 +444,30 @@ function linkButtons(links) {
   return shown.map(button).join('');
 }
 
+// Countdowns on upcoming episodes and an outline on the very next one; runs after each render
+// and every 30 seconds, so episodes turn "aired" while the page stays open.
+function tick() {
+  const now = Date.now();
+  const rows = [...document.querySelectorAll('.row[data-at]')];
+  const upcoming = rows.filter(r => Number(r.dataset.at) > now);
+  const next = Math.min(...upcoming.map(r => Number(r.dataset.at)));
+  for (const r of rows) {
+    const left = Number(r.dataset.at) - now;
+    r.classList.toggle('aired', left <= 0);
+    r.classList.toggle('next', left > 0 && Number(r.dataset.at) === next);
+    r.querySelector('.countdown').textContent = left > 0 ? 'in ' + duration(left) : '';
+  }
+}
+setInterval(tick, 30000);
+
+function duration(ms) {
+  const min = Math.ceil(ms / 60000);
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h ${String(min % 60).padStart(2, '0')}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
@@ -502,12 +530,12 @@ function render(items, start, plans) {
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     const body = rows.length ? rows.map(({ it, m, links, when, episodes }) => `
-      <div class="row${when / 1000 < now ? ' aired' : ''}">
+      <div class="row${when / 1000 < now ? ' aired' : ''}" data-at="${when.getTime()}">
         <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
           <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}</div>
+          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}<span class="countdown"></span></div>
         </div>
         <div class="links">${linkButtons(links)}</div>
       </div>`).join('') : '<div class="ep" style="padding:0 10px">Nothing airing</div>';
@@ -524,6 +552,7 @@ function render(items, start, plans) {
   document.body.style.removeProperty('--time-width');
   $('list').innerHTML = html;
   // Same width for every time cell (the widest one), so covers and titles line up.
+  tick();
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 }
