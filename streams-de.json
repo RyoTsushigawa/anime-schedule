@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-22T19:28:09.948Z",
+ "generated": "2026-10-22T21:19:14.469Z",
  "byAnilist": {
   "152677": [
    {
@@ -18,7 +18,8 @@
    },
    {
     "name": "Prime Video DE",
-    "url": "https://www.amazon.de/dp/B0HLC9F74S"
+    "url": "https://www.amazon.de/dp/B0HLC9F74S",
+    "extra": "aniverse or ADN"
    }
   ],
   "160803": [
@@ -28,7 +29,8 @@
    },
    {
     "name": "Prime Video DE",
-    "url": "https://www.amazon.de/dp/B0HL53YVMR"
+    "url": "https://www.amazon.de/dp/B0HL53YVMR",
+    "extra": "aniverse"
    }
   ],
   "169581": [
@@ -128,7 +130,8 @@
    },
    {
     "name": "Prime Video DE",
-    "url": "https://www.amazon.de/dp/B0HLSXSCRM"
+    "url": "https://www.amazon.de/dp/B0HLSXSCRM",
+    "extra": "aniverse"
    }
   ],
   "191788": [
@@ -393,5 +396,191 @@
     "url": "https://www.youtube.com/channel/UC9_koculzguUeaTpeYJ3aSA"
    }
   ]
+ },
+ "release": {
+  "152677": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "172192": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "176314": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
+  "178868": {
+   "offset": 900,
+   "service": "Crunchyroll"
+  },
+  "179876": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "180136": {
+   "offset": 2040,
+   "service": "Crunchyroll"
+  },
+  "185756": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "186541": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "186742": {
+   "offset": 7200,
+   "service": "Crunchyroll"
+  },
+  "187316": {
+   "offset": 0,
+   "service": "YouTube"
+  },
+  "187990": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "189123": {
+   "offset": 1800,
+   "service": "Netflix"
+  },
+  "191788": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "195516": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "195571": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "195604": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "198727": {
+   "offset": 9000,
+   "service": "Crunchyroll"
+  },
+  "199007": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "199426": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "200294": {
+   "offset": 2700,
+   "service": "Crunchyroll"
+  },
+  "200455": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
+  "202079": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "202250": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "203473": {
+   "offset": 9000,
+   "service": "Crunchyroll"
+  },
+  "203490": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "204011": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "204650": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "205896": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
+  "205909": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "206401": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
+  "206814": {
+   "offset": 6300,
+   "service": "Crunchyroll"
+  },
+  "207191": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
+  "207329": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "207809": {
+   "offset": 3300,
+   "service": "Crunchyroll"
+  },
+  "209463": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
+  "209499": {
+   "offset": 1800,
+   "service": "Prime Video"
+  },
+  "209502": {
+   "offset": 7200,
+   "service": "Crunchyroll"
+  },
+  "209562": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "209872": {
+   "offset": 3900,
+   "service": "Netflix"
+  },
+  "211778": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
+  "212503": {
+   "offset": 1920,
+   "service": "Crunchyroll"
+  },
+  "212799": {
+   "offset": 20100,
+   "service": "Prime Video"
+  },
+  "213068": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
+  "213658": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  },
+  "213805": {
+   "offset": 2040,
+   "service": "Netflix"
+  },
+  "216557": {
+   "offset": 1800,
+   "service": "Crunchyroll"
+  }
  }
 }
