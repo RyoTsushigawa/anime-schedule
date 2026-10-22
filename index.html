@@ -213,14 +213,18 @@ function savedOrFresh(key, download, onChange) {
   return Promise.resolve(JSON.parse(saved));
 }
 
-// All "Guckplan <Season> <Year>" tabs with their start dates (as timestamps), newest first.
+// All "Guckplan <Season> <Year>" tabs with their start dates (as timestamps), newest first, each
+// with `catalogGid`: the season's full show list ("Herbst 2026" for "Guckplan Herbst 2026").
 async function guckplanTabs() {
   const html = await (await fetch(SHEET + '/htmlview')).text();
+  const all = new Map([...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].map(([, name, gid]) => [name.trim(), gid]));
   const tabs = [];
-  for (const [, name, gid] of html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)) {
+  for (const [name, gid] of all) {
     const m = name.match(/^Guckplan\s+(\S+)\s+(\d{4})/i);
     const month = m && SEASON_MONTH[m[1].toLowerCase()];
-    if (month !== undefined && month !== null) tabs.push({ name, gid, start: new Date(Number(m[2]), month, 1).getTime() });
+    if (month === undefined || month === null) continue;
+    const catalogGid = all.get(name.replace(/^Guckplan\s+/i, ''));
+    tabs.push({ name, gid, start: new Date(Number(m[2]), month, 1).getTime(), ...(catalogGid && { catalogGid }) });
   }
   return tabs.sort((a, b) => b.start - a.start);
 }
@@ -240,14 +244,25 @@ function activeTabs(tabs, date) {
 
 const sheets = new Map();
 // A tab's Guckplan: the last copy shown in this browser at once, then the current one when it arrives.
+// Comes with `catalog`, the season's full show list, for looking up names people abbreviate.
 const sheetFor = tab => {
-  if (!sheets.has(tab.gid)) {
-    const onChange = fresh => { sheets.set(tab.gid, Promise.resolve(fresh)); load(true); };
-    sheets.set(tab.gid, savedOrFresh('sheet:' + tab.gid, () => loadSheet(tab.gid), onChange)
-      .catch(e => { sheets.delete(tab.gid); throw e; }));
+  const key = tab.gid + ':' + (tab.catalogGid || '');
+  if (!sheets.has(key)) {
+    const onChange = fresh => { sheets.set(key, Promise.resolve(fresh)); load(true); };
+    sheets.set(key, savedOrFresh('sheet:' + key, () => loadPlan(tab), onChange)
+      .catch(e => { sheets.delete(key); throw e; }));
   }
-  return sheets.get(tab.gid);
+  return sheets.get(key);
 };
+
+async function loadPlan(tab) {
+  const [plan, catalog] = await Promise.all([
+    loadSheet(tab.gid),
+    tab.catalogGid ? loadSheet(tab.catalogGid).catch(() => null) : null,
+  ]);
+  plan.catalog = (catalog?.shows || []).map(({ romaji, english, wo, tag }) => ({ romaji, english, wo, tag, time: '' }));
+  return plan;
+}
 
 async function loadSheet(gid) {
   const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
@@ -282,15 +297,27 @@ function picks(sheet, person) {
     const v = show.votes[person] || '';
     if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) add(show, { tag: show.tag, time: show.time });
     else if (v && !/^(nein|default|allein)$/i.test(v)) {
-      // People write short names ("Apothecary Diaries" for "The Apothecary Diaries Season 3"),
-      // so a name contained in a title counts too.
-      const short = norm(v);
-      const named = sheet.shows.find(s => titleMatches([s.romaji, s.english], [v]))
-        || (short.length >= 6 && sheet.shows.find(s => [s.romaji, s.english].some(t => norm(t).includes(short))));
+      const named = resolveName(sheet, v);
       if (named) add(named, { tag: show.tag || named.tag, time: show.time });
     }
   }
   return result;
+}
+
+// The show a name in someone's column means. People shorten names ("Apothecary Diaries" for
+// "The Apothecary Diaries Season 3"), so the season's full list (catalog) is checked too: its
+// full titles lead back to the Guckplan row, or the catalog entry itself is used when the show
+// has no row of its own.
+function resolveName(sheet, value) {
+  const short = norm(value);
+  const contains = list => short.length >= 4 && list.find(s => [s.romaji, s.english].some(t => norm(t).includes(short)));
+  const inPlan = titles => sheet.shows.find(s => titleMatches([s.romaji, s.english], titles));
+  const direct = inPlan([value]);
+  if (direct) return direct;
+  const catalog = sheet.catalog || [];
+  const entry = catalog.find(s => titleMatches([s.romaji, s.english], [value])) || contains(catalog);
+  if (entry) return inPlan([entry.romaji, entry.english]) || entry;
+  return contains(sheet.shows) || null;
 }
 
 // ---------- Title matching ----------
@@ -527,8 +554,10 @@ function render(items, start, plans) {
   // ("… Mini Anime" synonyms) don't tag along with the main show.
   const score = (s, m) => titleScore([s.romaji, s.english], mediaTitles(m));
   const best = new Map();
+  // A tab's shows, plus catalog entries someone named that have no Guckplan row of their own.
+  const showsOf = sheet => sheet ? [...sheet.shows, ...[...chosen.get(sheet).keys()].filter(s => !sheet.shows.includes(s))] : [];
   for (const sheet of plans.values())
-    for (const s of sheet.shows) best.set(s, Math.max(0, ...items.map(it => score(s, it.media))));
+    for (const s of showsOf(sheet)) best.set(s, Math.max(0, ...items.map(it => score(s, it.media))));
   for (const it of items) {
     const m = it.media;
     if (m.isAdult) continue;
@@ -539,7 +568,7 @@ function render(items, start, plans) {
     let show, sheet;
     for (const tab of activeTabs(tabs, when)) {
       sheet = plans.get(tab.gid);
-      show = sheet?.shows.find(s => best.get(s) > 0 && score(s, m) === best.get(s));
+      show = showsOf(sheet).find(s => best.get(s) > 0 && score(s, m) === best.get(s));
       if (show) break;
     }
     const slot = show && chosen.get(sheet).get(show);
