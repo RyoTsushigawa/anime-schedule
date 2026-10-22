@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-22T21:19:14.469Z",
+ "generated": "2026-10-22T22:29:04.103Z",
  "byAnilist": {
   "152677": [
    {
@@ -402,6 +402,10 @@
    "offset": 3600,
    "service": "Crunchyroll"
   },
+  "169581": {
+   "offset": 5400,
+   "service": "Crunchyroll"
+  },
   "172192": {
    "offset": 5400,
    "service": "Crunchyroll"
@@ -422,6 +426,10 @@
    "offset": 2040,
    "service": "Crunchyroll"
   },
+  "180894": {
+   "offset": 3600,
+   "service": "Crunchyroll"
+  },
   "185756": {
    "offset": 1800,
    "service": "Crunchyroll"
@@ -437,6 +445,10 @@
   "187316": {
    "offset": 0,
    "service": "YouTube"
+  },
+  "187402": {
+   "offset": 0,
+   "service": "Crunchyroll"
   },
   "187990": {
    "offset": 1800,
@@ -502,6 +514,10 @@
    "offset": 1800,
    "service": "Crunchyroll"
   },
+  "204389": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
   "204650": {
    "offset": 5400,
    "service": "Crunchyroll"
@@ -532,6 +548,10 @@
   },
   "207809": {
    "offset": 3300,
+   "service": "Crunchyroll"
+  },
+  "209219": {
+   "offset": 0,
    "service": "Crunchyroll"
   },
   "209463": {
@@ -566,6 +586,10 @@
    "offset": 20100,
    "service": "Prime Video"
   },
+  "212888": {
+   "offset": 0,
+   "service": "Crunchyroll"
+  },
   "213068": {
    "offset": 5400,
    "service": "Crunchyroll"
@@ -581,6 +605,679 @@
   "216557": {
    "offset": 1800,
    "service": "Crunchyroll"
+  }
+ },
+ "status": {
+  "152677": {
+   "titles": [
+    "Tantei wa Mou, Shindeiru. Season2",
+    "The Detective Is Already Dead Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793194200
+   },
+   "news": []
+  },
+  "159042": {
+   "titles": [
+    "Tensei Shitara Ken Deshita II",
+    "Reincarnated as a Sword Season 2"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1793201400
+   },
+   "news": []
+  },
+  "160803": {
+   "titles": [
+    "Mahou Shoujo Ikusei Keikaku restart",
+    "Magical Girl Raising Project: Restart"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793034000
+   },
+   "news": []
+  },
+  "169581": {
+   "titles": [
+    "Magical★Explorer",
+    "Magical Explorer: Reborn as a Side Character in a Fantasy Dating Sim, I'll Live Freely With My Eroge Knowledge."
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1792859400
+   },
+   "news": []
+  },
+  "172192": {
+   "titles": [
+    "Kikansha no Mahou wa Tokubetsu desu 2nd Season",
+    "A Returner's Magic Should Be Special Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793207700
+   },
+   "news": []
+  },
+  "176314": {
+   "titles": [
+    "Sasaki to Pii-chan Season 2",
+    "Sasaki and Peeps Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793192400
+   },
+   "news": []
+  },
+  "178083": {
+   "titles": [
+    "Tokyo Revengers: Santen Sensou-hen",
+    "Tokyo Revengers: War of the Three Titan Arc"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792772880
+   },
+   "news": []
+  },
+  "178868": {
+   "titles": [
+    "Magic Knight Rayearth (2026)",
+    "Magic Knight Rayearth (2026)"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793200500
+   },
+   "news": []
+  },
+  "179876": {
+   "titles": [
+    "DARK MACHINE THE ANIMATION",
+    "Dark Machine: The Animation"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1793124900
+   },
+   "news": []
+  },
+  "180136": {
+   "titles": [
+    "Tsuihou sareta Tensei Juukishi wa Game Chishiki de Musou suru",
+    "The Exiled Heavy Knight Knows How to Game the System"
+   ],
+   "next": {
+    "episode": 18,
+    "at": 1793289600
+   },
+   "news": []
+  },
+  "180894": {
+   "titles": [
+    "Romelia Senki",
+    "Romelia War Chronicle"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792846800
+   },
+   "news": []
+  },
+  "185756": {
+   "titles": [
+    "Tensei Kizoku, Kantei Skill de Nariagaru 3rd Season",
+    "As a Reincarnated Aristocrat, I'll Use My Appraisal Skill to Rise in the World Season 3"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1792940400
+   },
+   "news": []
+  },
+  "186541": {
+   "titles": [
+    "Mezametara Saikyou Soubi to Uchuusenmochi Datta node, Ikkodate Mezashite Youhei toshite Jiyuu ni Ikitai",
+    "Reborn as a Space Mercenary: I Woke Up Piloting the Strongest Starship!"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792936800
+   },
+   "news": []
+  },
+  "186742": {
+   "titles": [
+    "Toaru Anbu no ITEM",
+    "A Certain Dark Side's Item"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792769400
+   },
+   "news": []
+  },
+  "187316": {
+   "titles": [
+    "Genso Suikoden",
+    "Suikoden: The Anime"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793111400
+   },
+   "news": []
+  },
+  "187402": {
+   "titles": [
+    "Tensei shita Daiseijo wa, Seijo de Aru Koto wo Hitakakusu",
+    "A Tale of the Secret Saint"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1792846800
+   },
+   "news": []
+  },
+  "187990": {
+   "titles": [
+    "Battle Spirits [Re] ZEKKAI NO KU",
+    "Battle Spirits [Re]: Zekkai no Kuu"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793111400
+   },
+   "news": []
+  },
+  "189123": {
+   "titles": [
+    "Ao no Hako Season2",
+    "Blue Box Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792915200
+   },
+   "news": []
+  },
+  "191656": {
+   "titles": [
+    "Seitokai ni mo Ana wa Aru!",
+    "Even the Student Council Has Its Holes!"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792855800
+   },
+   "news": []
+  },
+  "191788": {
+   "titles": [
+    "Aoashi Season 2",
+    "Ao Ashi Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792918800
+   },
+   "news": []
+  },
+  "195516": {
+   "titles": [
+    "Kusuriya no Hitorigoto 3rd Season",
+    "The Apothecary Diaries Season 3"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792767600
+   },
+   "news": []
+  },
+  "195571": {
+   "titles": [
+    "Shuiro no Kamen",
+    "The Vermilion Mask"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792834200
+   },
+   "news": []
+  },
+  "195604": {
+   "titles": [
+    "Black Clover 2nd Season",
+    "Black Clover Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792854000
+   },
+   "news": []
+  },
+  "198727": {
+   "titles": [
+    "Chitose-kun wa Ramune Bin no Naka Part 2",
+    "Chitose Is in the Ramune Bottle Part 2"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1793118600
+   },
+   "news": []
+  },
+  "199007": {
+   "titles": [
+    "#Zombie Sagashitemasu",
+    "#I'm Looking For a Zombie"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792854000
+   },
+   "news": []
+  },
+  "199426": {
+   "titles": [
+    "HOTEL INHUMANS Season 2",
+    "Hotel Inhumans Season 2"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792941300
+   },
+   "news": []
+  },
+  "199594": {
+   "titles": [
+    "TETSURYO! meet with Tetsudou Musume",
+    "Tetsuryo! Meet with Railroad Girls"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793286000
+   },
+   "news": []
+  },
+  "200294": {
+   "titles": [
+    "Choujun! Choujou-senpai",
+    "Super Psychic Policeman Chojo"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793112300
+   },
+   "news": []
+  },
+  "200455": {
+   "titles": [
+    "Yowaki MAX Reijo Nano ni, Ratsuwan Konyakusha-sama no Kake ni Notte Shimatta",
+    "Even Though I'm a Super Timid Noble Girl, I Accepted the Bet From My Cunning Fiancé"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792938600
+   },
+   "news": []
+  },
+  "202079": {
+   "titles": [
+    "Ojisan wa Kawaii Mono ga Osuki.",
+    "Uncle's Obsession with Cute Things"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792936800
+   },
+   "news": []
+  },
+  "202250": {
+   "titles": [
+    "Kashita Maryoku wa \"Revo Barai\" de Kyousei Choushuu: Youzumi to Party Tsuihou sareta Ore wa, Kawaii Support Yousei to Issho ni Toritateta Maryoku wo Unyou shite Saikyou wo Mezasu.",
+    "Magic Repo Man: Dumped by My Party, I'll Cash In With a Cute Support Fairy to Become the Strongest!"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792864800
+   },
+   "news": []
+  },
+  "203473": {
+   "titles": [
+    "Kyoufu Collector",
+    "Horror Collector"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792862100
+   },
+   "news": []
+  },
+  "203490": {
+   "titles": [
+    "Uchi no Otouto-domo ga Sumimasen",
+    "Please Excuse My Younger Brothers"
+   ],
+   "next": {
+    "episode": 16,
+    "at": 1792773000
+   },
+   "news": []
+  },
+  "204011": {
+   "titles": [
+    "PSYREN",
+    "PSYREN"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793025000
+   },
+   "news": []
+  },
+  "204389": {
+   "titles": [
+    "Yasei no Last Boss ga Arawareta! 2nd Season",
+    "A Wild Last Boss Appeared! Season 2"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1792848600
+   },
+   "news": []
+  },
+  "204650": {
+   "titles": [
+    "TOUGEN ANKI ~Nikko Kegon no Taki-hen~",
+    "Tougen Anki: Nikko Kegon Falls Arc"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792771200
+   },
+   "news": []
+  },
+  "205896": {
+   "titles": [
+    "Shinja Zero no Megami-sama to Hajimeru Isekai Kouryaku",
+    "Full Clearing Another World under a Goddess with Zero Believers"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792938600
+   },
+   "news": []
+  },
+  "205909": {
+   "titles": [
+    "Hotaru no Yomeiri",
+    "Firefly Wedding"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792771200
+   },
+   "news": []
+  },
+  "206401": {
+   "titles": [
+    "FX Senshi Kurumi-chan",
+    "FX Fighter Kurumi-chan"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1793277000
+   },
+   "news": []
+  },
+  "206814": {
+   "titles": [
+    "Dragon Ball Super: Beerus",
+    "Dragon Ball Super: Beerus"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792944000
+   },
+   "news": []
+  },
+  "206949": {
+   "titles": [
+    "Kyouran Reijou Nia Liston: Byoujaku Reijou ni Tensei shita Kamigoroshi no Bujin no Karei naru Musouroku",
+    "Nia Liston: The Merciless Maiden"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793103900
+   },
+   "news": []
+  },
+  "207191": {
+   "titles": [
+    "Doumo, Suki na Hito ni Horegusuri wo Irai sareta Majo desu.",
+    "Hello, I Am a Witch and My Crush Wants Me to Make a Love Potion!"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793017800
+   },
+   "news": []
+  },
+  "207329": {
+   "titles": [
+    "Tsuihou sareta Cheat Fuyo Majutsushi wa Kimama na Second Life wo Ouka suru. Ore wa Buki dake ja Naku, Arayuru Mono ni \"Kyouka Point\" wo Fuyo Dekiru shi, Ore no Ishi de Itsudemo Kouka wo Kaijo Dekiru kedo, Nokotta Hitotachi Daijoubu?",
+    "The Exiled Cheating Magician Enjoys an Unrestrained Second Life. I Can Give \"Strengthening Points\" Not Only to Weapons, But Also to Everything, and I Can Unlock the Effect at Any Time of My Will, But are the Rest Okay?"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793115000
+   },
+   "news": []
+  },
+  "207809": {
+   "titles": [
+    "Sora wa Akai Kawa no Hotori",
+    "Red River"
+   ],
+   "next": {
+    "episode": 17,
+    "at": 1793122200
+   },
+   "news": []
+  },
+  "208025": {
+   "titles": [
+    "Dark Summoner to Dekiteiru",
+    "I'm Dating a Dark Summoner"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792945200
+   },
+   "news": []
+  },
+  "209219": {
+   "titles": [
+    "Tensei Goblin dakedo Shitsumon Aru?",
+    "So What's Wrong with Getting Reborn as a Goblin?"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1793019600
+   },
+   "news": []
+  },
+  "209463": {
+   "titles": [
+    "Kanata kara",
+    "Kanata kara"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792944000
+   },
+   "news": []
+  },
+  "209499": {
+   "titles": [
+    "TANK CHAIR",
+    "Tank Chair"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792938600
+   },
+   "news": []
+  },
+  "209502": {
+   "titles": [
+    "Shiotaiou no Satou-san ga Ore ni dake Amai",
+    "The Cold Sato-san is Only Sweet to Me"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793107800
+   },
+   "news": []
+  },
+  "209562": {
+   "titles": [
+    "VERTEX FORCE",
+    "VERTEX FORCE"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792857600
+   },
+   "news": []
+  },
+  "209709": {
+   "titles": [
+    "Shirotan",
+    "Sirotan"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792826940
+   },
+   "news": []
+  },
+  "209872": {
+   "titles": [
+    "Ranma1/2 3rd Season",
+    "Ranma ½ (2024) Season 3"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792861200
+   },
+   "news": []
+  },
+  "211778": {
+   "titles": [
+    "Sekai Saikyou no Majo, Hajimemashita",
+    "The World's Strongest Witch"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793192400
+   },
+   "news": []
+  },
+  "212503": {
+   "titles": [
+    "Hyouken no Majutsushi ga Sekai wo Suberu II",
+    "The Iceblade Sorcerer Shall Rule the World II"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793293200
+   },
+   "news": []
+  },
+  "212799": {
+   "titles": [
+    "Marronnier Oukoku no Shichinin no Kishi",
+    "The Seven Knights of the Marronnier Kingdom"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792854000
+   },
+   "news": []
+  },
+  "212888": {
+   "titles": [
+    "TEMPAL ~Item no Chikara~",
+    "Overgeared"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1792938600
+   },
+   "news": []
+  },
+  "213068": {
+   "titles": [
+    "Jyu-Oh Mujin DANDIVINE",
+    "Beast King War God Dandivine"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1793206800
+   },
+   "news": []
+  },
+  "213658": {
+   "titles": [
+    "Diamond no Ace: Act II Second Season Part 2",
+    "Ace of Diamond Act II Season 2 Part 2"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792918800
+   },
+   "news": []
+  },
+  "213805": {
+   "titles": [
+    "Koori no Jouheki 2nd Season",
+    "The Ramparts of Ice Season 2"
+   ],
+   "next": {
+    "episode": 5,
+    "at": 1793287800
+   },
+   "news": []
+  },
+  "216557": {
+   "titles": [
+    "Keroro Gunsou☆",
+    "Keroro Gunsou☆"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792803600
+   },
+   "news": []
+  },
+  "216895": {
+   "titles": [
+    "Aoki Denshou: Welsh & Shedar",
+    "Welsh & Shedar"
+   ],
+   "next": {
+    "episode": 4,
+    "at": 1792758300
+   },
+   "news": []
   }
  }
 }
