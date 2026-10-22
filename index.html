@@ -459,13 +459,16 @@ function tick() {
 }
 setInterval(tick, 30000);
 
-// When a row fades out: at release when it's shown on its release day, or at the end of the
-// watch day when it was moved to a later day.
-function fadeAt(released, day) {
-  if (released.toDateString() === day.toDateString()) return released.getTime();
-  const end = new Date(day);
-  end.setDate(end.getDate() + 1);
-  return end.getTime();
+// When a row fades out: at its watch time — the sheet's "Uhrzeit", else the evening slots
+// (first show 19:00, then every 30 minutes) — but never before the episode is out.
+const FIRST_SLOT = [19, 0];
+const SLOT_MINUTES = 30;
+function fadeAt(released, day, sheetTime, slot) {
+  const watch = new Date(day);
+  const [h, m] = (sheetTime || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).map(Number)
+    || [FIRST_SLOT[0], FIRST_SLOT[1] + slot * SLOT_MINUTES];
+  watch.setHours(h, m, 0, 0);
+  return Math.max(released.getTime(), watch.getTime());
 }
 
 function duration(ms) {
@@ -537,8 +540,8 @@ function render(items, start, plans) {
     : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-    const body = rows.length ? rows.map(({ it, m, links, when, episodes }) => `
-      <div class="row" data-at="${when.getTime()}" data-fade-at="${fadeAt(when, date)}">
+    const body = rows.length ? rows.map(({ it, m, links, when, show, episodes }, slot) => `
+      <div class="row" data-at="${when.getTime()}" data-fade-at="${fadeAt(when, date, show?.time, slot)}">
         <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
