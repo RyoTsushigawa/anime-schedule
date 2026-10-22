@@ -25,6 +25,10 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .mode { display: inline-flex; }
+  .mode .chip:first-child { border-radius: 99px 0 0 99px; }
+  .mode .chip:last-child { border-radius: 0 99px 99px 0; margin-left: -1px; }
+  body.solo #people, body.group #soloPerson { display: none; }
   label { display: flex; gap: 6px; align-items: center; color: var(--muted); user-select: none; }
   #week { color: var(--muted); min-width: 140px; text-align: center; }
   main { padding: 16px; max-width: 1000px; margin: 0 auto; }
@@ -61,6 +65,10 @@
   <button id="next" aria-label="Next week">&rarr;</button>
   <button id="thisWeek">This week</button>
   <label id="tabName">Guckplan</label>
+  <div class="mode" role="group" aria-label="Mode">
+    <button class="chip" id="modeSolo">Solo</button><button class="chip" id="modeGroup">Group</button>
+  </div>
+  <select id="soloPerson" aria-label="Person"></select>
   <div id="people" class="chips" role="group" aria-label="People"></div>
   <label><input type="checkbox" id="todayFirst"> Today first</label>
   <label><input type="checkbox" id="others"> Other services</label>
@@ -95,12 +103,18 @@ const QUERY = `query ($page: Int, $from: Int, $to: Int) {
 const $ = id => document.getElementById(id);
 const cache = new Map();
 let weekOffset = 0;
-// People whose shows are shown (toggles in the header), remembered per browser.
+// Whose shows are shown, remembered per browser: solo = one person from the dropdown,
+// group = everyone toggled on.
+let mode = 'solo';
+let soloPerson = DEFAULT_PERSON;
 const selectedPeople = new Set([DEFAULT_PERSON]);
 try {
+  mode = localStorage.getItem('mode') === 'group' ? 'group' : 'solo';
+  soloPerson = localStorage.getItem('soloPerson') || DEFAULT_PERSON;
   const saved = JSON.parse(localStorage.getItem('people'));
   if (Array.isArray(saved)) { selectedPeople.clear(); saved.forEach(p => selectedPeople.add(p)); }
 } catch {}
+const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
 let tabs = []; // Guckplan tabs, newest first
 // Each tab's sheet: { people: [...], shows: [{ romaji, english, wo, tag, time, votes: { name: value } }] }
@@ -338,10 +352,12 @@ function streamLinks(media, wo, searchTitle) {
   // German availability from LiveChart (tools/build-streams.mjs) wins over AniList's worldwide links.
   const de = streamsDe?.byAnilist[media.id];
   if (de?.length) {
-    for (const { name, url } of de) {
+    for (const { name, url, extra } of de) {
       const s = SERVICES.find(s => s.match.test(name));
+      // Needs an add-on channel we don't have (e.g. Prime Video + aniverse): counts as another service.
+      const label = (s?.label || name) + (extra ? ' + ' + extra : '');
       if (!links.some(l => l.url === url))
-        links.push({ url, label: s?.label || name, color: s?.color || '#5b5b66', main: !!s?.main, first: !!s && s.wo === wo });
+        links.push({ url, label, color: s?.color || '#5b5b66', main: !!s?.main && !extra, first: !!s && s.wo === wo && !extra });
     }
     return links.sort((a, b) => b.first - a.first);
   }
@@ -389,8 +405,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 function render(items, start, plans) {
-  // Shows any selected person watches; nobody selected = nothing.
-  const people = [...selectedPeople];
+  // Shows any selected person watches (solo: one person, group: the toggled ones); nobody = nothing.
+  const people = activePeople();
   if (!people.length) {
     $('list').innerHTML = '<div class="status">Pick at least one person above.</div>';
     return;
@@ -416,7 +432,8 @@ function render(items, start, plans) {
   for (const it of items) {
     const m = it.media;
     if (m.isAdult) continue;
-    const when = new Date(it.airingAt * 1000);
+    // When it comes out on our service (LiveChart's offset to Japanese TV), else AniList's TV time.
+    const when = new Date((it.airingAt + (streamsDe?.release?.[m.id]?.offset || 0)) * 1000);
     // Look the show up in the tab for the airing date first; the neighbouring tabs only
     // count for shows that tab doesn't list.
     let show, sheet;
@@ -436,7 +453,7 @@ function render(items, start, plans) {
     if (existing) existing.episodes.push(it.episode);
     else day.rows.push({ it, m, links, when, show, episodes: [it.episode] });
   }
-  for (const d of days) d.rows.sort((a, b) => a.it.airingAt - b.it.airingAt);
+  for (const d of days) d.rows.sort((a, b) => a.when - b.when);
 
   // "Today first": today on top, then the rest of the week, the days already past at the end.
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
@@ -446,7 +463,7 @@ function render(items, start, plans) {
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     const body = rows.length ? rows.map(({ it, m, links, when, episodes }) => `
-      <div class="row${it.airingAt < now ? ' aired' : ''}">
+      <div class="row${when / 1000 < now ? ' aired' : ''}">
         <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
@@ -532,8 +549,31 @@ const ready = Promise.all([
 ]);
 load();
 
-// People toggles: one button per person in the week's tab(s), rebuilt when the names change.
+function setMode(next) {
+  mode = next;
+  document.body.classList.toggle('solo', mode === 'solo');
+  document.body.classList.toggle('group', mode === 'group');
+  $('modeSolo').setAttribute('aria-pressed', mode === 'solo');
+  $('modeGroup').setAttribute('aria-pressed', mode === 'group');
+  try { localStorage.setItem('mode', mode); } catch {}
+}
+setMode(mode);
+$('modeSolo').onclick = () => { setMode('solo'); load(true); };
+$('modeGroup').onclick = () => { setMode('group'); load(true); };
+$('soloPerson').onchange = () => {
+  soloPerson = $('soloPerson').value;
+  try { localStorage.setItem('soloPerson', soloPerson); } catch {}
+  load(true);
+};
+
+// Solo dropdown and group toggles: one entry per person in the week's tab(s), rebuilt when the names change.
 function fillPeople(people) {
+  const select = $('soloPerson');
+  if ([...select.options].map(o => o.value).join() !== people.join()) {
+    select.replaceChildren(...people.map(p => new Option(p, p)));
+    if (!people.includes(soloPerson) && people.length) soloPerson = people.includes(DEFAULT_PERSON) ? DEFAULT_PERSON : people[0];
+    select.value = soloPerson;
+  }
   const box = $('people');
   if ([...box.children].map(b => b.dataset.name).join() === people.join()) return;
   box.replaceChildren(...people.map(name => {
