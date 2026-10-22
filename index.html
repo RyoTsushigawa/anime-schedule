@@ -62,13 +62,14 @@
   .day.is-today h2 { background: var(--today); color: var(--accent); }
   .row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 6px; }
   .row.aired { opacity: .6; }
+  .row.pause { opacity: .6; border-style: dashed; padding: 10px 8px; }
+  .row.pause .time { color: var(--muted); font-weight: 500; }
+  .cr.news { background: transparent; color: var(--text); border: 1px solid var(--line); }
   /* Shows sharing one watch slot: one card, rows split by a thin line */
   .shared { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
   .shared .row { border: 0; border-radius: 0; margin: 0; }
   .shared .row + .row { border-top: 1px dashed var(--line); }
-  .countdown:not(:empty)::before { content: ' · '; }
   .info .ep { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row.next .countdown { color: var(--accent); font-weight: 600; }
   .row img { width: 44px; height: 62px; object-fit: cover; border-radius: 6px; flex: none; background: var(--line); }
   .time { width: var(--time-width, auto); flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
   .info { flex: 1; min-width: 0; }
@@ -271,8 +272,10 @@ async function loadSheet(gid) {
   if (!res.ok) throw new Error('Google Sheet returned ' + res.status);
   const rows = parseCsv(await res.text());
   const headerIndex = rows.findIndex(r => r.some(c => c.trim() === 'Anime Titel'));
-  const header = rows[headerIndex].map(c => c.trim());
+  const header = rows[headerIndex]?.map(c => c.trim()) || [];
   const col = name => header.indexOf(name);
+  for (const name of ['Anime Titel', 'Tag', 'Uhrzeit'])
+    if (col(name) < 0) throw new Error(`the sheet has no "${name}" column anymore`);
   const people = header.slice(col('Uhrzeit') + 1).filter(Boolean);
   const shows = [];
   for (const r of rows.slice(headerIndex + 1)) {
@@ -399,8 +402,11 @@ function storeWeek(storeKey, items) {
 // All airings of one week from AniList. When AniList limits requests it answers 429 without the
 // header browsers need, so that shows up as a network error: both get a few retries with waits.
 async function downloadAirings(start) {
+  // Monday 00:00 to next Monday 00:00 local time (a daylight-saving week is an hour longer or shorter).
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
   const from = Math.floor(start / 1000) - 1;
-  const to = from + 7 * 86400 + 1;
+  const to = Math.floor(end / 1000);
   const items = [];
   const waits = [4000, 12000, 30000];
   for (let page = 1, attempt = 0; ;) {
@@ -426,6 +432,47 @@ async function downloadAirings(start) {
     items.push(...data.Page.airingSchedules);
     if (!data.Page.pageInfo.hasNextPage) return items;
     page++;
+  }
+}
+
+// Older shows in the plan (rewatches): looked up on AniList by title once, kept for 7 days.
+// title → media, null = not found; shows still waiting for a lookup are collected in render().
+const rewatchMedia = new Map();
+const pendingRewatch = new Set();
+const REWATCH_QUERY = `query ($search: String) {
+  Media(search: $search, type: ANIME) {
+    id status siteUrl title { romaji english } coverImage { medium } externalLinks { site url }
+  }
+}`;
+function rewatchFor(show) {
+  const key = 'rewatch:' + norm(show.romaji || show.english);
+  if (!rewatchMedia.has(key)) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (saved && Date.now() - saved.time < WEEK_KEEP_MS) rewatchMedia.set(key, saved.media);
+    } catch {}
+  }
+  if (!rewatchMedia.has(key)) pendingRewatch.add(show);
+  return rewatchMedia.get(key);
+}
+async function lookUpRewatches() {
+  for (const show of [...pendingRewatch]) {
+    pendingRewatch.delete(show);
+    const key = 'rewatch:' + norm(show.romaji || show.english);
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: REWATCH_QUERY, variables: { search: show.romaji || show.english } }),
+      });
+      // AniList busy: skip for this visit (not saved, so the next visit tries again).
+      if (!res.ok && res.status !== 404) { rewatchMedia.set(key, null); continue; }
+      const media = res.ok ? (await res.json()).data.Media : null;
+      rewatchMedia.set(key, media);
+      try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), media })); } catch {}
+    } catch {
+      rewatchMedia.set(key, null);
+    }
   }
 }
 
@@ -461,10 +508,18 @@ function streamLinks(media, wo, searchTitle) {
 
 const WEEKDAYS = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'];
 
+// Watch times before 06:00 ("00:30") belong to the night after the "Tag" evening.
+const NIGHT_UNTIL = 6;
+const parseTime = time => (time || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).map(Number);
+
 // The day an episode shows up on: the sheet's "Tag" (watch day) on or after the airing day,
-// or the airing day itself when the sheet has no day for it.
-function watchDay(aired, tag) {
+// or the airing day itself when the sheet has no day for it. With a night-time watch slot, an
+// episode out before that time the next morning still counts for the evening before.
+function watchDay(aired, tag, time) {
   const day = new Date(aired);
+  const hm = parseTime(time);
+  if (hm && hm[0] < NIGHT_UNTIL && day.getHours() * 60 + day.getMinutes() <= hm[0] * 60 + hm[1])
+    day.setDate(day.getDate() - 1);
   day.setHours(0, 0, 0, 0);
   const target = WEEKDAYS.indexOf(String(tag || '').toLowerCase().replace(/\W/g, '').slice(0, 2));
   if (target < 0) return day;
@@ -485,19 +540,12 @@ function linkButtons(links) {
   return shown.map(button).join('');
 }
 
-// Countdowns on upcoming episodes (the very next one in orange); runs after each render
-// and every 30 seconds, so episodes turn "aired" while the page stays open.
+// Fades rows whose watch time has passed; runs after each render and every 30 seconds, so
+// they fade while the page stays open.
 function tick() {
   const now = Date.now();
-  const rows = [...document.querySelectorAll('.row[data-at]')];
-  const upcoming = rows.filter(r => Number(r.dataset.at) > now);
-  const next = Math.min(...upcoming.map(r => Number(r.dataset.at)));
-  for (const r of rows) {
-    const left = Number(r.dataset.at) - now;
+  for (const r of document.querySelectorAll('.row[data-fade-at]'))
     r.classList.toggle('aired', now >= Number(r.dataset.fadeAt));
-    r.classList.toggle('next', left > 0 && Number(r.dataset.at) === next);
-    r.querySelector('.countdown').textContent = left > 0 ? 'in ' + duration(left) : '';
-  }
 }
 setInterval(tick, 30000);
 
@@ -507,11 +555,12 @@ setInterval(tick, 30000);
 const FIRST_SLOT = [19, 0];
 const SLOT_MINUTES = 30;
 function assignWatchTimes(day) {
-  const at = (h, m) => new Date(day.date).setHours(h, m, 0, 0);
+  // Night-time slots (before 06:00) are the next calendar morning.
+  const at = (h, m) => new Date(day.date).setHours(h < NIGHT_UNTIL ? h + 24 : h, m, 0, 0);
   const taken = new Set();
   for (const r of day.rows) {
-    const hm = (r.slot.time || '').match(/^(\d{1,2})[:.](\d{2})/);
-    r.watchAt = hm ? at(Number(hm[1]), Number(hm[2])) : null;
+    const hm = parseTime(r.slot.time);
+    r.watchAt = hm ? at(...hm) : null;
     if (hm) taken.add(r.watchAt);
   }
   let i = 0;
@@ -520,14 +569,6 @@ function assignWatchTimes(day) {
     taken.add(r.watchAt);
   }
   day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
-}
-
-function duration(ms) {
-  const min = Math.ceil(ms / 60000);
-  if (min < 60) return `${min}m`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h ${String(min % 60).padStart(2, '0')}m`;
-  return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -579,13 +620,41 @@ function render(items, start, plans) {
     const slot = show && chosen.get(sheet).get(show);
     if (!slot) continue;
     const links = streamLinks(m, show.wo, m.title.english || m.title.romaji);
-    const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag).toDateString());
+    const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag, slot.time).toDateString());
     if (!day) continue;
     found.add(show);
     // One entry per show and week; several episodes (batch drops, double episodes) are merged.
     const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
     if (existing) existing.episodes.push(it.episode);
     else day.rows.push({ it, m, links, when, slot, episodes: [it.episode] });
+  }
+
+  // Shows from this week's plan without an episode, checked against LiveChart (weekly script):
+  // a next episode after this week means a break ("Pause" in its slot, with the return date and
+  // any announcement); nothing scheduled means this season's run is over (left out). Shows
+  // LiveChart doesn't know this season that AniList lists as finished are rewatches, shown in
+  // their slot. The rest is listed below. Pause and rewatch only from this week on.
+  const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
+  const weekEnd = days[6].date.getTime() + 86400000;
+  const unknown = [];
+  for (const [show, slot] of [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : [])) {
+    if (found.has(show)) continue;
+    const status = Object.values(streamsDe?.status || {}).find(s => titleMatches([show.romaji, show.english], s.titles));
+    if (status && !status.next) continue; // finished
+    const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
+    if (!day || weekEnd < Date.now()) { unknown.push(show); continue; }
+    const next = status && new Date(status.next.at * 1000);
+    if (next && next >= weekEnd) {
+      day.rows.push({ pause: true, show, slot, when: next, news: status.news || [] });
+      found.add(show);
+      continue;
+    }
+    const media = !status && rewatchFor(show);
+    if (media && media.status === 'FINISHED') {
+      const links = streamLinks(media, show.wo, media.title.english || media.title.romaji);
+      day.rows.push({ rewatch: true, m: media, links, slot, when: day.date });
+      found.add(show);
+    } else unknown.push(show);
   }
   for (const d of days) assignWatchTimes(d);
 
@@ -596,13 +665,33 @@ function render(items, start, plans) {
     : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-    const row = ({ it, m, links, when, watchAt, episodes }) => `
+    const pause = ({ show, when, news }) => `
+      <div class="row pause">
+        <div class="time">Pause</div>
+        <div class="info">
+          <div class="title">${esc(show.english || show.romaji)}</div>
+          <div class="ep">No episode this week · back ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+        </div>
+        <div class="links">${news.slice(0, 1).map(n => `<a class="cr news" href="${esc(n.url)}" target="_blank" rel="noopener" title="${esc(n.title)}">Why?</a>`).join('')}</div>
+      </div>`;
+    const rewatch = ({ m, links, watchAt }) => `
+      <div class="row" data-fade-at="${watchAt}">
+        <div class="time">Rewatch</div>
+        <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
+        <div class="info">
+          <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
+          <div class="ep">Rewatch</div>
+        </div>
+        <div class="links">${linkButtons(links)}</div>
+      </div>`;
+    const row = r => r.pause ? pause(r) : r.rewatch ? rewatch(r) : episodeRow(r);
+    const episodeRow = ({ it, m, links, when, watchAt, episodes }) => `
       <div class="row" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}">
         <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
         <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
           <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}<span class="countdown"></span></div>
+          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}</div>
         </div>
         <div class="links">${linkButtons(links)}</div>
       </div>`;
@@ -618,13 +707,8 @@ function render(items, start, plans) {
     return `<section class="day${date.toDateString() === today ? ' is-today' : ''}"><h2>${heading}</h2>${body}</section>`;
   }).join('');
 
-  if (chosen) {
-    // Only the tab(s) this week's dates belong to, not the neighbours.
-    const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
-    const missing = [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid)).keys()] : []).filter(s => !found.has(s));
-    if (missing.length) html += `<details><summary>${missing.length} shows from the Guckplan aren't airing this week (or couldn't be matched)</summary>
-      <ul>${missing.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>`;
-  }
+  if (unknown.length) html += `<details><summary>${unknown.length} shows from the Guckplan aren't airing this week (or couldn't be matched)</summary>
+    <ul>${unknown.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>`;
   document.body.style.removeProperty('--time-width');
   $('list').innerHTML = html;
   // Same width for every time cell (the widest one), so covers and titles line up.
@@ -651,16 +735,23 @@ async function load(refresh = false) {
   const needed = new Map();
   for (const date of [lastWeek, start, end]) for (const t of activeTabs(tabs, date)) needed.set(t.gid, t);
   const plans = new Map();
+  const problems = [];
   await Promise.all([...needed.values()].map(t => sheetFor(t)
     .then(sheet => plans.set(t.gid, sheet))
-    .catch(e => console.warn(`${t.name} not loaded:`, e))));
+    .catch(e => problems.push(`${t.name}: ${e.message}`))));
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
+  if (!weekTabs.some(t => plans.has(t.gid))) {
+    $('list').innerHTML = `<div class="status">Couldn't read the Guckplan (${esc(problems.join('; ') || 'unknown error')}).</div>`;
+    return;
+  }
   $('tabName').textContent = weekTabs.map(t => t.name).join(' / ');
   fillPeople([...new Set(weekTabs.flatMap(t => plans.get(t.gid)?.people || []))]);
 
   try {
     const items = (await airings).flat();
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
+    // Rewatches seen for the first time: look them up, then show them.
+    if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
     if (weekOffset === 0 && !refresh) {
       if ($('todayFirst').checked) window.scrollTo(0, 0);
       else document.querySelector('.is-today')?.scrollIntoView({ block: 'start' });
