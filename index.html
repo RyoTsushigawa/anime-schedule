@@ -62,7 +62,6 @@
   .day.is-today h2 { background: var(--today); color: var(--accent); }
   .row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 6px; }
   .row.aired { opacity: .6; }
-  .row.next { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
   .countdown:not(:empty)::before { content: ' · '; }
   .info .ep { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row.next .countdown { color: var(--accent); font-weight: 600; }
@@ -444,7 +443,7 @@ function linkButtons(links) {
   return shown.map(button).join('');
 }
 
-// Countdowns on upcoming episodes and an outline on the very next one; runs after each render
+// Countdowns on upcoming episodes (the very next one in orange); runs after each render
 // and every 30 seconds, so episodes turn "aired" while the page stays open.
 function tick() {
   const now = Date.now();
