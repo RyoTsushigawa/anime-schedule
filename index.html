@@ -252,8 +252,10 @@ function weekStart(offset) {
   return d;
 }
 
-// One week of airings. Kept in memory, and in the browser for 30 minutes so reloads are instant.
+// One week of airings. Kept in memory, and in the browser: used as is for 30 minutes so reloads are
+// instant, and as a fallback for 7 days when AniList is unreachable or limiting requests.
 const WEEK_CACHE_MS = 30 * 60 * 1000;
+const WEEK_KEEP_MS = 7 * 86400 * 1000;
 function fetchWeek(start) {
   const key = start.getTime();
   if (!cache.has(key)) cache.set(key, downloadWeek(start).catch(e => { cache.delete(key); throw e; }));
@@ -262,34 +264,72 @@ function fetchWeek(start) {
 
 async function downloadWeek(start) {
   const storeKey = 'week:' + start.getTime();
-  try {
-    const saved = JSON.parse(localStorage.getItem(storeKey));
-    if (saved && Date.now() - saved.time < WEEK_CACHE_MS) return saved.items;
-  } catch {}
-  const from = Math.floor(start / 1000) - 1;
-  const to = from + 7 * 86400 + 1;
-  const items = [];
-  for (let page = 1; ; page++) {
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query: QUERY, variables: { page, from, to } }),
-    });
-    if (res.status === 429) { await new Promise(r => setTimeout(r, 3000)); page--; continue; }
-    if (!res.ok) throw new Error('AniList returned ' + res.status);
-    const { data } = await res.json();
-    items.push(...data.Page.airingSchedules);
-    if (!data.Page.pageInfo.hasNextPage) break;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(storeKey)); } catch {}
+  if (saved && Date.now() - saved.time < WEEK_CACHE_MS) return saved.items;
+  if (saved) {
+    // Older copy: show it now and update in the background (re-rendering if anything changed).
+    downloadAirings(start).then(items => {
+      storeWeek(storeKey, items);
+      if (JSON.stringify(items) !== JSON.stringify(saved.items)) {
+        cache.set(start.getTime(), Promise.resolve(items));
+        load(true);
+      }
+    }, () => {});
+    return saved.items;
   }
+  let items;
   try {
-    // Drop old weeks first so the browser storage doesn't fill up.
+    items = await downloadAirings(start);
+  } catch (e) {
+    throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute.");
+  }
+  storeWeek(storeKey, items);
+  return items;
+}
+
+function storeWeek(storeKey, items) {
+  try {
+    // Drop weeks too old to be a useful fallback, so the browser storage doesn't fill up.
     for (const k of Object.keys(localStorage)) if (k.startsWith('week:') && k !== storeKey) {
       const t = JSON.parse(localStorage.getItem(k))?.time;
-      if (!t || Date.now() - t > WEEK_CACHE_MS) localStorage.removeItem(k);
+      if (!t || Date.now() - t > WEEK_KEEP_MS) localStorage.removeItem(k);
     }
     localStorage.setItem(storeKey, JSON.stringify({ time: Date.now(), items }));
   } catch {}
-  return items;
+}
+
+// All airings of one week from AniList. When AniList limits requests it answers 429 without the
+// header browsers need, so that shows up as a network error: both get a few retries with waits.
+async function downloadAirings(start) {
+  const from = Math.floor(start / 1000) - 1;
+  const to = from + 7 * 86400 + 1;
+  const items = [];
+  const waits = [4000, 12000, 30000];
+  for (let page = 1, attempt = 0; ;) {
+    let res;
+    try {
+      res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: QUERY, variables: { page, from, to } }),
+      });
+    } catch (e) {
+      res = null;
+    }
+    if (!res || res.status === 429 || res.status >= 500) {
+      if (attempt >= waits.length) throw new Error('AniList unreachable');
+      const status = document.querySelector('#list .status');
+      if (status) status.textContent = 'AniList is busy, trying again…';
+      await new Promise(r => setTimeout(r, waits[attempt++]));
+      continue;
+    }
+    if (!res.ok) throw new Error('AniList returned ' + res.status);
+    const { data } = await res.json();
+    items.push(...data.Page.airingSchedules);
+    if (!data.Page.pageInfo.hasNextPage) return items;
+    page++;
+  }
 }
 
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
