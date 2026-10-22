@@ -39,6 +39,7 @@
   .ep { color: var(--muted); font-size: 13px; }
   .cr { flex: none; background: var(--accent); color: var(--accent-text); text-decoration: none; font-weight: 600; font-size: 13px; padding: 7px 12px; border-radius: 8px; white-space: nowrap; }
   .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
+  .cr.other { background: transparent; border: 1px solid; font-weight: 500; }
   .cr.none { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 400; }
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
   details { color: var(--muted); font-size: 13px; margin-top: 28px; }
@@ -57,6 +58,7 @@
   <button id="next" aria-label="Next week">&rarr;</button>
   <button id="thisWeek">This week</button>
   <label><span id="tabName">Guckplan</span> <select id="person"><option value="">Everything</option></select></label>
+  <label><input type="checkbox" id="others"> Other services</label>
 </header>
 <main id="list"><div class="status">Loading…</div></main>
 
@@ -93,14 +95,16 @@ let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [
 let tabs = []; // Guckplan tabs, newest first
 // Each tab's sheet: { people: [...], shows: [{ romaji, english, wo, tag, time, votes: { name: value } }] }
 
-// AniList site name pattern → button label and colour. `wo` is the sheet's "Wo" code
-// ("P" in the sheet means no legal stream, so it has no service here).
+// AniList / LiveChart site name pattern → button label and colour. `wo` is the sheet's "Wo" code
+// ("P" in the sheet means no legal stream, so it has no service here). `main` = a service the group
+// has; everything else only shows with the "Other services" toggle.
 const SERVICES = [
-  { match: /crunchyroll/i, label: 'Crunchyroll', color: '#f47521', wo: 'C', search: 'https://www.crunchyroll.com/search?q=' },
-  { match: /netflix/i, label: 'Netflix', color: '#e50914', wo: 'N', search: 'https://www.netflix.com/search?q=' },
-  { match: /amazon|prime video/i, label: 'Prime Video', color: '#1a98ff', wo: 'AM', search: 'https://www.primevideo.com/search/?phrase=' },
+  { match: /crunchyroll/i, label: 'Crunchyroll', color: '#f47521', wo: 'C', main: true, search: 'https://www.crunchyroll.com/search?q=' },
+  { match: /netflix/i, label: 'Netflix', color: '#e50914', wo: 'N', main: true, search: 'https://www.netflix.com/search?q=' },
+  { match: /amazon|prime video/i, label: 'Prime Video', color: '#1a98ff', wo: 'AM', main: true, search: 'https://www.primevideo.com/search/?phrase=' },
+  { match: /youtube/i, label: 'YouTube', color: '#ff0033', wo: 'Y', main: true },
   { match: /disney/i, label: 'Disney+', color: '#113ccf', wo: 'D+', search: 'https://www.disneyplus.com/search?q=' },
-  { match: /youtube/i, label: 'YouTube', color: '#ff0033', wo: 'Y' },
+  { match: /hidive/i, label: 'HIDIVE', color: '#00aeef', wo: 'H' },
   { match: /^adn$|animation digital network/i, label: 'ADN', color: '#0096d6', wo: 'ADN' },
 ];
 
@@ -240,19 +244,15 @@ async function fetchWeek(start) {
 }
 
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
-// Services nobody in the group has.
-const HIDDEN = /hidive/i;
-
 function streamLinks(media, episode, wo, searchTitle) {
   const links = [];
   // German availability from LiveChart (tools/build-streams.mjs) wins over AniList's worldwide links.
   const de = streamsDe?.byAnilist[media.id];
   if (de?.length) {
     for (const { name, url } of de) {
-      if (HIDDEN.test(name)) continue;
       const s = SERVICES.find(s => s.match.test(name));
       if (!links.some(l => l.url === url))
-        links.push({ url, label: s?.label || name, color: s?.color || '#5b5b66', first: !!s && s.wo === wo });
+        links.push({ url, label: s?.label || name, color: s?.color || '#5b5b66', main: !!s?.main, first: !!s && s.wo === wo });
     }
     return links.sort((a, b) => b.first - a.first);
   }
@@ -263,12 +263,12 @@ function streamLinks(media, episode, wo, searchTitle) {
     const match = eps.find(e => Number((e.title.match(/Episode\s+(\d+)/i) || [])[1]) === episode);
     const series = (media.externalLinks || []).find(l => s.match.test(l.site));
     const url = match?.url || series?.url || eps[0]?.url;
-    if (url) links.push({ url, label: s.label + (match ? ' Ep ' + episode : ''), color: s.color, first: s.wo === wo });
+    if (url) links.push({ url, label: s.label + (match ? ' Ep ' + episode : ''), color: s.color, main: !!s.main, first: s.wo === wo });
   }
   // The sheet says where it streams but AniList has no link: fall back to that service's search.
   const service = SERVICES.find(s => s.wo === wo);
   if (service?.search && !links.some(l => l.first))
-    links.unshift({ url: service.search + encodeURIComponent(searchTitle), label: service.label + ' 🔍', color: service.color, first: true });
+    links.unshift({ url: service.search + encodeURIComponent(searchTitle), label: service.label + ' 🔍', color: service.color, main: !!service.main, first: true });
   return links.sort((a, b) => b.first - a.first);
 }
 
@@ -285,6 +285,18 @@ function watchDay(aired, tag) {
   if (target < 0) return day;
   day.setDate(day.getDate() + (target - (day.getDay() + 6) % 7 + 7) % 7);
   return day;
+}
+
+// Our services as buttons; anything else only with the "Other services" toggle, outlined.
+// Without any of our services the show is marked as piracy.
+function linkButtons(links) {
+  const button = l => l.main
+    ? `<a class="cr" style="background:${l.color}" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`
+    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${esc(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${esc(l.label)}</a>`;
+  const shown = links.filter(l => l.main || $('others').checked);
+  // The piracy label is a rickroll, nothing more.
+  return (links.some(l => l.main) ? '' : '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any of our services">🏴‍☠️ Piracy</a>')
+    + shown.map(button).join('');
 }
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -322,7 +334,7 @@ function render(items, start, plans) {
     }
     if (chosen && !(show && chosen.get(sheet).has(show))) continue;
     const links = streamLinks(m, it.episode, show?.wo, m.title.english || m.title.romaji);
-    if (!chosen && !links.length) continue;
+    if (!chosen && !links.some(l => l.main || $('others').checked)) continue;
     const day = days.find(d => d.date.toDateString() === watchDay(when, show?.tag).toDateString());
     if (!day) continue;
     if (show) found.add(show);
@@ -343,7 +355,7 @@ function render(items, start, plans) {
           <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}</div>
         </div>
-        <div class="links">${links.length ? links.map(l => `<a class="cr" style="background:${l.color}" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('') : '<span class="cr none" title="Not on any of our services">🏴‍☠️ Piracy</span>'}</div>
+        <div class="links">${linkButtons(links)}</div>
       </div>`).join('') : '<div class="ep" style="padding:0 10px">Nothing airing</div>';
     return `<section class="day${date.toDateString() === today ? ' is-today' : ''}"><h2>${heading}</h2>${body}</section>`;
   }).join('');
@@ -391,6 +403,11 @@ async function load() {
 $('prev').onclick = () => { weekOffset--; load(); };
 $('next').onclick = () => { weekOffset++; load(); };
 $('thisWeek').onclick = () => { weekOffset = 0; load(); };
+try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
+$('others').onchange = () => {
+  try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
+  load();
+};
 $('person').onchange = () => {
   try { localStorage.setItem('person', $('person').value); } catch {}
   load();
