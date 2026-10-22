@@ -62,6 +62,7 @@
   <button id="thisWeek">This week</button>
   <label id="tabName">Guckplan</label>
   <div id="people" class="chips" role="group" aria-label="People"></div>
+  <label><input type="checkbox" id="todayFirst"> Today first</label>
   <label><input type="checkbox" id="others"> Other services</label>
 </header>
 <main id="list"><div class="status">Loading…</div></main>
@@ -397,7 +398,12 @@ function render(items, start, plans) {
   }
   for (const d of days) d.rows.sort((a, b) => a.it.airingAt - b.it.airingAt);
 
-  let html = days.map(({ date, rows }) => {
+  // "Today first": today on top, then the rest of the week, the days already past at the end.
+  const todayIndex = days.findIndex(d => d.date.toDateString() === today);
+  const ordered = $('todayFirst').checked && todayIndex > 0
+    ? [...days.slice(todayIndex), ...days.slice(0, todayIndex)]
+    : days;
+  let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     const body = rows.length ? rows.map(({ it, m, links, when, episodes }) => `
       <div class="row${it.airingAt < now ? ' aired' : ''}">
@@ -454,7 +460,10 @@ async function load(refresh = false) {
   try {
     const items = (await airings).flat();
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
-    if (weekOffset === 0 && !refresh) document.querySelector('.is-today')?.scrollIntoView({ block: 'start' });
+    if (weekOffset === 0 && !refresh) {
+      if ($('todayFirst').checked) window.scrollTo(0, 0);
+      else document.querySelector('.is-today')?.scrollIntoView({ block: 'start' });
+    }
   } catch (e) {
     $('list').innerHTML = `<div class="status">Couldn't load the schedule: ${esc(e.message)}</div>`;
   }
@@ -463,6 +472,11 @@ async function load(refresh = false) {
 $('prev').onclick = () => { weekOffset--; load(); };
 $('next').onclick = () => { weekOffset++; load(); };
 $('thisWeek').onclick = () => { weekOffset = 0; load(); };
+try { $('todayFirst').checked = localStorage.getItem('todayFirst') === '1'; } catch {}
+$('todayFirst').onchange = () => {
+  try { localStorage.setItem('todayFirst', $('todayFirst').checked ? '1' : '0'); } catch {}
+  load();
+};
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
   try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
