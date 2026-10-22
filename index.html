@@ -165,7 +165,7 @@ const SERVICES = [
   { match: /netflix/i, label: 'Netflix', color: '#e50914', wo: 'N', main: true, search: 'https://www.netflix.com/search?q=' },
   { match: /amazon|prime video/i, label: 'Prime Video', color: '#1a98ff', wo: 'AM', main: true, search: 'https://www.primevideo.com/search/?phrase=' },
   { match: /youtube/i, label: 'YouTube', color: '#ff0033', wo: 'Y', main: true },
-  { match: /disney/i, label: 'Disney+', color: '#113ccf', wo: 'D+', search: 'https://www.disneyplus.com/search?q=' },
+  { match: /disney/i, label: 'Disney+', color: '#113ccf', wo: 'D+', main: true, search: 'https://www.disneyplus.com/search?q=' },
   { match: /hidive/i, label: 'HIDIVE', color: '#00aeef', wo: 'H' },
   { match: /^adn$|animation digital network/i, label: 'ADN', color: '#0096d6', wo: 'ADN' },
 ];
@@ -428,15 +428,16 @@ function watchDay(aired, tag) {
 }
 
 // Our services as buttons; anything else only with the "Other services" toggle, outlined.
-// Without any of our services the show is marked as piracy.
+// The piracy label only when no button is left: none of our services, or (with the toggle on)
+// no service at all.
 function linkButtons(links) {
   const button = l => l.main
     ? `<a class="cr" style="background:${l.color}" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`
     : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${esc(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${esc(l.label)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked);
   // The piracy label is a rickroll, nothing more.
-  return (links.some(l => l.main) ? '' : '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any of our services">Piracy</a>')
-    + shown.map(button).join('');
+  if (!shown.length) return '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any streaming service">Piracy</a>';
+  return shown.map(button).join('');
 }
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
