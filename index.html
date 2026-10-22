@@ -17,20 +17,45 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  h1 { font-size: 18px; margin: 0 auto 0 0; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; }
+  .bar { max-width: 1000px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .controls { margin-top: 10px; justify-content: flex-start; }
+  .brand { min-width: 0; }
+  h1 { font-size: 18px; margin: 0; line-height: 1.2; }
+  #tabName { color: var(--muted); font-size: 12px; }
   button, input, select { font: inherit; color: inherit; }
-  button, select { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button, select { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
   button:hover, select:hover { border-color: var(--accent); }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .weeknav { display: flex; align-items: center; gap: 4px; }
+  .weeknav .icon { width: 32px; height: 32px; padding: 0; font-size: 20px; line-height: 1; }
+  #week { color: var(--muted); font-size: 14px; min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
+  #thisWeek { margin-left: 6px; }
+  /* Solo | Group */
+  .segmented { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
+  .segmented button { border: 0; border-radius: 99px; padding: 4px 14px; background: transparent; color: var(--muted); font-size: 13px; }
+  .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .pill { border-radius: 99px; padding: 5px 14px; font-size: 13px; }
+  body.solo .picker, body.group #soloPerson { display: none; }
+  /* Group: one button, names in a small panel */
+  .picker { position: relative; }
+  #groupButton::after { content: ' ▾'; color: var(--muted); }
+  .popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: max-content; max-width: min(320px, calc(100vw - 32px));
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .popover[hidden] { display: none; }
   .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-  .mode { display: inline-flex; }
-  .mode .chip:first-child { border-radius: 99px 0 0 99px; }
-  .mode .chip:last-child { border-radius: 0 99px 99px 0; margin-left: -1px; }
-  body.solo #people, body.group #soloPerson { display: none; }
-  label { display: flex; gap: 6px; align-items: center; color: var(--muted); user-select: none; }
-  #week { color: var(--muted); min-width: 140px; text-align: center; }
+  /* Options as small toggle pills */
+  .options { display: flex; gap: 6px; margin-left: auto; }
+  .toggle { cursor: pointer; user-select: none; }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .toggle span { display: inline-block; padding: 5px 12px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-size: 13px; background: var(--card); }
+  .toggle input:checked + span { border-color: var(--accent); color: var(--accent); }
+  .toggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 560px) {
+    .options { margin-left: 0; }
+    .picker { position: static; }
+    .popover { left: 16px; right: 16px; top: auto; margin-top: 6px; max-width: none; width: auto; }
+  }
   main { padding: 16px; max-width: 1000px; margin: 0 auto; }
   .day { margin-bottom: 22px; }
   .day h2 { font-size: 15px; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; }
@@ -59,19 +84,32 @@
 </head>
 <body>
 <header>
-  <h1>Simulcast Schedule</h1>
-  <button id="prev" aria-label="Previous week">&larr;</button>
-  <span id="week"></span>
-  <button id="next" aria-label="Next week">&rarr;</button>
-  <button id="thisWeek">This week</button>
-  <label id="tabName">Guckplan</label>
-  <div class="mode" role="group" aria-label="Mode">
-    <button class="chip" id="modeSolo">Solo</button><button class="chip" id="modeGroup">Group</button>
+  <div class="bar">
+    <div class="brand">
+      <h1>Simulcast Schedule</h1>
+      <div id="tabName">Guckplan</div>
+    </div>
+    <div class="weeknav">
+      <button id="prev" class="icon" aria-label="Previous week">‹</button>
+      <span id="week"></span>
+      <button id="next" class="icon" aria-label="Next week">›</button>
+      <button id="thisWeek">Today</button>
+    </div>
   </div>
-  <select id="soloPerson" aria-label="Person"></select>
-  <div id="people" class="chips" role="group" aria-label="People"></div>
-  <label><input type="checkbox" id="todayFirst"> Today first</label>
-  <label><input type="checkbox" id="others"> Other services</label>
+  <div class="bar controls">
+    <div class="segmented" role="group" aria-label="Mode">
+      <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
+    </div>
+    <select id="soloPerson" class="pill" aria-label="Person"></select>
+    <div class="picker">
+      <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
+      <div id="people" class="popover" role="group" aria-label="People" hidden></div>
+    </div>
+    <div class="options">
+      <label class="toggle"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
+      <label class="toggle"><input type="checkbox" id="others"><span>Other services</span></label>
+    </div>
+  </div>
 </header>
 <main id="list"><div class="status">Loading…</div></main>
 
@@ -560,6 +598,21 @@ function setMode(next) {
 setMode(mode);
 $('modeSolo').onclick = () => { setMode('solo'); load(true); };
 $('modeGroup').onclick = () => { setMode('group'); load(true); };
+// Group button: short summary of who's selected; opens the panel with everyone's names.
+function updateGroupButton() {
+  const names = [...selectedPeople];
+  $('groupButton').textContent = !names.length ? 'Pick people'
+    : names.length <= 2 ? names.join(', ')
+    : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+}
+updateGroupButton();
+function showPeople(open) {
+  $('people').hidden = !open;
+  $('groupButton').setAttribute('aria-expanded', open);
+}
+$('groupButton').onclick = () => showPeople($('people').hidden);
+document.addEventListener('click', e => { if (!e.target.closest('.picker')) showPeople(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') showPeople(false); });
 $('soloPerson').onchange = () => {
   soloPerson = $('soloPerson').value;
   try { localStorage.setItem('soloPerson', soloPerson); } catch {}
@@ -586,6 +639,7 @@ function fillPeople(people) {
       selectedPeople.has(name) ? selectedPeople.delete(name) : selectedPeople.add(name);
       b.setAttribute('aria-pressed', selectedPeople.has(name));
       try { localStorage.setItem('people', JSON.stringify([...selectedPeople])); } catch {}
+      updateGroupButton();
       load(true);
     };
     return b;
