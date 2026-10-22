@@ -22,6 +22,9 @@
   button, input, select { font: inherit; color: inherit; }
   button, select { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
   button:hover, select:hover { border-color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
   label { display: flex; gap: 6px; align-items: center; color: var(--muted); user-select: none; }
   #week { color: var(--muted); min-width: 140px; text-align: center; }
   main { padding: 16px; max-width: 1000px; margin: 0 auto; }
@@ -57,7 +60,8 @@
   <span id="week"></span>
   <button id="next" aria-label="Next week">&rarr;</button>
   <button id="thisWeek">This week</button>
-  <label><span id="tabName">Guckplan</span> <select id="person"><option value="">Everything</option></select></label>
+  <label id="tabName">Guckplan</label>
+  <div id="people" class="chips" role="group" aria-label="People"></div>
   <label><input type="checkbox" id="others"> Other services</label>
 </header>
 <main id="list"><div class="status">Loading…</div></main>
@@ -90,6 +94,12 @@ const QUERY = `query ($page: Int, $from: Int, $to: Int) {
 const $ = id => document.getElementById(id);
 const cache = new Map();
 let weekOffset = 0;
+// People whose shows are shown (toggles in the header), remembered per browser.
+const selectedPeople = new Set([DEFAULT_PERSON]);
+try {
+  const saved = JSON.parse(localStorage.getItem('people'));
+  if (Array.isArray(saved)) { selectedPeople.clear(); saved.forEach(p => selectedPeople.add(p)); }
+} catch {}
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
 let tabs = []; // Guckplan tabs, newest first
 // Each tab's sheet: { people: [...], shows: [{ romaji, english, wo, tag, time, votes: { name: value } }] }
@@ -338,8 +348,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 function render(items, start, plans) {
-  const person = $('person').value;
-  const chosen = person ? new Map([...plans.values()].map(s => [s, picks(s, person)])) : null;
+  // Shows any selected person watches; nobody selected = everything airing.
+  const people = [...selectedPeople];
+  const chosen = people.length
+    ? new Map([...plans.values()].map(s => [s, new Set(people.flatMap(p => [...picks(s, p)]))]))
+    : null;
   const found = new Set();
   const now = Date.now() / 1000;
   const today = new Date().toDateString();
@@ -451,10 +464,6 @@ $('others').onchange = () => {
   try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
   load();
 };
-$('person').onchange = () => {
-  try { localStorage.setItem('person', $('person').value); } catch {}
-  load();
-};
 
 // The German links and the sheet's tab list, fetched side by side; load() waits for both.
 const ready = Promise.all([
@@ -465,16 +474,24 @@ const ready = Promise.all([
 ]);
 load();
 
-// Person dropdown: rebuilt when a season's tab has different people, keeping the choice.
+// People toggles: one button per person in the week's tab(s), rebuilt when the names change.
 function fillPeople(people) {
-  const select = $('person');
-  const current = [...select.options].slice(1).map(o => o.value);
-  if (current.join() === people.join()) return;
-  let wanted = select.options.length > 1 ? select.value : DEFAULT_PERSON;
-  if (select.options.length <= 1) try { wanted = localStorage.getItem('person') ?? DEFAULT_PERSON; } catch {}
-  select.length = 1;
-  for (const p of people) select.add(new Option(p, p));
-  select.value = people.includes(wanted) ? wanted : '';
+  const box = $('people');
+  if ([...box.children].map(b => b.dataset.name).join() === people.join()) return;
+  box.replaceChildren(...people.map(name => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.dataset.name = name;
+    b.textContent = name;
+    b.setAttribute('aria-pressed', selectedPeople.has(name));
+    b.onclick = () => {
+      selectedPeople.has(name) ? selectedPeople.delete(name) : selectedPeople.add(name);
+      b.setAttribute('aria-pressed', selectedPeople.has(name));
+      try { localStorage.setItem('people', JSON.stringify([...selectedPeople])); } catch {}
+      load(true);
+    };
+    return b;
+  }));
 }
 </script>
 </body>
