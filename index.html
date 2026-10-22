@@ -288,8 +288,8 @@ async function loadSheet(gid) {
 }
 
 // The sheet shows one person watches, each with the slot ({ tag, time }) it's watched in:
-// Ja / Vielleicht / Wenn Belly dabei ist in their own row's slot, and a show named in that
-// person's column in the slot of the row that names it (watched there instead).
+// Ja / Vielleicht / Wenn Belly dabei ist / group names in their own row's slot, and a show named
+// in that person's column in the slot of the row that names it (watched there instead).
 function picks(sheet, person) {
   const result = new Map();
   const add = (show, slot) => { if (!result.get(show)?.time) result.set(show, slot); };
@@ -297,8 +297,11 @@ function picks(sheet, person) {
     const v = show.votes[person] || '';
     if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) add(show, { tag: show.tag, time: show.time });
     else if (v && !/^(nein|default|allein)$/i.test(v)) {
+      // A show's name: watched in this row's slot instead. Anything else ("Demons", a group
+      // like "Okinawa 3") is a yes for this row.
       const named = resolveName(sheet, v);
       if (named) add(named, { tag: show.tag || named.tag, time: show.time });
+      else add(show, { tag: show.tag, time: show.time });
     }
   }
   return result;
