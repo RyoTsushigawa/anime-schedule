@@ -83,6 +83,8 @@
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
   details { color: var(--muted); font-size: 13px; margin-top: 28px; }
   details ul { margin: 6px 0 0; padding-left: 20px; }
+  /* Buttons on one line, so rows keep their height when "Other services" adds some */
+  @media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
   @media (max-width: 560px) {
     .row img { display: none; }
     .cr { padding: 7px 9px; }
@@ -679,7 +681,7 @@ $('todayFirst').onchange = () => {
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
   try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
-  load();
+  load(true); // redraw in place, no jump back to today
 };
 
 // The German links and the sheet's tab list, fetched side by side; load() waits for both.
