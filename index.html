@@ -348,8 +348,12 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 function render(items, start, plans) {
-  // Shows any selected person watches; nobody selected = everything airing.
+  // Shows any selected person watches; nobody selected = nothing.
   const people = [...selectedPeople];
+  if (!people.length) {
+    $('list').innerHTML = '<div class="status">Pick at least one person above.</div>';
+    return;
+  }
   const chosen = people.length
     ? new Map([...plans.values()].map(s => [s, new Set(people.flatMap(p => [...picks(s, p)]))]))
     : null;
