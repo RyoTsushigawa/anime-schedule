@@ -1077,13 +1077,13 @@ $('list').addEventListener('click', async e => {
   load(true);
 });
 
-// "Mark all watched" in Catch-up: every show up to its latest released episode. The first click
+// "Mark all as watched" in Catch-up: every show up to its latest released episode. The first click
 // lets you pick (each show's ✓ filled = included; click to leave one out), the second saves the
 // included ones show by show (spaced out, AniList limits requests per minute).
 let catchupTargets = [];
 let selecting = false;
 const skipped = new Set(); // media ids left out while selecting
-const markAllLabel = () => `Mark ${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} watched`;
+const markAllLabel = () => `Mark ${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} as watched`;
 $('list').addEventListener('click', e => {
   const b = e.target.closest('[data-select]');
   if (!b) return;
@@ -1166,9 +1166,9 @@ async function loadCatchup() {
   const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
   catchupTargets = mine ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
   const note = missing => missing ? ' · not on your AniList yet' : '';
-  // While picking shows for "Mark all watched", each show's ✓ is its switch: filled = included.
+  // While picking shows for "Mark all as watched", each show's ✓ is its switch: filled = included.
   const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
-    title="Include in Mark all watched">✓</button>`;
+    title="Include in Mark all as watched">✓</button>`;
   const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
   const single = $('singleEpisodes').checked;
   const showLinks = $('catchupLinks').checked;
@@ -1204,7 +1204,7 @@ async function loadCatchup() {
   const top = !mine || !rows.length ? ''
     : selecting ? `<div class="catchup-bar"><span class="hint">Click a ✓ to leave that show out</span>
         <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
-    : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all watched</button></div>`;
+    : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
   $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
