@@ -1321,7 +1321,6 @@ async function missingPlanShows(plan, entries) {
 // refresh: re-render after newer sheet data arrived, without jumping to today.
 async function load(refresh = false) {
   if (view === 'catchup') return loadCatchup();
-  if (view === 'planner') return loadPlanner();
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -1414,17 +1413,13 @@ setMode(mode);
 function setView(next) {
   view = next;
   document.body.classList.toggle('catchup', view === 'catchup');
-  document.body.classList.toggle('planner', view === 'planner');
   $('viewWeek').setAttribute('aria-pressed', view === 'week');
   $('viewCatchup').setAttribute('aria-pressed', view === 'catchup');
   try { localStorage.setItem('view', view); } catch {}
 }
 setView(view);
 $('viewWeek').onclick = () => { setView('week'); load(); };
-$('viewCatchup').onclick = () => { setView('catchup'); load(); };
-// The watch plan generator (planner.js), opened from the ⚙ menu; Week or Catch-up leave it.
-$('openPlanner').onclick = () => { showSettings(false); setView('planner'); load(); window.scrollTo(0, 0); };
-try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') === '1'; } catch {}
+$('viewCatchup').onclick = () => { setView('catchup'); load(); };try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') === '1'; } catch {}
 $('catchupLinks').onchange = () => {
   try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
   load(true);
