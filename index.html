@@ -169,7 +169,6 @@
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <div id="settingsMenu" class="popover menu" hidden>
-        <label class="option week-only"><input type="checkbox" id="todayFirst"> Today first</label>
         <label class="option"><input type="checkbox" id="others"> Other services</label>
         <label class="option catchup-only"><input type="checkbox" id="singleEpisodes"> Single episodes</label>
         <label class="option catchup-only"><input type="checkbox" id="catchupLinks"> Links</label>
@@ -782,7 +781,9 @@ function render(items, start, plans) {
     let show, sheet;
     for (const tab of activeTabs(tabs, when)) {
       sheet = plans.get(tab.gid);
-      show = showsOf(sheet).find(s => best.get(s) > 0 && score(s, m) === best.get(s));
+      // A show listed twice in the sheet: use the row that counts for the selected people.
+      const matches = showsOf(sheet).filter(s => best.get(s) > 0 && score(s, m) === best.get(s));
+      show = matches.find(s => chosen.get(sheet).has(s)) || matches[0];
       if (show) break;
     }
     const slot = show && chosen.get(sheet).get(show);
@@ -807,6 +808,8 @@ function render(items, start, plans) {
   const unknown = [];
   for (const [show, slot] of [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : [])) {
     if (found.has(show)) continue;
+    // The same show listed twice in the sheet, already on the schedule through its other row.
+    if ([...found].some(f => titleMatches([f.romaji, f.english], [show.romaji, show.english]))) continue;
     const status = Object.values(streamsDe?.status || {}).find(s => titleMatches([show.romaji, show.english], s.titles));
     if (status && !status.next) continue; // finished
     const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
@@ -826,9 +829,10 @@ function render(items, start, plans) {
   }
   for (const d of days) assignWatchTimes(d);
 
-  // "Today first": the week starts with today; the days already past are left out.
+  // Opened or "Today" pressed: the week starts with today, the days already past are left out.
+  // With the arrows it's always the whole week.
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
-  const ordered = $('todayFirst').checked && todayIndex > 0 ? days.slice(todayIndex) : days;
+  const ordered = fromToday && todayIndex > 0 ? days.slice(todayIndex) : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     // Rows without a ✓ keep its place, so every row's buttons line up.
@@ -1280,27 +1284,19 @@ async function load(refresh = false) {
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
     // Rewatches seen for the first time: look them up, then show them.
     if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
-    if (weekOffset === 0 && !refresh) {
-      if ($('todayFirst').checked) window.scrollTo(0, 0);
-      else {
-        // Today's heading just below the sticky header (which is taller on phones).
-        const today = document.querySelector('.is-today');
-        if (today) window.scrollTo(0, today.getBoundingClientRect().top + scrollY - document.querySelector('header').offsetHeight - 8);
-      }
-    }
+    // A new week starts at the top (with "Today", that's today itself).
+    if (!refresh) window.scrollTo(0, 0);
   } catch (e) {
     $('list').innerHTML = `<div class="status">Couldn't load the schedule: ${esc(e.message)}</div>`;
   }
 }
 
-$('prev').onclick = () => { weekOffset--; load(); };
-$('next').onclick = () => { weekOffset++; load(); };
-$('thisWeek').onclick = () => { weekOffset = 0; load(); };
-try { $('todayFirst').checked = localStorage.getItem('todayFirst') === '1'; } catch {}
-$('todayFirst').onchange = () => {
-  try { localStorage.setItem('todayFirst', $('todayFirst').checked ? '1' : '0'); } catch {}
-  load();
-};
+// The page opens "from today"; the arrows show whole weeks, "Today" goes back to from-today.
+let fromToday = true;
+$('prev').onclick = () => { weekOffset--; fromToday = false; load(); };
+$('next').onclick = () => { weekOffset++; fromToday = false; load(); };
+$('thisWeek').onclick = () => { weekOffset = 0; fromToday = true; load(); };
+try { localStorage.removeItem('todayFirst'); } catch {}
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
   try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
