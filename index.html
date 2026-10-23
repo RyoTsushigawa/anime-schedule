@@ -89,18 +89,20 @@
   .popover[hidden] { display: none; }
   /* ⚙ settings menu: sections of rows, each row a name (with a short hint) and its control on the right */
   .settings { position: relative; }
-  .popover.menu { left: auto; right: 0; width: 290px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
+  .popover.menu { left: auto; right: 0; width: 210px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
   .menu section + section { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
   .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
   /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
-  .pills { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 10px 10px; }
-  .toggle, .pills > button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px;
+  .pills { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
+  .pills .pill-row { display: flex; gap: 6px; }
+  .pills .pill-row > button { flex: 1; justify-content: center; }
+  .toggle, .pills button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px;
     border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; user-select: none; }
-  .toggle:hover, .pills > button:hover { border-color: var(--accent); }
+  .toggle:hover, .pills button:hover { border-color: var(--accent); }
   .toggle input { position: absolute; opacity: 0; pointer-events: none; }
   .toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .toggle:has(input:checked), .pills > button.current { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-  .pills > button.muted { color: var(--muted); border-style: dashed; }
+  .toggle:has(input:checked), .pills button.current { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .pills button.muted { color: var(--muted); border-style: dashed; }
   /* AniList accounts: the name's initial in a small circle */
   .avatar { width: 18px; height: 18px; margin-left: -6px; border-radius: 50%; display: grid; place-items: center; flex: none;
     background: color-mix(in srgb, var(--accent) 20%, var(--card)); color: var(--accent); font-size: 10px; font-weight: 700; }
@@ -129,7 +131,7 @@
     .round { width: 34px; height: 34px; }
     /* ⚙ and AniList menus open across the screen, under the top row */
     .settings { position: static; }
-    .popover.menu { left: 0; right: 0; top: calc(100% + 8px); width: auto; margin: 0; }
+    .popover.menu { left: auto; right: 0; top: calc(100% + 8px); margin: 0; }
     .controls-left { flex-wrap: nowrap; flex: 1 1 auto; }
     .weeknav { width: 100%; }
     #week { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
