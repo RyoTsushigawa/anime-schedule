@@ -5,15 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Simulcast Schedule</title>
 <style>
+  /* Light by default; dark when the system is dark (theme "Auto") or when "Dark" is picked in ⚙. */
   :root {
     --bg: #f6f6f8; --card: #ffffff; --text: #1b1b1f; --muted: #6b6b75; --line: #e3e3e8;
     --accent: #f47521; --accent-text: #ffffff; --today: #fff4ec; --green: #1f9d55;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #121216; --card: #1c1c22; --text: #ececf1; --muted: #9a9aa5; --line: #2c2c34;
       --accent: #f47521; --accent-text: #ffffff; --today: #2a1f18; --green: #2fb36a;
+      color-scheme: dark;
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121216; --card: #1c1c22; --text: #ececf1; --muted: #9a9aa5; --line: #2c2c34;
+    --accent: #f47521; --accent-text: #ffffff; --today: #2a1f18; --green: #2fb36a;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -54,26 +62,34 @@
   .popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: max-content; max-width: min(320px, calc(100vw - 32px));
     display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
   .popover[hidden] { display: none; }
-  /* AniList account menu (right side of the header) */
-  .account-picker { position: relative; }
-  .account-picker[hidden] { display: none; }
-  #accountButton::after { content: ' ▾'; color: var(--muted); }
-  .popover.menu { left: auto; right: 0; flex-direction: column; flex-wrap: nowrap; gap: 2px; padding: 6px; min-width: 180px; }
-  .menu-item { border: 0; background: transparent; text-align: left; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  /* ⚙ settings menu (right side of the header) */
+  .settings { position: relative; margin-left: auto; }
+  #settingsButton { width: 34px; height: 30px; padding: 0; font-size: 16px; }
+  .popover.menu { left: auto; right: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px; padding: 8px; min-width: 210px; }
+  .option { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; user-select: none; }
+  .option:hover { background: var(--bg); }
+  .option input { margin: 0; accent-color: var(--accent); }
+  .menu-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 10px 8px 4px; border-top: 1px solid var(--line); margin-top: 6px; }
+  .menu .segmented { align-self: flex-start; margin: 0 8px; }
+  .menu #anilistUser { width: auto; margin: 0 8px; }
+  .menu-item { border: 0; background: transparent; text-align: left; border-radius: 8px; padding: 6px 8px; font-size: 13px; width: 100%; }
   .menu-item:hover { background: var(--bg); }
   .menu-item.current::after { content: ' ✓'; color: var(--green); }
-  .menu-item.separated { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+  .menu-item.muted { color: var(--muted); }
   .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-  /* Options as small toggle pills */
-  .options { display: flex; gap: 6px; margin-left: auto; }
-  .toggle { cursor: pointer; user-select: none; }
-  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
-  .toggle span { display: inline-block; padding: 5px 12px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-size: 13px; background: var(--card); }
-  .toggle input:checked + span { border-color: var(--accent); color: var(--accent); }
-  .toggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .segmented button { white-space: nowrap; }
   @media (max-width: 560px) {
-    .options { margin-left: 0; }
+    /* Phone: title, then the week bar across the full width, then search + person + ⚙ */
+    header { padding: 10px 12px; }
+    .weeknav { width: 100%; }
+    #week { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
+    .weeknav .icon { width: 28px; height: 30px; }
+    #thisWeek { margin-left: 0; padding: 6px 10px; }
+    .segmented button { padding: 4px 10px; }
+    .controls { margin-top: 8px; gap: 6px; flex-wrap: nowrap; }
+    #search { flex: 1 1 80px; min-width: 0; width: auto; }
+    #soloPerson, #groupButton { max-width: 110px; }
     .picker { position: static; }
     .popover { left: 16px; right: 16px; top: auto; margin-top: 6px; max-width: none; width: auto; }
   }
@@ -143,7 +159,6 @@
   </div>
   <div class="bar controls">
     <input id="search" class="pill" type="search" placeholder="Search" aria-label="Search shows" spellcheck="false">
-    <input id="anilistUser" class="pill" placeholder="AniList name" aria-label="AniList name" spellcheck="false">
     <div class="segmented week-only" role="group" aria-label="Mode">
       <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
     </div>
@@ -152,16 +167,23 @@
       <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
       <div id="people" class="popover" role="group" aria-label="People" hidden></div>
     </div>
-    <div class="options">
-      <button id="connect" class="pill" hidden>Connect AniList</button>
-      <div id="accountPicker" class="account-picker" hidden>
-        <button id="accountButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
-        <div id="accountMenu" class="popover menu" hidden></div>
+    <!-- ⚙: everything that isn't needed all the time -->
+    <div class="settings">
+      <button id="settingsButton" class="pill" aria-label="Settings" aria-haspopup="true" aria-expanded="false">⚙</button>
+      <div id="settingsMenu" class="popover menu" hidden>
+        <label class="option week-only"><input type="checkbox" id="todayFirst"> Today first</label>
+        <label class="option"><input type="checkbox" id="others"> Other services</label>
+        <label class="option catchup-only"><input type="checkbox" id="singleEpisodes"> Single episodes</label>
+        <label class="option catchup-only"><input type="checkbox" id="catchupLinks"> Links</label>
+        <div class="menu-label">Theme</div>
+        <div class="segmented" role="group" aria-label="Theme">
+          <button data-theme-choice="auto">Auto</button><button data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button>
+        </div>
+        <div class="menu-label catchup-only">Catch-up list of</div>
+        <input id="anilistUser" class="pill catchup-only" placeholder="AniList name" aria-label="AniList name" spellcheck="false">
+        <div class="menu-label">AniList</div>
+        <div id="accountSection"></div>
       </div>
-      <label class="toggle catchup-only"><input type="checkbox" id="singleEpisodes"><span>Single episodes</span></label>
-      <label class="toggle catchup-only"><input type="checkbox" id="catchupLinks"><span>Links</span></label>
-      <label class="toggle week-only"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
-      <label class="toggle"><input type="checkbox" id="others"><span>Other services</span></label>
     </div>
   </div>
 </header>
@@ -892,34 +914,44 @@ function useAccount(account) {
 const connect = () => {
   location.href = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
 };
-$('connect').onclick = connect;
 
-// Not logged in: "Connect AniList". Logged in: the account's name, opening a menu to switch
-// between this browser's accounts, add one or log out.
+// The AniList part of the ⚙ menu. Not logged in: "Connect AniList". Logged in: this browser's
+// accounts (click one to switch), "Add account" and "Log out".
 function updateConnect() {
-  $('connect').hidden = !!auth;
-  $('accountPicker').hidden = !auth;
-  if (!auth) return;
-  $('accountButton').textContent = auth.name || 'AniList';
   const item = (text, onclick, cls = '') => {
     const b = document.createElement('button');
     b.className = 'menu-item ' + cls;
     b.textContent = text;
-    b.onclick = () => { showAccounts(false); onclick(); };
+    b.onclick = onclick;
     return b;
   };
-  $('accountMenu').replaceChildren(
+  $('accountSection').replaceChildren(...(!auth ? [item('Connect AniList', connect)] : [
     ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), a === auth ? 'current' : '')),
-    item('Add account', connect, 'separated'),
-    item(`Log out ${auth.name || ''}`.trim(), disconnect),
-  );
+    item('Add account', connect, 'muted'),
+    item(`Log out ${auth.name || ''}`.trim(), disconnect, 'muted'),
+  ]));
 }
-function showAccounts(open) {
-  $('accountMenu').hidden = !open;
-  $('accountButton').setAttribute('aria-expanded', open);
+
+// ⚙ opens and closes the menu; a click anywhere else closes it.
+function showSettings(open) {
+  $('settingsMenu').hidden = !open;
+  $('settingsButton').setAttribute('aria-expanded', open);
 }
-$('accountButton').onclick = () => showAccounts($('accountMenu').hidden);
-document.addEventListener('click', e => { if (!e.target.closest('.account-picker')) showAccounts(false); });
+$('settingsButton').onclick = () => showSettings($('settingsMenu').hidden);
+document.addEventListener('click', e => { if (!e.target.closest('.settings')) showSettings(false); });
+
+// Theme: Auto (follows the system), Light or Dark, remembered per browser.
+function setTheme(choice) {
+  if (choice === 'light' || choice === 'dark') document.documentElement.dataset.theme = choice;
+  else delete document.documentElement.dataset.theme;
+  for (const b of document.querySelectorAll('[data-theme-choice]'))
+    b.setAttribute('aria-pressed', b.dataset.themeChoice === (choice || 'auto'));
+  try { localStorage.setItem('theme', choice || 'auto'); } catch {}
+}
+let savedTheme = 'auto';
+try { savedTheme = localStorage.getItem('theme') || 'auto'; } catch {}
+setTheme(savedTheme);
+for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = () => setTheme(b.dataset.themeChoice);
 
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
