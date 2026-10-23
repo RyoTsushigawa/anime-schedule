@@ -790,32 +790,27 @@ const connect = () => {
 };
 
 // The AniList part of the ⚙ menu. Not logged in: "Connect AniList". Logged in: this browser's
-// accounts (click one to switch), "Add account" and "Log out".
+// accounts as pills (the active one filled; click another to switch), "+ Add" and "Log out".
 function updateConnect() {
-  // A row: a round badge (the name's initial, or a symbol), the text, and ✓ on the active account.
-  const item = (badge, text, onclick, { muted = false, current = false } = {}) => {
+  // A pill: optionally the name's initial in a small circle, then the text.
+  const item = (text, onclick, { badge = '', muted = false, current = false } = {}) => {
     const b = document.createElement('button');
-    b.className = 'menu-item' + (muted ? ' muted' : '');
-    const avatar = document.createElement('span');
-    avatar.className = 'avatar';
-    avatar.textContent = badge;
-    const label = document.createElement('span');
-    label.textContent = text;
-    b.append(avatar, label);
-    if (current) {
-      const check = document.createElement('span');
-      check.className = 'check';
-      check.textContent = '✓';
-      b.append(check);
+    b.className = (muted ? 'muted' : '') + (current ? ' current' : '');
+    if (badge) {
+      const avatar = document.createElement('span');
+      avatar.className = 'avatar';
+      avatar.textContent = badge;
+      b.append(avatar);
     }
+    b.append(text);
     b.onclick = onclick;
     return b;
   };
   const initial = name => (name || '?').trim().charAt(0).toUpperCase();
-  $('accountSection').replaceChildren(...(!auth ? [item('+', 'Connect AniList', connect, { muted: true })] : [
-    ...accounts.map(a => item(initial(a.name), a.name || 'AniList', () => a !== auth && useAccount(a), { current: a === auth })),
-    item('+', 'Add account', connect, { muted: true }),
-    item('→', `Log out ${auth.name || ''}`.trim(), disconnect, { muted: true }),
+  $('accountSection').replaceChildren(...(!auth ? [item('+ Connect AniList', connect, { muted: true })] : [
+    ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), { badge: initial(a.name), current: a === auth })),
+    item('+ Add', connect, { muted: true }),
+    item('Log out', disconnect, { muted: true }),
   ]));
 }
 
@@ -827,18 +822,21 @@ function showSettings(open) {
 $('settingsButton').onclick = () => showSettings($('settingsMenu').hidden);
 document.addEventListener('click', e => { if (!e.target.closest('.settings')) showSettings(false); });
 
-// Theme: Auto (follows the system), Light or Dark, remembered per browser.
+// Theme: follows the system until the sun/moon is clicked, then Light or Dark, remembered per
+// browser. data-dark marks the theme actually showing (for the icon).
+const systemDark = matchMedia('(prefers-color-scheme: dark)');
+let theme = 'auto';
 function setTheme(choice) {
-  if (choice === 'light' || choice === 'dark') document.documentElement.dataset.theme = choice;
-  else delete document.documentElement.dataset.theme;
-  for (const b of document.querySelectorAll('[data-theme-choice]'))
-    b.setAttribute('aria-pressed', b.dataset.themeChoice === (choice || 'auto'));
-  try { localStorage.setItem('theme', choice || 'auto'); } catch {}
+  theme = choice === 'light' || choice === 'dark' ? choice : 'auto';
+  if (theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  document.documentElement.toggleAttribute('data-dark', theme === 'dark' || (theme === 'auto' && systemDark.matches));
+  try { localStorage.setItem('theme', theme); } catch {}
 }
-let savedTheme = 'auto';
-try { savedTheme = localStorage.getItem('theme') || 'auto'; } catch {}
-setTheme(savedTheme);
-for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = () => setTheme(b.dataset.themeChoice);
+try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
+setTheme(theme);
+systemDark.addEventListener('change', () => setTheme(theme));
+$('themeButton').onclick = () => setTheme(document.documentElement.hasAttribute('data-dark') ? 'light' : 'dark');
 
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
