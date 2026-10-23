@@ -218,7 +218,6 @@
         <section>
           <div class="menu-label">Display</div>
           <label class="option"><span>Other services<small>Also show services you don't have</small></span><input type="checkbox" id="others" class="switch"></label>
-          <label class="option catchup-only"><span>Single episodes<small>One row per open episode</small></span><input type="checkbox" id="singleEpisodes" class="switch"></label>
           <label class="option catchup-only"><span>Links<small>Stream buttons in Catch-up</small></span><input type="checkbox" id="catchupLinks" class="switch"></label>
           <div class="option"><span>Theme</span>
             <div class="segmented" role="group" aria-label="Theme">
@@ -243,6 +242,9 @@
     </div>
     <div class="segmented week-only" role="group" aria-label="Mode">
       <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
+    </div>
+    <div class="segmented catchup-only" role="group" aria-label="Catch-up layout">
+      <button id="perShow">Per show</button><button id="perEpisode">Single episodes</button>
     </div>
     <select id="soloPerson" class="pill" aria-label="Person"></select>
     <div class="picker">
