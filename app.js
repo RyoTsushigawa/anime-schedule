@@ -177,13 +177,45 @@ const sheetFor = tab => {
 };
 
 async function loadPlan(tab) {
-  const [hidden, catalog] = await Promise.all([
+  const [hidden, catalog, colors] = await Promise.all([
     hiddenRows(tab).catch(e => { console.warn('Hidden rows unknown, all rows count:', e.message); return null; }),
     tab.catalogGid ? loadSheet(tab.catalogGid).catch(() => null) : null,
+    headerColors(tab).catch(() => ({})),
   ]);
   const plan = await loadSheet(tab.gid, hidden);
   plan.catalog = (catalog?.shows || []).map(({ romaji, english, wo, tag }) => ({ romaji, english, wo, tag, time: '' }));
+  plan.colors = colors;
   return plan;
+}
+
+// Each person's color: the background of their name in the Guckplan's header row (Sheets API,
+// read-only like hiddenRows). { name: '#rrggbb' }
+async function headerColors(tab) {
+  const { sheetsKey } = await config();
+  if (!sheetsKey) return {};
+  const range = encodeURIComponent(`'${tab.name.replace(/'/g, "''")}'!A1:AZ6`);
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?ranges=${range}` +
+    `&fields=sheets(data(rowData(values(formattedValue,effectiveFormat(backgroundColor)))))&key=${encodeURIComponent(sheetsKey)}`);
+  if (!res.ok) throw new Error('Sheets API returned ' + res.status);
+  const rows = (await res.json()).sheets?.[0]?.data?.[0]?.rowData || [];
+  const header = rows.find(r => (r.values || []).some(v => v.formattedValue?.trim() === 'Anime Titel'))?.values || [];
+  const hex = c => '#' + ['red', 'green', 'blue'].map(k => Math.round((c[k] || 0) * 255).toString(16).padStart(2, '0')).join('');
+  return Object.fromEntries(header.flatMap(v => v.formattedValue?.trim() && v.effectiveFormat?.backgroundColor
+    ? [[v.formattedValue.trim(), hex(v.effectiveFormat.backgroundColor)]] : []));
+}
+
+// People's colors from every Guckplan tab loaded so far, as inline CSS variables for their chips
+// (with black or white text, whichever reads better on it).
+const personColor = new Map();
+const rememberColors = plans => {
+  for (const plan of plans) for (const [name, c] of Object.entries(plan?.colors || {})) personColor.set(name, c);
+};
+function personStyle(name) {
+  const c = personColor.get(name);
+  if (!/^#[0-9a-f]{6}$/.test(c || '')) return '';
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const text = 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#111' : '#fff';
+  return `--person:${c};--person-text:${text}`;
 }
 
 // The rows (numbers as in the sheet) and columns (0 = A) hidden by hand in a tab. Hidden Guckplan
@@ -593,7 +625,7 @@ function render(items, start, plans) {
   }));
   const showWho = $('who').checked;
   const whoChips = who => showWho && who?.length
-    ? `<span class="who">${who.map(p => `<span>${esc(p)}</span>`).join('')}</span>` : '';
+    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span>` : '';
   const found = new Set();
   const today = new Date().toDateString();
   const days = [];
@@ -1316,6 +1348,7 @@ async function load(refresh = false) {
     return;
   }
   $('tabName').textContent = weekTabs.map(t => t.name).join(' / ');
+  rememberColors(plans.values());
   fillPeople([...new Set(weekTabs.flatMap(t => plans.get(t.gid)?.people || []))]);
 
   try {
@@ -1440,12 +1473,16 @@ function fillPeople(people) {
     select.value = soloPerson;
   }
   const box = $('people');
-  if ([...box.children].map(b => b.dataset.name).join() === people.join()) return;
+  if ([...box.children].map(b => b.dataset.name).join() === people.join()) {
+    for (const b of box.children) b.style.cssText = personStyle(b.dataset.name);
+    return;
+  }
   box.replaceChildren(...people.map(name => {
     const b = document.createElement('button');
     b.className = 'chip';
     b.dataset.name = name;
     b.textContent = name;
+    b.style.cssText = personStyle(name);
     b.setAttribute('aria-pressed', selectedPeople.has(name));
     b.onclick = () => {
       selectedPeople.has(name) ? selectedPeople.delete(name) : selectedPeople.add(name);
