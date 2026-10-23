@@ -70,7 +70,7 @@ const DEFAULT_ANILIST = 'RyoTsushigawa';
 let view = 'week';
 $('anilistUser').value = DEFAULT_ANILIST;
 try {
-  view = localStorage.getItem('view') === 'catchup' ? 'catchup' : 'week';
+  view = ['catchup', 'pace'].includes(localStorage.getItem('view')) ? localStorage.getItem('view') : 'week';
   $('anilistUser').value = localStorage.getItem('anilistUser') ?? DEFAULT_ANILIST;
 } catch {}
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
@@ -932,24 +932,26 @@ function dueAt(released, slot) {
 
 async function loadCatchup() {
   const user = $('anilistUser').value.trim();
-  $('tabName').textContent = user ? `Catch-up · ${user} on AniList` : 'Catch-up';
-  if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name above.</div>'; return; }
+  const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
+  const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
+  $('tabName').textContent = user ? `${name} · ${user} on AniList` : name;
+  if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name in the AniList menu.</div>'; return; }
   if (!document.querySelector('#list .row')) $('list').innerHTML = '<div class="status">Loading…</div>';
   await ready;
   let entries;
   try {
     entries = await anilistList(user);
   } catch (e) {
-    if (view === 'catchup') $('list').innerHTML = `<div class="status">Couldn't load ${esc(user)}'s AniList list (${esc(e.message)}).</div>`;
+    if (view === shown) $('list').innerHTML = `<div class="status">Couldn't load ${esc(user)}'s AniList list (${esc(e.message)}).</div>`;
     return;
   }
-  if (view !== 'catchup') return;
+  if (view !== shown) return;
   // This season's Guckplan, for each show's "Wo" (that service's button first).
   let plan = null;
   try { plan = await sheetFor(tabFor(tabs, new Date())); } catch {}
   // Plus the Solo person's Guckplan shows that aren't on the AniList Watching list (forgotten).
   const planShows = await missingPlanShows(plan, entries);
-  if (view !== 'catchup') return;
+  if (view !== shown) return;
   const now = Date.now() / 1000;
   const week = 7 * 86400;
   const mySlots = plan && soloPerson ? [...picks(plan, soloPerson)] : [];
@@ -987,7 +989,7 @@ async function loadCatchup() {
   // Single episodes: a block per show with a row (and ✓) for each open episode, oldest first.
   // A ✓ on a forgotten show also puts it on the AniList list as Watching.
   const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
-  catchupTargets = mine ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
+  catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
   const note = missing => missing ? ' · not on your AniList yet' : '';
   // While picking shows for "Mark all as watched", each show's ✓ is its switch: filled = included.
   const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
@@ -1034,17 +1036,18 @@ async function loadCatchup() {
       ${showLinks ? `<div class="links">${linkButtons(links)}</div>` : ''}
       ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) + dropButton(m.id) : ''}
     </div>`;
-  ownPace.sort(byTitle);
-  if (!mine) selecting = false;
-  const top = !mine || !rows.length ? ''
-    : selecting ? `<div class="catchup-bar"><span class="hint">Click a ✓ to leave that show out</span>
-        <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
-    : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
-  const seasonal = rows.length ? top + rows.map(single ? perEpisode : grouped).join('')
-    : `<div class="status">${ownPace.length ? 'All caught up on the season.' : 'All caught up.'}</div>`;
-  const paceSection = ownPace.length
-    ? `<section class="day catchup-pace"><h2>At your own pace</h2>${ownPace.map(paced).join('')}</section>` : '';
-  $('list').innerHTML = seasonal + paceSection;
+  if (!mine || shown === 'pace') selecting = false;
+  if (shown === 'pace') {
+    ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) : byTitle);
+    $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
+      : '<div class="status">No older shows open on the Watching list.</div>';
+  } else {
+    const top = !mine || !rows.length ? ''
+      : selecting ? `<div class="catchup-bar"><span class="hint">Click a ✓ to leave that show out</span>
+          <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
+      : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
+    $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
+  }
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
   applySearch();
@@ -1088,7 +1091,7 @@ async function missingPlanShows(plan, entries) {
 
 // refresh: re-render after newer sheet data arrived, without jumping to today.
 async function load(refresh = false) {
-  if (view === 'catchup') return loadCatchup();
+  if (listView()) return loadCatchup();
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -1178,16 +1181,23 @@ function setMode(next) {
 }
 setMode(mode);
 
+// Week, Catch-up (this season's shows) or Non-seasonal (older shows at your own pace); the last
+// two both come from the AniList list and share its controls (body.catchup).
+function listView() { return view === 'catchup' || view === 'pace'; }
 function setView(next) {
   view = next;
-  document.body.classList.toggle('catchup', view === 'catchup');
+  document.body.classList.toggle('catchup', listView());
+  document.body.classList.toggle('pace', view === 'pace');
   $('viewWeek').setAttribute('aria-pressed', view === 'week');
   $('viewCatchup').setAttribute('aria-pressed', view === 'catchup');
+  $('viewPace').setAttribute('aria-pressed', view === 'pace');
   try { localStorage.setItem('view', view); } catch {}
 }
 setView(view);
 $('viewWeek').onclick = () => { setView('week'); load(); };
-$('viewCatchup').onclick = () => { setView('catchup'); load(); };try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') === '1'; } catch {}
+$('viewCatchup').onclick = () => { setView('catchup'); load(); };
+$('viewPace').onclick = () => { setView('pace'); load(); };
+try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') === '1'; } catch {}
 $('catchupLinks').onchange = () => {
   try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
   load(true);
