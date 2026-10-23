@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Same rules as the schedule: only this site's own code, talking to AniList and the Google Sheet. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+  img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://docs.google.com
+  https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Watch Plan Generator</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- A page of its own, opened in a new tab from the schedule's ⚙ menu. It only reads the Guckplan
+     and suggests a plan; it never changes the sheet or the schedule. -->
+<header>
+  <div class="bar">
+    <div class="brand">
+      <h1>Watch Plan Generator</h1>
+      <div id="tabName">Suggestions only · nothing in the Guckplan changes</div>
+    </div>
+  </div>
+</header>
+<main>
+  <div id="list"><div class="status">Loading…</div></div>
+</main>
+<div id="notice" role="status" hidden><span id="noticeText"></span></div>
+<script src="common.js"></script>
+<script src="planner.js"></script>
+</body>
+</html>
