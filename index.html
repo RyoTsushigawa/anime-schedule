@@ -105,6 +105,10 @@
   .avatar { width: 18px; height: 18px; margin-left: -6px; border-radius: 50%; display: grid; place-items: center; flex: none;
     background: color-mix(in srgb, var(--accent) 20%, var(--card)); color: var(--accent); font-size: 10px; font-weight: 700; }
   .current .avatar { background: rgba(255,255,255,.25); color: inherit; }
+  img.avatar { object-fit: cover; }
+  #accountButton { overflow: hidden; color: var(--accent); font-weight: 700; font-size: 15px; }
+  #accountButton.empty { color: var(--muted); }
+  #accountButton img { width: 100%; height: 100%; object-fit: cover; }
   /* Sun in dark mode, moon in light mode */
   #themeButton .sun, :root[data-dark] #themeButton .moon { display: none; }
   :root[data-dark] #themeButton .sun { display: block; }
@@ -221,6 +225,12 @@
             <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
           </div>
         </section>
+      </div>
+    </div>
+    <!-- AniList: the active account's picture (or initial); everything AniList lives in its menu -->
+    <div class="settings">
+      <button id="accountButton" class="round" aria-label="AniList" aria-haspopup="true" aria-expanded="false"></button>
+      <div id="accountMenu" class="popover menu" hidden>
         <section>
           <div class="menu-label">AniList</div>
           <div id="accountSection" class="pills"></div>
