@@ -108,7 +108,9 @@
   .who { margin-left: 4px; }
   .who span { display: inline-block; margin-left: 3px; padding: 0 6px; border-radius: 99px; font-size: 11px; line-height: 16px;
     background: var(--person, color-mix(in srgb, var(--accent) 16%, transparent)); color: var(--person-text, var(--text)); }
-  /* People in their Guckplan colors: a dot when not picked, filled when picked */
+  /* People in their Guckplan colors: the Solo dropdown filled with the chosen person's; chips with
+     a dot when not picked, filled when picked */
+  #soloPerson[style*="--person"] { background-color: var(--person); border-color: var(--person); color: var(--person-text); font-weight: 600; }
   .chip[style*="--person"]::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
     background: var(--person); vertical-align: 1px; }
   .chip[style*="--person"][aria-pressed="true"] { background: var(--person); border-color: var(--person); color: var(--person-text); }
