@@ -92,28 +92,22 @@
   .popover.menu { left: auto; right: 0; width: 290px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
   .menu section + section { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
   .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
-  .option { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 8px;
-    font-size: 14px; cursor: pointer; user-select: none; }
-  label.option:hover { background: var(--bg); }
-  .option small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
-  .menu .segmented button { padding: 3px 10px; font-size: 12px; }
-  /* On/off switch */
-  .switch { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 36px; height: 20px; margin: 0;
-    border-radius: 99px; background: var(--line); cursor: pointer; transition: background .15s; }
-  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
-    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s; }
-  .switch:checked { background: var(--accent); }
-  .switch:checked::after { transform: translateX(16px); }
-  .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  /* AniList accounts */
-  .menu-item { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left;
-    border-radius: 8px; padding: 7px 10px; font-size: 14px; }
-  .menu-item:hover { background: var(--bg); }
-  .menu-item .avatar { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none;
-    background: color-mix(in srgb, var(--accent) 20%, var(--card)); color: var(--accent); font-size: 12px; font-weight: 700; }
-  .menu-item .check { margin-left: auto; color: var(--green); font-weight: 700; }
-  .menu-item.muted { color: var(--muted); }
-  .menu-item.muted .avatar { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 10px 10px; }
+  .toggle, .pills > button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; user-select: none; }
+  .toggle:hover, .pills > button:hover { border-color: var(--accent); }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toggle:has(input:checked), .pills > button.current { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .pills > button.muted { color: var(--muted); border-style: dashed; }
+  /* AniList accounts: the name's initial in a small circle */
+  .avatar { width: 18px; height: 18px; margin-left: -6px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: color-mix(in srgb, var(--accent) 20%, var(--card)); color: var(--accent); font-size: 10px; font-weight: 700; }
+  .current .avatar { background: rgba(255,255,255,.25); color: inherit; }
+  /* Sun in dark mode, moon in light mode */
+  #themeButton .sun, :root[data-dark] #themeButton .moon { display: none; }
+  :root[data-dark] #themeButton .sun { display: block; }
   .field { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; font-size: 12px; color: var(--muted); }
   .field input { width: 100%; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; }
   .field input:focus { outline: none; border-color: var(--accent); }
@@ -209,6 +203,11 @@
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
       </button>
     </div>
+    <!-- Sun/moon: light or dark (follows the system until clicked) -->
+    <button id="themeButton" class="round" aria-label="Switch light/dark">
+      <svg class="moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
     <!-- ⚙: everything that isn't needed all the time -->
     <div class="settings">
       <button id="settingsButton" class="round" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
@@ -216,18 +215,15 @@
       </button>
       <div id="settingsMenu" class="popover menu" hidden>
         <section>
-          <div class="menu-label">Display</div>
-          <label class="option"><span>Other services<small>Also show services you don't have</small></span><input type="checkbox" id="others" class="switch"></label>
-          <label class="option catchup-only"><span>Links<small>Stream buttons in Catch-up</small></span><input type="checkbox" id="catchupLinks" class="switch"></label>
-          <div class="option"><span>Theme</span>
-            <div class="segmented" role="group" aria-label="Theme">
-              <button data-theme-choice="auto">Auto</button><button data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button>
-            </div>
+          <div class="menu-label">Show</div>
+          <div class="pills">
+            <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
+            <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
           </div>
         </section>
         <section>
           <div class="menu-label">AniList</div>
-          <div id="accountSection"></div>
+          <div id="accountSection" class="pills"></div>
           <label class="field catchup-only"><span>Catch-up list of</span>
             <input id="anilistUser" placeholder="AniList name" aria-label="AniList name" spellcheck="false"></label>
         </section>
