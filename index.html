@@ -156,6 +156,13 @@
   .drop { flex: none; min-width: 52px; height: 30px; padding: 0 8px; border-radius: 8px; color: var(--muted); font-size: 12px; }
   .drop-space { flex: none; width: 52px; }
   .drop[data-sure] { color: #e5484d; border-color: #e5484d; }
+  #notice { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10; display: flex; gap: 12px; align-items: center;
+    max-width: calc(100vw - 32px); padding: 10px 10px 10px 16px; border-radius: 12px; background: var(--card); color: var(--text);
+    border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; }
+  #notice[hidden] { display: none; }
+  #noticeText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #noticeUndo { flex: none; border-color: var(--accent); color: var(--accent); font-weight: 600; padding: 5px 12px; }
+  #noticeUndo[hidden] { display: none; }
   .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
   details { color: var(--muted); font-size: 13px; margin-top: 28px; }
@@ -228,6 +235,8 @@
   </div>
 </header>
 <main id="list"><div class="status">Loading…</div></main>
+<!-- After a ✓, Drop or "Mark all as watched": what happened, and Undo (Ctrl+Z on a keyboard) -->
+<div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
 
 <script src="app.js"></script>
 </body>
