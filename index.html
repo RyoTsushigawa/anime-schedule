@@ -70,36 +70,53 @@
   .catchup-bar .hint { color: var(--muted); font-size: 13px; margin-right: auto; }
   #markAll.sure { border-color: var(--green); color: var(--green); font-weight: 600; }
   .watch-space { flex: none; width: 30px; }
-  #anilistUser, #search { background: var(--card); border: 1px solid var(--line); width: 150px; }
-  #anilistUser:focus, #search:focus { outline: none; border-color: var(--accent); }
   .hidden-by-search { display: none !important; }
-  /* Search: a magnifying glass until clicked, then the field */
-  .search { display: flex; align-items: center; }
-  #searchButton { width: 34px; height: 30px; padding: 0; display: grid; place-items: center; color: var(--muted); }
-  .search #search { display: none; }
-  .search.open #searchButton { display: none; }
+  /* Top right: 🔍 and ⚙ as round icon buttons */
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .round { width: 36px; height: 36px; padding: 0; border-radius: 99px; display: grid; place-items: center; color: var(--muted); flex: none; }
+  .round[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  /* Search: the 🔍 until clicked, then a field that opens to its left */
+  .search { display: flex; align-items: center; gap: 8px; }
+  #search { display: none; width: 210px; height: 36px; background: var(--card); border: 1px solid var(--line); }
+  #search:focus { outline: none; border-color: var(--accent); }
   .search.open #search { display: block; }
+  .search.open #searchButton { color: var(--accent); border-color: var(--accent); }
   /* Group: one button, names in a small panel */
   .picker { position: relative; }
   #groupButton::after { content: ' ▾'; color: var(--muted); }
   .popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: max-content; max-width: min(320px, calc(100vw - 32px));
     display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
   .popover[hidden] { display: none; }
-  /* ⚙ settings menu (right side of the header) */
+  /* ⚙ settings menu: sections of rows, each row a name (with a short hint) and its control on the right */
   .settings { position: relative; }
-  #settingsButton { width: 36px; height: 36px; padding: 0; border-radius: 99px; display: grid; place-items: center; color: var(--muted); }
-  #settingsButton[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
-  .popover.menu { left: auto; right: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px; padding: 8px; min-width: 210px; }
-  .option { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; user-select: none; }
-  .option:hover { background: var(--bg); }
-  .option input { margin: 0; accent-color: var(--accent); }
-  .menu-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 10px 8px 4px; border-top: 1px solid var(--line); margin-top: 6px; }
-  .menu .segmented { align-self: flex-start; margin: 0 8px; }
-  .menu #anilistUser { width: auto; margin: 0 8px; }
-  .menu-item { border: 0; background: transparent; text-align: left; border-radius: 8px; padding: 6px 8px; font-size: 13px; width: 100%; }
+  .popover.menu { left: auto; right: 0; width: 290px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
+  .menu section + section { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+  .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
+  .option { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 8px;
+    font-size: 14px; cursor: pointer; user-select: none; }
+  label.option:hover { background: var(--bg); }
+  .option small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .menu .segmented button { padding: 3px 10px; font-size: 12px; }
+  /* On/off switch */
+  .switch { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 36px; height: 20px; margin: 0;
+    border-radius: 99px; background: var(--line); cursor: pointer; transition: background .15s; }
+  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s; }
+  .switch:checked { background: var(--accent); }
+  .switch:checked::after { transform: translateX(16px); }
+  .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* AniList accounts */
+  .menu-item { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left;
+    border-radius: 8px; padding: 7px 10px; font-size: 14px; }
   .menu-item:hover { background: var(--bg); }
-  .menu-item.current::after { content: ' ✓'; color: var(--green); }
+  .menu-item .avatar { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: color-mix(in srgb, var(--accent) 20%, var(--card)); color: var(--accent); font-size: 12px; font-weight: 700; }
+  .menu-item .check { margin-left: auto; color: var(--green); font-weight: 700; }
   .menu-item.muted { color: var(--muted); }
+  .menu-item.muted .avatar { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  .field { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; font-size: 12px; color: var(--muted); }
+  .field input { width: 100%; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; }
+  .field input:focus { outline: none; border-color: var(--accent); }
   .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
   .segmented button { white-space: nowrap; }
@@ -113,13 +130,12 @@
     #thisWeek { margin-left: 0; padding: 6px 10px; }
     .segmented button { padding: 4px 8px; font-size: 12px; }
     .group { gap: 5px; }
-    #searchButton { width: 30px; }
     #soloPerson, #groupButton { padding: 5px 8px; font-size: 12px; }
     .controls { margin-top: 8px; gap: 8px 6px; }
-    /* While searching on a phone, the field takes the whole row. */
-    body.searching .group > :not(.search) { display: none; }
-    .search.open { flex: 1 1 80px; min-width: 0; }
-    .search.open #search { width: 100%; }
+    /* While searching on a phone, the field takes the title's place in the top row. */
+    body.searching .brand { display: none; }
+    body.searching .top-actions, .search.open { flex: 1; min-width: 0; }
+    .search.open #search { flex: 1; width: auto; min-width: 0; }
     #soloPerson, #groupButton { max-width: 96px; }
     .picker { position: static; }
     .popover { left: 16px; right: 16px; top: auto; margin-top: 6px; max-width: none; width: auto; }
@@ -180,42 +196,50 @@
 </head>
 <body>
 <header>
-  <!-- Row 1: title left, ⚙ top right. Row 2: view, search and person left; week right. -->
+  <!-- Row 1: title left, 🔍 and ⚙ top right. Row 2: view and person left; week right. -->
   <div class="bar">
     <div class="brand">
       <h1>Simulcast Schedule</h1>
       <div id="tabName">Guckplan</div>
     </div>
+    <div class="top-actions">
+    <div id="searchBox" class="search">
+      <input id="search" class="pill" type="search" placeholder="Search shows" aria-label="Search shows" spellcheck="false">
+      <button id="searchButton" class="round" aria-label="Search shows">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      </button>
+    </div>
     <!-- ⚙: everything that isn't needed all the time -->
     <div class="settings">
-      <button id="settingsButton" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+      <button id="settingsButton" class="round" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <div id="settingsMenu" class="popover menu" hidden>
-        <label class="option"><input type="checkbox" id="others"> Other services</label>
-        <label class="option catchup-only"><input type="checkbox" id="singleEpisodes"> Single episodes</label>
-        <label class="option catchup-only"><input type="checkbox" id="catchupLinks"> Links</label>
-        <div class="menu-label">Theme</div>
-        <div class="segmented" role="group" aria-label="Theme">
-          <button data-theme-choice="auto">Auto</button><button data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button>
-        </div>
-        <div class="menu-label catchup-only">Catch-up list of</div>
-        <input id="anilistUser" class="pill catchup-only" placeholder="AniList name" aria-label="AniList name" spellcheck="false">
-        <div class="menu-label">AniList</div>
-        <div id="accountSection"></div>
+        <section>
+          <div class="menu-label">Display</div>
+          <label class="option"><span>Other services<small>Also show services you don't have</small></span><input type="checkbox" id="others" class="switch"></label>
+          <label class="option catchup-only"><span>Single episodes<small>One row per open episode</small></span><input type="checkbox" id="singleEpisodes" class="switch"></label>
+          <label class="option catchup-only"><span>Links<small>Stream buttons in Catch-up</small></span><input type="checkbox" id="catchupLinks" class="switch"></label>
+          <div class="option"><span>Theme</span>
+            <div class="segmented" role="group" aria-label="Theme">
+              <button data-theme-choice="auto">Auto</button><button data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button>
+            </div>
+          </div>
+        </section>
+        <section>
+          <div class="menu-label">AniList</div>
+          <div id="accountSection"></div>
+          <label class="field catchup-only"><span>Catch-up list of</span>
+            <input id="anilistUser" placeholder="AniList name" aria-label="AniList name" spellcheck="false"></label>
+        </section>
       </div>
+    </div>
     </div>
   </div>
   <div class="bar controls">
     <div class="group">
     <div class="segmented" role="group" aria-label="View">
       <button id="viewWeek">Week</button><button id="viewCatchup">Catch-up</button>
-    </div>
-    <div id="searchBox" class="search">
-      <button id="searchButton" class="pill" aria-label="Search shows">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-      </button>
-      <input id="search" class="pill" type="search" placeholder="Search" aria-label="Search shows" spellcheck="false">
     </div>
     <div class="segmented week-only" role="group" aria-label="Mode">
       <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
