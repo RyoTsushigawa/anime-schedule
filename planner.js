@@ -1,35 +1,54 @@
 // ---------- Watch plan generator ----------
 // Suggests a weekly watch plan for a Guckplan tab: the day, slot and time for each show, and which
-// shows run side by side (people with nobody in common watching different shows in the same slot,
-// like a show's name written in someone's column). It only shows the suggestion and copies it as a
-// table; nothing is written to the sheet.
+// shows run side by side (groups with nobody in common watching different shows in the same slot,
+// like a show's name written in someone's column), next to the plan in the Guckplan now. It only
+// shows the suggestion and copies it as a table; nothing is written to the sheet.
 //
-// The group's rules: every day from 19:00 in 30-minute slots. A show is planned for everyone with
-// Ja / Vielleicht / Wenn Belly dabei ist / a group name like "Demons" (as picks() reads the sheet).
-// Shows stay on their release day where possible, never before they're out. Some people can't make
-// some weekdays (Belly: never Mondays). Best plan = fewest breaks for every person (slots between
-// their first and last show of an evening where they watch nothing), then the fewest shows moved
-// off their release day, then short evenings (as many side-by-side pairs as possible).
+// The group's rules: every day from 19:00 (or each day's own start) in 30-minute slots. A show is
+// planned for everyone with Ja / Vielleicht / Wenn Belly dabei ist / a group name like "Demons" (as
+// picks() reads the sheet). Shows stay on their release day where possible, never before they're
+// out. People can't make some days or times (Belly: never Mondays; Rei's training, … from the
+// "Seasonpläne" tab); a time blocked for everyone is skipped and the evening goes on after it.
+// Best plan = fewest breaks for every person (slots between their first and last show of an evening
+// where they watch nothing), then the fewest shows moved off their release day, then short evenings.
 // Its own page (planner.html), opened in a new tab from the schedule's ⚙ menu; uses common.js.
 
 const PLAN_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const PLAN_DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const SHEET_DAYS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const SLOT_LENGTH = 30;
-// How much each thing counts against a plan. "hard" = not allowed (someone can't that day, or the
-// episode isn't out yet at that slot); a break costs more the more one person has in an evening.
-const PLAN_COST = { hard: 1000, gap: 30, gapSquared: 6, delay: 12, keep: 2, slot: 4 };
-const EVERYONE = '*'; // planUnavailable key for days the whole group has off
+const MAX_SLOTS = 24;
+// How much each thing counts against a plan. "hard" = not allowed (someone is busy, or the episode
+// isn't out yet at that slot); a break costs more the more one person has in an evening; every slot
+// from 23:00 on costs extra so evenings stay short-ish.
+const PLAN_COST = { hard: 1000, gap: 30, gapSquared: 6, delay: 12, keep: 2, slot: 4, late: 10 };
+const LATE_FROM = 23 * 60;
+const MAX_SIDE_BY_SIDE = 3;
+const EVERYONE = '*'; // stands for the whole group in the settings below
 
-let planUnavailable = { Belly: [0] }; // person → weekdays (0 = Monday) they can't make
-let planStart = '19:00';
+// Settings, kept in this browser: whole days someone can't (person → weekdays, 0 = Monday), the
+// standard start and each weekday's own one ('' = standard), and busy times (person or everyone,
+// day, from, to). Busy times start out filled from the sheet's "Seasonpläne" tab.
+let planUnavailable = { Belly: [0] };
+let planStarts = { standard: '19:00', days: ['', '', '', '', '', '', ''] };
+let planBusy = null;
 try {
   planUnavailable = JSON.parse(localStorage.getItem('planUnavailable')) || planUnavailable;
-  planStart = localStorage.getItem('planStart') || planStart;
+  planStarts = JSON.parse(localStorage.getItem('planStarts')) || { ...planStarts, standard: localStorage.getItem('planStart') || '19:00' };
+  planBusy = JSON.parse(localStorage.getItem('planBusy'));
 } catch {}
+const saveSettings = () => {
+  try {
+    localStorage.setItem('planUnavailable', JSON.stringify(planUnavailable));
+    localStorage.setItem('planStarts', JSON.stringify(planStarts));
+    localStorage.setItem('planBusy', JSON.stringify(planBusy || []));
+  } catch {}
+};
 let planTabGid = null;
 const planCache = new Map(); // tab gid → planner data
 let planOutcome = null;
+let planView = 'compare'; // compare | suggestion | now
+try { planView = localStorage.getItem('planView') || planView; } catch {}
 let tabs = [];
 let streamsDe = null;
 
@@ -60,6 +79,7 @@ const minutesOf = time => {
 };
 const clock = min => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 const dayIndex = tag => WEEKDAYS.indexOf(norm(tag).slice(0, 2));
+const bits = mask => { let n = 0; for (; mask; mask &= mask - 1) n++; return n; };
 
 // ---------- Data: who watches what, and when each show comes out ----------
 
@@ -127,44 +147,106 @@ async function plannerMedia(shows) {
   return result;
 }
 
+// Busy times from the sheet's "Seasonpläne" tab (read-only): blocks headed by a name ("Rei",
+// "Terra & Blau"), weekday columns from "Montag", times on the left. A block that's mostly anime is
+// someone's watch plan and is skipped; anything else (Training, BG3-Truppe, …) counts as busy.
+async function seasonplanBusy(data) {
+  const html = await (await fetch(SHEET + '/htmlview')).text();
+  const gid = html.match(/\{name: "Seasonpl(?:ä|\\u00e4)ne", pageUrl: "[^"]*gid=(\d+)/)?.[1];
+  if (!gid) return [];
+  const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
+  if (!res.ok) return [];
+  const v = parseCsv(await res.text()).map(r => r.map(c => c.trim()));
+  const titles = data.shows.flatMap(s => [norm(s.title), norm(s.sheetTitle)]).filter(Boolean);
+  const blockPeople = name => name.split(/\s*(?:&|,|\+|\bund\b)\s*/i).map(n => norm(n) === 'blau' ? 'blue' : norm(n))
+    .flatMap(n => data.people.filter(p => n && norm(p) === n));
+  const ranges = [];
+  for (let r = 0; r < v.length; r++)
+    for (let c = 1; c < v[r].length; c++) {
+      if (norm(v[r][c]) !== 'montag') continue;
+      let name = '';
+      for (let up = r - 1; up >= 0 && !name; up--) name = v[up][c - 1] || v[up][c] || '';
+      const who = blockPeople(name);
+      if (!who.length) continue;
+      const entries = [];
+      for (let x = r + 1; x < v.length; x++) {
+        const time = minutesOf(v[x][c - 1]);
+        if (time === null) continue;
+        for (let d = 0; d < 7; d++) if (v[x][c + d]) entries.push({ d, time, text: v[x][c + d] });
+      }
+      const anime = e => e.text.split(/[^A-Za-zÄÖÜäöüß0-9]+/).some(w => w.length >= 4 && titles.some(t => t.includes(norm(w))));
+      if (!entries.length || entries.filter(anime).length / entries.length >= 0.3) continue;
+      entries.sort((a, b) => a.d - b.d || a.time - b.time);
+      for (const e of entries) {
+        const last = ranges[ranges.length - 1];
+        if (last && last.c === c && last.d === e.d && last.note === e.text && last.to === e.time) last.to = e.time + SLOT_LENGTH;
+        else ranges.push({ c, who, d: e.d, from: e.time, to: e.time + SLOT_LENGTH, note: e.text });
+      }
+    }
+  return ranges.flatMap(r => r.who.map(person => ({ person, day: r.d, from: clock(r.from), to: clock(r.to), note: r.note })));
+}
+
 // ---------- The plan and what it costs ----------
-// A plan: seven days (Monday first), each an array of slots in order; a slot holds one show, or
-// two shows watched side by side by people with nobody in common. Shows are indexes into data.shows.
+// A plan: seven days (Monday first), each an array of slots in order; a slot holds one show, or up
+// to three shows watched side by side by groups with nobody in common. Shows are indexes into
+// data.shows. Each day's slot times leave out times blocked for everyone.
 
 function planContext(data) {
-  const off = d => (planUnavailable[EVERYONE] || []).includes(d);
-  const dayMask = [0, 1, 2, 3, 4, 5, 6].map(d => data.people.reduce((mask, p, i) =>
-    off(d) || (planUnavailable[p] || []).includes(d) ? mask | (1 << i) : mask, 0));
-  return { shows: data.shows, people: data.people, dayMask, start: minutesOf(planStart) ?? 19 * 60 };
+  const everyone = data.people.reduce((mask, p, b) => mask | (1 << b), 0);
+  const maskOf = person => person === EVERYONE ? everyone : data.people.includes(person) ? 1 << data.people.indexOf(person) : 0;
+  const standard = minutesOf(planStarts.standard) ?? 19 * 60;
+  const starts = PLAN_DAYS.map((day, d) => minutesOf(planStarts.days[d]) ?? standard);
+  const busy = (planBusy || []).map(e => ({ mask: maskOf(e.person), all: e.person === EVERYONE, day: Number(e.day), from: minutesOf(e.from), to: minutesOf(e.to) }))
+    .filter(e => e.mask);
+  const overlaps = (e, at) => e.from === null || e.to === null || (at < e.to && at + SLOT_LENGTH > e.from);
+  // Times blocked for everyone (with from/to) aren't slots at all; the evening continues after them.
+  const times = starts.map((start, d) => {
+    const list = [];
+    for (let at = start; list.length < MAX_SLOTS; at += SLOT_LENGTH)
+      if (!busy.some(e => e.all && e.day === d && e.from !== null && e.to !== null && overlaps(e, at))) list.push(at);
+    return list;
+  });
+  // Who's busy in each slot: whole days off (per person or everyone) and busy times.
+  const busyMask = times.map((list, d) => list.map(at => {
+    let mask = 0;
+    for (const [person, days] of Object.entries(planUnavailable)) if (days.includes(d)) mask |= maskOf(person);
+    for (const e of busy) if (e.day === d && overlaps(e, at)) mask |= e.mask;
+    return mask;
+  }));
+  return { shows: data.shows, people: data.people, times, busy: busyMask };
 }
 
 // The cost, and with `details` everything the result page shows.
 function planCost(plan, ctx, details = false) {
-  const { shows, dayMask, start, people } = ctx;
-  let cost = 0, breaks = 0, moved = 0, hard = 0;
+  const { shows, times, people, busy } = ctx;
+  let cost = 0, breaks = 0, moved = 0;
   const personBreaks = details ? people.map(() => []) : null;
   const problems = details ? [] : null;
   for (let d = 0; d < 7; d++) {
     const slots = plan[d];
+    const at = k => times[d][Math.min(k, MAX_SLOTS - 1)] + SLOT_LENGTH * Math.max(0, k - MAX_SLOTS + 1);
     cost += PLAN_COST.slot * slots.length;
     const masks = slots.map(slot => slot.reduce((mask, i) => mask | shows[i].mask, 0));
-    for (let k = 0; k < slots.length; k++)
+    for (let k = 0; k < slots.length; k++) {
+      if (at(k) >= LATE_FROM) cost += PLAN_COST.late;
       for (const i of slots[k]) {
         const s = shows[i];
-        if (s.mask & dayMask[d]) {
-          cost += PLAN_COST.hard; hard++;
-          if (details) problems.push(`${s.title}: ${people.filter((p, b) => s.mask & dayMask[d] & (1 << b)).join(', ')} can't on ${PLAN_DAYS[d]}`);
+        const clash = s.mask & busy[d][Math.min(k, MAX_SLOTS - 1)];
+        if (clash) {
+          cost += PLAN_COST.hard;
+          if (details) problems.push(`${s.title}: ${people.filter((p, b) => clash & (1 << b)).join(', ')} can't on ${PLAN_DAYS_SHORT[d]} ${clock(at(k))}`);
         }
         if (s.release) {
           const delay = (d - s.release.day + 7) % 7;
-          if (delay === 0 && start + SLOT_LENGTH * k < s.release.min) {
-            cost += PLAN_COST.hard; hard++;
+          if (delay === 0 && at(k) < s.release.min) {
+            cost += PLAN_COST.hard;
             if (details) problems.push(`${s.title}: only out at ${clock(s.release.min)}`);
           }
           if (delay) { cost += PLAN_COST.delay * delay; moved++; }
         }
         if (s.current && s.current.day !== d) cost += PLAN_COST.keep;
       }
+    }
     for (let p = 0; p < people.length; p++) {
       const bit = 1 << p;
       let first = -1, last = -1, count = 0;
@@ -177,10 +259,10 @@ function planCost(plan, ctx, details = false) {
       if (details) personBreaks[p].push({ day: d, gaps });
     }
   }
-  return details ? { cost, breaks, moved, hard, personBreaks, problems } : cost;
+  return details ? { cost, breaks, moved, personBreaks, problems } : cost;
 }
 
-// Start: every show on its release day (or the next day everyone can), in release order.
+// Start: every show on its release day (or the next day its people can), in release order.
 function startPlan(ctx, shuffle) {
   const plan = [[], [], [], [], [], [], []];
   const order = ctx.shows.map((s, i) => i);
@@ -188,14 +270,14 @@ function startPlan(ctx, shuffle) {
   for (const i of order) {
     const s = ctx.shows[i];
     let d = s.release ? s.release.day : s.current ? s.current.day : Math.floor(Math.random() * 7);
-    for (let t = 0; t < 7 && (s.mask & ctx.dayMask[d]); t++) d = (d + 1) % 7;
+    for (let t = 0; t < 7 && (s.mask & ctx.busy[d][0]); t++) d = (d + 1) % 7;
     plan[d].push([i]);
   }
   for (const day of plan) day.sort((a, b) => (ctx.shows[a[0]].release?.min ?? 0) - (ctx.shows[b[0]].release?.min ?? 0));
   return plan;
 }
 
-// One random change: move a show (to another slot or day, alone or next to another show), swap two
+// One random change: move a show (to another slot or day, alone or next to other shows), swap two
 // slots of an evening, or swap two shows. Null when the change isn't possible.
 function changePlan(plan, ctx) {
   const next = plan.map(day => day.map(slot => slot.slice()));
@@ -205,7 +287,10 @@ function changePlan(plan, ctx) {
       for (let k = 0; k < next[d].length; k++)
         if (next[d][k].includes(i)) return [d, k];
   };
-  const fits = (slot, i) => slot.length === 1 && !(shows[slot[0]].mask & shows[i].mask);
+  // Shows side by side: nobody may be in two of them.
+  const slotMask = slot => slot.reduce((mask, i) => mask | shows[i].mask, 0);
+  const apart = slot => slot.reduce((sum, i) => sum + bits(shows[i].mask), 0) === bits(slotMask(slot));
+  const fits = (slot, i) => slot.length < MAX_SIDE_BY_SIDE && !(slotMask(slot) & shows[i].mask);
   const r = Math.random();
   if (r < 0.6) {
     const i = Math.floor(Math.random() * shows.length);
@@ -231,7 +316,7 @@ function changePlan(plan, ctx) {
     const sa = next[da][ka], sb = next[db][kb];
     sa[sa.indexOf(a)] = b;
     sb[sb.indexOf(b)] = a;
-    if ((sa.length === 2 && shows[sa[0]].mask & shows[sa[1]].mask) || (sb.length === 2 && shows[sb[0]].mask & shows[sb[1]].mask)) return null;
+    if (!apart(sa) || !apart(sb)) return null;
   }
   return next;
 }
@@ -259,23 +344,26 @@ async function findPlan(ctx, onProgress) {
   return best || startPlan(ctx, false);
 }
 
-// The plan in the Guckplan now (Tag + Uhrzeit), for comparison: one slot per 30 minutes from each
-// evening's first show, shows at the same time side by side. Null when most shows have no day yet.
+// The plan in the Guckplan now (Tag + Uhrzeit): each evening as its times, shows at the same time
+// side by side. For the cost, every 30 minutes from the evening's first show is one slot.
 function currentPlan(ctx) {
-  const placed = ctx.shows.map((s, i) => ({ s, i })).filter(({ s }) => s.current && s.current.min !== null);
-  if (placed.length < ctx.shows.length / 2) return null;
-  const plan = [[], [], [], [], [], [], []];
-  for (let d = 0; d < 7; d++) {
-    const today = placed.filter(({ s }) => s.current.day === d);
-    if (!today.length) continue;
-    const first = Math.min(...today.map(({ s }) => s.current.min));
-    for (const { s, i } of today) {
-      const k = Math.round((s.current.min - first) / SLOT_LENGTH);
-      while (plan[d].length <= k) plan[d].push([]);
-      plan[d][k].push(i);
+  const days = PLAN_DAYS.map((day, d) => {
+    const today = ctx.shows.map((s, i) => ({ s, i })).filter(({ s }) => s.current?.day === d && s.current.min !== null);
+    const times = [...new Set(today.map(({ s }) => s.current.min))].sort((a, b) => a - b);
+    return times.map(at => ({ at, shows: today.filter(({ s }) => s.current.min === at).map(({ i }) => i) }));
+  });
+  const plan = days.map(evening => {
+    const slots = [];
+    if (!evening.length) return slots;
+    for (const { at, shows } of evening) {
+      const k = Math.round((at - evening[0].at) / SLOT_LENGTH);
+      while (slots.length <= k) slots.push([]);
+      slots[k].push(...shows);
     }
-  }
-  return { plan, missing: ctx.shows.length - placed.length };
+    return slots;
+  });
+  const unplaced = ctx.shows.map((s, i) => i).filter(i => !(ctx.shows[i].current && ctx.shows[i].current.min !== null));
+  return { days, plan, unplaced };
 }
 
 // ---------- The planner page ----------
@@ -291,6 +379,11 @@ async function loadPlanner() {
   } catch (e) {
     $('list').innerHTML = `<div class="status">Couldn't load the plan data (${esc(e.message)}).</div>`;
     return;
+  }
+  // Busy times: filled from "Seasonpläne" the first time (Belly's Mondays are a whole-day block).
+  if (!planBusy) {
+    try { planBusy = await seasonplanBusy(data); } catch { planBusy = []; }
+    saveSettings();
   }
   // Accent "person" (the schedule's default): the schedule's Solo person's Guckplan color.
   try {
@@ -310,7 +403,11 @@ async function loadPlanner() {
 function plannerSetup(data) {
   const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
     `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
-  // "Everyone" first (days off for the whole group), then each person.
+  // Days across the top, each day's own start time, then whole days off: "Everyone" first.
+  const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}`;
+  const starts = `<span class="avail-name everyone">Start</span>${PLAN_DAYS.map((day, d) =>
+    `<input class="avail-start" data-day="${d}" value="${esc(planStarts.days[d] || '')}" placeholder="${esc(planStarts.standard)}"
+      inputmode="numeric" maxlength="5" aria-label="Start on ${day}" title="Start on ${day} (empty = standard)">`).join('')}`;
   const grid = [EVERYONE, ...data.people].map(p => `
     <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Everyone' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
       `<button class="avail-day" data-person="${esc(p)}" data-day="${d}" aria-pressed="${(planUnavailable[p] || []).includes(d)}"
@@ -318,20 +415,48 @@ function plannerSetup(data) {
   return `<section class="plan-card">
     <div class="plan-head">
       <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>
-      <label class="plan-start">Start <input id="planStart" class="pill" type="time" value="${esc(planStart)}"></label>
+      <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard start"></label>
       <button id="planRun" class="pill plan-go">Generate plan</button>
     </div>
-    <div class="menu-label">Who can't when <span class="plan-hint">· tap a day to mark it</span></div>
-    <div class="avail">${grid}</div>
+    <div class="menu-label">Who can't when <span class="plan-hint">· tap a day for the whole day off</span></div>
+    <div class="avail">${header}${starts}${grid}</div>
+    <div class="menu-label">Busy times <span class="plan-hint">· “Everyone” skips that time for all</span></div>
+    <div id="busyList" class="busy-list">${busyRows(data)}</div>
+    <div class="plan-actions busy-actions">
+      <button id="busyAdd" class="pill">+ Add</button>
+      <button id="busyReload" class="pill" title="Replace the busy times with the ones in the Seasonpläne tab">↻ From Seasonpläne</button>
+    </div>
   </section>`;
+}
+
+function busyRows(data) {
+  if (!planBusy?.length) return '<div class="ep busy-empty">None.</div>';
+  const options = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
+  const who = [[EVERYONE, 'Everyone'], ...data.people.map(p => [p, p])];
+  return planBusy.map((e, i) => `
+    <div class="busy-row" data-i="${i}">
+      <select class="pill" data-field="person" aria-label="Who">${options(who, e.person)}</select>
+      <select class="pill" data-field="day" aria-label="Day">${options(PLAN_DAYS_SHORT.map((d, j) => [j, d]), e.day)}</select>
+      <input class="pill busy-time" data-field="from" value="${esc(e.from || '')}" placeholder="from" inputmode="numeric" maxlength="5" aria-label="From">
+      <input class="pill busy-time" data-field="to" value="${esc(e.to || '')}" placeholder="to" inputmode="numeric" maxlength="5" aria-label="To">
+      <input class="pill busy-note" data-field="note" value="${esc(e.note || '')}" placeholder="note" aria-label="Note">
+      <button class="round busy-remove" aria-label="Remove">✕</button>
+    </div>`).join('');
 }
 
 function bindPlannerSetup(data) {
   $('planTab').onchange = () => { planTabGid = $('planTab').value; planOutcome = null; loadPlanner(); };
-  $('planStart').onchange = () => {
-    planStart = $('planStart').value || '19:00';
-    try { localStorage.setItem('planStart', planStart); } catch {}
+  $('planStandard').onchange = () => {
+    planStarts.standard = minutesOf($('planStandard').value) !== null ? $('planStandard').value : '19:00';
+    for (const input of document.querySelectorAll('.avail-start')) input.placeholder = planStarts.standard;
+    saveSettings();
   };
+  for (const input of document.querySelectorAll('.avail-start'))
+    input.onchange = () => {
+      planStarts.days[Number(input.dataset.day)] = minutesOf(input.value) !== null ? input.value : '';
+      input.value = planStarts.days[Number(input.dataset.day)];
+      saveSettings();
+    };
   for (const b of document.querySelectorAll('.avail-day'))
     b.onclick = () => {
       const days = new Set(planUnavailable[b.dataset.person] || []);
@@ -339,8 +464,25 @@ function bindPlannerSetup(data) {
       days.has(d) ? days.delete(d) : days.add(d);
       planUnavailable[b.dataset.person] = [...days].sort();
       b.setAttribute('aria-pressed', days.has(d));
-      try { localStorage.setItem('planUnavailable', JSON.stringify(planUnavailable)); } catch {}
+      saveSettings();
     };
+  const redrawBusy = () => { $('busyList').innerHTML = busyRows(data); bindBusy(); };
+  const bindBusy = () => {
+    for (const row of document.querySelectorAll('.busy-row')) {
+      const e = planBusy[Number(row.dataset.i)];
+      for (const field of row.querySelectorAll('[data-field]'))
+        field.onchange = () => { e[field.dataset.field] = field.dataset.field === 'day' ? Number(field.value) : field.value; saveSettings(); };
+      row.querySelector('.busy-remove').onclick = () => { planBusy.splice(Number(row.dataset.i), 1); saveSettings(); redrawBusy(); };
+    }
+  };
+  bindBusy();
+  $('busyAdd').onclick = () => { planBusy.push({ person: EVERYONE, day: 0, from: '', to: '', note: '' }); saveSettings(); redrawBusy(); };
+  $('busyReload').onclick = async () => {
+    try { planBusy = await seasonplanBusy(data); } catch { notice("Couldn't read Seasonpläne"); return; }
+    saveSettings();
+    redrawBusy();
+    notice('Busy times taken from Seasonpläne');
+  };
   $('planRun').onclick = () => generatePlan(data);
 }
 
@@ -360,18 +502,21 @@ async function generatePlan(data) {
 
 function showPlan(data, plan) {
   const ctx = planContext(data);
+  const { shows, times } = ctx;
   const result = planCost(plan, ctx, true);
   const now = currentPlan(ctx);
-  const nowResult = now && planCost(now.plan, ctx, true);
-  const { shows, start } = ctx;
-  const ends = plan.map(day => day.length ? start + SLOT_LENGTH * day.length : null).filter(Boolean);
-  const pairs = plan.flat().filter(slot => slot.length === 2).length;
-  const tile = (value, label, was) => `<div class="plan-tile"><b>${value}</b><span>${label}</span>${was !== undefined ? `<small>now ${was}</small>` : ''}</div>`;
+  const nowResult = planCost(now.plan, ctx, true);
+  const endOf = days => Math.max(0, ...days.filter(Boolean));
+  const ends = plan.map((slots, d) => slots.length ? times[d][slots.length - 1] + SLOT_LENGTH : 0);
+  const nowEnds = now.days.map(evening => evening.length ? evening[evening.length - 1].at + SLOT_LENGTH : 0);
+  const sideBySide = p => p.flat().filter(slot => slot.length > 1).length;
+  const nowMoved = shows.filter(s => s.release && s.current && s.current.day !== s.release.day).length;
+  const tile = (value, label, was) => `<div class="plan-tile"><b>${value}</b><span>${label}</span><small>Guckplan now: ${was}</small></div>`;
   const stats = `<div class="plan-stats">
-    ${tile(result.breaks, result.breaks === 1 ? 'break' : 'breaks', nowResult?.breaks)}
-    ${tile(result.moved, 'moved off release day')}
-    ${tile(pairs, pairs === 1 ? 'side-by-side pair' : 'side-by-side pairs')}
-    ${tile(ends.length ? clock(Math.max(...ends)) : '–', 'latest end')}
+    ${tile(result.breaks, result.breaks === 1 ? 'break' : 'breaks', nowResult.breaks)}
+    ${tile(result.moved, 'moved off release day', nowMoved)}
+    ${tile(sideBySide(plan), 'slots side by side', sideBySide(now.plan))}
+    ${tile(clock(endOf(ends)), 'latest end', nowEnds.some(Boolean) ? clock(endOf(nowEnds)) : '–')}
   </div>`;
   const problems = result.problems.length ? `<details class="warning" open><summary>${result.problems.length} ${result.problems.length === 1 ? "show doesn't" : "shows don't"} fit anywhere cleanly</summary>
     <ul>${result.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : '';
@@ -381,45 +526,66 @@ function showPlan(data, plan) {
     const notes = [];
     if (s.release) {
       notes.push(`out ${PLAN_DAYS_SHORT[s.release.day]} ${clock(s.release.min)}`);
-      const delay = (d - s.release.day + 7) % 7;
-      if (delay) {
-        const cant = data.people.filter((p, b) => s.mask & ctx.dayMask[s.release.day] & (1 << b));
-        notes.push(`<span class="plan-moved">moved +${delay} ${delay === 1 ? 'day' : 'days'}${cant.length ? ` (${esc(cant.join(', '))} can't ${PLAN_DAYS_SHORT[s.release.day]})` : ''}</span>`);
-      }
+      const delay = d < 0 ? 0 : (d - s.release.day + 7) % 7;
+      if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'day' : 'days'}</span>`);
     } else notes.push('no weekly release');
     if (s.short) notes.push('short');
     return `<div class="info"><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
   };
-  const days = plan.map((slots, d) => {
-    if (!slots.length) return '';
-    const rows = slots.map((slot, k) => `
-      <div class="row plan-row">
-        <div class="time">${clock(start + SLOT_LENGTH * k)}<small>Slot ${k + 1}</small></div>
-        <div class="plan-slot${slot.length === 2 ? ' pair' : ''}">${slot.map(i => showInfo(i, d)).join('<div class="plan-or">‖</div>')}</div>
-      </div>`).join('');
-    return `<section class="day"><h2>${PLAN_DAYS[d]} <span class="plan-span">${clock(start)}–${clock(start + SLOT_LENGTH * slots.length)}</span></h2>${rows}</section>`;
+  const row = (at, label, slot, d) => `
+    <div class="row plan-row">
+      <div class="time">${clock(at)}${label ? `<small>${label}</small>` : ''}</div>
+      <div class="plan-slot${slot.length > 1 ? ' pair' : ''}">${slot.map(i => showInfo(i, d)).join('<div class="plan-or">‖</div>')}</div>
+    </div>`;
+  const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d)).join('');
+  const nowDay = d => now.days[d].map(({ at, shows: slot }) => row(at, '', slot, d)).join('');
+  const span = (from, to) => from === null ? '' : `<span class="plan-span">${clock(from)}–${clock(to)}</span>`;
+  const days = PLAN_DAYS.map((day, d) => {
+    const mine = plan[d].length ? span(times[d][0], ends[d]) : '';
+    const theirs = now.days[d].length ? span(now.days[d][0].at, nowEnds[d]) : '';
+    if (planView === 'suggestion') return plan[d].length ? `<section class="day"><h2>${day} ${mine}</h2>${suggestionDay(d)}</section>` : '';
+    if (planView === 'now') return now.days[d].length ? `<section class="day"><h2>${day} ${theirs}</h2>${nowDay(d)}</section>` : '';
+    if (!plan[d].length && !now.days[d].length) return '';
+    return `<section class="day"><h2>${day}</h2><div class="plan-compare">
+      <div><div class="plan-side">Guckplan now ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
+      <div><div class="plan-side">Suggestion ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
+    </div></section>`;
   }).join('');
-  const breakList = data.people.map((p, b) => ({ p, list: result.personBreaks[b] })).filter(x => x.list.length);
-  const breaks = `<section class="day"><h2>Breaks</h2><div class="plan-breaks">${breakList.length
-    ? breakList.map(({ p, list }) => `<span class="plan-break"><span class="who"><span style="${personStyle(p)}">${esc(p)}</span></span>
-        ${list.map(x => `${PLAN_DAYS_SHORT[x.day]}${x.gaps > 1 ? ` ×${x.gaps}` : ''}`).join(', ')}</span>`).join('')
-    : '<span class="ep">Nobody has a break.</span>'}</div></section>`;
-  const actions = `<div class="plan-actions"><button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button></div>`;
-  $('planOut').innerHTML = problems + stats + actions + days + breaks;
-  const times = [...document.querySelectorAll('#planOut .time')];
-  document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
+  const unplaced = planView !== 'suggestion' && now.unplaced.length
+    ? `<section class="day"><h2>No day in the Guckplan yet</h2>${now.unplaced.map(i => `<div class="row plan-row"><div class="time">–</div><div class="plan-slot">${showInfo(i, -1)}</div></div>`).join('')}</section>` : '';
+  const breakList = (r, label) => {
+    const list = data.people.map((p, b) => ({ p, list: r.personBreaks[b] })).filter(x => x.list.length);
+    return `<div class="plan-breaks"><span class="plan-side">${label}</span>${list.length
+      ? list.map(({ p, list }) => `<span class="plan-break"><span class="who"><span style="${personStyle(p)}">${esc(p)}</span></span>
+          ${list.map(x => `${PLAN_DAYS_SHORT[x.day]}${x.gaps > 1 ? ` ×${x.gaps}` : ''}`).join(', ')}</span>`).join('')
+      : '<span class="ep">nobody</span>'}</div>`;
+  };
+  const breaks = `<section class="day"><h2>Breaks</h2>${breakList(result, 'Suggestion')}${breakList(nowResult, 'Guckplan now')}</section>`;
+  const views = [['compare', 'Side by side'], ['suggestion', 'Suggestion'], ['now', 'Guckplan now']];
+  const actions = `<div class="plan-actions">
+    <div class="segmented plan-views" role="group" aria-label="Show">${views.map(([v, label]) =>
+      `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
+    <button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button></div>`;
+  $('planOut').innerHTML = problems + stats + actions + days + unplaced + breaks;
+  const cells = [...document.querySelectorAll('#planOut .time')];
+  document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
   $('planAgain').onclick = () => generatePlan(data);
-  $('planCopy').onclick = () => copyPlan(data, plan, start);
+  $('planCopy').onclick = () => copyPlan(data, plan, times);
+  for (const b of document.querySelectorAll('[data-plan-view]'))
+    b.onclick = () => {
+      planView = b.dataset.planView;
+      try { localStorage.setItem('planView', planView); } catch {}
+      showPlan(data, plan);
+    };
 }
 
 // Tab-separated, to paste anywhere (e.g. next to the Guckplan): title, Tag, Uhrzeit, Slot and the
-// show it runs side by side with.
-async function copyPlan(data, plan, start) {
+// shows it runs side by side with.
+async function copyPlan(data, plan, times) {
   const lines = [['Anime Titel', 'Tag', 'Uhrzeit', 'Slot', 'Parallel mit'].join('\t')];
   plan.forEach((slots, d) => slots.forEach((slot, k) => slot.forEach(i => {
-    const other = slot.find(j => j !== i);
-    lines.push([data.shows[i].sheetTitle, SHEET_DAYS[d], clock(start + SLOT_LENGTH * k), k + 1,
-      other === undefined ? '' : data.shows[other].sheetTitle].join('\t'));
+    lines.push([data.shows[i].sheetTitle, SHEET_DAYS[d], clock(times[d][k]), k + 1,
+      slot.filter(j => j !== i).map(j => data.shows[j].sheetTitle).join(', ')].join('\t'));
   })));
   try {
     await navigator.clipboard.writeText(lines.join('\n'));
