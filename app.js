@@ -1460,9 +1460,19 @@ document.addEventListener('click', e => { if (!e.target.closest('.picker')) show
 document.addEventListener('keydown', e => { if (e.key === 'Escape') showPeople(false); });
 $('soloPerson').onchange = () => {
   soloPerson = $('soloPerson').value;
+  colorSolo();
   try { localStorage.setItem('soloPerson', soloPerson); } catch {}
   load(true);
 };
+
+// The Solo dropdown in the chosen person's Guckplan color, and each name in the list in theirs
+// (the list colors show where the browser allows styling them, e.g. on desktop).
+function colorSolo() {
+  const select = $('soloPerson');
+  select.style.cssText = personStyle(select.value);
+  for (const o of select.options) o.style.cssText = personStyle(o.value)
+    .replace('--person:', 'background-color:').replace(';--person-text:', ';color:');
+}
 
 // Solo dropdown and group toggles: one entry per person in the week's tab(s), rebuilt when the names change.
 function fillPeople(people) {
@@ -1472,6 +1482,7 @@ function fillPeople(people) {
     if (!people.includes(soloPerson) && people.length) soloPerson = people.includes(DEFAULT_PERSON) ? DEFAULT_PERSON : people[0];
     select.value = soloPerson;
   }
+  colorSolo();
   const box = $('people');
   if ([...box.children].map(b => b.dataset.name).join() === people.join()) {
     for (const b of box.children) b.style.cssText = personStyle(b.dataset.name);
