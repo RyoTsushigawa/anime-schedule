@@ -821,10 +821,15 @@ function updateConnect() {
     b.onclick = onclick;
     return b;
   };
+  const row = (...pills) => {
+    const div = document.createElement('div');
+    div.className = 'pill-row';
+    div.append(...pills);
+    return div;
+  };
   $('accountSection').replaceChildren(...(!auth ? [item('+ Connect AniList', connect, { muted: true })] : [
     ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), { account: a, current: a === auth })),
-    item('+ Add', connect, { muted: true }),
-    item('Log out', disconnect, { muted: true }),
+    row(item('+ Add', connect, { muted: true }), item('Log out', disconnect, { muted: true })),
   ]));
 }
 
