@@ -736,6 +736,8 @@ function render(items, start, plans) {
   const ordered = $('todayFirst').checked && todayIndex > 0 ? days.slice(todayIndex) : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+    // Rows without a ✓ keep its place, so every row's buttons line up.
+    const checkSpace = auth ? '<div class="watch-space"></div>' : '';
     const pause = ({ show, when, news }) => `
       <div class="row pause" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
@@ -744,6 +746,7 @@ function render(items, start, plans) {
           <div class="ep">No episode this week · back ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
         </div>
         <div class="links">${news.slice(0, 1).map(n => `<a class="cr news" href="${esc(n.url)}" target="_blank" rel="noopener" title="${esc(n.title)}">Why?</a>`).join('')}</div>
+        ${checkSpace}
       </div>`;
     const rewatch = ({ m, links, watchAt }) => `
       <div class="row" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
@@ -754,6 +757,7 @@ function render(items, start, plans) {
           <div class="ep">Rewatch</div>
         </div>
         <div class="links">${linkButtons(links)}</div>
+        ${checkSpace}
       </div>`;
     const row = r => r.pause ? pause(r) : r.rewatch ? rewatch(r) : episodeRow(r);
     const episodeRow = ({ it, m, links, when, watchAt, episodes }) => `
@@ -764,8 +768,8 @@ function render(items, start, plans) {
           <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}</div>
         </div>
-        ${watchButton(m.id, Math.max(...episodes))}
         <div class="links">${linkButtons(links)}</div>
+        ${watchButton(m.id, Math.max(...episodes))}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
     const groups = [];
