@@ -36,6 +36,11 @@
   .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
   .pill { border-radius: 99px; padding: 5px 14px; font-size: 13px; }
   body.solo .picker, body.group #soloPerson { display: none; }
+  /* Week | Catch-up: each view only shows its own controls */
+  body.catchup .weeknav > :not(.segmented), body.catchup .week-only, body.catchup #soloPerson, body.catchup .picker,
+  body:not(.catchup) #anilistUser { display: none; }
+  #anilistUser { background: var(--card); border: 1px solid var(--line); width: 150px; }
+  #anilistUser:focus { outline: none; border-color: var(--accent); }
   /* Group: one button, names in a small panel */
   .picker { position: relative; }
   #groupButton::after { content: ' ▾'; color: var(--muted); }
@@ -81,6 +86,10 @@
   .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
   .cr.other { background: transparent; border: 1px solid; font-weight: 500; }
   .cr.none { background: #1e1e22; color: #ffffff; box-shadow: inset 0 0 0 1px #3a3a42; }
+  /* ✓ = watched (written to AniList) */
+  .watch { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 8px; color: var(--muted); font-size: 15px; line-height: 1; }
+  .watch.done { color: var(--accent); border-color: var(--accent); }
+  .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
   details { color: var(--muted); font-size: 13px; margin-top: 28px; }
   details ul { margin: 6px 0 0; padding-left: 20px; }
@@ -100,6 +109,9 @@
       <div id="tabName">Guckplan</div>
     </div>
     <div class="weeknav">
+      <div class="segmented" role="group" aria-label="View">
+        <button id="viewWeek">Week</button><button id="viewCatchup">Catch-up</button>
+      </div>
       <button id="prev" class="icon" aria-label="Previous week">‹</button>
       <span id="week"></span>
       <button id="next" class="icon" aria-label="Next week">›</button>
@@ -107,7 +119,8 @@
     </div>
   </div>
   <div class="bar controls">
-    <div class="segmented" role="group" aria-label="Mode">
+    <input id="anilistUser" class="pill" placeholder="AniList name" aria-label="AniList name" spellcheck="false">
+    <div class="segmented week-only" role="group" aria-label="Mode">
       <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
     </div>
     <select id="soloPerson" class="pill" aria-label="Person"></select>
@@ -116,7 +129,8 @@
       <div id="people" class="popover" role="group" aria-label="People" hidden></div>
     </div>
     <div class="options">
-      <label class="toggle"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
+      <button id="connect" class="pill" hidden>Connect AniList</button>
+      <label class="toggle week-only"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
       <label class="toggle"><input type="checkbox" id="others"><span>Other services</span></label>
     </div>
   </div>
@@ -163,6 +177,31 @@ try {
   if (Array.isArray(saved)) { selectedPeople.clear(); saved.forEach(p => selectedPeople.add(p)); }
 } catch {}
 const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
+// Optional AniList login (implicit grant, client 54702): lets ✓ write watched episodes to the
+// viewer's AniList. The token only lives in this browser's storage.
+const ANILIST_CLIENT_ID = 54702;
+let auth = null; // { token, expires, name }
+try { auth = JSON.parse(localStorage.getItem('anilistAuth')); } catch {}
+{
+  // Back from AniList's login page: the token arrives in the address (#access_token=…).
+  const params = new URLSearchParams(location.hash.slice(1));
+  if (params.get('access_token')) {
+    auth = { token: params.get('access_token'), expires: Date.now() + Number(params.get('expires_in') || 0) * 1000 };
+    history.replaceState(null, '', location.pathname + location.search);
+    try { localStorage.setItem('anilistAuth', JSON.stringify(auth)); } catch {}
+  }
+}
+if (auth?.expires && auth.expires < Date.now()) auth = null;
+const myProgress = new Map(); // media id → episodes watched, for the logged-in viewer
+
+// Week schedule or Catch-up (from an AniList list), remembered per browser.
+const DEFAULT_ANILIST = 'RyoTsushigawa';
+let view = 'week';
+$('anilistUser').value = DEFAULT_ANILIST;
+try {
+  view = localStorage.getItem('view') === 'catchup' ? 'catchup' : 'week';
+  $('anilistUser').value = localStorage.getItem('anilistUser') ?? DEFAULT_ANILIST;
+} catch {}
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
 let tabs = []; // Guckplan tabs, newest first
 // Each tab's sheet: { people: [...], shows: [{ romaji, english, wo, tag, time, votes: { name: value } }] }
@@ -693,6 +732,7 @@ function render(items, start, plans) {
           <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}</div>
         </div>
+        ${watchButton(m.id, Math.max(...episodes))}
         <div class="links">${linkButtons(links)}</div>
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
@@ -707,6 +747,9 @@ function render(items, start, plans) {
     return `<section class="day${date.toDateString() === today ? ' is-today' : ''}"><h2>${heading}</h2>${body}</section>`;
   }).join('');
 
+  // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
+  const age = streamsDe?.generated && Math.floor((Date.now() - Date.parse(streamsDe.generated)) / 86400000);
+  if (age >= 14) html = `<div class="notice">Stream links were last updated ${age} days ago; the weekly refresh may have stopped.</div>` + html;
   if (unknown.length) html += `<details><summary>${unknown.length} shows from the Guckplan aren't airing this week (or couldn't be matched)</summary>
     <ul>${unknown.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>`;
   document.body.style.removeProperty('--time-width');
@@ -717,8 +760,170 @@ function render(items, start, plans) {
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 }
 
+// ---------- Catch-up ----------
+
+// Someone's AniList list (Watching / Rewatching), kept for 10 minutes; an older copy beats an error.
+const LIST_QUERY = `query ($user: String) {
+  MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING]) {
+    lists { entries { progress media {
+      id status episodes siteUrl synonyms title { romaji english } coverImage { medium }
+      externalLinks { site url } nextAiringEpisode { episode airingAt }
+    } } }
+  }
+}`;
+const LIST_CACHE_MS = 10 * 60 * 1000;
+async function anilistList(user) {
+  const key = 'list:' + user.toLowerCase();
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
+  if (saved && Date.now() - saved.time < LIST_CACHE_MS) return saved.entries;
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query: LIST_QUERY, variables: { user } }),
+    });
+    const json = await res.json();
+    if (json.errors?.length) throw new Error(json.errors[0].message);
+    const entries = json.data.MediaListCollection.lists.flatMap(l => l.entries);
+    try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
+    return entries;
+  } catch (e) {
+    if (saved) return saved.entries;
+    throw e;
+  }
+}
+
+// ---------- Writing to AniList (when connected) ----------
+
+async function anilistAsMe(query, variables = {}) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + auth.token },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (res.status === 401) { disconnect(); throw new Error('AniList login expired, connect again'); }
+  const json = await res.json();
+  if (json.errors?.length) throw new Error(json.errors[0].message);
+  return json.data;
+}
+
+function disconnect() {
+  auth = null;
+  try { localStorage.removeItem('anilistAuth'); } catch {}
+  myProgress.clear();
+  updateConnect();
+}
+
+function updateConnect() { $('connect').hidden = !!auth; }
+$('connect').onclick = () => {
+  location.href = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
+};
+
+// Who's logged in and how far they are in each show (their Watching/Rewatching list).
+async function loadMe() {
+  if (!auth) return;
+  if (!auth.name) {
+    auth.name = (await anilistAsMe('{ Viewer { name } }')).Viewer.name;
+    try { localStorage.setItem('anilistAuth', JSON.stringify(auth)); } catch {}
+    // First login: Catch-up shows their own list.
+    $('anilistUser').value = auth.name;
+    try { localStorage.setItem('anilistUser', auth.name); } catch {}
+  }
+  for (const { progress, media } of await anilistList(auth.name)) myProgress.set(media.id, progress);
+}
+
+const SAVE_PROGRESS = `mutation ($mediaId: Int, $progress: Int) {
+  SaveMediaListEntry(mediaId: $mediaId, progress: $progress) { progress }
+}`;
+const watchButton = (mediaId, episode) => !auth ? '' :
+  `<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"
+    title="Episode ${episode} watched (AniList)">✓</button>`;
+
+// ✓ sets the AniList progress to that episode; clicking a ticked one undoes it (back to what it
+// was before this visit's tick, else one episode back).
+const before = new Map();
+$('list').addEventListener('click', async e => {
+  const b = e.target.closest('.watch');
+  if (!b || !auth) return;
+  const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
+  const current = myProgress.get(mediaId) || 0;
+  let progress;
+  if (current >= episode) progress = before.has(mediaId) ? before.get(mediaId) : episode - 1;
+  else { before.set(mediaId, current); progress = episode; }
+  b.disabled = true;
+  try {
+    const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, progress })).SaveMediaListEntry.progress;
+    myProgress.set(mediaId, saved);
+    // Keep the saved list in step, so Catch-up shows it right away.
+    try {
+      const key = 'list:' + auth.name.toLowerCase();
+      const list = JSON.parse(localStorage.getItem(key));
+      const entry = list?.entries.find(x => x.media.id === mediaId);
+      if (entry) { entry.progress = saved; localStorage.setItem(key, JSON.stringify(list)); }
+      else localStorage.removeItem(key);
+    } catch {}
+  } catch (err) {
+    b.title = `Couldn't save: ${err.message}`;
+  }
+  load(true);
+});
+
+// Every show on the list with episodes out on our service that haven't been watched yet,
+// the longest-waiting first, with the next episode to watch.
+async function loadCatchup() {
+  const user = $('anilistUser').value.trim();
+  $('tabName').textContent = user ? `Catch-up · ${user} on AniList` : 'Catch-up';
+  if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name above.</div>'; return; }
+  if (!document.querySelector('#list .row')) $('list').innerHTML = '<div class="status">Loading…</div>';
+  await ready;
+  let entries;
+  try {
+    entries = await anilistList(user);
+  } catch (e) {
+    if (view === 'catchup') $('list').innerHTML = `<div class="status">Couldn't load ${esc(user)}'s AniList list (${esc(e.message)}).</div>`;
+    return;
+  }
+  if (view !== 'catchup') return;
+  // This season's Guckplan, for each show's "Wo" (that service's button first).
+  let plan = null;
+  try { plan = await sheetFor(tabFor(tabs, new Date())); } catch {}
+  const now = Date.now() / 1000;
+  const week = 7 * 86400;
+  const rows = [];
+  for (const { progress, media: m } of entries) {
+    const offset = streamsDe?.release?.[m.id]?.offset || 0;
+    const next = m.nextAiringEpisode;
+    // Out so far: everything before the next episode, minus the latest if it isn't on our service yet.
+    let out = next ? next.episode - 1 : m.status === 'FINISHED' ? m.episodes : 0;
+    if (next && next.airingAt - week + offset > now) out--;
+    if (!out || out <= progress) continue;
+    const first = progress + 1;
+    const since = next ? next.airingAt - (next.episode - first) * week + offset : 0;
+    const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
+    rows.push({ m, first, out, since, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) });
+  }
+  rows.sort((a, b) => a.since - b.since);
+  // ✓ only on your own list.
+  const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
+  $('list').innerHTML = rows.length ? rows.map(({ m, first, out, links }) => `
+    <div class="row">
+      <div class="time">Ep ${first}</div>
+      <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
+      <div class="info">
+        <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
+        <div class="ep">${out - first + 1} to catch up${out > first ? ` · Ep ${first}–${out}` : ''}</div>
+      </div>
+      ${mine ? watchButton(m.id, first) : ''}
+      <div class="links">${linkButtons(links)}</div>
+    </div>`).join('') : '<div class="status">All caught up.</div>';
+  const times = [...document.querySelectorAll('.time')];
+  document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
+}
+
 // refresh: re-render after newer sheet data arrived, without jumping to today.
 async function load(refresh = false) {
+  if (view === 'catchup') return loadCatchup();
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -740,6 +945,7 @@ async function load(refresh = false) {
     .then(sheet => plans.set(t.gid, sheet))
     .catch(e => problems.push(`${t.name}: ${e.message}`))));
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
+  if (view !== 'week') return; // switched to Catch-up meanwhile
   if (!weekTabs.some(t => plans.has(t.gid))) {
     $('list').innerHTML = `<div class="status">Couldn't read the Guckplan (${esc(problems.join('; ') || 'unknown error')}).</div>`;
     return;
@@ -749,6 +955,7 @@ async function load(refresh = false) {
 
   try {
     const items = (await airings).flat();
+    if (view !== 'week') return; // switched to Catch-up meanwhile
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
     // Rewatches seen for the first time: look them up, then show them.
     if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
@@ -781,7 +988,9 @@ const ready = Promise.all([
     .then(json => { streamsDe = json; }, e => console.warn('streams-de.json not loaded:', e)),
   savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
     .then(list => { tabs = list; }, e => console.warn('Sheet tabs not loaded:', e)),
+  loadMe().catch(e => console.warn('AniList account not loaded:', e)),
 ]);
+updateConnect();
 load();
 
 function setMode(next) {
@@ -793,6 +1002,21 @@ function setMode(next) {
   try { localStorage.setItem('mode', mode); } catch {}
 }
 setMode(mode);
+
+function setView(next) {
+  view = next;
+  document.body.classList.toggle('catchup', view === 'catchup');
+  $('viewWeek').setAttribute('aria-pressed', view === 'week');
+  $('viewCatchup').setAttribute('aria-pressed', view === 'catchup');
+  try { localStorage.setItem('view', view); } catch {}
+}
+setView(view);
+$('viewWeek').onclick = () => { setView('week'); load(); };
+$('viewCatchup').onclick = () => { setView('catchup'); load(); };
+$('anilistUser').onchange = () => {
+  try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catch {}
+  load();
+};
 $('modeSolo').onclick = () => { setMode('solo'); load(true); };
 $('modeGroup').onclick = () => { setMode('group'); load(true); };
 // Group button: short summary of who's selected; opens the panel with everyone's names.
