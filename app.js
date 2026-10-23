@@ -1114,7 +1114,7 @@ async function loadCatchup() {
   const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Include in Mark all as watched">✓</button>`;
   const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
-  const single = $('singleEpisodes').checked;
+  const single = singleEpisodes;
   const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
@@ -1297,11 +1297,18 @@ $('catchupLinks').onchange = () => {
   try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
   load(true);
 };
-try { $('singleEpisodes').checked = localStorage.getItem('singleEpisodes') === '1'; } catch {}
-$('singleEpisodes').onchange = () => {
-  try { localStorage.setItem('singleEpisodes', $('singleEpisodes').checked ? '1' : '0'); } catch {}
-  load(true);
-};
+// Catch-up layout (Per show | Single episodes), right in the controls row, saved per browser.
+let singleEpisodes = false;
+try { singleEpisodes = localStorage.getItem('singleEpisodes') === '1'; } catch {}
+function setSingleEpisodes(on) {
+  singleEpisodes = on;
+  $('perShow').setAttribute('aria-pressed', String(!on));
+  $('perEpisode').setAttribute('aria-pressed', String(on));
+  try { localStorage.setItem('singleEpisodes', on ? '1' : '0'); } catch {}
+}
+setSingleEpisodes(singleEpisodes);
+$('perShow').onclick = () => { setSingleEpisodes(false); load(true); };
+$('perEpisode').onclick = () => { setSingleEpisodes(true); load(true); };
 $('anilistUser').onchange = () => {
   try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catch {}
   load();
