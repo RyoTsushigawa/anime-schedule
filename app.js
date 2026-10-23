@@ -577,13 +577,23 @@ function render(items, start, plans) {
     $('list').innerHTML = '<div class="status">Pick at least one person above.</div>';
     return;
   }
-  // Per tab: show → slot, merged over the selected people (a slot with a time wins).
+  // Per tab: show → slot, merged over the selected people (a slot with a time wins), and who
+  // picked each show (for "Who's watching" in Group mode).
+  const whoBySheet = new Map();
   const chosen = new Map([...plans.values()].map(s => {
     const merged = new Map();
+    const who = new Map();
     for (const p of people)
-      for (const [show, slot] of picks(s, p)) if (!merged.get(show)?.time) merged.set(show, slot);
+      for (const [show, slot] of picks(s, p)) {
+        if (!merged.get(show)?.time) merged.set(show, slot);
+        who.set(show, [...who.get(show) || [], p]);
+      }
+    whoBySheet.set(s, who);
     return [s, merged];
   }));
+  const showWho = mode === 'group' && people.length > 1 && $('who').checked;
+  const whoChips = who => showWho && who?.length
+    ? `<span class="who">${who.map(p => `<span>${esc(p)}</span>`).join('')}</span>` : '';
   const found = new Set();
   const today = new Date().toDateString();
   const days = [];
@@ -624,7 +634,7 @@ function render(items, start, plans) {
     // One entry per show and week; several episodes (batch drops, double episodes) are merged.
     const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
     if (existing) existing.episodes.push(it.episode);
-    else day.rows.push({ it, m, links, when, slot, episodes: [it.episode] });
+    else day.rows.push({ it, m, links, when, slot, episodes: [it.episode], who: whoBySheet.get(sheet).get(show) });
   }
 
   // Shows from this week's plan without an episode, checked against LiveChart (weekly script):
@@ -688,13 +698,21 @@ function render(items, start, plans) {
         ${checkSpace}
       </div>`;
     const row = r => r.pause ? pause(r) : r.rewatch ? rewatch(r) : episodeRow(r);
-    const episodeRow = ({ it, m, links, when, watchAt, episodes }) => `
+    // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
+    const hm = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const timeCell = (when, watchAt) => {
+      const release = `${when.toLocaleDateString(undefined, { weekday: 'short' })} ${hm(when)}`;
+      const watch = hm(new Date(watchAt));
+      return choices.time === 'watch' ? watch
+        : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : release;
+    };
+    const episodeRow = ({ it, m, links, when, watchAt, episodes, who }) => `
       <div class="row" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
-        <div class="time">${when.toLocaleDateString(undefined, { weekday: 'short' })} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</div>
+        <div class="time">${timeCell(when, watchAt)}</div>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}</div>
+          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links)}</div>
         ${watchButton(m.id, Math.max(...episodes))}
@@ -861,6 +879,49 @@ try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
 setTheme(theme);
 systemDark.addEventListener('change', () => setTheme(theme));
 $('themeButton').onclick = () => setTheme(document.documentElement.hasAttribute('data-dark') ? 'light' : 'dark');
+
+// ⚙ choices (buttons with data-set="name" data-value="…"), remembered per browser: the time shown
+// in the week, the Catch-up order and the accent color.
+const choices = { time: 'release', sort: 'oldest', accent: '#f47521' };
+for (const name of Object.keys(choices))
+  try { choices[name] = localStorage.getItem(name) || choices[name]; } catch {}
+function setChoice(name, value) {
+  choices[name] = value;
+  for (const b of document.querySelectorAll(`[data-set="${name}"]`))
+    b.setAttribute('aria-pressed', b.dataset.value === value);
+  try { localStorage.setItem(name, value); } catch {}
+  if (name === 'accent') applyAccent();
+}
+// The accent color, and today's header tinted with it.
+function applyAccent() {
+  const root = document.documentElement.style;
+  const c = /^#[0-9a-f]{6}$/i.test(choices.accent) ? choices.accent : '#f47521';
+  root.setProperty('--accent', c);
+  root.setProperty('--today', `color-mix(in srgb, ${c} 14%, var(--bg))`);
+}
+for (const name of Object.keys(choices)) setChoice(name, choices[name]);
+for (const b of document.querySelectorAll('[data-set]'))
+  b.onclick = () => {
+    setChoice(b.dataset.set, b.dataset.value);
+    if (b.dataset.set !== 'accent') load(true);
+  };
+
+// "Who's watching" (Group mode): on unless switched off.
+try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
+$('who').onchange = () => {
+  try { localStorage.setItem('who', $('who').checked ? '1' : '0'); } catch {}
+  load(true);
+};
+
+// Refresh data: forget the saved copies (weeks, sheet, AniList lists, rewatch lookups) and load
+// everything fresh. Settings and logins stay.
+$('refreshData').onclick = () => {
+  try {
+    for (const k of Object.keys(localStorage))
+      if (/^(week:|sheet:|list:|rewatch:|tabs$)/.test(k)) localStorage.removeItem(k);
+  } catch {}
+  location.reload();
+};
 
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
@@ -1133,7 +1194,11 @@ async function loadCatchup() {
     const since = next ? released(first) : 0;
     rows.push({ m, first, out, since, missing, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) });
   }
-  rows.sort((a, b) => a.since - b.since);
+  // ⚙ Sort: longest waiting first, most episodes behind first, or by title.
+  const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
+  rows.sort(choices.sort === 'az' ? byTitle
+    : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
+    : (a, b) => a.since - b.since);
   // ✓ only on your own list. Grouped: one row per show, its ✓ marks every released episode.
   // Single episodes: a block per show with a row (and ✓) for each open episode, oldest first.
   // A ✓ on a forgotten show also puts it on the AniList list as Watching.
