@@ -1282,7 +1282,11 @@ async function load(refresh = false) {
     if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
     if (weekOffset === 0 && !refresh) {
       if ($('todayFirst').checked) window.scrollTo(0, 0);
-      else document.querySelector('.is-today')?.scrollIntoView({ block: 'start' });
+      else {
+        // Today's heading just below the sticky header (which is taller on phones).
+        const today = document.querySelector('.is-today');
+        if (today) window.scrollTo(0, today.getBoundingClientRect().top + scrollY - document.querySelector('header').offsetHeight - 8);
+      }
     }
   } catch (e) {
     $('list').innerHTML = `<div class="status">Couldn't load the schedule: ${esc(e.message)}</div>`;
