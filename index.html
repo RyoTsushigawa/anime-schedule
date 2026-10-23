@@ -7,12 +7,12 @@
 <style>
   :root {
     --bg: #f6f6f8; --card: #ffffff; --text: #1b1b1f; --muted: #6b6b75; --line: #e3e3e8;
-    --accent: #f47521; --accent-text: #ffffff; --today: #fff4ec;
+    --accent: #f47521; --accent-text: #ffffff; --today: #fff4ec; --green: #1f9d55;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #121216; --card: #1c1c22; --text: #ececf1; --muted: #9a9aa5; --line: #2c2c34;
-      --accent: #f47521; --accent-text: #ffffff; --today: #2a1f18;
+      --accent: #f47521; --accent-text: #ffffff; --today: #2a1f18; --green: #2fb36a;
     }
   }
   * { box-sizing: border-box; }
@@ -91,9 +91,11 @@
   .cr.other { background: transparent; border: 1px solid; font-weight: 500; }
   .cr.none { background: #1e1e22; color: #ffffff; box-shadow: inset 0 0 0 1px #3a3a42; }
   /* ✓ = watched (written to AniList) */
-  .watch { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 8px; color: var(--muted); font-size: 15px; line-height: 1; }
-  .watch.done { color: var(--accent); border-color: var(--accent); }
-  .drop { flex: none; height: 30px; padding: 0 10px; border-radius: 8px; color: var(--muted); font-size: 12px; }
+  .watch { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 8px; color: var(--green); border-color: var(--green); font-size: 15px; font-weight: 700; line-height: 1; }
+  .watch:hover { border-color: var(--green); background: color-mix(in srgb, var(--green) 15%, var(--card)); }
+  .watch.done { background: var(--green); color: #fff; }
+  .drop { flex: none; min-width: 52px; height: 30px; padding: 0 8px; border-radius: 8px; color: var(--muted); font-size: 12px; }
+  .drop-space { flex: none; width: 52px; }
   .drop[data-sure] { color: #e5484d; border-color: #e5484d; }
   .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
@@ -137,6 +139,7 @@
     <div class="options">
       <button id="connect" class="pill" hidden>Connect AniList</button>
       <label class="toggle catchup-only"><input type="checkbox" id="singleEpisodes"><span>Single episodes</span></label>
+      <label class="toggle catchup-only"><input type="checkbox" id="catchupLinks"><span>Links</span></label>
       <label class="toggle week-only"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
       <label class="toggle"><input type="checkbox" id="others"><span>Other services</span></label>
     </div>
@@ -978,6 +981,7 @@ async function loadCatchup() {
   catchupTargets = mine ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
   const note = missing => missing ? ' · not on your AniList yet' : '';
   const single = $('singleEpisodes').checked;
+  const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
     <div class="row">
@@ -986,8 +990,8 @@ async function loadCatchup() {
       <div class="info">${title(m)}
         <div class="ep">${out - first + 1} to catch up${out > first ? ` · Ep ${first}–${out}` : ''}${note(missing)}</div>
       </div>
-      ${mine ? dropButton(m.id) + watchButton(m.id, out, missing) : ''}
-      <div class="links">${linkButtons(links)}</div>
+      ${showLinks ? `<div class="links">${linkButtons(links)}</div>` : ''}
+      ${mine ? watchButton(m.id, out, missing) + dropButton(m.id) : ''}
     </div>`;
   const perEpisode = ({ m, first, out, missing, links }) => {
     const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
@@ -996,8 +1000,8 @@ async function loadCatchup() {
         <div class="time">Ep ${ep}</div>
         ${i ? '<div class="cover-space"></div>' : `<img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">`}
         <div class="info">${i ? `<div class="ep">Episode ${ep}</div>` : `${title(m)}<div class="ep">${eps.length} to catch up${note(missing)}</div>`}</div>
-        ${mine ? (i ? '' : dropButton(m.id)) + watchButton(m.id, ep, missing) : ''}
-        <div class="links">${i ? '' : linkButtons(links)}</div>
+        ${showLinks && !i ? `<div class="links">${linkButtons(links)}</div>` : ''}
+        ${mine ? watchButton(m.id, ep, missing) + (i ? '<div class="drop-space"></div>' : dropButton(m.id)) : ''}
       </div>`).join('')}</div>`;
   };
   const top = mine && rows.length ? `<div class="catchup-bar"><button id="markAll" class="pill">Mark all watched</button></div>` : '';
@@ -1133,6 +1137,11 @@ function setView(next) {
 setView(view);
 $('viewWeek').onclick = () => { setView('week'); load(); };
 $('viewCatchup').onclick = () => { setView('catchup'); load(); };
+try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') === '1'; } catch {}
+$('catchupLinks').onchange = () => {
+  try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
+  load(true);
+};
 try { $('singleEpisodes').checked = localStorage.getItem('singleEpisodes') === '1'; } catch {}
 $('singleEpisodes').onchange = () => {
   try { localStorage.setItem('singleEpisodes', $('singleEpisodes').checked ? '1' : '0'); } catch {}
