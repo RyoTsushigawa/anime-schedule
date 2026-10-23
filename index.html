@@ -95,7 +95,6 @@
   /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
   .pills { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
   .pills .pill-row { display: flex; gap: 6px; }
-  body.solo .group-only { display: none; }
   /* Segmented choices and color dots inside a menu: full width, evenly spread */
   .menu .segmented { display: flex; margin: 4px 8px 8px; }
   .menu .segmented button { flex: 1; padding: 4px 6px; font-size: 12px; }
@@ -248,13 +247,13 @@
           <div class="pills">
             <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
             <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
-            <label class="toggle week-only group-only" title="Who picked each show (Group mode)"><input type="checkbox" id="who">Who's watching</label>
+            <label class="toggle week-only" title="Everyone in the Guckplan who watches each show"><input type="checkbox" id="who">Who's watching</label>
           </div>
         </section>
         <section class="week-only">
           <div class="menu-label">Time</div>
           <div class="segmented" role="group" aria-label="Time shown">
-            <button data-set="time" data-value="release" title="When it comes out">Release</button><button data-set="time" data-value="watch" title="Your watch time from the Guckplan">Watch</button><button data-set="time" data-value="both">Both</button>
+            <button data-set="time" data-value="release" title="When it comes out">Release</button><button data-set="time" data-value="watch" title="Your watch time from the Guckplan">Plan</button><button data-set="time" data-value="both">Both</button>
           </div>
         </section>
         <section class="catchup-only">
