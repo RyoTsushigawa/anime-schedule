@@ -38,7 +38,11 @@
   body.solo .picker, body.group #soloPerson { display: none; }
   /* Week | Catch-up: each view only shows its own controls */
   body.catchup .weeknav > :not(.segmented), body.catchup .week-only, body.catchup #soloPerson, body.catchup .picker,
-  body:not(.catchup) #anilistUser { display: none; }
+  body:not(.catchup) #anilistUser, body:not(.catchup) .catchup-only { display: none; }
+  .row.compact { padding-top: 4px; padding-bottom: 4px; }
+  .cover-space { width: 44px; flex: none; }
+  @media (max-width: 560px) { .cover-space { display: none; } }
+  .catchup-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
   #anilistUser { background: var(--card); border: 1px solid var(--line); width: 150px; }
   #anilistUser:focus { outline: none; border-color: var(--accent); }
   /* Group: one button, names in a small panel */
@@ -130,6 +134,7 @@
     </div>
     <div class="options">
       <button id="connect" class="pill" hidden>Connect AniList</button>
+      <label class="toggle catchup-only"><input type="checkbox" id="singleEpisodes"><span>Single episodes</span></label>
       <label class="toggle week-only"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
       <label class="toggle"><input type="checkbox" id="others"><span>Other services</span></label>
     </div>
@@ -853,18 +858,48 @@ $('list').addEventListener('click', async e => {
   else { before.set(mediaId, current); progress = episode; }
   b.disabled = true;
   try {
-    const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, progress })).SaveMediaListEntry.progress;
-    myProgress.set(mediaId, saved);
-    // Keep the saved list in step, so Catch-up shows it right away.
-    try {
-      const key = 'list:' + auth.name.toLowerCase();
-      const list = JSON.parse(localStorage.getItem(key));
-      const entry = list?.entries.find(x => x.media.id === mediaId);
-      if (entry) { entry.progress = saved; localStorage.setItem(key, JSON.stringify(list)); }
-      else localStorage.removeItem(key);
-    } catch {}
+    await saveProgress(mediaId, progress);
   } catch (err) {
     b.title = `Couldn't save: ${err.message}`;
+  }
+  load(true);
+});
+
+async function saveProgress(mediaId, progress) {
+  const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, progress })).SaveMediaListEntry.progress;
+  myProgress.set(mediaId, saved);
+  // Keep the saved list in step, so Catch-up shows it right away.
+  try {
+    const key = 'list:' + auth.name.toLowerCase();
+    const list = JSON.parse(localStorage.getItem(key));
+    const entry = list?.entries.find(x => x.media.id === mediaId);
+    if (entry) { entry.progress = saved; localStorage.setItem(key, JSON.stringify(list)); }
+    else localStorage.removeItem(key);
+  } catch {}
+}
+
+// "Mark all watched" in Catch-up: every show up to its latest released episode. The first click
+// only asks; the second saves show by show (spaced out, AniList limits requests per minute).
+let catchupTargets = [];
+$('list').addEventListener('click', async e => {
+  const b = e.target.closest('#markAll');
+  if (!b || !auth || b.disabled) return;
+  if (!b.dataset.sure) {
+    b.dataset.sure = '1';
+    b.textContent = `Sure? Marks ${catchupTargets.length} shows. Click again`;
+    return;
+  }
+  b.disabled = true;
+  const targets = [...catchupTargets];
+  for (const [i, { mediaId, progress }] of targets.entries()) {
+    b.textContent = `Saving ${i + 1}/${targets.length}…`;
+    try {
+      await saveProgress(mediaId, progress);
+    } catch (err) {
+      b.textContent = `Stopped at ${i + 1}/${targets.length}: ${err.message}`;
+      return;
+    }
+    await new Promise(r => setTimeout(r, 700));
   }
   load(true);
 });
@@ -904,19 +939,35 @@ async function loadCatchup() {
     rows.push({ m, first, out, since, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) });
   }
   rows.sort((a, b) => a.since - b.since);
-  // ✓ only on your own list.
+  // ✓ only on your own list. Grouped: one row per show, its ✓ marks every released episode.
+  // Single episodes: a block per show with a row (and ✓) for each open episode, oldest first.
   const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
-  $('list').innerHTML = rows.length ? rows.map(({ m, first, out, links }) => `
+  catchupTargets = mine ? rows.map(r => ({ mediaId: r.m.id, progress: r.out })) : [];
+  const single = $('singleEpisodes').checked;
+  const title = m => `<div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
+  const grouped = ({ m, first, out, links }) => `
     <div class="row">
       <div class="time">Ep ${first}</div>
       <img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">
-      <div class="info">
-        <div class="title"><a href="${esc(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
+      <div class="info">${title(m)}
         <div class="ep">${out - first + 1} to catch up${out > first ? ` · Ep ${first}–${out}` : ''}</div>
       </div>
-      ${mine ? watchButton(m.id, first) : ''}
+      ${mine ? watchButton(m.id, out) : ''}
       <div class="links">${linkButtons(links)}</div>
-    </div>`).join('') : '<div class="status">All caught up.</div>';
+    </div>`;
+  const perEpisode = ({ m, first, out, links }) => {
+    const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
+    return `<div class="shared">${eps.map((ep, i) => `
+      <div class="row${i ? ' compact' : ''}">
+        <div class="time">Ep ${ep}</div>
+        ${i ? '<div class="cover-space"></div>' : `<img src="${esc(m.coverImage.medium)}" alt="" loading="lazy">`}
+        <div class="info">${i ? `<div class="ep">Episode ${ep}</div>` : `${title(m)}<div class="ep">${eps.length} to catch up</div>`}</div>
+        ${mine ? watchButton(m.id, ep) : ''}
+        <div class="links">${i ? '' : linkButtons(links)}</div>
+      </div>`).join('')}</div>`;
+  };
+  const top = mine && rows.length ? `<div class="catchup-bar"><button id="markAll" class="pill">Mark all watched</button></div>` : '';
+  $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 }
@@ -1013,6 +1064,11 @@ function setView(next) {
 setView(view);
 $('viewWeek').onclick = () => { setView('week'); load(); };
 $('viewCatchup').onclick = () => { setView('catchup'); load(); };
+try { $('singleEpisodes').checked = localStorage.getItem('singleEpisodes') === '1'; } catch {}
+$('singleEpisodes').onchange = () => {
+  try { localStorage.setItem('singleEpisodes', $('singleEpisodes').checked ? '1' : '0'); } catch {}
+  load(true);
+};
 $('anilistUser').onchange = () => {
   try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catch {}
   load();
