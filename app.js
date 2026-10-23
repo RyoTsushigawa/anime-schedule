@@ -522,7 +522,7 @@ const LIST_QUERY = `query ($user: String) {
   MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING]) {
     lists { entries { progress status media {
       id status episodes siteUrl synonyms title { romaji english } coverImage { medium }
-      externalLinks { site url } nextAiringEpisode { episode airingAt }
+      externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day }
     } } }
   }
 }`;
@@ -953,7 +953,15 @@ async function loadCatchup() {
   const now = Date.now() / 1000;
   const week = 7 * 86400;
   const mySlots = plan && soloPerson ? [...picks(plan, soloPerson)] : [];
-  const rows = [];
+  // Seasonal = in the Guckplan, or started within the last ~9 months (this and the last two
+  // seasons). Anything older (One Piece, a show you're working through) is watched at your own
+  // pace: listed apart with its next episode, never "1025 to catch up" or part of Mark all.
+  const recent = m => {
+    const s = m.startDate;
+    if (!s?.year) return m.status !== 'FINISHED';
+    return new Date(s.year, (s.month || 1) - 1, s.day || 1) > Date.now() - 270 * 86400000;
+  };
+  const rows = [], ownPace = [];
   for (const { progress, media: m, missing } of [...entries, ...planShows]) {
     const offset = streamsDe?.release?.[m.id]?.offset || 0;
     const next = m.nextAiringEpisode;
@@ -967,7 +975,8 @@ async function loadCatchup() {
     if (!out || out <= progress) continue;
     const first = progress + 1;
     const since = next ? released(first) : 0;
-    rows.push({ m, first, out, since, missing, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) });
+    const row = { m, first, out, since, missing, progress, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
+    (missing || show || recent(m) ? rows : ownPace).push(row);
   }
   // ⚙ Sort: longest waiting first, most episodes behind first, or by title.
   const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
@@ -1014,12 +1023,28 @@ async function loadCatchup() {
         ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, ep, missing)) + '<div class="drop-space"></div>' : ''}
       </div>`).join('')}</div>`;
   };
+  // At your own pace: one row per show with the next episode and its ✓ (that episode only).
+  const paced = ({ m, first, out, progress, links }) => `
+    <div class="row" ${searchKey(...mediaTitles(m))}>
+      <div class="time">Ep ${first}</div>
+      <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
+      <div class="info">${title(m)}
+        <div class="ep">${progress} of ${m.episodes || out} watched</div>
+      </div>
+      ${showLinks ? `<div class="links">${linkButtons(links)}</div>` : ''}
+      ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) + dropButton(m.id) : ''}
+    </div>`;
+  ownPace.sort(byTitle);
   if (!mine) selecting = false;
   const top = !mine || !rows.length ? ''
     : selecting ? `<div class="catchup-bar"><span class="hint">Click a ✓ to leave that show out</span>
         <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
     : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
-  $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
+  const seasonal = rows.length ? top + rows.map(single ? perEpisode : grouped).join('')
+    : `<div class="status">${ownPace.length ? 'All caught up on the season.' : 'All caught up.'}</div>`;
+  const paceSection = ownPace.length
+    ? `<section class="day catchup-pace"><h2>At your own pace</h2>${ownPace.map(paced).join('')}</section>` : '';
+  $('list').innerHTML = seasonal + paceSection;
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
   applySearch();
