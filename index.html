@@ -43,7 +43,7 @@
   header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; }
   .bar { max-width: 1000px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
   .controls { margin-top: 10px; }
-  .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+  .controls-left { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
   .brand { min-width: 0; }
   h1 { font-size: 18px; margin: 0; line-height: 1.2; }
   #tabName { color: var(--muted); font-size: 12px; }
@@ -121,13 +121,13 @@
   @media (max-width: 560px) {
     /* Phone: title + ⚙, then view + search + person, then the week bar across the full width */
     header { padding: 10px 12px; }
-    .group { flex-wrap: nowrap; flex: 1 1 auto; }
+    .controls-left { flex-wrap: nowrap; flex: 1 1 auto; }
     .weeknav { width: 100%; }
     #week { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
     .weeknav .icon { width: 28px; height: 30px; }
     #thisWeek { margin-left: 0; padding: 6px 10px; }
     .segmented button { padding: 4px 8px; font-size: 12px; }
-    .group { gap: 5px; }
+    .controls-left { gap: 5px; }
     #soloPerson, #groupButton { padding: 5px 8px; font-size: 12px; }
     .controls { margin-top: 8px; gap: 8px 6px; }
     /* While searching on a phone, the field takes the title's place in the top row. */
@@ -242,7 +242,7 @@
     </div>
   </div>
   <div class="bar controls">
-    <div class="group">
+    <div class="controls-left">
     <div class="segmented" role="group" aria-label="View">
       <button id="viewWeek">Week</button><button id="viewCatchup">Catch-up</button>
     </div>
