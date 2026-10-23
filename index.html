@@ -107,7 +107,12 @@
   .time small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
   .who { margin-left: 4px; }
   .who span { display: inline-block; margin-left: 3px; padding: 0 6px; border-radius: 99px; font-size: 11px; line-height: 16px;
-    background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); }
+    background: var(--person, color-mix(in srgb, var(--accent) 16%, transparent)); color: var(--person-text, var(--text)); }
+  /* People in their Guckplan colors: a dot when not picked, filled when picked */
+  .chip[style*="--person"]::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
+    background: var(--person); vertical-align: 1px; }
+  .chip[style*="--person"][aria-pressed="true"] { background: var(--person); border-color: var(--person); color: var(--person-text); }
+  .chip[style*="--person"][aria-pressed="true"]::before { background: var(--person-text); opacity: .5; }
   .pills .pill-row > button { flex: 1; justify-content: center; }
   .toggle, .pills button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px;
     border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; user-select: none; }
