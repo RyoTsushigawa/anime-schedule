@@ -39,6 +39,7 @@
   .weeknav .icon { width: 32px; height: 32px; padding: 0; font-size: 20px; line-height: 1; }
   #week { color: var(--muted); font-size: 14px; min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
   #thisWeek { margin-left: 6px; }
+  #thisWeek[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   /* Solo | Group */
   .segmented { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
   .segmented button { border: 0; border-radius: 99px; padding: 4px 14px; background: transparent; color: var(--muted); font-size: 13px; }
@@ -1291,11 +1292,21 @@ async function load(refresh = false) {
   }
 }
 
-// The page opens "from today"; the arrows show whole weeks, "Today" goes back to from-today.
+// The page opens "from today"; the arrows show whole weeks. "Today" goes to this week from today,
+// and pressed again shows the whole week; it's highlighted while "from today" is on.
 let fromToday = true;
-$('prev').onclick = () => { weekOffset--; fromToday = false; load(); };
-$('next').onclick = () => { weekOffset++; fromToday = false; load(); };
-$('thisWeek').onclick = () => { weekOffset = 0; fromToday = true; load(); };
+function setFromToday(on) {
+  fromToday = on;
+  $('thisWeek').setAttribute('aria-pressed', on);
+}
+setFromToday(true);
+$('prev').onclick = () => { weekOffset--; setFromToday(false); load(); };
+$('next').onclick = () => { weekOffset++; setFromToday(false); load(); };
+$('thisWeek').onclick = () => {
+  setFromToday(!(weekOffset === 0 && fromToday));
+  weekOffset = 0;
+  load();
+};
 try { localStorage.removeItem('todayFirst'); } catch {}
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
