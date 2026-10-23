@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Simulcast Schedule</title>
+<!-- Home screen app -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#121216">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Schedule">
 <style>
   /* Light by default; dark when the system is dark (theme "Auto") or when "Dark" is picked in ⚙. */
   :root {
@@ -1358,6 +1366,9 @@ const ready = Promise.all([
 ]);
 updateConnect();
 load();
+
+// Home screen app: the service worker keeps the page fresh online and available offline.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('No offline copy:', e));
 
 function setMode(next) {
   mode = next;
