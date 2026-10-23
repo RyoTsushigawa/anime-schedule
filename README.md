@@ -13,7 +13,8 @@ with buttons for the legal streaming services in Germany.
 - **Catch-up** view: everything on an AniList "Watching" list with episodes out but not yet watched.
 - **Connect AniList** (optional, per browser): the ✓ next to an episode sets your AniList progress. Uses the
   AniList API client 54702 (redirect URL `https://ryotsushigawa.github.io/anime-schedule/`); the login key
-  only stays in that browser, so it only works on the live page, not a local copy.
+  only stays in that browser, so it only works on the live page, not a local copy. Several accounts can be
+  kept in one browser (shared PC): the account menu in the header switches between them, adds one or logs out.
 - Each day is sorted by watch time (the sheet's "Uhrzeit", otherwise 19:00, 19:30, …); times before 06:00
   count as that night.
 
