@@ -121,6 +121,15 @@
   @media (max-width: 560px) {
     /* Phone: title + ⚙, then view + search + person, then the week bar across the full width */
     header { padding: 10px 12px; }
+    /* Top row stays one line: the title shortens, the round buttons get a bit smaller */
+    .bar:first-child { flex-wrap: nowrap; gap: 8px; position: relative; }
+    .brand { flex: 1 1 auto; }
+    h1, #tabName { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top-actions { gap: 6px; }
+    .round { width: 34px; height: 34px; }
+    /* ⚙ and AniList menus open across the screen, under the top row */
+    .settings { position: static; }
+    .popover.menu { left: 0; right: 0; top: calc(100% + 8px); width: auto; margin: 0; }
     .controls-left { flex-wrap: nowrap; flex: 1 1 auto; }
     .weeknav { width: 100%; }
     #week { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
