@@ -1,7 +1,7 @@
 // Service worker for the home screen app. The page's own files are fetched fresh from GitHub every
 // time (so a new version shows right away, without Ctrl+F5) and kept as a copy for when there's no
 // internet. AniList, Google and LiveChart requests aren't touched: the page keeps its own copies.
-const CACHE = 'schedule-v1';
+const CACHE = 'schedule-v2';
 const FILES = ['./', 'index.html', 'streams-de.json', 'config.json', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', event => {
