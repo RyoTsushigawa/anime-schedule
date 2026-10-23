@@ -577,21 +577,21 @@ function render(items, start, plans) {
     $('list').innerHTML = '<div class="status">Pick at least one person above.</div>';
     return;
   }
-  // Per tab: show → slot, merged over the selected people (a slot with a time wins), and who
-  // picked each show (for "Who's watching" in Group mode).
+  // Per tab: show → slot, merged over the selected people (a slot with a time wins), and everyone
+  // in the Guckplan who picked each show (for "Who's watching").
   const whoBySheet = new Map();
   const chosen = new Map([...plans.values()].map(s => {
     const merged = new Map();
     const who = new Map();
-    for (const p of people)
+    for (const p of s.people)
       for (const [show, slot] of picks(s, p)) {
-        if (!merged.get(show)?.time) merged.set(show, slot);
+        if (people.includes(p) && !merged.get(show)?.time) merged.set(show, slot);
         who.set(show, [...who.get(show) || [], p]);
       }
     whoBySheet.set(s, who);
     return [s, merged];
   }));
-  const showWho = mode === 'group' && people.length > 1 && $('who').checked;
+  const showWho = $('who').checked;
   const whoChips = who => showWho && who?.length
     ? `<span class="who">${who.map(p => `<span>${esc(p)}</span>`).join('')}</span>` : '';
   const found = new Set();
@@ -906,7 +906,7 @@ for (const b of document.querySelectorAll('[data-set]'))
     if (b.dataset.set !== 'accent') load(true);
   };
 
-// "Who's watching" (Group mode): on unless switched off.
+// "Who's watching": name chips of everyone watching each show; on unless switched off.
 try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
 $('who').onchange = () => {
   try { localStorage.setItem('who', $('who').checked ? '1' : '0'); } catch {}
