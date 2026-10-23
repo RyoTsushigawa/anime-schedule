@@ -394,15 +394,29 @@ const sheetFor = tab => {
 };
 
 async function loadPlan(tab) {
-  const [plan, catalog] = await Promise.all([
-    loadSheet(tab.gid),
+  const [hidden, catalog] = await Promise.all([
+    hiddenRows(tab.gid).catch(() => null),
     tab.catalogGid ? loadSheet(tab.catalogGid).catch(() => null) : null,
   ]);
+  const plan = await loadSheet(tab.gid, hidden);
   plan.catalog = (catalog?.shows || []).map(({ romaji, english, wo, tag }) => ({ romaji, english, wo, tag, time: '' }));
   return plan;
 }
 
-async function loadSheet(gid) {
+// The sheet rows (numbers as in the sheet) hidden in a tab: the read-only web view leaves them
+// out, the CSV export doesn't. Hidden Guckplan rows are dropped shows, or shows already covered by
+// being named in another row's slot.
+async function hiddenRows(gid) {
+  const res = await fetch(`${SHEET}/htmlview/sheet?headers=true&gid=${gid}`);
+  if (!res.ok) throw new Error('Google Sheet view returned ' + res.status);
+  const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+  const shown = new Set([...doc.querySelectorAll('table.waffle tbody tr th')].map(th => Number(th.textContent.trim())).filter(Boolean));
+  if (!shown.size) throw new Error('no rows in the sheet view');
+  const last = Math.max(...shown);
+  return new Set(Array.from({ length: last }, (_, i) => i + 1).filter(n => !shown.has(n)));
+}
+
+async function loadSheet(gid, hidden = null) {
   const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
   if (!res.ok) throw new Error('Google Sheet returned ' + res.status);
   const rows = parseCsv(await res.text());
@@ -413,29 +427,38 @@ async function loadSheet(gid) {
     if (col(name) < 0) throw new Error(`the sheet has no "${name}" column anymore`);
   const people = header.slice(col('Uhrzeit') + 1).filter(Boolean);
   const shows = [];
-  for (const r of rows.slice(headerIndex + 1)) {
+  for (const [i, r] of rows.entries()) {
+    if (i <= headerIndex) continue;
     const romaji = (r[col('Anime Titel')] || '').trim();
     if (!romaji) break; // the summary block below the list starts after an empty title
-    // A show listed again further down is an outdated copy: the first row is the one people keep up to date.
-    if (shows.some(s => norm(s.romaji) === norm(romaji))) continue;
     const votes = {};
     for (const p of people) votes[p] = (r[header.indexOf(p)] || '').trim().replace(/,$/, '');
-    shows.push({
+    const show = {
       romaji, english: (r[col('Eng Anime Titel')] || '').trim(),
       wo: (r[col('Wo')] || '').trim().toUpperCase(),
       tag: (r[col('Tag')] || '').trim(), time: (r[col('Uhrzeit')] || '').trim(), votes,
-    });
+      hidden: !!hidden?.has(i + 1), // CSV line i is sheet row i + 1
+    };
+    // The same show listed twice: the visible row wins, else the upper one.
+    const twin = shows.findIndex(s => norm(s.romaji) === norm(romaji));
+    if (twin < 0) shows.push(show);
+    else if (shows[twin].hidden && !show.hidden) shows[twin] = show;
   }
+  // Mostly hidden means someone left a filter on (e.g. only Friday): then hiding says nothing.
+  if (shows.filter(s => s.hidden).length > shows.length / 2) for (const s of shows) s.hidden = false;
   return { people, shows };
 }
 
 // The sheet shows one person watches, each with the slot ({ tag, time }) it's watched in:
 // Ja / Vielleicht / Wenn Belly dabei ist / group names in their own row's slot, and a show named
 // in that person's column in the slot of the row that names it (watched there instead).
+// Hidden rows (dropped, or covered by being named elsewhere) don't count themselves, but a show in
+// a hidden row can still be named from a visible one.
 function picks(sheet, person) {
   const result = new Map();
   const add = (show, slot) => { if (!result.get(show)?.time) result.set(show, slot); };
   for (const show of sheet.shows) {
+    if (show.hidden) continue;
     const v = show.votes[person] || '';
     if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) add(show, { tag: show.tag, time: show.time });
     else if (v && !/^(nein|default|allein)$/i.test(v)) {
