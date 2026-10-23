@@ -416,6 +416,8 @@ async function loadSheet(gid) {
   for (const r of rows.slice(headerIndex + 1)) {
     const romaji = (r[col('Anime Titel')] || '').trim();
     if (!romaji) break; // the summary block below the list starts after an empty title
+    // A show listed again further down is an outdated copy: the first row is the one people keep up to date.
+    if (shows.some(s => norm(s.romaji) === norm(romaji))) continue;
     const votes = {};
     for (const p of people) votes[p] = (r[header.indexOf(p)] || '').trim().replace(/,$/, '');
     shows.push({
