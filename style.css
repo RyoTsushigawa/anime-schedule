@@ -45,7 +45,8 @@ body.catchup .weeknav, body.catchup .week-only, body.catchup #soloPerson, body.c
 body:not(.catchup) #anilistUser, body:not(.catchup) .catchup-only { display: none; }
 .row.compact { padding-top: 6px; padding-bottom: 6px; }
 .row.show-head { padding-bottom: 10px; }
-.catchup-bar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 10px; }
+.catchup-pace { margin-top: 26px; }
+.catchup-bar {display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 10px; }
 .catchup-bar .hint { color: var(--muted); font-size: 13px; margin-right: auto; }
 #markAll.sure { border-color: var(--green); color: var(--green); font-weight: 600; }
 .watch-space { flex: none; width: 30px; }
