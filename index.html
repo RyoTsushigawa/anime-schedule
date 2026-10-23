@@ -27,7 +27,8 @@
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
   header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; }
   .bar { max-width: 1000px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
-  .controls { margin-top: 10px; justify-content: flex-start; }
+  .controls { margin-top: 10px; }
+  .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
   .brand { min-width: 0; }
   h1 { font-size: 18px; margin: 0; line-height: 1.2; }
   #tabName { color: var(--muted); font-size: 12px; }
@@ -45,7 +46,7 @@
   .pill { border-radius: 99px; padding: 5px 14px; font-size: 13px; }
   body.solo .picker, body.group #soloPerson { display: none; }
   /* Week | Catch-up: each view only shows its own controls */
-  body.catchup .weeknav > :not(.segmented), body.catchup .week-only, body.catchup #soloPerson, body.catchup .picker,
+  body.catchup .weeknav, body.catchup .week-only, body.catchup #soloPerson, body.catchup .picker,
   body:not(.catchup) #anilistUser, body:not(.catchup) .catchup-only { display: none; }
   .row.compact { padding-top: 6px; padding-bottom: 6px; }
   .row.show-head { padding-bottom: 10px; }
@@ -56,6 +57,12 @@
   #anilistUser, #search { background: var(--card); border: 1px solid var(--line); width: 150px; }
   #anilistUser:focus, #search:focus { outline: none; border-color: var(--accent); }
   .hidden-by-search { display: none !important; }
+  /* Search: a magnifying glass until clicked, then the field */
+  .search { display: flex; align-items: center; }
+  #searchButton { width: 34px; height: 30px; padding: 0; display: grid; place-items: center; color: var(--muted); }
+  .search #search { display: none; }
+  .search.open #searchButton { display: none; }
+  .search.open #search { display: block; }
   /* Group: one button, names in a small panel */
   .picker { position: relative; }
   #groupButton::after { content: ' ▾'; color: var(--muted); }
@@ -63,8 +70,9 @@
     display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
   .popover[hidden] { display: none; }
   /* ⚙ settings menu (right side of the header) */
-  .settings { position: relative; margin-left: auto; }
-  #settingsButton { width: 34px; height: 30px; padding: 0; font-size: 16px; }
+  .settings { position: relative; }
+  #settingsButton { width: 36px; height: 36px; padding: 0; border-radius: 99px; display: grid; place-items: center; color: var(--muted); }
+  #settingsButton[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
   .popover.menu { left: auto; right: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px; padding: 8px; min-width: 210px; }
   .option { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; user-select: none; }
   .option:hover { background: var(--bg); }
@@ -80,16 +88,23 @@
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
   .segmented button { white-space: nowrap; }
   @media (max-width: 560px) {
-    /* Phone: title, then the week bar across the full width, then search + person + ⚙ */
+    /* Phone: title + ⚙, then view + search + person, then the week bar across the full width */
     header { padding: 10px 12px; }
+    .group { flex-wrap: nowrap; flex: 1 1 auto; }
     .weeknav { width: 100%; }
     #week { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
     .weeknav .icon { width: 28px; height: 30px; }
     #thisWeek { margin-left: 0; padding: 6px 10px; }
-    .segmented button { padding: 4px 10px; }
-    .controls { margin-top: 8px; gap: 6px; flex-wrap: nowrap; }
-    #search { flex: 1 1 80px; min-width: 0; width: auto; }
-    #soloPerson, #groupButton { max-width: 110px; }
+    .segmented button { padding: 4px 8px; font-size: 12px; }
+    .group { gap: 5px; }
+    #searchButton { width: 30px; }
+    #soloPerson, #groupButton { padding: 5px 8px; font-size: 12px; }
+    .controls { margin-top: 8px; gap: 8px 6px; }
+    /* While searching on a phone, the field takes the whole row. */
+    body.searching .group > :not(.search) { display: none; }
+    .search.open { flex: 1 1 80px; min-width: 0; }
+    .search.open #search { width: 100%; }
+    #soloPerson, #groupButton { max-width: 96px; }
     .picker { position: static; }
     .popover { left: 16px; right: 16px; top: auto; margin-top: 6px; max-width: none; width: auto; }
   }
@@ -142,34 +157,17 @@
 </head>
 <body>
 <header>
+  <!-- Row 1: title left, ⚙ top right. Row 2: view, search and person left; week right. -->
   <div class="bar">
     <div class="brand">
       <h1>Simulcast Schedule</h1>
       <div id="tabName">Guckplan</div>
     </div>
-    <div class="weeknav">
-      <div class="segmented" role="group" aria-label="View">
-        <button id="viewWeek">Week</button><button id="viewCatchup">Catch-up</button>
-      </div>
-      <button id="prev" class="icon" aria-label="Previous week">‹</button>
-      <span id="week"></span>
-      <button id="next" class="icon" aria-label="Next week">›</button>
-      <button id="thisWeek">Today</button>
-    </div>
-  </div>
-  <div class="bar controls">
-    <input id="search" class="pill" type="search" placeholder="Search" aria-label="Search shows" spellcheck="false">
-    <div class="segmented week-only" role="group" aria-label="Mode">
-      <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
-    </div>
-    <select id="soloPerson" class="pill" aria-label="Person"></select>
-    <div class="picker">
-      <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
-      <div id="people" class="popover" role="group" aria-label="People" hidden></div>
-    </div>
     <!-- ⚙: everything that isn't needed all the time -->
     <div class="settings">
-      <button id="settingsButton" class="pill" aria-label="Settings" aria-haspopup="true" aria-expanded="false">⚙</button>
+      <button id="settingsButton" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
       <div id="settingsMenu" class="popover menu" hidden>
         <label class="option week-only"><input type="checkbox" id="todayFirst"> Today first</label>
         <label class="option"><input type="checkbox" id="others"> Other services</label>
@@ -184,6 +182,33 @@
         <div class="menu-label">AniList</div>
         <div id="accountSection"></div>
       </div>
+    </div>
+  </div>
+  <div class="bar controls">
+    <div class="group">
+    <div class="segmented" role="group" aria-label="View">
+      <button id="viewWeek">Week</button><button id="viewCatchup">Catch-up</button>
+    </div>
+    <div id="searchBox" class="search">
+      <button id="searchButton" class="pill" aria-label="Search shows">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      </button>
+      <input id="search" class="pill" type="search" placeholder="Search" aria-label="Search shows" spellcheck="false">
+    </div>
+    <div class="segmented week-only" role="group" aria-label="Mode">
+      <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
+    </div>
+    <select id="soloPerson" class="pill" aria-label="Person"></select>
+    <div class="picker">
+      <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
+      <div id="people" class="popover" role="group" aria-label="People" hidden></div>
+    </div>
+    </div>
+    <div class="weeknav">
+      <button id="prev" class="icon" aria-label="Previous week">‹</button>
+      <span id="week"></span>
+      <button id="next" class="icon" aria-label="Next week">›</button>
+      <button id="thisWeek">Today</button>
     </div>
   </div>
 </header>
@@ -666,6 +691,22 @@ function applySearch() {
     box.classList.toggle('hidden-by-search', !!q && !box.querySelector('[data-search]:not(.hidden-by-search)'));
 }
 $('search').addEventListener('input', applySearch);
+// The magnifying glass opens the field; an empty field closes again when you click elsewhere,
+// Esc clears and closes it.
+function openSearch(open) {
+  $('searchBox').classList.toggle('open', open);
+  document.body.classList.toggle('searching', open);
+  if (open) $('search').focus();
+}
+$('searchButton').onclick = () => openSearch(true);
+$('search').addEventListener('blur', () => { if (!$('search').value) openSearch(false); });
+$('search').addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  $('search').value = '';
+  applySearch();
+  openSearch(false);
+  $('search').blur();
+});
 
 // Fades rows whose watch time has passed; runs after each render and every 30 seconds, so
 // they fade while the page stays open.
