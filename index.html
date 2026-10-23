@@ -54,6 +54,15 @@
   .popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: max-content; max-width: min(320px, calc(100vw - 32px));
     display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
   .popover[hidden] { display: none; }
+  /* AniList account menu (right side of the header) */
+  .account-picker { position: relative; }
+  .account-picker[hidden] { display: none; }
+  #accountButton::after { content: ' ▾'; color: var(--muted); }
+  .popover.menu { left: auto; right: 0; flex-direction: column; flex-wrap: nowrap; gap: 2px; padding: 6px; min-width: 180px; }
+  .menu-item { border: 0; background: transparent; text-align: left; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  .menu-item:hover { background: var(--bg); }
+  .menu-item.current::after { content: ' ✓'; color: var(--green); }
+  .menu-item.separated { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; }
   .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
   /* Options as small toggle pills */
@@ -145,6 +154,10 @@
     </div>
     <div class="options">
       <button id="connect" class="pill" hidden>Connect AniList</button>
+      <div id="accountPicker" class="account-picker" hidden>
+        <button id="accountButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
+        <div id="accountMenu" class="popover menu" hidden></div>
+      </div>
       <label class="toggle catchup-only"><input type="checkbox" id="singleEpisodes"><span>Single episodes</span></label>
       <label class="toggle catchup-only"><input type="checkbox" id="catchupLinks"><span>Links</span></label>
       <label class="toggle week-only"><input type="checkbox" id="todayFirst"><span>Today first</span></label>
@@ -195,20 +208,39 @@ try {
 } catch {}
 const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
 // Optional AniList login (implicit grant, client 54702): lets ✓ write watched episodes to the
-// viewer's AniList. The token only lives in this browser's storage.
+// viewer's AniList. Several accounts can be kept in one browser (a shared PC), one of them active;
+// the tokens only live in this browser's storage.
 const ANILIST_CLIENT_ID = 54702;
-let auth = null; // { token, expires, name }
-try { auth = JSON.parse(localStorage.getItem('anilistAuth')); } catch {}
+let accounts = []; // [{ token, expires, name }]
+let auth = null;   // the active account
+try {
+  accounts = JSON.parse(localStorage.getItem('anilistAccounts')) || [];
+  const single = JSON.parse(localStorage.getItem('anilistAuth')); // stored before there could be several
+  if (single && !accounts.length) accounts = [single];
+  localStorage.removeItem('anilistAuth');
+} catch {}
 {
   // Back from AniList's login page: the token arrives in the address (#access_token=…).
   const params = new URLSearchParams(location.hash.slice(1));
   if (params.get('access_token')) {
     auth = { token: params.get('access_token'), expires: Date.now() + Number(params.get('expires_in') || 0) * 1000 };
+    accounts.push(auth);
     history.replaceState(null, '', location.pathname + location.search);
-    try { localStorage.setItem('anilistAuth', JSON.stringify(auth)); } catch {}
   }
 }
-if (auth?.expires && auth.expires < Date.now()) auth = null;
+accounts = accounts.filter(a => !a.expires || a.expires > Date.now());
+if (!auth) {
+  let active = null;
+  try { active = localStorage.getItem('anilistActive'); } catch {}
+  auth = accounts.find(a => a.name === active) || accounts[0] || null;
+}
+function saveAccounts() {
+  try {
+    localStorage.setItem('anilistAccounts', JSON.stringify(accounts));
+    localStorage.setItem('anilistActive', auth?.name || '');
+  } catch {}
+}
+saveAccounts();
 const myProgress = new Map(); // media id → episodes watched, for the logged-in viewer
 
 // Week schedule or Catch-up (from an AniList list), remembered per browser.
@@ -836,27 +868,71 @@ async function anilistAsMe(query, variables = {}) {
   }
 }
 
+// Log out the active account (also when AniList says its login expired); the next saved one, if
+// any, becomes active.
 function disconnect() {
-  auth = null;
-  try { localStorage.removeItem('anilistAuth'); } catch {}
-  myProgress.clear();
-  updateConnect();
+  accounts = accounts.filter(a => a !== auth);
+  useAccount(accounts[0] || null);
 }
 
-function updateConnect() { $('connect').hidden = !!auth; }
-$('connect').onclick = () => {
+// Make an account the active one: ✓ and Catch-up then use its list.
+function useAccount(account) {
+  auth = account;
+  myProgress.clear();
+  saveAccounts();
+  if (auth?.name) {
+    $('anilistUser').value = auth.name;
+    try { localStorage.setItem('anilistUser', auth.name); } catch {}
+  }
+  updateConnect();
+  if (auth) loadMe().catch(e => console.warn('AniList account not loaded:', e)).then(() => load(true));
+  else load(true);
+}
+
+const connect = () => {
   location.href = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
 };
+$('connect').onclick = connect;
+
+// Not logged in: "Connect AniList". Logged in: the account's name, opening a menu to switch
+// between this browser's accounts, add one or log out.
+function updateConnect() {
+  $('connect').hidden = !!auth;
+  $('accountPicker').hidden = !auth;
+  if (!auth) return;
+  $('accountButton').textContent = auth.name || 'AniList';
+  const item = (text, onclick, cls = '') => {
+    const b = document.createElement('button');
+    b.className = 'menu-item ' + cls;
+    b.textContent = text;
+    b.onclick = () => { showAccounts(false); onclick(); };
+    return b;
+  };
+  $('accountMenu').replaceChildren(
+    ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), a === auth ? 'current' : '')),
+    item('Add account', connect, 'separated'),
+    item(`Log out ${auth.name || ''}`.trim(), disconnect),
+  );
+}
+function showAccounts(open) {
+  $('accountMenu').hidden = !open;
+  $('accountButton').setAttribute('aria-expanded', open);
+}
+$('accountButton').onclick = () => showAccounts($('accountMenu').hidden);
+document.addEventListener('click', e => { if (!e.target.closest('.account-picker')) showAccounts(false); });
 
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
   if (!auth) return;
   if (!auth.name) {
     auth.name = (await anilistAsMe('{ Viewer { name } }')).Viewer.name;
-    try { localStorage.setItem('anilistAuth', JSON.stringify(auth)); } catch {}
-    // First login: Catch-up shows their own list.
+    // Logged in again with an account that was already saved: keep the new login only.
+    accounts = accounts.filter(a => a === auth || a.name !== auth.name);
+    saveAccounts();
+    // A new login: Catch-up shows their own list.
     $('anilistUser').value = auth.name;
     try { localStorage.setItem('anilistUser', auth.name); } catch {}
+    updateConnect();
   }
   for (const { progress, media } of await anilistList(auth.name)) myProgress.set(media.id, progress);
 }
