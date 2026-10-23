@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-22T22:29:04.103Z",
+ "generated": "2026-10-23T09:33:42.976Z",
  "byAnilist": {
   "152677": [
    {
@@ -370,6 +370,12 @@
    {
     "name": "Crunchyroll",
     "url": "https://www.crunchyroll.com/series/GT00385792"
+   }
+  ],
+  "213657": [
+   {
+    "name": "Disney+",
+    "url": "https://www.disneyplus.com/browse/entity-0113d236-c3a2-4098-a663-bdb5979bfb74"
    }
   ],
   "213658": [
@@ -1232,6 +1238,17 @@
    "next": {
     "episode": 4,
     "at": 1793206800
+   },
+   "news": []
+  },
+  "213657": {
+   "titles": [
+    "Yozakura-san Chi no Daisakusen 2nd Season Part 2",
+    "Mission: Yozakura Family Season 2 Part 2"
+   ],
+   "next": {
+    "episode": 3,
+    "at": 1792915200
    },
    "news": []
   },
