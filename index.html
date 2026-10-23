@@ -395,7 +395,7 @@ const sheetFor = tab => {
 
 async function loadPlan(tab) {
   const [hidden, catalog] = await Promise.all([
-    hiddenRows(tab.gid).catch(() => null),
+    hiddenRows(tab).catch(e => { console.warn('Hidden rows unknown, all rows count:', e.message); return null; }),
     tab.catalogGid ? loadSheet(tab.catalogGid).catch(() => null) : null,
   ]);
   const plan = await loadSheet(tab.gid, hidden);
@@ -403,17 +403,23 @@ async function loadPlan(tab) {
   return plan;
 }
 
-// The sheet rows (numbers as in the sheet) hidden in a tab: the read-only web view leaves them
-// out, the CSV export doesn't. Hidden Guckplan rows are dropped shows, or shows already covered by
-// being named in another row's slot.
-async function hiddenRows(gid) {
-  const res = await fetch(`${SHEET}/htmlview/sheet?headers=true&gid=${gid}`);
-  if (!res.ok) throw new Error('Google Sheet view returned ' + res.status);
-  const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-  const shown = new Set([...doc.querySelectorAll('table.waffle tbody tr th')].map(th => Number(th.textContent.trim())).filter(Boolean));
-  if (!shown.size) throw new Error('no rows in the sheet view');
-  const last = Math.max(...shown);
-  return new Set(Array.from({ length: last }, (_, i) => i + 1).filter(n => !shown.has(n)));
+// The rows (numbers as in the sheet) hidden by hand in a tab. Hidden Guckplan rows are dropped
+// shows, or shows already covered by being named in another row's slot. Only the Sheets API tells
+// "hidden by hand" apart from "hidden by a filter" (the Guckplan is nearly always filtered), so this
+// needs the read-only API key from config.json (written by tools/publish.mjs); without one,
+// hiding is ignored and every row counts.
+const SHEET_ID = SHEET.split('/d/')[1];
+let configPromise = null;
+const config = () => configPromise ??= fetch('config.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+async function hiddenRows(tab) {
+  const { sheetsKey } = await config();
+  if (!sheetsKey) throw new Error('no Sheets API key');
+  const range = encodeURIComponent(`'${tab.name.replace(/'/g, "''")}'!A1:A300`);
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?ranges=${range}` +
+    `&fields=sheets(data(rowMetadata(hiddenByUser)))&key=${encodeURIComponent(sheetsKey)}`);
+  if (!res.ok) throw new Error('Sheets API returned ' + res.status);
+  const rows = (await res.json()).sheets?.[0]?.data?.[0]?.rowMetadata || [];
+  return new Set(rows.flatMap((r, i) => r.hiddenByUser ? [i + 1] : []));
 }
 
 async function loadSheet(gid, hidden = null) {
@@ -444,8 +450,6 @@ async function loadSheet(gid, hidden = null) {
     if (twin < 0) shows.push(show);
     else if (shows[twin].hidden && !show.hidden) shows[twin] = show;
   }
-  // Mostly hidden means someone left a filter on (e.g. only Friday): then hiding says nothing.
-  if (shows.filter(s => s.hidden).length > shows.length / 2) for (const s of shows) s.hidden = false;
   return { people, shows };
 }
 
