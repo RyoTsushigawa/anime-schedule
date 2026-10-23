@@ -397,6 +397,33 @@ const mediaTitles = m => [m.title.romaji, m.title.english, ...(m.synonyms || [])
 
 // ---------- AniList ----------
 
+// Every AniList request goes through here. When AniList limits requests it answers 429 without the
+// header browsers need, so that shows up as a network error: both (and server errors) get a few
+// retries with waits, and a "Loading…" message on the page says so meanwhile.
+const RETRY_WAITS = [4000, 12000, 30000];
+async function anilist(query, variables = {}, token) {
+  for (let attempt = 0; ; attempt++) {
+    let res = null;
+    try {
+      res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token && { Authorization: 'Bearer ' + token }) },
+        body: JSON.stringify({ query, variables }),
+      });
+    } catch {}
+    if (res && res.status !== 429 && res.status < 500) {
+      if (res.status === 401) throw Object.assign(new Error('AniList login expired, connect again'), { status: 401 });
+      const json = await res.json().catch(() => ({}));
+      if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { status: res.status });
+      return json.data;
+    }
+    if (attempt >= RETRY_WAITS.length) throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute");
+    const status = document.querySelector('#list .status');
+    if (status) status.textContent = 'AniList is busy, trying again…';
+    await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
+  }
+}
+
 function weekStart(offset) {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -451,8 +478,7 @@ function storeWeek(storeKey, items) {
   } catch {}
 }
 
-// All airings of one week from AniList. When AniList limits requests it answers 429 without the
-// header browsers need, so that shows up as a network error: both get a few retries with waits.
+// All airings of one week from AniList.
 async function downloadAirings(start) {
   // Monday 00:00 to next Monday 00:00 local time (a daylight-saving week is an hour longer or shorter).
   const end = new Date(start);
@@ -460,30 +486,10 @@ async function downloadAirings(start) {
   const from = Math.floor(start / 1000) - 1;
   const to = Math.floor(end / 1000);
   const items = [];
-  const waits = [4000, 12000, 30000];
-  for (let page = 1, attempt = 0; ;) {
-    let res;
-    try {
-      res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ query: QUERY, variables: { page, from, to } }),
-      });
-    } catch (e) {
-      res = null;
-    }
-    if (!res || res.status === 429 || res.status >= 500) {
-      if (attempt >= waits.length) throw new Error('AniList unreachable');
-      const status = document.querySelector('#list .status');
-      if (status) status.textContent = 'AniList is busy, trying again…';
-      await new Promise(r => setTimeout(r, waits[attempt++]));
-      continue;
-    }
-    if (!res.ok) throw new Error('AniList returned ' + res.status);
-    const { data } = await res.json();
+  for (let page = 1; ; page++) {
+    const data = await anilist(QUERY, { page, from, to });
     items.push(...data.Page.airingSchedules);
     if (!data.Page.pageInfo.hasNextPage) return items;
-    page++;
   }
 }
 
@@ -511,20 +517,17 @@ async function lookUpRewatches() {
   for (const show of [...pendingRewatch]) {
     pendingRewatch.delete(show);
     const key = 'rewatch:' + norm(show.romaji || show.english);
+    let media;
     try {
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ query: REWATCH_QUERY, variables: { search: show.romaji || show.english } }),
-      });
-      // AniList busy: skip for this visit (not saved, so the next visit tries again).
-      if (!res.ok && res.status !== 404) { rewatchMedia.set(key, null); continue; }
-      const media = res.ok ? (await res.json()).data.Media : null;
-      rewatchMedia.set(key, media);
-      try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), media })); } catch {}
-    } catch {
+      media = (await anilist(REWATCH_QUERY, { search: show.romaji || show.english })).Media;
+    } catch (e) {
+      // Not on AniList: remember that. AniList busy: skip for this visit (the next one tries again).
       rewatchMedia.set(key, null);
+      if (e.status !== 404) continue;
+      media = null;
     }
+    rewatchMedia.set(key, media);
+    try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), media })); } catch {}
   }
 }
 
@@ -791,14 +794,7 @@ async function anilistList(user) {
   try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
   if (saved && Date.now() - saved.time < LIST_CACHE_MS) return saved.entries;
   try {
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query: LIST_QUERY, variables: { user } }),
-    });
-    const json = await res.json();
-    if (json.errors?.length) throw new Error(json.errors[0].message);
-    const entries = json.data.MediaListCollection.lists.flatMap(l => l.entries);
+    const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
     try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
     return entries;
   } catch (e) {
@@ -810,15 +806,12 @@ async function anilistList(user) {
 // ---------- Writing to AniList (when connected) ----------
 
 async function anilistAsMe(query, variables = {}) {
-  const res = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + auth.token },
-    body: JSON.stringify({ query, variables }),
-  });
-  if (res.status === 401) { disconnect(); throw new Error('AniList login expired, connect again'); }
-  const json = await res.json();
-  if (json.errors?.length) throw new Error(json.errors[0].message);
-  return json.data;
+  try {
+    return await anilist(query, variables, auth.token);
+  } catch (e) {
+    if (e.status === 401) disconnect();
+    throw e;
+  }
 }
 
 function disconnect() {
@@ -1060,11 +1053,7 @@ async function missingPlanShows(plan, entries) {
       externalLinks { site url } nextAiringEpisode { episode airingAt } ${auth ? 'mediaListEntry { progress status }' : ''}
     } } }`;
     try {
-      const data = auth ? await anilistAsMe(query, { ids }) : await (await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ query, variables: { ids } }),
-      })).json().then(j => j.data);
+      const data = auth ? await anilistAsMe(query, { ids }) : await anilist(query, { ids });
       planShowsCache = { key, time: Date.now(), media: data.Page.media };
     } catch {
       return [];
