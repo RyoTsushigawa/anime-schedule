@@ -403,8 +403,9 @@ async function loadPlan(tab) {
   return plan;
 }
 
-// The rows (numbers as in the sheet) hidden by hand in a tab. Hidden Guckplan rows are dropped
-// shows, or shows already covered by being named in another row's slot. Only the Sheets API tells
+// The rows (numbers as in the sheet) and columns (0 = A) hidden by hand in a tab. Hidden Guckplan
+// rows are dropped shows, or shows already covered by being named in another row's slot; a hidden
+// person column is someone no longer taking part. Only the Sheets API tells
 // "hidden by hand" apart from "hidden by a filter" (the Guckplan is nearly always filtered), so this
 // needs the read-only API key from config.json (written by tools/publish.mjs); without one,
 // hiding is ignored and every row counts.
@@ -414,12 +415,15 @@ const config = () => configPromise ??= fetch('config.json', { cache: 'no-cache' 
 async function hiddenRows(tab) {
   const { sheetsKey } = await config();
   if (!sheetsKey) throw new Error('no Sheets API key');
-  const range = encodeURIComponent(`'${tab.name.replace(/'/g, "''")}'!A1:A300`);
+  const range = encodeURIComponent(`'${tab.name.replace(/'/g, "''")}'!A1:AZ300`);
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?ranges=${range}` +
-    `&fields=sheets(data(rowMetadata(hiddenByUser)))&key=${encodeURIComponent(sheetsKey)}`);
+    `&fields=sheets(data(rowMetadata(hiddenByUser),columnMetadata(hiddenByUser)))&key=${encodeURIComponent(sheetsKey)}`);
   if (!res.ok) throw new Error('Sheets API returned ' + res.status);
-  const rows = (await res.json()).sheets?.[0]?.data?.[0]?.rowMetadata || [];
-  return new Set(rows.flatMap((r, i) => r.hiddenByUser ? [i + 1] : []));
+  const data = (await res.json()).sheets?.[0]?.data?.[0] || {};
+  return {
+    rows: new Set((data.rowMetadata || []).flatMap((r, i) => r.hiddenByUser ? [i + 1] : [])),
+    cols: new Set((data.columnMetadata || []).flatMap((c, i) => c.hiddenByUser ? [i] : [])),
+  };
 }
 
 async function loadSheet(gid, hidden = null) {
@@ -431,7 +435,8 @@ async function loadSheet(gid, hidden = null) {
   const col = name => header.indexOf(name);
   for (const name of ['Anime Titel', 'Tag', 'Uhrzeit'])
     if (col(name) < 0) throw new Error(`the sheet has no "${name}" column anymore`);
-  const people = header.slice(col('Uhrzeit') + 1).filter(Boolean);
+  // Everyone right of "Uhrzeit", except columns hidden by hand.
+  const people = header.flatMap((name, i) => i > col('Uhrzeit') && name && !hidden?.cols.has(i) ? [name] : []);
   const shows = [];
   for (const [i, r] of rows.entries()) {
     if (i <= headerIndex) continue;
@@ -443,7 +448,7 @@ async function loadSheet(gid, hidden = null) {
       romaji, english: (r[col('Eng Anime Titel')] || '').trim(),
       wo: (r[col('Wo')] || '').trim().toUpperCase(),
       tag: (r[col('Tag')] || '').trim(), time: (r[col('Uhrzeit')] || '').trim(), votes,
-      hidden: !!hidden?.has(i + 1), // CSV line i is sheet row i + 1
+      hidden: !!hidden?.rows.has(i + 1), // CSV line i is sheet row i + 1
     };
     // The same show listed twice: the visible row wins, else the upper one.
     const twin = shows.findIndex(s => norm(s.romaji) === norm(romaji));
