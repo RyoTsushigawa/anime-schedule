@@ -103,6 +103,9 @@
   .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
   .status { color: var(--muted); text-align: center; padding: 40px 0; }
   details { color: var(--muted); font-size: 13px; margin-top: 28px; }
+  details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1px solid #e5484d; border-radius: 10px;
+    background: color-mix(in srgb, #e5484d 10%, transparent); }
+  details.warning summary { cursor: pointer; font-weight: 600; }
   details ul { margin: 6px 0 0; padding-left: 20px; }
   /* Buttons on one line, so rows keep their height when "Other services" adds some */
   @media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
@@ -728,11 +731,9 @@ function render(items, start, plans) {
   }
   for (const d of days) assignWatchTimes(d);
 
-  // "Today first": today on top, then the rest of the week, the days already past at the end.
+  // "Today first": the week starts with today; the days already past are left out.
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
-  const ordered = $('todayFirst').checked && todayIndex > 0
-    ? [...days.slice(todayIndex), ...days.slice(0, todayIndex)]
-    : days;
+  const ordered = $('todayFirst').checked && todayIndex > 0 ? days.slice(todayIndex) : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     const pause = ({ show, when, news }) => `
@@ -781,8 +782,9 @@ function render(items, start, plans) {
   // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
   const age = streamsDe?.generated && Math.floor((Date.now() - Date.parse(streamsDe.generated)) / 86400000);
   if (age >= 14) html = `<div class="notice">Stream links were last updated ${age} days ago; the weekly refresh may have stopped.</div>` + html;
-  if (unknown.length) html += `<details><summary>${unknown.length} shows from the Guckplan aren't airing this week (or couldn't be matched)</summary>
-    <ul>${unknown.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>`;
+  // At the very top, in red: plan shows that couldn't be placed this week.
+  if (unknown.length) html = `<details class="warning"><summary>${unknown.length} ${unknown.length === 1 ? 'show' : 'shows'} from the Guckplan ${unknown.length === 1 ? "isn't" : "aren't"} airing this week (or couldn't be matched)</summary>
+    <ul>${unknown.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>` + html;
   document.body.style.removeProperty('--time-width');
   $('list').innerHTML = html;
   // Same width for every time cell (the widest one), so covers and titles line up.
