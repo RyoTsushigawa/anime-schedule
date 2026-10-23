@@ -515,8 +515,16 @@ function openSearch(open) {
   document.body.classList.toggle('searching', open);
   if (open) $('search').focus();
 }
-$('searchButton').onclick = () => openSearch(true);
-$('search').addEventListener('blur', () => { if (!$('search').value) openSearch(false); });
+// The 🔍 opens the field, and closes it again (clearing the search) when it's open.
+$('searchButton').onclick = () => {
+  const open = $('searchBox').classList.contains('open');
+  if (open) { $('search').value = ''; applySearch(); }
+  openSearch(!open);
+};
+$('search').addEventListener('blur', e => {
+  if (e.relatedTarget === $('searchButton')) return; // the 🔍 itself decides
+  if (!$('search').value) openSearch(false);
+});
 $('search').addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   $('search').value = '';
@@ -784,17 +792,30 @@ const connect = () => {
 // The AniList part of the ⚙ menu. Not logged in: "Connect AniList". Logged in: this browser's
 // accounts (click one to switch), "Add account" and "Log out".
 function updateConnect() {
-  const item = (text, onclick, cls = '') => {
+  // A row: a round badge (the name's initial, or a symbol), the text, and ✓ on the active account.
+  const item = (badge, text, onclick, { muted = false, current = false } = {}) => {
     const b = document.createElement('button');
-    b.className = 'menu-item ' + cls;
-    b.textContent = text;
+    b.className = 'menu-item' + (muted ? ' muted' : '');
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar';
+    avatar.textContent = badge;
+    const label = document.createElement('span');
+    label.textContent = text;
+    b.append(avatar, label);
+    if (current) {
+      const check = document.createElement('span');
+      check.className = 'check';
+      check.textContent = '✓';
+      b.append(check);
+    }
     b.onclick = onclick;
     return b;
   };
-  $('accountSection').replaceChildren(...(!auth ? [item('Connect AniList', connect)] : [
-    ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), a === auth ? 'current' : '')),
-    item('Add account', connect, 'muted'),
-    item(`Log out ${auth.name || ''}`.trim(), disconnect, 'muted'),
+  const initial = name => (name || '?').trim().charAt(0).toUpperCase();
+  $('accountSection').replaceChildren(...(!auth ? [item('+', 'Connect AniList', connect, { muted: true })] : [
+    ...accounts.map(a => item(initial(a.name), a.name || 'AniList', () => a !== auth && useAccount(a), { current: a === auth })),
+    item('+', 'Add account', connect, { muted: true }),
+    item('→', `Log out ${auth.name || ''}`.trim(), disconnect, { muted: true }),
   ]));
 }
 
@@ -1033,6 +1054,16 @@ $('list').addEventListener('click', async e => {
 
 // Every show on the list with episodes out on our service that haven't been watched yet,
 // the longest-waiting first, with the next episode to watch.
+// When an episode counts as missed in Catch-up (seconds): its Guckplan watch slot ("Tag" +
+// "Uhrzeit") is over, or, without a time, the watch day is over; never before it's out.
+function dueAt(released, slot) {
+  const day = watchDay(new Date(released * 1000), slot?.tag, slot?.time);
+  const hm = parseTime(slot?.time);
+  if (hm) day.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
+  else day.setDate(day.getDate() + 1);
+  return Math.max(released, day.getTime() / 1000);
+}
+
 async function loadCatchup() {
   const user = $('anilistUser').value.trim();
   $('tabName').textContent = user ? `Catch-up · ${user} on AniList` : 'Catch-up';
@@ -1055,17 +1086,21 @@ async function loadCatchup() {
   if (view !== 'catchup') return;
   const now = Date.now() / 1000;
   const week = 7 * 86400;
+  const mySlots = plan && soloPerson ? [...picks(plan, soloPerson)] : [];
   const rows = [];
   for (const { progress, media: m, missing } of [...entries, ...planShows]) {
     const offset = streamsDe?.release?.[m.id]?.offset || 0;
     const next = m.nextAiringEpisode;
-    // Out so far: everything before the next episode, minus the latest if it isn't on our service yet.
+    const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
+    const slot = mySlots.find(([s]) => titleMatches([s.romaji, s.english], mediaTitles(m)))?.[1] || show;
+    const released = ep => next.airingAt - (next.episode - ep) * week + offset;
+    // Out so far: everything before the next episode, minus the newest ones whose watch time
+    // hasn't passed yet (you're only behind once the planned slot is over).
     let out = next ? next.episode - 1 : m.status === 'FINISHED' ? m.episodes : 0;
-    if (next && next.airingAt - week + offset > now) out--;
+    while (next && out > progress && dueAt(released(out), slot) > now) out--;
     if (!out || out <= progress) continue;
     const first = progress + 1;
-    const since = next ? next.airingAt - (next.episode - first) * week + offset : 0;
-    const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
+    const since = next ? released(first) : 0;
     rows.push({ m, first, out, since, missing, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) });
   }
   rows.sort((a, b) => a.since - b.since);
