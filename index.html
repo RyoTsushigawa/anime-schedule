@@ -64,43 +64,6 @@
   /* Week | Catch-up: each view only shows its own controls */
   body.catchup .weeknav, body.catchup .week-only, body.catchup #soloPerson, body.catchup .picker,
   body:not(.catchup) #anilistUser, body:not(.catchup) .catchup-only { display: none; }
-  body.planner .weeknav, body.planner .week-only, body.planner #soloPerson, body.planner .picker { display: none; }
-  /* Watch plan generator */
-  .plan-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 16px; }
-  .plan-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
-  .plan-start { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-  .plan-start input { padding: 4px 10px; }
-  .plan-go { margin-left: auto; background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-  .plan-go:disabled { opacity: .6; }
-  .plan-hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
-  .avail { display: grid; grid-template-columns: max-content repeat(7, minmax(30px, 1fr)); gap: 4px 4px; align-items: center; padding: 0 10px; }
-  .avail-name { justify-self: start; margin-right: 8px; padding: 1px 8px; border-radius: 99px; font-size: 12px;
-    background: var(--person, var(--line)); color: var(--person-text, var(--text)); }
-  .avail-name.everyone { background: transparent; font-weight: 600; padding-left: 0; }
-  .avail-day { padding: 3px 0; border-radius: 8px; font-size: 12px; color: var(--muted); }
-  .avail-day[aria-pressed="true"] { background: color-mix(in srgb, #e5484d 22%, var(--card)); border-color: #e5484d; color: #e5484d;
-    text-decoration: line-through; }
-  .plan-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
-  .plan-tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; }
-  .plan-tile b { font-size: 22px; }
-  .plan-tile span { color: var(--muted); font-size: 12px; }
-  .plan-tile small { color: var(--muted); font-size: 11px; margin-top: 2px; }
-  .plan-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px; }
-  .plan-span { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 6px; }
-  .plan-slot { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; }
-  .plan-slot .info .ep { white-space: normal; }
-  .plan-or { color: var(--muted); font-weight: 700; }
-  .plan-moved { color: #e5484d; }
-  .plan-breaks { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 0 10px; font-size: 13px; }
-  .plan-break .who { margin: 0 4px 0 0; }
-  .plan-break .who span { margin: 0; }
-  @media (max-width: 560px) {
-    .plan-stats { grid-template-columns: repeat(2, 1fr); }
-    .plan-slot.pair { flex-direction: column; align-items: stretch; gap: 4px; }
-    .plan-or { display: none; }
-    .plan-slot.pair .info + .info { border-top: 1px dashed var(--line); padding-top: 4px; }
-    .plan-go { margin-left: 0; }
-  }
   .row.compact { padding-top: 6px; padding-bottom: 6px; }
   .row.show-head { padding-bottom: 10px; }
   .catchup-bar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -142,16 +105,18 @@
   .pills #refreshData { justify-content: center; }
   /* Small second line in the time cell ("Both"), and who's watching in Group mode */
   .time small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
+  /* People in their Guckplan colors, kept soft: a light tint of the color with a thin edge in it,
+     names in the normal text color. */
   .who { margin-left: 4px; }
-  .who span { display: inline-block; margin-left: 3px; padding: 0 6px; border-radius: 99px; font-size: 11px; line-height: 16px;
-    background: var(--person, color-mix(in srgb, var(--accent) 16%, transparent)); color: var(--person-text, var(--text)); }
-  /* People in their Guckplan colors: the Solo dropdown filled with the chosen person's; chips with
-     a dot when not picked, filled when picked */
-  #soloPerson[style*="--person"] { background-color: var(--person); border-color: var(--person); color: var(--person-text); font-weight: 600; }
-  .chip[style*="--person"]::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
-    background: var(--person); vertical-align: 1px; }
-  .chip[style*="--person"][aria-pressed="true"] { background: var(--person); border-color: var(--person); color: var(--person-text); }
-  .chip[style*="--person"][aria-pressed="true"]::before { background: var(--person-text); opacity: .5; }
+  .who span { --tint: var(--person, var(--accent)); display: inline-block; margin-left: 3px; padding: 0 6px; border-radius: 99px;
+    font-size: 11px; line-height: 15px; color: color-mix(in srgb, var(--text) 85%, transparent);
+    background: color-mix(in srgb, var(--tint) 20%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 50%, transparent); }
+  #soloPerson[style*="--person"] { background-color: color-mix(in srgb, var(--person) 16%, var(--card));
+    border-color: color-mix(in srgb, var(--person) 55%, transparent); }
+  .chip[style*="--person"]::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%;
+    background: var(--person); opacity: .8; vertical-align: 1px; }
+  .chip[style*="--person"][aria-pressed="true"] { background: color-mix(in srgb, var(--person) 18%, var(--card));
+    border-color: color-mix(in srgb, var(--person) 60%, transparent); color: var(--text); font-weight: 600; }
   .pills .pill-row > button { flex: 1; justify-content: center; }
   .toggle, .pills button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px;
     border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; user-select: none; }
@@ -318,10 +283,7 @@
           </div>
         </section>
         <section>
-          <div class="pills">
-            <button id="openPlanner" title="Suggest a weekly watch plan for a Guckplan tab">Watch plan generator</button>
-            <button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button>
-          </div>
+          <div class="pills"><button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button></div>
         </section>
       </div>
     </div>
@@ -369,6 +331,5 @@
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
 
 <script src="app.js"></script>
-<script src="planner.js"></script>
 </body>
 </html>
