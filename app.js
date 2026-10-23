@@ -789,38 +789,57 @@ const connect = () => {
   location.href = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
 };
 
-// The AniList part of the ⚙ menu. Not logged in: "Connect AniList". Logged in: this browser's
-// accounts as pills (the active one filled; click another to switch), "+ Add" and "Log out".
+// An account's picture (AniList avatar), else its initial in a circle.
+function avatarOf(account, className) {
+  const span = document.createElement('span');
+  if (className) span.className = className;
+  span.textContent = (account?.name || '?').trim().charAt(0).toUpperCase();
+  if (!account?.avatar) return span;
+  const img = document.createElement('img');
+  img.src = safeUrl(account.avatar).replace(/&amp;/g, '&');
+  img.alt = '';
+  if (className) img.className = className;
+  img.onerror = () => img.replaceWith(span); // picture gone: the initial instead
+  return img;
+}
+
+// The AniList button (top right) and its menu. Not logged in: "Connect AniList". Logged in: this
+// browser's accounts as pills (the active one filled; click another to switch), "+ Add", "Log out".
+const PERSON_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 function updateConnect() {
-  // A pill: optionally the name's initial in a small circle, then the text.
-  const item = (text, onclick, { badge = '', muted = false, current = false } = {}) => {
+  const button = $('accountButton');
+  button.classList.toggle('empty', !auth);
+  if (auth) button.replaceChildren(avatarOf(auth));
+  else button.innerHTML = PERSON_ICON;
+  button.title = auth?.name ? `AniList: ${auth.name}` : 'AniList';
+  // A pill: optionally the account's picture or initial, then the text.
+  const item = (text, onclick, { account = null, muted = false, current = false } = {}) => {
     const b = document.createElement('button');
     b.className = (muted ? 'muted' : '') + (current ? ' current' : '');
-    if (badge) {
-      const avatar = document.createElement('span');
-      avatar.className = 'avatar';
-      avatar.textContent = badge;
-      b.append(avatar);
-    }
+    if (account) b.append(avatarOf(account, 'avatar'));
     b.append(text);
     b.onclick = onclick;
     return b;
   };
-  const initial = name => (name || '?').trim().charAt(0).toUpperCase();
   $('accountSection').replaceChildren(...(!auth ? [item('+ Connect AniList', connect, { muted: true })] : [
-    ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), { badge: initial(a.name), current: a === auth })),
+    ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), { account: a, current: a === auth })),
     item('+ Add', connect, { muted: true }),
     item('Log out', disconnect, { muted: true }),
   ]));
 }
 
-// ⚙ opens and closes the menu; a click anywhere else closes it.
-function showSettings(open) {
-  $('settingsMenu').hidden = !open;
-  $('settingsButton').setAttribute('aria-expanded', open);
+// ⚙ and the AniList button open and close their menus; a click anywhere else closes them.
+function showMenu(menu, button, open) {
+  $(menu).hidden = !open;
+  $(button).setAttribute('aria-expanded', open);
 }
+const showSettings = open => showMenu('settingsMenu', 'settingsButton', open);
 $('settingsButton').onclick = () => showSettings($('settingsMenu').hidden);
-document.addEventListener('click', e => { if (!e.target.closest('.settings')) showSettings(false); });
+$('accountButton').onclick = () => showMenu('accountMenu', 'accountButton', $('accountMenu').hidden);
+document.addEventListener('click', e => {
+  if (!e.target.closest('#settingsMenu, #settingsButton')) showSettings(false);
+  if (!e.target.closest('#accountMenu, #accountButton')) showMenu('accountMenu', 'accountButton', false);
+});
 
 // Theme: follows the system until the sun/moon is clicked, then Light or Dark, remembered per
 // browser. data-dark marks the theme actually showing (for the icon).
@@ -841,8 +860,16 @@ $('themeButton').onclick = () => setTheme(document.documentElement.hasAttribute(
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
   if (!auth) return;
+  // The account's picture for the AniList button (accounts saved before it was asked get it once).
+  if (auth.name && auth.avatar === undefined) {
+    auth.avatar = (await anilistAsMe('{ Viewer { avatar { medium } } }')).Viewer.avatar?.medium || '';
+    saveAccounts();
+    updateConnect();
+  }
   if (!auth.name) {
-    auth.name = (await anilistAsMe('{ Viewer { name } }')).Viewer.name;
+    const { Viewer } = await anilistAsMe('{ Viewer { name avatar { medium } } }');
+    auth.name = Viewer.name;
+    auth.avatar = Viewer.avatar?.medium || '';
     // Logged in again with an account that was already saved: keep the new login only.
     accounts = accounts.filter(a => a === auth || a.name !== auth.name);
     saveAccounts();
