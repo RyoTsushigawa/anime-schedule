@@ -723,7 +723,7 @@ function render(items, start, plans) {
 // Someone's AniList list (Watching / Rewatching), kept for 10 minutes; an older copy beats an error.
 const LIST_QUERY = `query ($user: String) {
   MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING]) {
-    lists { entries { progress media {
+    lists { entries { progress status media {
       id status episodes siteUrl synonyms title { romaji english } coverImage { medium }
       externalLinks { site url } nextAiringEpisode { episode airingAt }
     } } }
@@ -832,13 +832,108 @@ async function loadMe() {
     try { localStorage.setItem('anilistUser', auth.name); } catch {}
     updateConnect();
   }
-  for (const { progress, media } of await anilistList(auth.name)) myProgress.set(media.id, progress);
+  for (const { progress, status, media } of await anilistList(auth.name)) {
+    myProgress.set(media.id, progress);
+    knownEntries.set(media.id, { progress, status });
+  }
 }
 
 // $status only when given: CURRENT for a show not on the list yet, DROPPED for "Drop".
 const SAVE_PROGRESS = `mutation ($mediaId: Int, $progress: Int, $status: MediaListStatus) {
-  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) { progress }
+  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) { id progress status }
 }`;
+
+// ---------- Undo (Ctrl+Z, or the notice's "Undo") ----------
+
+// How the logged-in viewer's entries looked, to put them back: from their Watching list and the
+// forgotten Guckplan shows; anything else is asked from AniList before changing it.
+const knownEntries = new Map(); // media id → { progress, status }
+const notOnList = new Set();    // media ids known not to be on the list
+async function entryBefore(mediaId) {
+  if (knownEntries.has(mediaId)) return { onList: true, ...knownEntries.get(mediaId) };
+  if (notOnList.has(mediaId)) return { onList: false };
+  const entry = (await anilistAsMe('query ($id: Int) { Media(id: $id) { mediaListEntry { progress status } } }', { id: mediaId })).Media.mediaListEntry;
+  return entry ? { onList: true, progress: entry.progress, status: entry.status } : { onList: false };
+}
+
+// Every change goes through here and returns what's needed to undo it.
+async function change(mediaId, vars) {
+  const before = await entryBefore(mediaId);
+  const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars })).SaveMediaListEntry;
+  knownEntries.set(mediaId, { progress: saved.progress, status: saved.status });
+  notOnList.delete(mediaId);
+  myProgress.set(mediaId, saved.progress);
+  listChanged(mediaId, saved.progress, !!vars.status);
+  return { mediaId, before, entryId: saved.id };
+}
+
+// Keep the saved Watching list in step, so Catch-up shows changes right away; a status change
+// means the list itself changed, so it's fetched again.
+function listChanged(mediaId, progress, statusChanged) {
+  try {
+    const key = 'list:' + auth.name.toLowerCase();
+    const list = JSON.parse(localStorage.getItem(key));
+    const entry = list?.entries.find(x => x.media.id === mediaId);
+    if (entry && !statusChanged) { entry.progress = progress; localStorage.setItem(key, JSON.stringify(list)); }
+    else localStorage.removeItem(key);
+  } catch {}
+  if (statusChanged) planShowsCache.time = 0;
+}
+
+// Each action (one ✓, one Drop, one "Mark all as watched") is one step; undoing puts every show
+// of that step back the way it was, newest step first.
+const undoSteps = [];
+function remember(records, text) {
+  if (!records.length) return;
+  undoSteps.push(records);
+  notice(text, true);
+}
+let undoing = false;
+async function undo() {
+  const step = undoSteps.pop();
+  if (!step || !auth || undoing) return;
+  undoing = true;
+  notice('Undoing…');
+  try {
+    for (const [i, { mediaId, before, entryId }] of [...step].reverse().entries()) {
+      if (before.onList) {
+        await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status });
+        knownEntries.set(mediaId, { progress: before.progress, status: before.status });
+        myProgress.set(mediaId, before.progress);
+      } else {
+        await anilistAsMe('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: entryId });
+        knownEntries.delete(mediaId);
+        notOnList.add(mediaId);
+        myProgress.delete(mediaId);
+      }
+      listChanged(mediaId, before.progress || 0, true);
+      if (i < step.length - 1) await new Promise(r => setTimeout(r, 700));
+    }
+    notice(step.length > 1 ? `Undone (${step.length} shows)` : 'Undone');
+  } catch (err) {
+    notice(`Couldn't undo: ${err.message}`);
+  }
+  undoing = false;
+  load(true);
+}
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+  if (e.target.closest?.('input, textarea, select')) return; // typing: the field's own undo
+  e.preventDefault();
+  undo();
+});
+
+// A short notice at the bottom after each action, with "Undo" (phones have no Ctrl+Z).
+let noticeTimer = null;
+function notice(text, withUndo = false) {
+  $('noticeText').textContent = text;
+  $('noticeUndo').hidden = !withUndo;
+  $('notice').hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 8000 : 3000);
+}
+$('noticeUndo').onclick = () => undo();
+const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'show';
 const watchButton = (mediaId, episode, add = false) => !auth ? '' :
   `<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
     title="Episode ${episode} watched (AniList)">✓</button>`;
@@ -855,28 +950,15 @@ $('list').addEventListener('click', async e => {
   if (current >= episode) progress = before.has(mediaId) ? before.get(mediaId) : episode - 1;
   else { before.set(mediaId, current); progress = episode; }
   b.disabled = true;
+  const title = rowTitle(b);
   try {
-    await saveProgress(mediaId, progress, b.dataset.add ? 'CURRENT' : undefined);
+    const record = await change(mediaId, { progress, status: b.dataset.add ? 'CURRENT' : undefined });
+    remember([record], `${title}: episode ${progress} watched`);
   } catch (err) {
     b.title = `Couldn't save: ${err.message}`;
   }
   load(true);
 });
-
-async function saveProgress(mediaId, progress, status) {
-  const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, progress, status })).SaveMediaListEntry.progress;
-  myProgress.set(mediaId, saved);
-  // Keep the saved list in step, so Catch-up shows it right away; a new or dropped show means
-  // the list changed, so it's fetched again.
-  try {
-    const key = 'list:' + auth.name.toLowerCase();
-    const list = JSON.parse(localStorage.getItem(key));
-    const entry = list?.entries.find(x => x.media.id === mediaId);
-    if (entry && !status) { entry.progress = saved; localStorage.setItem(key, JSON.stringify(list)); }
-    else localStorage.removeItem(key);
-  } catch {}
-  if (status) planShowsCache.time = 0;
-}
 
 // "Drop" in Catch-up: sets the show to Dropped on AniList, so it leaves Catch-up (and doesn't come
 // back as a forgotten Guckplan show). The first click only asks.
@@ -891,10 +973,9 @@ $('list').addEventListener('click', async e => {
     return;
   }
   b.disabled = true;
+  const title = rowTitle(b);
   try {
-    await anilistAsMe(SAVE_PROGRESS, { mediaId: Number(b.dataset.media), status: 'DROPPED' });
-    try { localStorage.removeItem('list:' + auth.name.toLowerCase()); } catch {}
-    planShowsCache.time = 0;
+    remember([await change(Number(b.dataset.media), { status: 'DROPPED' })], `${title} dropped`);
   } catch (err) {
     b.textContent = `Couldn't drop: ${err.message}`;
     return;
@@ -934,16 +1015,19 @@ $('list').addEventListener('click', async e => {
   b.disabled = true;
   const targets = catchupTargets.filter(t => !skipped.has(t.mediaId));
   selecting = false;
+  const records = []; // the whole run is one undo step
   for (const [i, { mediaId, progress, add }] of targets.entries()) {
     b.textContent = `Saving ${i + 1}/${targets.length}…`;
     try {
-      await saveProgress(mediaId, progress, add ? 'CURRENT' : undefined);
+      records.push(await change(mediaId, { progress, status: add ? 'CURRENT' : undefined }));
     } catch (err) {
       b.textContent = `Stopped at ${i + 1}/${targets.length}: ${err.message}`;
+      remember(records, `${records.length} of ${targets.length} shows marked as watched`);
       return;
     }
     await new Promise(r => setTimeout(r, 700));
   }
+  remember(records, `${records.length} ${records.length === 1 ? 'show' : 'shows'} marked as watched`);
   load(true);
 });
 
@@ -1061,6 +1145,11 @@ async function missingPlanShows(plan, entries) {
     } catch {
       return [];
     }
+  }
+  // Logged in, AniList said how these stand on the list: remember it for undo.
+  if (auth) for (const m of planShowsCache.media) {
+    if (m.mediaListEntry) knownEntries.set(m.id, { progress: m.mediaListEntry.progress, status: m.mediaListEntry.status });
+    else notOnList.add(m.id);
   }
   return planShowsCache.media
     .filter(m => !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
