@@ -743,14 +743,19 @@ async function entryBefore(mediaId) {
   return entry ? { onList: true, progress: entry.progress, status: entry.status } : { onList: false };
 }
 
-// Every change goes through here and returns what's needed to undo it.
+// Every change goes through here and returns what's needed to undo it. Progress on a show that
+// isn't on the Watching list (not on the list at all, or Planning/Paused) also sets it to
+// Watching; otherwise AniList keeps it elsewhere and the page, which reads the Watching list,
+// shows it as unwatched again after a reload.
+const ON_WATCHING_LIST = ['CURRENT', 'REPEATING', 'COMPLETED'];
 async function change(mediaId, vars) {
   const before = await entryBefore(mediaId);
-  const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars })).SaveMediaListEntry;
+  const status = vars.status || (vars.progress !== undefined && !ON_WATCHING_LIST.includes(before.status) ? 'CURRENT' : undefined);
+  const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars, status })).SaveMediaListEntry;
   knownEntries.set(mediaId, { progress: saved.progress, status: saved.status });
   notOnList.delete(mediaId);
   myProgress.set(mediaId, saved.progress);
-  listChanged(mediaId, saved.progress, !!vars.status);
+  listChanged(mediaId, saved.progress, !!status);
   return { mediaId, before, entryId: saved.id };
 }
 
