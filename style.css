@@ -190,6 +190,7 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .drop { flex: none; min-width: 52px; height: 30px; padding: 0 8px; border-radius: 8px; color: var(--muted); font-size: 12px; }
 .drop-space { flex: none; width: 52px; }
 .drop[data-sure] { color: #e5484d; border-color: #e5484d; }
+.drop.dropped { display: inline-grid; place-items: center; border: 1px dashed var(--line); color: var(--muted); font-size: 11px; }
 #notice { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10; display: flex; gap: 12px; align-items: center;
   max-width: calc(100vw - 32px); padding: 10px 10px 10px 16px; border-radius: 12px; background: var(--card); color: var(--text);
   border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; }
