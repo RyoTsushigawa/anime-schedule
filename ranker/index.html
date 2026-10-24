@@ -1,0 +1,1736 @@
+<title>Higher or Lower Ranker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: game stage (show vs. benchmark) on top, benchmark ladder + results below, export last. */
+:root{
+  --bg:#eef0f5; --surface:#ffffff; --sunk:#e3e6ee; --ink:#161a2b; --muted:#5b6176; --line:#d3d8e3;
+  --hi:#0a8a74; --hi-ink:#ffffff; --lo:#cf2f57; --lo-ink:#ffffff; --focus:#2b59ff;
+  --display:"Dela Gothic One","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --chip-l:40%;
+  /* chart series (fixed order) and chrome */
+  --s1:#2a78d6; --s1soft:#b7d3f6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#6250d6; --s7:#e34948; --grid:#e1e0d9; --axis:#c3c2b7;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f121b; --surface:#181c29; --sunk:#222738; --ink:#eceef6; --muted:#9aa1b9; --line:#2c3245;
+  --hi:#2ec4a5; --hi-ink:#06231d; --lo:#ff6b8c; --lo-ink:#2d0611; --focus:#8aa6ff; --chip-l:38%; --s1:#3987e5; --s1soft:#1c5cab; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#9085e9; --s7:#e66767; --grid:#2c2c2a; --axis:#383835; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f121b; --surface:#181c29; --sunk:#222738; --ink:#eceef6; --muted:#9aa1b9; --line:#2c3245;
+  --hi:#2ec4a5; --hi-ink:#06231d; --lo:#ff6b8c; --lo-ink:#2d0611; --focus:#8aa6ff; --chip-l:38%; --s1:#3987e5; --s1soft:#1c5cab; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#9085e9; --s7:#e66767; --grid:#2c2c2a; --axis:#383835; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 64px;display:grid;gap:22px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(1.5rem,3.6vw,2.2rem);letter-spacing:.01em;line-height:1.1}
+h2{font-size:1.05rem;font-weight:600}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+a{color:inherit}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.kbd{font-family:var(--mono);font-size:.72rem;border:1px solid currentColor;border-radius:4px;padding:0 5px;opacity:.7;margin-left:6px}
+
+header.top p{margin:6px 0 0;max-width:62ch}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:14px;min-width:0}
+.banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.banner .tag{font-family:var(--mono);font-size:.75rem;background:var(--sunk);padding:3px 8px;border-radius:999px}
+details.load > summary{display:none}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 14px;font-weight:600}
+.tab::before{content:"+";font-family:var(--mono);width:1em}
+.tab[aria-expanded="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-expanded="true"]::before{content:"–"}
+.tabnote{font-weight:400;font-size:.8rem;opacity:.75}
+.loadgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:18px;display:grid;gap:8px;align-content:start;min-width:0}
+.drop.over{border-color:var(--hi)}
+.drop ol{margin:0;padding-left:1.2em;color:var(--muted);font-size:.88rem}
+textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px;resize:vertical}
+.pending{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--bg);font-size:.88rem}
+.chip input{margin:0}
+.opts{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.9rem}
+.opts label{display:inline-flex;gap:6px;align-items:center}
+.err{color:var(--lo);font-weight:500}
+
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 18px;display:grid;gap:18px}
+.prompt{text-align:center;font-size:1.05rem}
+.prompt b{font-weight:600}
+.duel{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:14px}
+.card{border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:10px;align-content:start;background:var(--bg);min-width:0}
+.card.new{border-color:var(--ink);border-width:2px}
+.card .title{font-family:var(--display);font-size:clamp(1.15rem,2.6vw,1.6rem);line-height:1.15;overflow-wrap:anywhere}
+.card .orig{font-size:.85rem;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+.cardrow{display:flex;gap:14px;align-items:flex-start;min-width:0}
+.cardrow > div{display:grid;gap:10px;min-width:0;flex:1}
+.cv{width:clamp(72px,18vw,110px);aspect-ratio:100/142;flex:none;border-radius:6px;background:var(--sunk);object-fit:cover;display:block}
+.scoreline{display:flex;flex-wrap:wrap;gap:6px 12px;flex-basis:100%}
+.scoreline > span{display:inline-flex;align-items:center;gap:5px}
+.card .benchscore{display:flex;align-items:center;gap:10px}
+.card .benchscore .score{font-size:1.3rem;height:1.7em;min-width:3em}
+.meta{font-family:var(--mono);font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.vs{align-self:center;font-family:var(--display);font-size:1.6rem;color:var(--muted)}
+.score{display:inline-flex;align-items:center;justify-content:center;min-width:2.6em;height:1.6em;padding:0 6px;border-radius:5px;font-family:var(--mono);font-weight:600;color:#fff;font-size:.85rem;font-variant-numeric:tabular-nums}
+.score.none{background:var(--sunk);color:var(--muted)}
+.answers{display:grid;grid-template-columns:1fr auto 1fr;gap:10px}
+.ans{border:0;border-radius:10px;padding:14px 10px;font-weight:600;font-size:1.05rem}
+.ans.hi{background:var(--hi);color:var(--hi-ink)}
+.ans.lo{background:var(--lo);color:var(--lo-ink)}
+.ans.eq{background:var(--sunk);padding-inline:16px}
+.ans:active{transform:translateY(1px)}
+.direct{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px}
+.direct .step{min-width:2.8em;padding:6px 8px;font-family:var(--mono)}
+.direct #directSet{padding:12px 16px;font-size:1rem;font-family:var(--mono)}
+.chart{display:grid;gap:8px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.84rem;align-items:center}
+.chart-legend label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.chart-legend .sw{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chart-legend .sw.bar{height:10px;width:10px;border-radius:2px}
+.chart-legend .stat{color:var(--muted);font-family:var(--mono);font-size:.76rem}
+.chart-wrap{position:relative}
+.chart-wrap svg{width:100%;height:auto;display:block;overflow:visible}
+.chart-wrap svg text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.chart-tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.8rem;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:150px;z-index:2}
+.chart-tip b{display:block;margin-bottom:4px}
+.chart-tip .row{display:flex;gap:8px;align-items:center;justify-content:space-between;font-variant-numeric:tabular-nums}
+.chart-tip .row span:first-child{display:inline-flex;gap:6px;align-items:center}
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--ink)}
+table.agree th{position:static;text-transform:none;letter-spacing:0;font-size:.82rem}
+table.agree tbody th{color:var(--ink)}
+.field{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:4px 8px;width:12em}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input,.filters select{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:4px 6px;font-size:.85rem;min-width:0}
+.filters input{flex:1 1 10em}
+details.settings{border-top:1px solid var(--line);padding-top:10px;font-size:.9rem}
+details.settings summary{cursor:pointer;color:var(--muted);font-weight:500;width:max-content}
+details.settings .opts{margin-top:10px}
+.substrip{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center}
+.progress{height:8px;background:var(--sunk);border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:var(--hi);width:0;transition:width .25s}
+.stats{font-family:var(--mono);font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 16px;font-variant-numeric:tabular-nums}
+.done{text-align:center;display:grid;gap:10px;justify-items:center;padding:12px 0}
+.done .big{font-family:var(--display);font-size:clamp(1.4rem,4vw,2rem)}
+
+.lower{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+/* Benchmarks sit above the results in newspaper-style columns (10 at the top left, reading down) */
+.ladder{columns:250px;column-gap:20px}
+.ladder .rung{break-inside:avoid;margin-bottom:5px}
+.rung{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.rung select,.rung input{width:100%;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 4px;font-size:.84rem}
+.rung select.empty,.rung input.empty{color:var(--muted);border-style:dashed}
+.rung .n{font-family:var(--mono);font-size:.75rem;color:var(--muted);min-width:2.5em;text-align:right;font-variant-numeric:tabular-nums}
+.note{font-size:.84rem;color:var(--muted);margin:0}
+
+.tablewrap{overflow-x:auto;max-height:640px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{position:sticky;top:0;background:var(--surface);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);z-index:1}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.t{min-width:12em}
+.star{font-family:var(--mono);font-size:.7rem;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:6px;color:var(--muted);white-space:nowrap}
+.delta.up{color:var(--hi)} .delta.down{color:var(--lo)}
+td select{border:1px solid var(--line);background:var(--bg);border-radius:5px;font-family:var(--mono);font-size:.82rem;padding:1px 2px}
+.empty-row{padding:22px;text-align:center;color:var(--muted)}
+
+.export{display:grid;gap:12px}
+.export .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.steps{margin:0;padding-left:1.3em;color:var(--muted);font-size:.9rem;display:grid;gap:3px}
+.toast{min-height:1.4em;font-size:.88rem}
+textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
+
+@media (max-width:760px){
+  .loadgrid{grid-template-columns:1fr}
+  .lower{grid-template-columns:1fr}
+  .duel{grid-template-columns:1fr}
+  .vs{justify-self:center;font-size:1.1rem}
+  .answers{grid-template-columns:1fr 1fr}
+  .answers .direct{grid-column:1 / -1;order:3}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <button class="btn" id="themeBtn" style="float:right;margin-left:12px" aria-label="Switch light or dark mode"></button>
+    <div class="eyebrow">List re-scoring game</div>
+    <h1>Higher or Lower Ranker</h1>
+    <p class="muted">One show you've already scored stands for each step from 10 down to 0.5, in half points. Every other show is compared against those benchmarks and gets the score of the highest benchmark it beats or matches. Start with your AniList username: site medians, English titles, covers and any seasons missing from your list are filled in automatically, and your progress stays in this browser.</p>
+  </header>
+
+  <section class="panel" id="loadPanel">
+    <div class="banner">
+      <div id="sourceLine"></div>
+      <button class="btn" id="resetBtn" hidden>Start over</button>
+    </div>
+    <div class="tabs" role="group" aria-label="Panels">
+      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Load your list</button>
+      <button class="tab" id="tabCompare" aria-expanded="false" aria-controls="compareDetails">Compare to others<span class="tabnote" id="tabCompareNote"></span></button>
+    </div>
+    <details class="load" id="loadDetails">
+      <summary>Load your list</summary>
+      <div class="drop" style="margin-top:14px">
+        <h3>Your AniList username</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">The quickest start: your public AniList list loads directly. It also keeps your list in sync, so shows you finish later join your queue by themselves.</p>
+        <div class="opts">
+          <input type="text" id="userLoadIn" class="field" placeholder="AniList username" aria-label="Your AniList username" autocomplete="username">
+          <button class="btn primary" id="userLoadBtn">Load my list</button>
+        </div>
+      </div>
+      <div class="loadgrid">
+        <div class="drop" id="drop">
+          <h3>Or a list file (AniList or MyAnimeList)</h3>
+          <ol>
+            <li><b>AniList:</b> a list export from AniList's settings, or from a backup tool, as <code>.json</code> or <code>.xml</code>.</li>
+            <li><b>MyAnimeList:</b> Profile menu → Export (myanimelist.net/panel.php?go=export), a <code>.xml.gz</code> file.</li>
+            <li>Choose or drop it here. Zipped <code>.gz</code> files are fine.</li>
+          </ol>
+          <div><input type="file" id="fileIn" accept=".xml,.gz,.json,application/xml,application/gzip,application/json,text/xml"></div>
+        </div>
+        <div class="drop">
+          <h3>Or paste titles</h3>
+          <p class="muted" style="margin:0;font-size:.88rem">One title per line. You'll need to choose benchmarks by hand, and only a list file lets you import scores back automatically.</p>
+          <textarea id="pasteIn" placeholder="Cowboy Bebop&#10;Steins;Gate&#10;Frieren: Beyond Journey's End"></textarea>
+          <div><button class="btn" id="pasteBtn">Use these titles</button></div>
+        </div>
+      </div>
+      <div class="drop" style="margin-top:16px" hidden>
+        <h3>Site median scores (optional)</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">Shows you never scored start their search at the community median. They load automatically when this page has them. To use newer ones, load a <code>site-scores.json</code> made by the helper.</p>
+        <div><input type="file" id="siteIn" accept=".json,application/json"></div>
+        <div class="muted" id="siteMsg" style="font-size:.88rem"></div>
+      </div>
+      <div class="pending" id="pending" hidden></div>
+      <p class="err" id="loadErr" hidden></p>
+    </details>
+    <details class="load" id="compareDetails">
+      <summary>Compare to others</summary>
+      <div class="drop" style="margin-top:14px" id="followBox">
+        <h3>Follow on AniList</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">Add people by AniList username; their list loads straight from AniList (it has to be public). Your own username keeps your list in sync: shows you complete on AniList join your queue the next time you open this page.</p>
+        <div class="opts">
+          <input type="text" id="followIn" placeholder="AniList username" aria-label="AniList username to follow" class="field">
+          <button class="btn" id="followBtn">Follow</button>
+          <button class="btn" id="refreshLists" title="Lists are kept for 30 minutes; this loads them fresh">Reload lists now</button>
+        </div>
+        <div class="chips" id="followList"></div>
+        <div class="opts">
+          <label>Your AniList username <input type="text" id="meUser" class="field"></label>
+          <button class="btn" id="meSave">Save</button>
+        </div>
+        <div class="muted" id="followMsg" style="font-size:.88rem"></div>
+      </div>
+      <div class="drop" style="margin-top:14px">
+        <h3>Or load a list file</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">Load one AniList or MAL list file per person, as many people as you like. Their scores then show next to yours and the site median while you rate, and in the results. Loading a list under a name that's already here replaces that person's list. Fern (fern.ignoffo.dev) can export any public AniList by username.</p>
+        <div class="opts">
+          <label>Name <input type="text" id="refName" placeholder="Optional" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px;width:11em"></label>
+          <input type="file" id="refIn" accept=".xml,.gz,.json,application/xml,application/gzip,application/json,text/xml">
+        </div>
+        <div class="chips" id="refPeople"></div>
+        <div class="muted" id="refMsg" style="font-size:.88rem"></div>
+        <div id="refOnly" hidden>
+          <div class="substrip">
+            <b id="refOnlyHead"></b>
+            <div class="opts">
+              <select id="refWho" aria-label="Whose list" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px"></select>
+              <button class="btn" id="refAddAll" style="padding:3px 12px"></button>
+              <input type="search" id="refSearch" placeholder="Search titles" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px;width:13em">
+              <label><input type="checkbox" id="refDoneOnly" checked> Only ones they completed</label>
+            </div>
+          </div>
+          <div class="tablewrap" style="max-height:320px;margin-top:8px"><table>
+            <thead><tr><th>Title</th><th class="num">Their score</th><th>Their status</th><th></th></tr></thead>
+            <tbody id="refOnlyBody"></tbody>
+          </table></div>
+          <p class="note" style="margin-top:6px">Adding puts the show into your queue to rate. Each one you score goes into the import file as a new Completed entry.</p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section class="stage" id="stage" aria-live="polite"></section>
+
+  <section class="lower">
+    <div class="panel">
+      <div>
+        <div class="eyebrow">Benchmarks</div>
+        <h2>One show for each score</h2>
+      </div>
+      <p class="note">Picked from shows you already gave that score. Swap any of them for a show that better represents the score. Changing a benchmark doesn't re-score shows already placed.</p>
+      <div class="ladder" id="ladder"></div>
+    </div>
+    <div class="panel">
+      <div class="substrip">
+        <div>
+          <div class="eyebrow">Results</div>
+          <h2 id="rankHead">Scored so far</h2>
+        </div>
+        <span class="muted" style="font-size:.85rem">Change a score from its menu if a result feels off.</span>
+        <div id="refSummary" style="font-size:.88rem;flex-basis:100%;min-width:0"></div>
+      </div>
+      <div class="chart" id="chartBox" hidden>
+        <div class="chart-legend" id="chartLegend"></div>
+        <div class="chart-wrap" id="chartWrap">
+          <svg id="chartSvg" viewBox="0 0 720 230" role="img" aria-label="How your scores are spread"></svg>
+          <div class="chart-tip" id="chartTip" hidden></div>
+        </div>
+      </div>
+      <div class="filters">
+        <input type="search" id="fSearch" placeholder="Search titles" aria-label="Search titles">
+        <select id="fLetter" aria-label="First letter"><option value="">All letters</option><option value="#">0–9 / symbols</option></select>
+        <select id="fScore" aria-label="New score"><option value="">All scores</option></select>
+        <select id="fKind" aria-label="Show">
+          <option value="">Everything</option><option value="bench">Benchmarks only</option><option value="changed">Changed from old</option>
+          <option value="up">Went up</option><option value="down">Went down</option><option value="added">Not in your list before</option>
+        </select>
+        <span class="muted" id="fCount"></span>
+        <button class="btn" id="fExport" style="padding:3px 12px;margin-left:auto">Export this view (CSV)</button>
+      </div>
+      <div class="tablewrap"><table>
+        <thead id="rankThead"></thead>
+        <tbody id="rankBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section class="panel export" id="exportPanel">
+    <div>
+      <div class="eyebrow">Export</div>
+      <h2>Send the new scores back</h2>
+    </div>
+    <div class="opts" id="exportOpts">
+      <label><input type="checkbox" id="markDone"> Mark every scored show as Completed, with all episodes watched</label>
+      <label><input type="checkbox" id="wholeNums"> Round to whole numbers (for MyAnimeList, which has no half points)</label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="saveXml">Save import file (.xml)</button>
+      <button class="btn" id="copyXml">Copy import XML</button>
+      <button class="btn" id="saveCsv">Save results as CSV</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="backupBtn">Back up progress (.json)</button>
+      <label class="btn" style="cursor:pointer">Restore progress… <input type="file" id="restoreIn" accept=".json,application/json" hidden></label>
+      <span class="muted" style="font-size:.85rem">Your progress lives in this browser. A backup moves it to another browser or computer, or brings it over from the Claude version.</span>
+    </div>
+    <ol class="steps" id="exportSteps">
+      <li><b>AniList:</b> set your scoring system to <b>10 Point Decimal</b> in Settings → Lists so half points show, then upload under Settings → Import Lists → MyAnimeList (anilist.co/settings/import).</li>
+      <li><b>MyAnimeList:</b> tick the round-to-whole-numbers box first, then upload at myanimelist.net/import.php using <b>MyAnimeList Import</b>.</li>
+      <li>The file holds every scored show and benchmark. Shows are matched by their MyAnimeList ID.</li>
+    </ol>
+    <div class="toast" id="toast" role="status"></div>
+    <textarea class="xmlout" id="xmlOut" hidden readonly></textarea>
+  </section>
+</div>
+
+<script>
+(() => {
+const LEVELS = [10,9.5,9,8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,3.5,3,2.5,2,1.5,1,0.5];
+const MIN_SCORE = 0.5; // lowest score you can give
+const KEY = 'hl-ranker-v2';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = s => (+s).toFixed(1);
+// English titles, formats and episode counts by MAL id, built from db.json
+let showInfo = null;
+// Every anime on AniList (db.json, rebuilt weekly): {anilistId: [malId, median, english, romaji, format, episodes, status, sequels[], prequels[]]}
+let DB = null, malToAl = {};
+// Cover images load straight from AniList's image server (cover-urls.json: {anilistId: url}, plus covers from loaded lists)
+let coverUrls = {};
+const T = it => (showInfo && it.id && showInfo.titles[it.id]) || it.title;
+function coverFor(id){
+  const al = malToAl[id] || (showInfo && showInfo.anilist[id]);
+  return Promise.resolve((al && coverUrls[al]) || null);
+}
+function fillCovers(root){
+  root.querySelectorAll('img.cv[data-id]').forEach(img => coverFor(img.dataset.id).then(src => { if(src) img.src = src; else img.hidden = true; }));
+}
+const titleBlock = it => `<div class="title">${esc(T(it))}</div>${T(it)!==it.title?`<div class="orig">${esc(it.title)}</div>`:''}`;
+const half = v => Math.round(v*2)/2;
+const chipColor = s => `hsl(${Math.round(Math.max(0, s-1)/9*140)} 62% var(--chip-l))`;
+const scoreChip = s => s ? `<span class="score" style="background:${chipColor(s)}">${fmt(s)}</span>` : `<span class="score none">–</span>`;
+
+// Example list. "site" is a made-up community average for the demo only.
+const SAMPLE = [
+  ['1','Cowboy Bebop','TV',26,9],['5114','Fullmetal Alchemist: Brotherhood','TV',64,10],['9253','Steins;Gate','TV',24,9.5],
+  ['30','Neon Genesis Evangelion','TV',26,8],['199','Spirited Away','Movie',1,9],['16498','Attack on Titan','TV',25,8.5],
+  ['1535','Death Note','TV',37,8],['32281','Your Name.','Movie',1,0,8.5],['52991',"Frieren: Beyond Journey's End",'TV',28,9.5],
+  ['32182','Mob Psycho 100','TV',12,8.5],['11061','Hunter x Hunter (2011)','TV',148,9],['5680','K-On!','TV',13,7.5],
+  ['21','One Piece','TV',0,0,8.5],['20','Naruto','TV',220,7],
+  // one example show for each lower step, so every benchmark slot starts filled
+  ['11757','Sword Art Online','TV',25,6.5],['27899','Tokyo Ghoul √A','TV',12,6],['39617','The Promised Neverland Season 2','TV',11,5.5],
+  ['2476','School Days','TV',12,5],['32379','Berserk (2016)','TV',12,4.5],['32981','Hand Shakers','TV',12,4],
+  ['23079','Glasslip','TV',13,3.5],['34771','DYNAMIC CHORD','TV',12,3],['40074','GIBIATE','TV',12,2.5],
+  ['19315','Pupa','TV',12,2],['28929','VAMPIRE HOLMES','TV',12,1.5],['38853','EX-ARM','TV',12,1],['31904','Big Order','TV',10,0.5],
+].map(([id,title,type,eps,old,site],e) => ({e,id,title,type,eps,old,site:site||0,status:'Completed'}));
+
+let S = null, pending = null, undoStack = [];
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function autoBench(items){
+  const bench = {};
+  for(const L of LEVELS){
+    const c = items.map((it,i)=>[it,i]).filter(([it]) => it.old===L && !tooShort(it));
+    if(!c.length) continue;
+    c.sort((a,b) => (b[0].status==='Completed') - (a[0].status==='Completed'));
+    bench[L] = c[0][1];
+  }
+  return bench;
+}
+function newState({source,kind,xml,fileName,items,showOld=true}){
+  const bench = autoBench(items), used = new Set(Object.values(bench));
+  return {v:2,source,kind,xml,fileName,items,bench,results:{},
+    queue:shuffle(items.map((_,i)=>i).filter(i=>!used.has(i))),cur:null,skipped:[],compares:0,
+    hints:true,showOld,markDone:true,wholeNums:false};
+}
+function save(){ if(S.source==='sample') return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} syncRemoved(); }
+// Copies what you marked "Didn't watch" or "Dropped" (and how each show got into the game) to the page database,
+// so Claude can read it and tune which seasons get added automatically. Writes only when the lists change.
+let removedTimer = null, removedSent = '';
+function syncRemoved(){ return; // only used by the Claude version (lets Claude read what you removed)
+}
+function syncRemovedUnused(){
+  clearTimeout(removedTimer);
+  removedTimer = setTimeout(async () => {
+    if(!S || S.source==='sample' || typeof followDb==='undefined' || !followDb) return;
+    const pick = i => { const it = S.items[i]; return {id:it.id||'', alId:it.alId||'', title:it.title, type:it.type||'', eps:it.eps||0, status:it.status, from:it.from||''}; };
+    const body = {notWatched:(S.removed||[]).map(pick), dropped:(S.dropped||[]).map(pick),
+      added:S.items.filter(it => it.added && it.status==='Missing season').length, updated:new Date().toISOString()};
+    const key = JSON.stringify([body.notWatched, body.dropped]);
+    if(key===removedSent) return;
+    try{ await followDb.doc('insights/removed').set(body); removedSent = key; }catch(e){}
+  }, 2000);
+}
+function load(){ try{ const raw = localStorage.getItem(KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===2) return s; } }catch(e){} return null; }
+
+/* ---------- engine: binary search over the benchmark ladder ---------- */
+function benchList(){ return LEVELS.filter(L => S.bench[L]!=null).map(L => ({s:L, idx:S.bench[L]})); }
+function benchLevelOf(){ const m = {}; for(const L of LEVELS) if(S.bench[L]!=null) m[S.bench[L]] = L; return m; }
+// Starting guess: your old score, or the site's average if you never scored it
+function guessOf(it){ return it.old || it.site || 0; }
+function probesFor(idx){
+  const g = guessOf(S.items[idx]); if(!S.hints || !g) return [];
+  const B = benchList(); let i = B.findIndex(b => b.s <= g);
+  if(i<0) i = B.length-1;
+  return [i, i-1].filter(p => p>=0 && p<B.length);
+}
+// A show that lands at position p sits below B[p-1] and at or above B[p].
+// If the score steps between those two benchmarks have no benchmark yet, the show
+// becomes the benchmark for the middle empty step, so half points fill in as you play.
+function place(idx, p, B){
+  const upper = p>0 ? B[p-1].s : 10.5, lower = p<B.length ? B[p].s : 0.5;
+  const gaps = LEVELS.filter(L => L<upper && L>lower && S.bench[L]==null);
+  if(S.fillGaps!==false && gaps.length){
+    const L = p===0 ? gaps[gaps.length-1] : p===B.length ? gaps[0] : gaps[Math.floor((gaps.length-1)/2)];
+    S.bench[L] = idx; S.lastNew = {idx, L};
+    return;
+  }
+  S.results[idx] = p<B.length ? lower : Math.max(MIN_SCORE, upper-0.5);
+}
+function advance(){
+  if(!benchList().length) return;
+  for(;;){
+    const B = benchList();
+    if(!S.cur){
+      if(!S.queue.length) return;
+      const idx = S.queue.shift();
+      if(tooShort(S.items[idx])){ S.short = S.short || []; if(!S.short.includes(idx)) S.short.push(idx); continue; }
+      S.cur = {idx, lo:0, hi:B.length, probes:probesFor(idx), m:-1};
+    }
+    const c = S.cur;
+    if(c.lo>=c.hi){ place(c.idx, c.lo, B); S.cur = null; continue; }
+    if(c.m>=0) return;
+    let m = -1;
+    while(c.probes.length){ const p = c.probes.shift(); if(p>=c.lo && p<c.hi){ m = p; break; } }
+    if(m<0) m = (c.lo+c.hi)>>1;
+    c.m = m; return;
+  }
+}
+function snap(){ undoStack.push(JSON.stringify({queue:S.queue,cur:S.cur,results:S.results,skipped:S.skipped,compares:S.compares,bench:S.bench,lastNew:S.lastNew||null,removed:S.removed||[],dropped:S.dropped||[],nItems:S.items.length})); if(undoStack.length>200) undoStack.shift(); }
+// Later seasons the page added by itself ("Missing season") that you haven't scored leave with a dropped show.
+// Follows AniList sequel links (db.json); a show from your own list ends the line.
+function dropSequels(idx){
+  if(typeof DB==='undefined' || !DB) return 0;
+  const alOf = x => +(x.alId || malToAl[x.id] || (showInfo && x.id && showInfo.anilist?.[x.id]) || 0);
+  const start = alOf(S.items[idx]); if(!start) return 0;
+  const byAl = new Map(); S.items.forEach((x,i) => { const a = alOf(x); if(a) byAl.set(a, i); });
+  const fs = finalScores(), gone = [], seen = new Set([start]);
+  let frontier = [start];
+  while(frontier.length){
+    const next = [];
+    for(const a of frontier) for(const n of (DB[a]?.[7] || [])){
+      if(seen.has(n)) continue; seen.add(n);
+      const i = byAl.get(n);
+      if(i==null){ next.push(n); continue; }                 // not in the game: keep following the line
+      const x = S.items[i];
+      if(!(x.added && x.status==='Missing season')) continue; // your own list: the line stops here
+      if(fs[i]==null){ gone.push(i); }
+      next.push(n);
+    }
+    frontier = next;
+  }
+  if(!gone.length) return 0;
+  S.removed = S.removed || [];
+  gone.forEach(i => { if(!S.removed.includes(i)) S.removed.push(i); });
+  S.queue = S.queue.filter(i => !gone.includes(i)); S.skipped = S.skipped.filter(i => !gone.includes(i));
+  if(S.cur && gone.includes(S.cur.idx)) S.cur = null;
+  return gone.length;
+}
+let stageNote = '';
+// "Dropped": out of the game, and exported with status Dropped (your old score, if any, is kept)
+function dropShow(idx){
+  if(idx==null){ if(!S.cur) return; idx = S.cur.idx; }
+  snap(); S.dropped = S.dropped || [];
+  if(!S.dropped.includes(idx)) S.dropped.push(idx);
+  delete S.results[idx];
+  const seq = dropSequels(idx);
+  stageNote = seq ? `Dropped ${T(S.items[idx])} and removed ${seq} later season${seq>1?'s':''} that were added automatically. Undo (Z) brings them back.` : '';
+  S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx);
+  if(S.cur && S.cur.idx===idx) S.cur = null;
+  advance(); save(); render();
+}
+// "Didn't watch": out of the game, and never written to the import file
+function notWatched(idx){
+  if(idx==null){ if(!S.cur) return; idx = S.cur.idx; }
+  snap(); S.removed = S.removed || [];
+  if(!S.removed.includes(idx)) S.removed.push(idx);
+  delete S.results[idx];
+  S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx);
+  if(S.cur && S.cur.idx===idx) S.cur = null;
+  advance(); save(); render();
+}
+// Series with fewer than 6 episodes sit out (movies are exempt). Unknown format or episode count: kept.
+const MIN_EPS = 6;
+function tooShort(it){
+  if(S && S.minEps===false) return false;
+  const f = String(it.type || (showInfo && it.id && showInfo.formats?.[it.id]) || '').toUpperCase().replace(/\s+/g,'_');
+  if(!f || f.includes('MOVIE')) return false;
+  const eps = it.eps || (showInfo && it.id && showInfo.episodes?.[it.id]) || 0;
+  return eps > 0 && eps < MIN_EPS;
+}
+function applyMinEps(){
+  S.short = S.short || [];
+  if(S.minEps===false){ if(S.short.length){ S.queue.push(...S.short); S.short = []; } }
+  else {
+    const out = S.queue.filter(i => tooShort(S.items[i]));
+    if(S.cur && tooShort(S.items[S.cur.idx])){ out.push(S.cur.idx); S.cur = null; }
+    if(out.length){ S.queue = S.queue.filter(i => !out.includes(i)); S.short.push(...out); }
+  }
+  advance(); save(); render();
+}
+// The middle button: "Set" at the benchmark's score means "same level"; ±1/±½ adjust it first
+let direct = null; // {key, v}
+function directFor(b){
+  const key = S.cur.idx + ':' + S.cur.m;
+  if(!direct || direct.key!==key) direct = {key, v: b.s};
+  return direct.v;
+}
+// A score given by hand fills that step's benchmark if it has none yet (same rule as "Fill empty steps")
+function giveScore(idx, v){
+  if(S.fillGaps!==false && S.bench[v]==null && !tooShort(S.items[idx])){
+    delete S.results[idx]; S.bench[v] = idx; S.lastNew = {idx, L:v};
+    return true;
+  }
+  S.results[idx] = v; return false;
+}
+// Steps still empty but with shows already scored there (e.g. set by hand before this rule): promote one
+function backfillBench(){
+  if(S.fillGaps===false) return false;
+  let changed = false;
+  for(const L of LEVELS){
+    if(S.bench[L]!=null) continue;
+    const k = Object.keys(S.results).find(k => S.results[k]===L && !tooShort(S.items[k]));
+    if(k!=null){ delete S.results[k]; S.bench[L] = +k; changed = true; }
+  }
+  return changed;
+}
+// Take the compared person's score, rounded to your half-point scale
+let agreeKeys = []; // the agree buttons on screen, in order: [{v, ps:[[person, index]]}]
+function agreeRef(pi){
+  if(!S.cur) return;
+  const it = S.items[S.cur.idx];
+  if(pi==null) pi = agreeKeys.length ? agreeKeys[0].ps[0][1] : -1; // A key: the first agree button
+  const r = refScore(it, REFS[pi]); if(!r) return;
+  snap(); S.lastNew = null; giveScore(S.cur.idx, Math.max(MIN_SCORE, half(r))); S.cur = null; direct = null;
+  advance(); save(); render();
+}
+function stepDirect(d){
+  if(!S.cur || !direct) return;
+  direct.v = Math.max(MIN_SCORE, Math.min(10, direct.v + d));
+  $('directSet').innerHTML = `Set ${fmt(direct.v)}<span class="kbd">E</span>`;
+}
+function setDirect(){
+  if(!S.cur || !direct || direct.key!==S.cur.idx + ':' + S.cur.m) return;
+  snap(); S.lastNew = null; giveScore(S.cur.idx, direct.v); S.cur = null; direct = null;
+  advance(); save(); render();
+}
+function restoreRemoved(){ if(!(S.removed||[]).length) return; snap(); S.queue.push(...S.removed); S.removed = []; advance(); save(); render(); }
+function undo(){
+  const u = undoStack.pop(); if(!u) return;
+  const {nItems, ...rest} = JSON.parse(u);
+  Object.assign(S, rest);
+  if(nItems!=null && S.items.length > nItems) S.items.length = nItems; // drops shows added since then
+  save(); render();
+}
+function answer(d){
+  const c = S.cur; if(!c || c.m<0) return;
+  const B = benchList();
+  snap(); S.compares++; S.lastNew = null;
+  if(d==='same'){ S.results[c.idx] = B[c.m].s; S.cur = null; }
+  else { if(d==='higher') c.hi = c.m; else c.lo = c.m+1; c.m = -1; }
+  advance(); save(); render();
+}
+function skip(){ if(!S.cur) return; snap(); S.skipped.push(S.cur.idx); S.cur = null; advance(); save(); render(); }
+function unskip(){ snap(); S.queue.push(...S.skipped); S.skipped = []; advance(); save(); render(); }
+function rescore(idx){ snap(); delete S.results[idx]; if(S.cur) S.queue.unshift(S.cur.idx); S.cur = null; S.queue.unshift(idx); advance(); save(); render(); $('stage').scrollIntoView({behavior:'smooth',block:'start'}); }
+function estLeft(){
+  const per = Math.ceil(Math.log2(benchList().length+1));
+  const each = S.hints ? Math.min(per, 2.5) : per;
+  return Math.round((S.cur ? Math.ceil(Math.log2(S.cur.hi-S.cur.lo+1)) : 0) + S.queue.length*each);
+}
+function setBench(L, idx){
+  const prev = S.bench[L];
+  if(idx!=null){
+    for(const K of LEVELS) if(S.bench[K]===idx) delete S.bench[K];
+    S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx); delete S.results[idx];
+    S.removed = (S.removed||[]).filter(i => i!==idx); S.dropped = (S.dropped||[]).filter(i => i!==idx);
+    if(S.cur && S.cur.idx===idx) S.cur = null;
+    S.bench[L] = idx;
+  } else delete S.bench[L];
+  if(prev!=null && prev!==idx) S.results[prev] = L; // the old benchmark keeps that score
+  if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+  undoStack = [];
+  advance(); save(); render();
+}
+function finalScores(){
+  const m = {}, bl = benchLevelOf();
+  for(const k in S.results) m[k] = S.results[k];
+  for(const k in bl) m[k] = bl[k];
+  return m;
+}
+
+/* ---------- rendering ---------- */
+function itemUrl(it){
+  const k = S.kind==='manga'?'manga':'anime';
+  const al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]);
+  if(al) return `https://anilist.co/${k}/${encodeURIComponent(al)}`;
+  return it.id ? `https://myanimelist.net/${k}/${encodeURIComponent(it.id)}` : '';
+}
+function metaLine(it, mine){
+  const bits = [], scores = [];
+  if(it.type) bits.push(esc(it.type));
+  if(it.eps) bits.push(`${it.eps} ${S.kind==='manga'?'ch':(it.eps===1?'ep':'eps')}`);
+  const u = itemUrl(it); if(u) bits.push(`<a href="${u}" target="_blank" rel="noopener">${u.includes('anilist')?'AniList':'MAL'} ↗</a>`);
+  if(S.showOld){
+    if(mine && it.old) scores.push(`you before ${scoreChip(it.old)}`);
+    if(it.site) scores.push(`site median ${scoreChip(it.site)}`);
+    REFS.forEach(P => { const r = refScore(it, P); if(r) scores.push(`${esc(P.name)} ${scoreChip(r)}`); });
+  }
+  return bits.map(b => `<span>${b}</span>`).join('') + (scores.length ? `<span class="scoreline">${scores.map(s=>`<span>${s}</span>`).join('')}</span>` : '');
+}
+/* ---------- someone else's list to compare with ---------- */
+// Everyone you compare with: [{name, byMal:{id:score}, byAl:{id:score}, count, list}]
+const REF_KEY = 'hl-ranker-refs';
+let REFS = [];
+try{
+  REFS = JSON.parse(localStorage.getItem(REF_KEY) || '[]') || [];
+  const one = JSON.parse(localStorage.getItem('hl-ranker-ref') || 'null'); // from the single-person version
+  if(one && !REFS.length) REFS = [one];
+}catch(e){}
+// People followed on AniList (auto: true) are downloaded fresh on every visit, so only file-loaded people are saved
+const saveRefs = () => { try{ localStorage.setItem(REF_KEY, JSON.stringify(REFS.filter(P => !P.auto))); localStorage.removeItem('hl-ranker-ref'); }catch(e){} };
+let REF = null; // the person picked in the "only on their list" table
+let refPick = 0;
+function refScore(it, P){
+  if(!P) return 0;
+  const al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]);
+  return (it.id && P.byMal[it.id]) || (al && P.byAl[al]) || 0;
+}
+function refSummary(){
+  if(!REFS.length) return '';
+  const fs = finalScores();
+  return REFS.map(P => {
+    let n = 0, diff = 0, same = 0;
+    for(const k in fs){ const r = refScore(S.items[k], P); if(r){ n++; const d = Math.abs(fs[k]-r); diff += d; if(d<=0.5) same++; } }
+    return n ? `${P.name}: ${n} in common, ${fmt(diff/n)} points apart on average, ${Math.round(same/n*100)}% within half a point.` : `${P.name}: none of your scored shows yet.`;
+  }).join(' ');
+}
+function renderSource(){
+  const line = $('sourceLine');
+  if(S.source==='sample'){
+    line.innerHTML = `<span class="tag">Example list</span> <span class="muted">Try a few rounds, then load your own list below.</span>`;
+  } else {
+    const what = S.source==='paste' ? 'Pasted titles' : `${esc(S.fileName||'List export')} · ${S.kind}`;
+    line.innerHTML = `<span class="tag">${what}</span> <span class="muted">${S.items.length} shows. Progress saves in this browser.</span>`;
+  }
+  $('resetBtn').hidden = S.source==='sample';
+}
+let settingsOpen = false;
+function renderStage(){
+  const st = $('stage'), B = benchList();
+  const nRemoved = (S.removed||[]).length;
+  const nShort = (S.short||[]).length;
+  const nDropped = (S.dropped||[]).length;
+  const total = S.items.length - S.skipped.length - nRemoved - nShort - nDropped;
+  const scored = Object.keys(finalScores()).length, pct = total ? Math.round(scored/total*100) : 0;
+  const statsHtml = `<div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} under ${MIN_EPS} episodes left out</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
+  if(!B.length){
+    st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
+    return;
+  }
+  if(!S.cur){
+    st.innerHTML = `<div class="done"><div class="big">All ${scored} scored</div>
+      <div class="muted">${S.compares} comparisons. Check the results below, then export.</div>
+      <div class="substrip" style="justify-content:center">${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
+      <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div></div>${statsHtml}`;
+  } else {
+    const a = S.items[S.cur.idx], b = B[S.cur.m], bi = S.items[b.idx];
+    const g = S.hints && guessOf(a);
+    const ln = S.lastNew && S.bench[S.lastNew.L]===S.lastNew.idx ? S.lastNew : null;
+    const note = stageNote; stageNote = '';
+    st.innerHTML = `${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} filled the empty ${fmt(ln.L)} step and is now its benchmark.</div>`:''}
+      <div class="prompt">Is <b>${esc(T(a))}</b> higher or lower than <b>${esc(T(bi))}</b>?</div>
+      <div class="duel">
+        <article class="card new"><div class="eyebrow">Scoring now${g?` · started near ${fmt(g)}`:''}${a.added?` · not in your list yet`:''}</div>
+          <div class="cardrow">${showInfo&&a.id?`<img class="cv" data-id="${esc(a.id)}" alt="">`:''}<div><div>${titleBlock(a)}</div><div class="meta">${metaLine(a,true)}</div>${a.added&&a.from?`<div class="muted" style="font-size:.84rem">Found through ${esc(a.from)}</div>`:''}</div></div></article>
+        <div class="vs" aria-hidden="true">VS</div>
+        <article class="card"><div class="benchscore">${scoreChip(b.s)}<span class="eyebrow">Benchmark for ${fmt(b.s)}</span></div>
+          <div class="cardrow">${showInfo&&bi.id?`<img class="cv" data-id="${esc(bi.id)}" alt="">`:''}<div><div>${titleBlock(bi)}</div><div class="meta">${metaLine(bi,false)}</div></div></div></article>
+      </div>
+      <div class="answers">
+        <button class="ans hi" data-a="higher">↑ Higher<span class="kbd">↑</span></button>
+        <div class="direct">
+          <button class="btn step" data-step="-1">−1</button>
+          <button class="btn step" data-step="-0.5">−½</button>
+          <button class="btn primary" id="directSet" title="Same level as the benchmark, or adjust first">Set ${fmt(directFor(b))}<span class="kbd">E</span></button>
+          <button class="btn step" data-step="0.5">+½</button>
+          <button class="btn step" data-step="1">+1</button>
+        </div>
+        <button class="ans lo" data-a="lower">↓ Lower<span class="kbd">↓</span></button>
+      </div>
+      ${(() => {
+        // One button per distinct score: people who'd give the same (rounded) score share a button
+        const groups = new Map();
+        REFS.forEach((P,pi) => { const r = refScore(a,P); if(!r) return; const v = Math.max(MIN_SCORE, half(r)); if(!groups.has(v)) groups.set(v, []); groups.get(v).push([P,pi]); });
+        // Keys 1, 2, 3... follow the button order
+        agreeKeys = [...groups].sort((x, y) => x[1][0][1] - y[1][0][1]).map(([v, ps]) => ({v, ps})); // fixed order: by who comes first in your people list
+        return agreeKeys.length ? `<div class="direct">${agreeKeys.map(({v, ps}, n) => `<button class="btn" data-agree="${ps[0][1]}">Agree with ${ps.map(([P]) => esc(P.name)).join(', ')} · ${fmt(v)}${n<9?`<span class="kbd">${n+1}</span>`:''}</button>`).join('')}</div>` : '';
+      })()}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <button class="btn" id="dropBtn">Dropped<span class="kbd">D</span></button>
+        <button class="btn" id="nwBtn">Didn't watch<span class="kbd">X</span></button>
+        <button class="btn" id="skipBtn">Skip for now<span class="kbd">K</span></button>
+        <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button>
+      </div>${statsHtml}
+      <details class="settings" id="settingsBox" ${settingsOpen?'open':''}>
+        <summary>Settings</summary>
+        <div class="opts">
+          <label><input type="checkbox" id="optOld" ${S.showOld?'checked':''}> Show other scores</label>
+          <label title="Starts each search at your old score, or the site median if you never scored it"><input type="checkbox" id="optHints" ${S.hints?'checked':''}> Start near old score or site median</label>
+          <label><input type="checkbox" id="optMinEps" ${S.minEps!==false?'checked':''}> Leave out series under ${MIN_EPS} episodes (movies stay in)</label>
+          <label title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark"><input type="checkbox" id="optFill" ${S.fillGaps!==false?'checked':''}> Fill empty steps with new benchmarks</label>
+        </div>
+      </details>`;
+    $('settingsBox').addEventListener('toggle', e => { settingsOpen = e.target.open; });
+    fillCovers(st);
+    st.querySelectorAll('[data-a]').forEach(btn => btn.onclick = () => answer(btn.dataset.a));
+    $('skipBtn').onclick = skip;
+    $('nwBtn').onclick = () => notWatched();
+    $('dropBtn').onclick = () => dropShow();
+    st.querySelectorAll('[data-step]').forEach(btn => btn.onclick = () => { stepDirect(+btn.dataset.step); btn.blur(); });
+    $('directSet').onclick = setDirect;
+    st.querySelectorAll('[data-agree]').forEach(b => b.onclick = () => agreeRef(+b.dataset.agree));
+    $('optOld').onchange = e => { S.showOld = e.target.checked; save(); render(); };
+    $('optHints').onchange = e => { S.hints = e.target.checked; save(); };
+    $('optFill').onchange = e => { S.fillGaps = e.target.checked; save(); };
+    $('optMinEps').onchange = e => { S.minEps = e.target.checked; applyMinEps(); };
+  }
+  const ub = $('undoBtn'); if(ub) ub.onclick = undo;
+  const us = $('unskipBtn'); if(us) us.onclick = unskip;
+  const rb = $('restoreBtn'); if(rb) rb.onclick = restoreRemoved;
+}
+function renderLadder(){
+  const order = S.items.map((it,i)=>i).sort((a,b) => (S.items[b].old - S.items[a].old) || T(S.items[a]).localeCompare(T(S.items[b])));
+  const fs = finalScores(), countAt = {};
+  for(const k in fs) countAt[fs[k]] = (countAt[fs[k]]||0) + 1;
+  const removed = new Set([...(S.removed||[]), ...(S.dropped||[])]);
+  const scoreNow = i => fs[i]!=null ? fs[i] : (S.items[i].old || null);
+  // Each show gets one unique label to type or pick; repeated titles get their score or id added
+  const seen = {}, labelOf = {}, byLabel = new Map();
+  order.forEach(i => { const t = T(S.items[i]); seen[t] = (seen[t]||0) + 1; });
+  order.forEach(i => {
+    const it = S.items[i], t = T(it);
+    let lab = seen[t] > 1 ? `${t} (${it.type || 'id ' + (it.id || i)}${it.old ? ', ' + fmt(it.old) : ''})` : t;
+    while(byLabel.has(lab)) lab += ' ·';
+    labelOf[i] = lab; byLabel.set(lab, i);
+  });
+  // Type to search: the suggestion list puts shows already at that score first
+  const fillList = L => {
+    const at = order.filter(i => !removed.has(i) && scoreNow(i)===L), rest = order.filter(i => !removed.has(i) && scoreNow(i)!==L);
+    $('benchOptions').innerHTML = [...at, ...rest].map(i => `<option value="${esc(labelOf[i])}">${scoreNow(i)!=null ? fmt(scoreNow(i)) : ''}</option>`).join('');
+  };
+  $('ladder').innerHTML = LEVELS.map(L => `<div class="rung">${scoreChip(L)}
+      <input type="text" list="benchOptions" id="bench-${L*10}" data-l="${L}" class="${S.bench[L]==null?'empty':''}" placeholder="Type a title…"
+        value="${S.bench[L]!=null ? esc(labelOf[S.bench[L]] || T(S.items[S.bench[L]])) : ''}" aria-label="Benchmark for ${fmt(L)}" autocomplete="off">
+      <span class="n" title="Shows with this score now">${countAt[L]||0}</span></div>`).join('') + '<datalist id="benchOptions"></datalist>';
+  $('ladder').querySelectorAll('input[data-l]').forEach(inp => {
+    const L = +inp.dataset.l, was = inp.value;
+    inp.onfocus = () => { fillList(L); inp.select(); };
+    inp.onchange = () => {
+      const v = inp.value.trim();
+      if(!v){ if(S.bench[L]!=null) setBench(L, null); return; }
+      let i = byLabel.get(v);
+      if(i==null){ const low = v.toLowerCase(); const hits = order.filter(j => !removed.has(j) && labelOf[j].toLowerCase().includes(low)); if(hits.length===1) i = hits[0]; }
+      if(i==null){ inp.value = was; inp.setCustomValidity('Pick a show from the suggestions'); inp.reportValidity(); setTimeout(() => inp.setCustomValidity(''), 2000); return; }
+      if(i!==S.bench[L]) setBench(L, i);
+    };
+    inp.onkeydown = e => { if(e.key==='Escape'){ inp.value = was; inp.blur(); } };
+  });
+}
+// Click a column header to sort by it; click again to flip the direction
+let tSort = {key:'new', dir:-1};
+let lastView = null; // {cols, ids, fs} of the rows on screen, for "Export this view"
+function tableCols(fs){
+  const cols = [
+    {key:'title', label:'Title', text:true, val:i => T(S.items[i]).toLowerCase()},
+    {key:'old', label:'Old', val:i => S.items[i].old || null},
+    {key:'new', label:'New', val:i => fs[i]},
+    {key:'change', label:'Change', val:i => S.items[i].old ? fs[i]-S.items[i].old : null},
+    {key:'median', label:'Median', val:i => S.items[i].site || null},
+  ];
+  REFS.forEach((P,pi) => {
+    cols.push({key:'p'+pi, label:P.name, person:P, val:i => refScore(S.items[i], P) || null});
+    cols.push({key:'g'+pi, label:'Gap', title:`Your score minus ${P.name}'s. Sort to find where you disagree most.`, gapOf:P, val:i => { const r = refScore(S.items[i], P); return r ? fs[i]-r : null; }});
+  });
+  return cols;
+}
+// Agreement between you and everyone you compare with, and between them: average gap and shows in common
+function agreementTable(fs){
+  if(!REFS.length) return '';
+  const you = {}; for(const k in fs){ const id = S.items[k].id; if(id) you[id] = fs[k]; }
+  const people = [{name:'You', map:you}, ...REFS.map(P => ({name:P.name, map:P.byMal}))];
+  const pair = (A, B) => { let n = 0, d = 0; for(const id in A.map){ const b = B.map[id]; if(b){ n++; d += Math.abs(A.map[id]-b); } } return n ? `${fmt(d/n)}<span class="muted"> · ${n}</span>` : '<span class="muted">–</span>'; };
+  return `<div class="tablewrap" style="max-height:none;margin-top:6px"><table class="agree">
+    <thead><tr><th>Average gap · shows in common</th>${people.map(p => `<th class="num">${esc(p.name)}</th>`).join('')}</tr></thead>
+    <tbody>${people.map((A,ai) => `<tr><th>${esc(A.name)}</th>${people.map((B,bi) => `<td class="num">${ai===bi ? '' : pair(A,B)}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div><p class="note" style="margin-top:4px">Smaller gap means closer taste. "You" uses your new scores.</p>`;
+}
+/* ---------- score spread chart: your new scores as bars, smooth curves for you and everyone else ---------- */
+let chartOpts = {}; try{ chartOpts = JSON.parse(localStorage.getItem('hl-chart') || '{}') || {}; }catch(e){}
+const chartOn = key => chartOpts[key] !== false;
+// Kernel density: a smooth, bell-shaped version of a set of scores (as % of shows per half point)
+function smooth(vals, xs, bw = 0.6){
+  const n = vals.length, k = 1 / (bw * Math.sqrt(2 * Math.PI));
+  return xs.map(x => { let s = 0; for(const v of vals){ const z = (x - v) / bw; s += Math.exp(-0.5 * z * z); } return n ? s * k / n * 0.5 * 100 : 0; });
+}
+const avgOf = v => v.reduce((a,b) => a+b, 0) / v.length;
+const medianOf = v => { const s = [...v].sort((a,b) => a-b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
+function renderChart(fs){
+  const box = $('chartBox'); if(!box) return;
+  const mine = Object.values(fs).map(Number);
+  if(mine.length < 2){ box.hidden = true; return; }
+  box.hidden = false;
+  const series = [{key:'you', name:'You', vals:mine, color:'var(--s1)'}];
+  const old = Object.keys(fs).map(k => S.items[k].old).filter(v => v > 0);
+  if(old.length > 1) series.push({key:'old', name:'You before', vals:old, color:'var(--s2)'});
+  const people = REFS.slice(0, 5);
+  people.forEach((P, i) => { const v = Object.values(P.byMal || {}).map(Number).filter(x => x > 0); if(v.length > 1) series.push({key:'p:' + (P.user || P.name), name:P.name, vals:v, color:`var(--s${3+i})`}); });
+  // legend with on/off toggles and each series' average and median
+  $('chartLegend').innerHTML = series.map(s => `<label><input type="checkbox" data-series="${esc(s.key)}" ${chartOn(s.key)?'checked':''}>
+      <span class="sw ${s.key==='you'?'bar':''}" style="background:${s.color};opacity:${s.key==='you'?0.4:1}"></span>${esc(s.name)}
+      <span class="stat">avg ${fmt(avgOf(s.vals))} · median ${fmt(medianOf(s.vals))} · ${s.vals.length}</span></label>`).join('')
+    + (REFS.length > 5 ? `<span class="muted">+${REFS.length-5} more not drawn</span>` : '');
+  $('chartLegend').querySelectorAll('[data-series]').forEach(cb => cb.onchange = () => {
+    chartOpts[cb.dataset.series] = cb.checked; try{ localStorage.setItem('hl-chart', JSON.stringify(chartOpts)); }catch(e){}
+    renderChart(finalScores());
+  });
+  const W = 720, H = 230, L = 40, R = 10, T = 10, B = 26, pw = W - L - R, ph = H - T - B;
+  const bins = [...LEVELS].sort((a,b) => a-b); // 0.5 ... 10
+  const xOf = v => L + (v - 0.25) / 10 * pw, bw = pw / bins.length;
+  const share = (vals, b) => vals.filter(v => half(v)===b).length / vals.length * 100;
+  const youBars = bins.map(b => share(mine, b));
+  const xs = []; for(let x = 0.25; x <= 10.251; x += 0.05) xs.push(x);
+  const shown = series.filter(s => chartOn(s.key));
+  const curves = shown.map(s => ({s, ys:smooth(s.vals, xs)}));
+  const yMax = Math.max(1, ...(chartOn('you') ? youBars : []), ...curves.flatMap(c => c.ys)) * 1.1;
+  const step = [1,2,5,10,20,25,50].find(st => yMax / st <= 5) || 50;
+  const yOf = p => T + ph - p / yMax * ph;
+  let svg = '';
+  for(let t = 0; t <= yMax; t += step) svg += `<line x1="${L}" x2="${W-R}" y1="${yOf(t)}" y2="${yOf(t)}" stroke="var(--grid)" stroke-width="1"/><text x="${L-6}" y="${yOf(t)+4}" text-anchor="end">${t}%</text>`;
+  svg += `<line x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}" stroke="var(--axis)" stroke-width="1"/>`;
+  for(let v = 1; v <= 10; v++) svg += `<text x="${xOf(v)}" y="${H-8}" text-anchor="middle">${v}</text>`;
+  if(chartOn('you')) youBars.forEach((p, i) => {
+    if(!p) return;
+    const x = L + i*bw + 1, w = bw - 2, y = yOf(p), h = T + ph - y, r = Math.min(3, w/2, h);
+    svg += `<path d="M${x},${T+ph} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${T+ph} Z" fill="var(--s1)" fill-opacity="0.28"/>`;
+  });
+  // other curves first, yours on top; each gets a surface ring so crossings stay readable
+  [...curves].sort((a,b) => (a.s.key==='you') - (b.s.key==='you')).forEach(({s, ys}) => {
+    const d = ys.map((y, i) => `${i?'L':'M'}${xOf(xs[i]).toFixed(1)},${yOf(y).toFixed(1)}`).join(' ');
+    svg += `<path d="${d}" fill="none" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+  });
+  // hover targets: one column per half point
+  bins.forEach((b, i) => svg += `<rect data-bin="${i}" x="${L + i*bw}" y="${T}" width="${bw}" height="${ph}" fill="transparent"/>`);
+  svg += `<line id="chartCursor" x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>`;
+  const el = $('chartSvg'); el.innerHTML = svg;
+  const tip = $('chartTip'), wrap = $('chartWrap'), cur = $('chartCursor');
+  el.querySelectorAll('[data-bin]').forEach(rc => {
+    rc.onmouseenter = rc.onmousemove = ev => {
+      const i = +rc.dataset.bin, b = bins[i];
+      const rows = series.filter(s => chartOn(s.key)).map(s => { const n = s.vals.filter(v => half(v)===b).length;
+        return `<div class="row"><span><span class="sw ${s.key==='you'?'bar':''}" style="background:${s.color};display:inline-block;width:10px;height:${s.key==='you'?10:3}px;border-radius:2px"></span>${esc(s.name)}</span><span>${n} · ${fmt(n / s.vals.length * 100)}%</span></div>`; }).join('');
+      tip.innerHTML = `<b>Score ${fmt(b)}</b>${rows}`;
+      tip.hidden = false;
+      const box2 = wrap.getBoundingClientRect(), x = ev.clientX - box2.left;
+      tip.style.left = Math.min(Math.max(0, x + 12), box2.width - tip.offsetWidth) + 'px';
+      tip.style.top = '4px';
+      cur.setAttribute('x1', xOf(b)); cur.setAttribute('x2', xOf(b)); cur.setAttribute('visibility', 'visible');
+    };
+    rc.onmouseleave = () => { tip.hidden = true; cur.setAttribute('visibility', 'hidden'); };
+  });
+}
+function renderTable(){
+  const fs = finalScores(), bl = benchLevelOf(), body = $('rankBody');
+  const all = Object.keys(fs).map(Number);
+  // Person-specific filters
+  const kindSel = $('fKind'), keep = kindSel.value;
+  kindSel.querySelectorAll('.pf').forEach(o => o.remove());
+  REFS.forEach((P,pi) => kindSel.insertAdjacentHTML('beforeend', `<option class="pf" value="by${pi}">Scored by ${esc(P.name)}</option><option class="pf" value="apart${pi}">1+ points apart from ${esc(P.name)}</option>`));
+  kindSel.value = [...kindSel.options].some(o => o.value===keep) ? keep : '';
+  // Filters above the table
+  const q = $('fSearch').value.trim().toLowerCase(), letter = $('fLetter').value, fScore = $('fScore').value, kind = kindSel.value;
+  const first = i => { const c = T(S.items[i]).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; };
+  const delta = i => S.items[i].old ? fs[i] - S.items[i].old : 0;
+  const byTitle = (a,b) => T(S.items[a]).localeCompare(T(S.items[b]));
+  const cols = tableCols(fs);
+  if(!cols.some(c => c.key===tSort.key)) tSort = {key:'new', dir:-1};
+  const sc = cols.find(c => c.key===tSort.key);
+  const ids = all.filter(i => {
+    const pm = kind.match(/^(by|apart)(\d+)$/);
+    if(pm){ const r = refScore(S.items[i], REFS[+pm[2]]); if(!r) return false; if(pm[1]==='apart' && Math.abs(fs[i]-r) < 1) return false; }
+    const it = S.items[i];
+    if(q && !T(it).toLowerCase().includes(q) && !it.title.toLowerCase().includes(q)) return false;
+    if(letter && first(i)!==letter) return false;
+    if(fScore && fs[i]!==+fScore) return false;
+    if(kind==='bench' && bl[i]==null) return false;
+    if(kind==='changed' && !(it.old && delta(i)!==0)) return false;
+    if(kind==='up' && !(it.old && delta(i)>0)) return false;
+    if(kind==='down' && !(it.old && delta(i)<0)) return false;
+    if(kind==='added' && !it.added) return false;
+    return true;
+  }).sort((a,b) => {
+    const va = sc.val(a), vb = sc.val(b);
+    if(va==null && vb==null) return byTitle(a,b);
+    if(va==null) return 1; if(vb==null) return -1; // empty cells always last
+    const c = sc.text ? va.localeCompare(vb) : va - vb;
+    return c * tSort.dir || byTitle(a,b);
+  });
+  $('fCount').textContent = ids.length!==all.length ? `${ids.length} of ${all.length}` : '';
+  const done = !S.cur && !S.queue.length;
+  $('rankHead').textContent = done ? `Final scores (${all.length})` : `Scored so far (${all.length})`;
+  $('rankThead').innerHTML = `<tr>${cols.map(c => `<th class="${c.text?'':'num'} sortable" data-sort="${c.key}" ${c.title?`title="${esc(c.title)}"`:''} aria-sort="${tSort.key===c.key ? (tSort.dir>0?'ascending':'descending') : 'none'}">${esc(c.label)}${tSort.key===c.key ? (tSort.dir>0?' ▲':' ▼') : ''}</th>`).join('')}</tr>`;
+  $('rankThead').querySelectorAll('[data-sort]').forEach(th => th.onclick = () => {
+    const k = th.dataset.sort;
+    tSort = tSort.key===k ? {key:k, dir:-tSort.dir} : {key:k, dir: k==='title' ? 1 : -1};
+    renderTable();
+  });
+  $('refSummary').innerHTML = agreementTable(fs);
+  renderChart(fs);
+  lastView = {cols, ids, fs};
+  if(!ids.length){ body.innerHTML = `<tr><td colspan="${cols.length}" class="empty-row">${all.length ? 'No shows match these filters.' : 'Answer a few comparisons and your scores show up here.'}</td></tr>`; return; }
+  body.innerHTML = ids.map(idx => {
+    const it = S.items[idx], s = fs[idx], isB = bl[idx]!=null, d = it.old ? s - it.old : null;
+    const u = itemUrl(it);
+    const ctrl =
+      `${scoreChip(s)} <select data-i="${idx}" aria-label="Change score">${LEVELS.map(v=>`<option value="${v}" ${v===s?'selected':''}>${fmt(v)}</option>`).join('')}<option value="redo">Redo…</option><option value="drop">Dropped</option><option value="nw">Didn't watch</option></select>`;
+    return `<tr><td class="t">${u?`<a href="${u}" target="_blank" rel="noopener">${esc(T(it))}</a>`:esc(T(it))}${isB?'<span class="star">benchmark</span>':''}</td>
+      <td class="num">${scoreChip(it.old)}</td>
+      <td class="num">${ctrl}</td>
+      <td class="num delta ${d>0?'up':d<0?'down':''}">${d===null?'':d>0?'+'+fmt(d):d===0?'·':fmt(d)}</td>
+      <td class="num">${it.site?fmt(it.site):''}</td>
+      ${REFS.map(P => { const r = refScore(it, P), g = r ? s - r : null;
+        return `<td class="num">${r?scoreChip(r):''}</td><td class="num delta ${g>0?'up':g<0?'down':''}">${g===null?'':g>0?'+'+fmt(g):g===0?'·':fmt(g)}</td>`; }).join('')}</tr>`;
+  }).join('');
+  body.querySelectorAll('select').forEach(sel => sel.onchange = () => {
+    const i = +sel.dataset.i;
+    // A benchmark being changed first gives up its step on the ladder. Its undo step is taken here, and the
+    // action below drops the extra one it takes, so one Undo puts everything back.
+    const benchL = LEVELS.find(L => S.bench[L]===i);
+    if(benchL!=null){
+      snap(); delete S.bench[benchL]; S.results[i] = benchL;
+      if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+    }
+    const fixUndo = () => { if(benchL!=null) undoStack.splice(undoStack.length-1, 1); };
+    if(sel.value==='redo'){ rescore(i); fixUndo(); return; }
+    if(sel.value==='nw'){ notWatched(i); fixUndo(); return; }
+    if(sel.value==='drop'){ dropShow(i); fixUndo(); return; }
+    if(benchL==null) snap();
+    S.lastNew = null;
+    if(giveScore(i, +sel.value) && S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; } // new benchmark: restart the current search on the new ladder
+    advance(); save(); render();
+  });
+}
+function renderExport(){
+  const canImport = !!S.xml || S.source==='json';
+  const any = Object.keys(finalScores()).length > 0;
+  $('saveXml').disabled = !canImport || !any;
+  $('copyXml').disabled = !canImport || !any;
+  $('saveCsv').disabled = !any;
+  $('exportSteps').hidden = !canImport;
+  $('exportOpts').hidden = !canImport;
+  $('markDone').checked = S.markDone !== false;
+  $('wholeNums').checked = !!S.wholeNums;
+  if(!canImport) toast(S.source==='sample' ? 'Load your AniList or MAL list file to get an import file. The example list can only save a CSV.' : 'Pasted titles can be saved as CSV. Load a list file to get an import file.');
+}
+function render(){ renderSource(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
+
+/* ---------- loading ---------- */
+function normStatus(s, kind){
+  const A = kind!=='manga', u = String(s||'').trim().toUpperCase().replace(/[\s_-]+/g,'');
+  const map = {CURRENT:A?'Watching':'Reading', WATCHING:'Watching', READING:'Reading', PLANNING:A?'Plan to Watch':'Plan to Read',
+    PLANTOWATCH:'Plan to Watch', PLANTOREAD:'Plan to Read', COMPLETED:'Completed', DROPPED:'Dropped', PAUSED:'On-Hold', ONHOLD:'On-Hold',
+    REPEATING:A?'Rewatching':'Rereading'};
+  return map[u] || (s ? String(s).trim() : 'Unknown');
+}
+// Your scores may be 10-point, decimal, or 100-point: bring them to 0-10 in half points
+let preciseScores = false; // true while reading someone else's list: keep their exact decimals
+function normScores(entries){
+  const max = Math.max(0, ...entries.map(x => x.old||0));
+  entries.forEach(x => { let v = +x.old||0; if(max>10) v = v/10; x.old = Math.max(0, Math.min(10, preciseScores ? Math.round(v*10)/10 : half(v))); });
+  return entries;
+}
+function parseJson(text){
+  let data; try{ data = JSON.parse(text); }catch(e){ throw new Error('That file is not readable JSON.'); }
+  const out = {anime:[], manga:[]}, seen = new Set();
+  const titleOf = t => typeof t==='string' ? t : t ? (t.userPreferred||t.english||t.romaji||t.native||'') : '';
+  const push = (o, m) => {
+    const kind = String(m.type||o.type||(m.chapters!=null||o.chapters!=null?'manga':'anime')).toLowerCase()==='manga' ? 'manga' : 'anime';
+    const title = titleOf(m.title) || titleOf(o.title) || '(untitled)';
+    const key = kind + ':' + (m.id ?? m.idMal ?? title);
+    if(seen.has(key)) return; seen.add(key); // AniList repeats entries that sit in custom lists
+    const score = o.scoreRaw!=null ? o.scoreRaw/10 : (o.score ?? 0);
+    // AniList gives averageScore / meanScore out of 100; it has no median, so the average is the closest
+    const siteRaw = m.averageScore ?? m.meanScore ?? o.averageScore ?? o.meanScore ?? 0;
+    out[kind].push({e:out[kind].length, id:String(m.idMal ?? o.idMal ?? ''), alId:m.id ?? o.mediaId ?? '', title,
+      type:String(m.format||o.format||'').replace(/_/g,' '), eps:+(kind==='manga' ? (m.chapters??o.chapters) : (m.episodes??o.episodes)) || 0,
+      progress:+o.progress || 0, old:+score || 0, site: siteRaw ? Math.max(MIN_SCORE, Math.min(10, half(+siteRaw > 10 ? siteRaw/10 : +siteRaw))) : 0,
+      status:normStatus(o.status, kind)});
+  };
+  (function walk(o){
+    if(!o || typeof o!=='object') return;
+    if(Array.isArray(o)){ o.forEach(walk); return; }
+    if(o.media && typeof o.media==='object' && o.media.title){ push(o, o.media); return; }
+    if(o.title && ('score' in o || 'status' in o)){ push(o, o); return; }
+    for(const k in o) walk(o[k]);
+  })(data);
+  if(!out.anime.length && !out.manga.length) throw new Error('No list entries found in that JSON file.');
+  normScores(out.anime); normScores(out.manga);
+  return out;
+}
+function parseXml(text){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('That file is not readable XML or JSON. Use the list file from your AniList or MAL export.');
+  let kind = 'anime', ents = [...doc.getElementsByTagName('anime')];
+  if(!ents.length){ kind = 'manga'; ents = [...doc.getElementsByTagName('manga')]; }
+  if(!ents.length) throw new Error('No anime or manga entries found in that file.');
+  const g = (el,t) => { const c = el.getElementsByTagName(t)[0]; return c ? c.textContent.trim() : ''; };
+  const A = kind==='anime';
+  return {kind, entries: normScores(ents.map((el,e) => {
+    const site = +(g(el,'series_score') || g(el,'average_score') || g(el,'mean_score')) || 0;
+    return {e,
+      id: g(el, A?'series_animedb_id':'manga_mangadb_id'),
+      title: g(el, A?'series_title':'manga_title') || '(untitled)',
+      type: g(el, 'series_type'),
+      eps: +g(el, A?'series_episodes':'manga_chapters') || 0,
+      old: +g(el, 'my_score') || 0,
+      site: site ? Math.max(MIN_SCORE, Math.min(10, half(site>10 ? site/10 : site))) : 0,
+      status: normStatus(g(el, 'my_status'), kind)};
+  }))};
+}
+async function readFile(file){
+  const head = new Uint8Array(await file.slice(0,2).arrayBuffer());
+  if(head[0]===0x1f && head[1]===0x8b){
+    if(typeof DecompressionStream==='undefined') throw new Error('This browser cannot unzip .gz files. Unzip it first and load the file inside.');
+    return await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+  return await file.text();
+}
+async function onFile(file){
+  showErr('');
+  try{
+    const text = (await readFile(file)).replace(/^﻿/, '');
+    if(/^\s*[\[{]/.test(text)){
+      const lists = parseJson(text);
+      await dbReady; lists.anime.push(...missingSeasons(lists.anime));
+      const kind = lists.anime.length >= lists.manga.length ? 'anime' : 'manga';
+      pending = {source:'json', kind, xml:null, fileName:file.name, lists, entries:lists[kind]};
+      applySite(lists.anime); applySite(lists.manga);
+    } else {
+      const {kind, entries} = parseXml(text);
+      if(kind==='anime'){ await dbReady; entries.push(...missingSeasons(entries)); }
+      pending = {source:'xml', kind, xml:text, fileName:file.name, entries};
+      applySite(entries);
+    }
+    renderPending();
+  }catch(e){ showErr(e.message || 'Could not read that file.'); }
+}
+function showErr(m){ $('loadErr').hidden = !m; $('loadErr').textContent = m; }
+function renderPending(){
+  const el = $('pending');
+  if(!pending){ el.hidden = true; return; }
+  const counts = {}; pending.entries.forEach(x => counts[x.status] = (counts[x.status]||0)+1);
+  const order = ['Completed','Rewatching','Rereading','Missing season','Watching','Reading','On-Hold','Dropped','Plan to Watch','Plan to Read','Listed'];
+  const rank = s => { const i = order.indexOf(s); return i<0 ? 99 : i; };
+  const sts = Object.keys(counts).sort((a,b)=>rank(a)-rank(b));
+  const def = s => ['Completed','Rewatching','Rereading','Missing season','Listed'].includes(s) || (!counts.Completed && !/^Plan/.test(s));
+  const L = pending.lists, both = L && L.anime.length && L.manga.length;
+  const scored = pending.entries.filter(x=>x.old).length, withSite = pending.entries.filter(x=>!x.old && x.site).length, unscored = pending.entries.filter(x=>!x.old).length;
+  const kindPick = both ? `<div class="chips">${['anime','manga'].map(k=>`<label class="chip"><input type="radio" name="kindPick" id="kp-${k}" value="${k}" ${pending.kind===k?'checked':''}> ${k==='anime'?'Anime':'Manga'} <span class="muted">${L[k].length}</span></label>`).join('')}</div>` : '';
+  const siteNote = unscored ? `<div class="muted" style="font-size:.88rem">${unscored} have no score from you. ${withSite ? `${withSite} of them start at the site's median score.` : `Load the site scores file above to start them at the site's median. Otherwise they start in the middle.`}</div>` : '';
+  el.innerHTML = `<div><b>${pending.entries.length} entries found</b>${pending.fileName?` in ${esc(pending.fileName)}`:''}, ${scored} with your scores. Which ones should be scored?</div>${kindPick}
+    <div class="chips">${sts.map((s,i)=>`<label class="chip"><input type="checkbox" id="st${i}" data-s="${esc(s)}" ${def(s)?'checked':''}> ${esc(s)} <span class="muted">${counts[s]}</span></label>`).join('')}</div>
+    ${siteNote}
+    <div class="opts"><label><input type="checkbox" id="pOld" checked> Show my old scores while comparing</label></div>
+    <div><button class="btn primary" id="startBtn">Start</button> <span class="muted" style="font-size:.85rem">${S.source!=='sample'?'This replaces your current progress.':''}</span></div>`;
+  el.hidden = false;
+  el.querySelectorAll('[name="kindPick"]').forEach(r => r.onchange = () => { pending.kind = r.value; pending.entries = L[r.value]; renderPending(); });
+  $('startBtn').onclick = () => {
+    const keep = new Set([...el.querySelectorAll('[data-s]')].filter(c=>c.checked).map(c=>c.dataset.s));
+    const items = pending.entries.filter(x => keep.has(x.status));
+    if(items.length < 2){ showErr('Pick at least two shows.'); return; }
+    S = newState({source:pending.source, kind:pending.kind, xml:pending.xml, fileName:pending.fileName, items, showOld:$('pOld').checked});
+    pending = null; undoStack = []; showErr(''); renderPending();
+    $('loadDetails').open = false;
+    advance(); save(); render();
+    $('stage').scrollIntoView({behavior:'smooth', block:'start'});
+  };
+}
+
+$('fileIn').onchange = e => { const f = e.target.files[0]; if(f) onFile(f); };
+// site-scores.json from the helper: {byMal:{malId:score}, byAniList:{anilistId:score}}, scores 0-10
+let siteScores = null;
+function applySite(list){
+  if(!siteScores || !list) return 0;
+  let n = 0;
+  list.forEach(it => {
+    const v = (it.id && siteScores.byMal?.[it.id]) ?? (it.alId!=='' && it.alId!=null ? siteScores.byAniList?.[it.alId] : undefined);
+    if(v){ it.site = Math.max(MIN_SCORE, Math.min(10, half(+v > 10 ? v/10 : +v))); n++; }
+  });
+  return n;
+}
+function useSite(data, how){
+  if(!data || (!data.byMal && !data.byAniList)) throw new Error('not a site-scores file');
+  siteScores = data;
+  const nItems = S.source!=='sample' ? applySite(S.items) : 0;
+  if(pending){ applySite(pending.entries); if(pending.lists){ applySite(pending.lists.anime); applySite(pending.lists.manga); } renderPending(); }
+  save(); render();
+  const n = Object.keys(data.byMal||{}).length || Object.keys(data.byAniList||{}).length;
+  const when = data.made ? ` (looked up ${new Date(data.made).toLocaleDateString()})` : '';
+  $('siteMsg').textContent = `${how}: ${n} site medians from ${data.source==='myanimelist'?'MyAnimeList':'AniList'}${when}${S.source!=='sample'?`, ${nItems} match your current list`:''}.`;
+}
+function showRefState(){
+  $('tabCompareNote').textContent = REFS.length ? `· ${REFS.map(P => P.name).join(', ')}` : '';
+  $('refPeople').innerHTML = REFS.map((P,i) => P.auto ? '' : `<span class="chip"><b>${esc(P.name)}</b> <span class="muted">${P.count} scored</span>
+    <button class="btn" data-rename="${i}" style="padding:0 8px;font-size:.78rem">Rename</button>
+    <button class="btn" data-drop-ref="${i}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`).join('');
+  renderFollow();
+  $('refPeople').querySelectorAll('[data-drop-ref]').forEach(b => b.onclick = () => {
+    const P = REFS.splice(+b.dataset.dropRef, 1)[0]; saveRefs();
+    $('refMsg').textContent = `Removed ${P.name}.`; showRefState(); render();
+  });
+  $('refPeople').querySelectorAll('[data-rename]').forEach(b => b.onclick = () => {
+    const v = $('refName').value.trim();
+    if(!v){ $('refMsg').textContent = 'Type the new name in the Name box first, then click Rename.'; $('refName').focus(); return; }
+    REFS[+b.dataset.rename].name = v; saveRefs(); $('refName').value = '';
+    showRefState(); render();
+  });
+  $('refWho').innerHTML = REFS.map((P,i) => `<option value="${i}" ${i===refPick?'selected':''}>${esc(P.name)}'s list</option>`).join('');
+  $('refWho').hidden = REFS.length < 2;
+  renderRefOnly();
+}
+$('refWho').onchange = e => { refPick = +e.target.value; renderRefOnly(); };
+function refOnlyList(){
+  if(!REF || !REF.list || S.source==='sample') return [];
+  const mal = new Set(S.items.map(it => it.id).filter(Boolean)), al = new Set(S.items.map(it => String(it.alId || (showInfo && it.id && showInfo.anilist[it.id]) || '')).filter(Boolean));
+  return REF.list.filter(x => !(x.id && mal.has(x.id)) && !(x.alId && al.has(String(x.alId))));
+}
+function renderRefOnly(){
+  if(refPick >= REFS.length) refPick = 0;
+  REF = REFS[refPick] || null;
+  const box = $('refOnly');
+  if(!REF || !REF.list){ box.hidden = true; return; }
+  box.hidden = false;
+  if(S.source==='sample'){ $('refAddAll').hidden = true; $('refOnlyHead').textContent = 'Start your own list first to add shows from theirs.'; $('refOnlyBody').innerHTML = ''; return; }
+  const all = refOnlyList(), q = $('refSearch').value.trim().toLowerCase(), doneOnly = $('refDoneOnly').checked;
+  const rows = all.filter(x => !tooShort(x) && (!doneOnly || x.status==='Completed') && (!q || x.title.toLowerCase().includes(q) || T(x).toLowerCase().includes(q)))
+    .sort((a,b) => (b.score-a.score) || T(a).localeCompare(T(b)));
+  $('refOnlyHead').textContent = `On ${REF.name}'s list but not yours: ${all.length}`;
+  $('refOnlyBody').innerHTML = rows.length ? rows.slice(0,500).map(x => `<tr><td class="t">${esc(T(x))}</td><td class="num">${x.score?scoreChip(x.score):''}</td><td>${esc(x.status)}</td>
+    <td class="num">${x.id ? `<button class="btn" data-add="${esc(x.id)}" data-al="${esc(x.alId)}" style="padding:2px 10px">Add</button>` : `<span class="muted" title="No MyAnimeList id, so it can't go in the import file">no MAL id</span>`}</td></tr>`).join('')
+    + (rows.length>500 ? `<tr><td colspan="4" class="empty-row">Showing 500 of ${rows.length}. Search to narrow it down.</td></tr>` : '')
+    : `<tr><td colspan="4" class="empty-row">Nothing to show.</td></tr>`;
+  $('refOnlyBody').querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const x = REF.list.find(r => r.id===b.dataset.add); if(!x) return;
+    snap();
+    S.queue.unshift(addFromRef(x)); // next after the current comparison
+    advance(); save(); render();
+    $('refMsg').textContent = `Added ${x.title}. It's up next to rate.`;
+  });
+  // Add every show the current filter shows (that has a MAL id), after a second click to confirm
+  const addable = rows.filter(x => x.id), btn = $('refAddAll');
+  btn.hidden = !addable.length;
+  btn.textContent = refAddArmed ? `Click again to add ${addable.length}` : `Add all ${addable.length} shown`;
+  btn.onclick = () => {
+    if(!refAddArmed){ refAddArmed = setTimeout(() => { refAddArmed = null; renderRefOnly(); }, 4000); renderRefOnly(); return; }
+    clearTimeout(refAddArmed); refAddArmed = null;
+    snap();
+    addable.forEach(x => S.queue.push(addFromRef(x)));
+    advance(); save(); render();
+    $('refMsg').textContent = `Added ${addable.length} shows from ${REF.name}'s list to the end of your queue. Undo (Z) takes them all back out.`;
+  };
+}
+let refAddArmed = null;
+function addFromRef(x){
+  S.items.push({e:-1, added:true, id:x.id, alId:x.alId, title:x.title, type:x.type, eps:x.eps, old:0, site:0, from:`${REF.name}'s list`, status:`From ${REF.name}`});
+  applySite([S.items[S.items.length-1]]);
+  return S.items.length-1;
+}
+$('refSearch').oninput = renderRefOnly;
+$('refDoneOnly').onchange = renderRefOnly;
+$('refIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const text = (await readFile(f)).replace(/^﻿/, '');
+    let entries, name = '';
+    preciseScores = true;
+    try{
+      if(/^\s*[\[{]/.test(text)){
+        const lists = parseJson(text); entries = [...lists.anime, ...lists.manga];
+        name = (text.match(/"user"\s*:\s*\{[^{}]*?"name"\s*:\s*"([^"]+)"/) || [])[1] || '';
+      } else {
+        entries = parseXml(text).entries;
+        name = (text.match(/<user_name>\s*(?:<!\[CDATA\[)?([^<\]]+)/) || [])[1] || '';
+      }
+    } finally { preciseScores = false; }
+    const byMal = {}, byAl = {}; let count = 0;
+    entries.forEach(x => { if(!x.old) return; count++; if(x.id && x.id!=='0') byMal[x.id] = x.old; if(x.alId) byAl[x.alId] = x.old; });
+    if(!entries.length) throw new Error('No shows found in that list file.');
+    name = $('refName').value.trim() || name.trim() || f.name.replace(/\.(xml|json|gz)+$/i,'');
+    // Keep their whole list (small fields only) so shows you don't have can be added
+    const list = entries.map(x => ({id:x.id&&x.id!=='0'?x.id:'', alId:x.alId||'', title:x.title, type:x.type||'', eps:x.eps||0, status:x.status, score:x.old||0}));
+    const P = {name, byMal, byAl, count, list};
+    const same = REFS.findIndex(r => r.name.toLowerCase()===name.toLowerCase());
+    if(same>=0) REFS[same] = P; else REFS.push(P); // loading the same name again updates that person
+    refPick = same>=0 ? same : REFS.length-1;
+    saveRefs(); $('refName').value = '';
+    $('refMsg').textContent = `${same>=0 ? 'Updated' : 'Added'} ${name}: ${count} scored shows.`;
+    showRefState(); render();
+  }catch(err){ $('refMsg').textContent = err.message && !/JSON|XML/.test(err.message) ? err.message : 'Could not read that list file.'; }
+  e.target.value = '';
+};
+$('siteIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{ useSite(JSON.parse((await f.text()).replace(/^﻿/, '')), 'Loaded'); }
+  catch(err){ $('siteMsg').textContent = 'That file is not a site-scores file from the helper.'; }
+};
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if(f) onFile(f); });
+$('pasteBtn').onclick = () => {
+  const lines = [...new Set($('pasteIn').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
+  if(lines.length < 2){ showErr('Paste at least two titles, one per line.'); return; }
+  showErr('');
+  pending = {source:'paste', kind:'anime', xml:null, fileName:'', entries: lines.map((title,e)=>({e,id:'',title,type:'',eps:0,old:0,site:0,status:'Listed'}))};
+  renderPending();
+};
+
+let resetArmed = null;
+$('resetBtn').onclick = () => {
+  const b = $('resetBtn');
+  if(!resetArmed){ b.textContent = 'Click again to erase progress'; resetArmed = setTimeout(()=>{ resetArmed=null; b.textContent='Start over'; }, 3000); return; }
+  clearTimeout(resetArmed); resetArmed = null; b.textContent = 'Start over';
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  S = newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))}); undoStack = [];
+  advance(); render(); $('loadDetails').open = true;
+};
+
+/* ---------- export ---------- */
+const outScore = s => S.wholeNums ? String(Math.round(s)) : (s%1 ? fmt(s) : String(s));
+function buildFreshXml(){
+  const fs = finalScores(), A = S.kind!=='manga', markDone = S.markDone !== false;
+  const cdata = s => '<![CDATA[' + String(s).replace(/]]>/g, ']]]]><![CDATA[>') + ']]>';
+  const toMal = s => s==='Rewatching'||s==='Rereading' ? 'Completed' : s;
+  let missing = 0; const rows = [];
+  Object.keys(fs).forEach(k => {
+    const it = S.items[k];
+    if(!it.id || it.id==='0'){ missing++; return; }
+    const status = markDone ? 'Completed' : toMal(it.status);
+    const prog = markDone && it.eps ? it.eps : (it.progress||0);
+    rows.push(A
+      ? `  <anime>\n    <series_animedb_id>${esc(it.id)}</series_animedb_id>\n    <series_title>${cdata(it.title)}</series_title>\n    <series_type>${esc(it.type)}</series_type>\n    <series_episodes>${it.eps}</series_episodes>\n    <my_watched_episodes>${prog}</my_watched_episodes>\n    <my_score>${outScore(fs[k])}</my_score>\n    <my_status>${esc(status)}</my_status>\n    <update_on_import>1</update_on_import>\n  </anime>`
+      : `  <manga>\n    <manga_mangadb_id>${esc(it.id)}</manga_mangadb_id>\n    <manga_title>${cdata(it.title)}</manga_title>\n    <manga_chapters>${it.eps}</manga_chapters>\n    <my_read_chapters>${prog}</my_read_chapters>\n    <my_score>${outScore(fs[k])}</my_score>\n    <my_status>${esc(status)}</my_status>\n    <update_on_import>1</update_on_import>\n  </manga>`);
+  });
+  (S.dropped||[]).forEach(k => {
+    const it = S.items[k];
+    if(!it.id || it.id==='0'){ missing++; return; }
+    rows.push(A
+      ? `  <anime>\n    <series_animedb_id>${esc(it.id)}</series_animedb_id>\n    <series_title>${cdata(it.title)}</series_title>\n    <series_type>${esc(it.type)}</series_type>\n    <series_episodes>${it.eps}</series_episodes>\n    <my_watched_episodes>${it.progress||0}</my_watched_episodes>\n    <my_score>${it.old?outScore(it.old):0}</my_score>\n    <my_status>Dropped</my_status>\n    <update_on_import>1</update_on_import>\n  </anime>`
+      : `  <manga>\n    <manga_mangadb_id>${esc(it.id)}</manga_mangadb_id>\n    <manga_title>${cdata(it.title)}</manga_title>\n    <manga_chapters>${it.eps}</manga_chapters>\n    <my_read_chapters>${it.progress||0}</my_read_chapters>\n    <my_score>${it.old?outScore(it.old):0}</my_score>\n    <my_status>Dropped</my_status>\n    <update_on_import>1</update_on_import>\n  </manga>`);
+  });
+  return {xml:`<?xml version="1.0" encoding="UTF-8" ?>\n<myanimelist>\n  <myinfo>\n    <user_export_type>${A?1:2}</user_export_type>\n  </myinfo>\n${rows.join('\n')}\n</myanimelist>\n`, missing};
+}
+function buildXml(){
+  if(S.source==='json') return buildFreshXml();
+  const doc = new DOMParser().parseFromString(S.xml, 'application/xml');
+  const ents = [...doc.getElementsByTagName(S.kind)], fs = finalScores();
+  const setChild = (el, tag, val) => {
+    let c = [...el.children].find(x => x.tagName===tag);
+    if(!c){ c = doc.createElement(tag); el.appendChild(c); }
+    c.textContent = String(val);
+  };
+  const getChild = (el, tag) => { const c = [...el.children].find(x => x.tagName===tag); return c ? c.textContent.trim() : ''; };
+  const markDone = S.markDone !== false;
+  // Seasons that weren't in the file get a new entry, marked Completed
+  const addEntry = it => {
+    const el = doc.createElement('anime'), add = (t, v, cd) => { const c = doc.createElement(t); if(cd) c.appendChild(doc.createCDATASection(v)); else c.textContent = String(v); el.appendChild(c); };
+    add('series_animedb_id', it.id); add('series_title', it.title, true); add('series_type', it.type||''); add('series_episodes', it.eps||0);
+    add('my_watched_episodes', it.eps||0); add('my_score', 0); add('my_status', 'Completed'); add('update_on_import', 1);
+    doc.documentElement.appendChild(el); return el;
+  };
+  Object.keys(fs).forEach(k => {
+    const it0 = S.items[k];
+    const el = it0.added ? addEntry(it0) : ents[it0.e]; if(!el) return;
+    setChild(el,'my_score',outScore(fs[k]));
+    if(markDone){
+      setChild(el,'my_status','Completed');
+      if(S.kind==='anime'){ const eps = +getChild(el,'series_episodes'); if(eps>0) setChild(el,'my_watched_episodes',eps); }
+      else {
+        const ch = +getChild(el,'manga_chapters'), vol = +getChild(el,'manga_volumes');
+        if(ch>0) setChild(el,'my_read_chapters',ch);
+        if(vol>0) setChild(el,'my_read_volumes',vol);
+      }
+    }
+    setChild(el,'update_on_import','1');
+  });
+  (S.dropped||[]).forEach(k => {
+    const it0 = S.items[k];
+    const el = it0.added ? addEntry(it0) : ents[it0.e]; if(!el) return;
+    setChild(el,'my_status','Dropped');
+    if(it0.added){ setChild(el,'my_watched_episodes',0); }
+    setChild(el,'update_on_import','1');
+  });
+  let out = new XMLSerializer().serializeToString(doc);
+  if(!/^<\?xml/.test(out)) out = '<?xml version="1.0" encoding="UTF-8" ?>\n' + out;
+  return {xml:out, missing:0};
+}
+const missingNote = m => m ? ` ${m} scored show${m>1?'s have':' has'} no MyAnimeList ID and can't go in this file.` : '';
+function buildCsv(){
+  const fs = finalScores(), bl = benchLevelOf(), q = v => /[",\n]/.test(v) ? `"${String(v).replace(/"/g,'""')}"` : v;
+  const ids = Object.keys(fs).sort((a,b)=>fs[b]-fs[a]);
+  return ['title,english_title,mal_id,anilist_id,old_score,new_score,benchmark', ...ids.map(k=>{ const it=S.items[k]; return [q(it.title),q(T(it)),it.id,it.alId||(showInfo?.anilist?.[it.id]??''),it.old||'',outScore(fs[k]),bl[k]!=null?'yes':''].join(','); })].join('\n');
+}
+function toast(m){ $('toast').textContent = m; }
+// A normal website can save any file type, so the import file downloads as a real .xml
+async function offer(filename, data, note=''){
+  try{
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], {type:'application/octet-stream'}));
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast(`Saved ${filename}.${note}`);
+    return true;
+  }catch(e){ return false; }
+}
+function showText(txt, msg){ const ta = $('xmlOut'); ta.value = txt; ta.hidden = false; ta.focus(); ta.select(); toast(msg); }
+$('saveXml').onclick = async () => {
+  const {xml, missing} = buildXml(), base = (S.fileName||'animelist').replace(/\.gz$/i,'').replace(/\.(xml|json)$/i,'').replace(/[^\w.-]+/g,'_');
+  if(!await offer(`${base}_rescored.xml`, xml, missingNote(missing))) showText(xml, 'Saving files is not available here. The XML is below: copy it into a text file and save it ending in .xml.' + missingNote(missing));
+};
+// Progress backup: everything this browser keeps (your game, people loaded from files, follows) in one .json file.
+// The Claude version of the ranker can make the same file, so progress moves over.
+$('backupBtn').onclick = async () => {
+  const payload = {kind:'higher-lower-ranker-backup', v:1, made:new Date().toISOString(), state:S,
+    refs:REFS.filter(P => !P.auto), follows:follows.map(f => ({...f})), me:myUser};
+  await offer(`ranker-progress-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload));
+};
+$('restoreIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const b = JSON.parse(await f.text());
+    if(b.kind!=='higher-lower-ranker-backup' || !b.state || !b.state.items) throw new Error();
+    localStorage.setItem(KEY, JSON.stringify(b.state));
+    localStorage.setItem(REF_KEY, JSON.stringify(b.refs || []));
+    const store = {};
+    (b.follows || []).forEach(x => { if(x && /^[A-Za-z0-9_-]{2,20}$/.test(x.name || x.id || '')) store['follows/' + (x.id || x.name).toLowerCase()] = {name:x.name || x.id, nick:x.nick || '', mirrorDrops:!!x.mirrorDrops, added:x.added || new Date().toISOString()}; });
+    if(b.me) store['settings/me'] = {username:b.me};
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    toast('Progress restored. Reloading…');
+    setTimeout(() => location.reload(), 600);
+  }catch(err){ toast('That file is not a ranker progress backup.'); }
+  e.target.value = '';
+};
+$('markDone').onchange = e => { S.markDone = e.target.checked; save(); };
+$('wholeNums').onchange = e => { S.wholeNums = e.target.checked; save(); };
+$('copyXml').onclick = () => {
+  const {xml, missing} = buildXml();
+  navigator.clipboard.writeText(xml).then(() => toast('Import XML copied. Paste it into a text file saved with a .xml ending.' + missingNote(missing)))
+    .catch(() => showText(xml, 'Copy blocked here. The XML is selected below: press Ctrl+C.' + missingNote(missing)));
+};
+$('saveCsv').onclick = async () => {
+  const csv = buildCsv();
+  if(!await offer('scores.csv', csv)) showText(csv, 'Saving files is not available here. The CSV is below to copy.');
+};
+
+document.addEventListener('keydown', e => {
+  if(e.target.closest('input,textarea,select') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if(k==='arrowup' || k==='w'){ e.preventDefault(); answer('higher'); }
+  else if(k==='arrowdown' || k==='s'){ e.preventDefault(); answer('lower'); }
+  else if(k==='e' || k==='='){ setDirect(); }
+  else if(k==='k'){ skip(); }
+  else if(k==='x'){ notWatched(); }
+  else if(k==='d'){ dropShow(); }
+  else if(k==='a'){ agreeRef(); }
+  else if(/^[1-9]$/.test(e.key) && +e.key <= agreeKeys.length){ agreeRef(agreeKeys[+e.key - 1].ps[0][1]); } // 1 = first agree button, 2 = second, …
+  else if(k==='arrowright'){ e.preventDefault(); stepDirect(e.shiftKey ? 0.5 : 1); }
+  else if(k==='arrowleft'){ e.preventDefault(); stepDirect(e.shiftKey ? -0.5 : -1); }
+  else if(k==='+'){ stepDirect(1); }
+  else if(k==='-'){ stepDirect(-1); }
+  else if(k==='enter' && !e.target.closest('button')){ setDirect(); }
+  else if(k==='z' || k==='backspace'){ e.preventDefault(); undo(); }
+});
+
+/* ---------- AniList, live ----------
+   This website talks to AniList directly (graphql.anilist.co, no login needed for public lists).
+   Lists are cached in this browser for 30 minutes so reloading the page doesn't hit AniList's rate limit. */
+const AL_STATUS = {CURRENT:'Watching', PLANNING:'Plan to Watch', COMPLETED:'Completed', DROPPED:'Dropped', PAUSED:'On-Hold', REPEATING:'Rewatching'};
+const LIST_CACHE = 'hl-lists', LIST_TTL = 30 * 60 * 1000;
+let lastAniListCall = 0;
+async function anilist(query, variables){
+  for(let tries = 0; tries < 4; tries++){
+    const wait = lastAniListCall + 800 - Date.now(); if(wait > 0) await new Promise(r => setTimeout(r, wait));
+    lastAniListCall = Date.now();
+    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'}, body:JSON.stringify({query, variables})});
+    if(res.status===429){ await new Promise(r => setTimeout(r, ((+res.headers.get('retry-after')) || 30) * 1000)); continue; }
+    const json = await res.json();
+    if(!res.ok || json.errors) throw new Error(json.errors?.[0]?.message || `AniList answered ${res.status}`);
+    return json.data;
+  }
+  throw new Error('AniList is busy, try again in a minute');
+}
+async function getList(userName, force = false){
+  const key = userName.toLowerCase();
+  let cache = {}; try{ cache = JSON.parse(localStorage.getItem(LIST_CACHE) || '{}') || {}; }catch(e){}
+  if(!force && cache[key] && Date.now() - new Date(cache[key].updated).getTime() < LIST_TTL) return cache[key];
+  const d = await anilist(`query($u:String){MediaListCollection(userName:$u,type:ANIME){user{name}
+    lists{entries{status progress score(format:POINT_10_DECIMAL) media{id idMal format episodes title{romaji english} coverImage{medium}}}}}}`, {u:userName});
+  const c = d.MediaListCollection, seen = new Set(), entries = [];
+  for(const l of c.lists) for(const e of l.entries){
+    const m = e.media; if(seen.has(m.id)) continue; seen.add(m.id); // custom lists repeat entries
+    entries.push({id:m.idMal ? String(m.idMal) : '', alId:m.id, title:m.title.romaji || m.title.english || '', en:m.title.english || '',
+      type:(m.format || '').replace(/_/g,' '), eps:m.episodes || 0, status:AL_STATUS[e.status] || e.status, score:e.score || 0, progress:e.progress || 0, cover:m.coverImage?.medium || ''});
+  }
+  const L = {name:c.user.name, entries, updated:new Date().toISOString()};
+  // covers and English titles from lists help shows the weekly data file doesn't know yet
+  entries.forEach(e => { if(e.cover) coverUrls[e.alId] = e.cover; if(e.id){ if(!malToAl[e.id]) malToAl[e.id] = e.alId; if(showInfo && e.en && !showInfo.titles[e.id]) showInfo.titles[e.id] = e.en; } });
+  cache[key] = L;
+  try{ localStorage.setItem(LIST_CACHE, JSON.stringify(cache)); }catch(e){ try{ localStorage.removeItem(LIST_CACHE); }catch(_){} }
+  return L;
+}
+
+/* ---------- following people on AniList ----------
+   Who you follow (follows/<lowercase name>) and your own username (settings/me) are kept in this browser
+   with the same small store interface the Claude version uses for its page database. */
+const STORE_KEY = 'hl-store';
+function localStore(){
+  let data = {}; try{ data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }catch(e){}
+  const subs = [];
+  const persist = () => { try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }catch(e){} subs.forEach(f => f()); };
+  const snapOf = p => ({id:p.split('/').pop(), exists:p in data, data:() => data[p]});
+  return {
+    doc: p => ({
+      set: async v => { data[p] = v; persist(); },
+      delete: async () => { delete data[p]; persist(); },
+      onSnapshot: cb => { const f = () => cb(snapOf(p)); subs.push(f); f(); return () => {}; },
+    }),
+    collection: c => ({
+      onSnapshot: cb => { const f = () => cb({docs:Object.keys(data).filter(k => k.startsWith(c + '/') && k.split('/').length===2).map(snapOf)}); subs.push(f); f(); return () => {}; },
+    }),
+  };
+}
+let followDb = null, follows = [], myUser = '', listIndex = null, loadingLists = false;
+function toRef(L){
+  const byMal = {}, byAl = {}; let count = 0;
+  const list = L.entries.map(e => ({id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, status:e.status, score:e.score}));
+  list.forEach(x => { if(!x.score) return; count++; if(x.id) byMal[x.id] = x.score; if(x.alId) byAl[x.alId] = x.score; });
+  return {name:L.name, user:L.name.toLowerCase(), byMal, byAl, count, list, auto:true, updated:L.updated};
+}
+// Shows you completed on AniList that aren't in the game yet join the queue (anything already here, including removed or dropped, is left alone)
+function mergeMyEntries(entries){
+  if(!S || S.source==='sample') return 0;
+  const have = new Set(S.items.map(it => it.id).filter(Boolean));
+  const fresh = entries.filter(e => e.id && !have.has(e.id) && (e.status==='Completed' || e.status==='Rewatching'))
+    .map(e => ({e:-1, added:true, id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, old:e.score ? Math.max(MIN_SCORE, half(e.score)) : 0, site:0, progress:e.progress, status:'From your AniList'}));
+  if(!fresh.length) return 0;
+  applySite(fresh);
+  fresh.forEach(it => { S.items.push(it); S.queue.push(S.items.length-1); });
+  advance(); save();
+  return fresh.length;
+}
+// "Copy their drops": shows a followed person dropped are dropped for you too (skips anything you scored,
+// your benchmarks, and anything already handled; each show is only ever copied once, so Undo sticks)
+function followNamesMirroring(){ return follows.filter(f => f.mirrorDrops).map(f => f.nick || f.name || f.id).join(', '); }
+function applyMirroredDrops(){
+  if(!S || S.source==='sample') return 0;
+  const fs = finalScores(), bl = benchLevelOf();
+  S.mirrorDone = S.mirrorDone || [];
+  const byId = new Map(); S.items.forEach((it,i) => { if(it.id) byId.set(it.id, i); });
+  let n = 0, snapped = false;
+  for(const f of follows.filter(f => f.mirrorDrops)){
+    const P = REFS.find(P => P.auto && P.user===f.id); if(!P || !P.list) continue;
+    for(const e of P.list){
+      if(e.status!=='Dropped' || !e.id) continue;
+      const key = f.id + ':' + e.id; if(S.mirrorDone.includes(key)) continue;
+      const i = byId.get(e.id);
+      if(i==null) continue; // not in your game (yet): checked again next time
+      S.mirrorDone.push(key);
+      if(fs[i]!=null || bl[i]!=null || (S.dropped||[]).includes(i) || (S.removed||[]).includes(i)) continue;
+      if(!snapped){ snap(); snapped = true; }
+      S.dropped = S.dropped || []; S.dropped.push(i); delete S.results[i];
+      S.queue = S.queue.filter(x => x!==i); S.skipped = S.skipped.filter(x => x!==i);
+      if(S.cur && S.cur.idx===i) S.cur = null;
+      dropSequels(i); n++;
+    }
+  }
+  if(n){ advance(); save(); }
+  return n;
+}
+// Downloads everyone you follow (and your own list) from AniList, then applies sync and copied drops
+async function loadLiveLists(force = false){
+  if(loadingLists) return; loadingLists = true;
+  listIndex = {made:new Date().toISOString(), people:[], errors:[]};
+  const loaded = [];
+  $('followMsg').textContent = follows.length || myUser ? 'Loading lists from AniList…' : '';
+  for(const f of follows){
+    try{
+      const L = await getList(f.name || f.id, force), P = toRef(L);
+      if(f.nick) P.name = f.nick;
+      loaded.push(P); listIndex.people.push({name:L.name, count:P.count, updated:L.updated});
+    }catch(e){ listIndex.errors.push({name:f.id, error:e.message}); }
+    renderFollow();
+  }
+  // a followed person replaces a file-loaded copy of the same name
+  REFS = [...REFS.filter(P => !P.auto && !loaded.some(L => L.user===P.name.toLowerCase() || L.name.toLowerCase()===P.name.toLowerCase())), ...loaded];
+  let added = 0, meErr = '';
+  if(myUser){ try{ added = mergeMyEntries((await getList(myUser, force)).entries); }catch(e){ meErr = e.message; } }
+  const copied = applyMirroredDrops();
+  const msgs = [];
+  if(added) msgs.push(`${added} show${added>1?'s':''} you completed on AniList joined your queue.`);
+  if(copied) msgs.push(`${copied} show${copied>1?'s':''} dropped because ${followNamesMirroring()} dropped ${copied>1?'them':'it'}. Undo (Z) brings ${copied>1?'them':'it'} back.`);
+  if(meErr) msgs.push(`Couldn't load your own list (${myUser}): ${meErr}`);
+  $('followMsg').textContent = msgs.join(' ');
+  loadingLists = false;
+  showRefState(); render();
+}
+function renderFollow(){
+  const box = $('followList'); if(!box) return;
+  const inIndex = name => listIndex?.people.find(p => p.name.toLowerCase()===name);
+  const failed = name => listIndex?.errors?.find(e => e.name.toLowerCase()===name);
+  box.innerHTML = follows.map(f => {
+    const p = inIndex(f.id), err = failed(f.id);
+    const state = p ? `${p.count} scored · loaded ${new Date(p.updated).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : err ? `couldn't load: ${esc(err.error)}` : 'loading…';
+    return `<span class="chip"><input class="field nick" data-nick="${esc(f.id)}" value="${esc(f.nick || f.name || f.id)}" title="Nickname shown on the page (AniList: ${esc(f.name || f.id)})" aria-label="Nickname for ${esc(f.name || f.id)}" style="width:8em;padding:1px 6px"> <span class="muted">${f.nick ? `@${esc(f.name || f.id)} · ` : ''}${state}</span>
+      <label title="Shows they dropped are dropped for you too" style="display:inline-flex;gap:4px;align-items:center;font-size:.8rem"><input type="checkbox" data-mirror="${esc(f.id)}" ${f.mirrorDrops?'checked':''}> copy their drops</label>
+      <button class="btn" data-unfollow="${esc(f.id)}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`;
+  }).join('');
+  // Nicknames: saved with the follow, used everywhere the person's name shows
+  box.querySelectorAll('[data-nick]').forEach(inp => inp.onchange = async () => {
+    const f = follows.find(x => x.id===inp.dataset.nick); if(!f) return;
+    const v = inp.value.trim().slice(0, 30);
+    const nick = v && v.toLowerCase()!==(f.name || f.id).toLowerCase() ? v : '';
+    await followDb.doc('follows/' + f.id).set({name:f.name || f.id, added:f.added || new Date().toISOString(), nick, mirrorDrops:!!f.mirrorDrops});
+  });
+  box.querySelectorAll('[data-mirror]').forEach(cb => cb.onchange = async () => {
+    const f = follows.find(x => x.id===cb.dataset.mirror); if(!f) return;
+    await followDb.doc('follows/' + f.id).set({name:f.name || f.id, added:f.added || new Date().toISOString(), nick:f.nick || '', mirrorDrops:cb.checked});
+  });
+  box.querySelectorAll('[data-unfollow]').forEach(b => b.onclick = async () => { await followDb.doc('follows/' + b.dataset.unfollow).delete(); });
+  if(document.activeElement !== $('meUser')) $('meUser').value = myUser;
+}
+$('followBtn').onclick = async () => {
+  const name = $('followIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
+  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username (letters, numbers, - and _).'; return; }
+  await followDb.doc('follows/' + name.toLowerCase()).set({name, added:new Date().toISOString()});
+  $('followIn').value = '';
+};
+$('followIn').addEventListener('keydown', e => { if(e.key==='Enter') $('followBtn').click(); });
+$('meSave').onclick = async () => {
+  const name = $('meUser').value.trim().replace(/^@/, '');
+  if(name && !/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username.'; return; }
+  await followDb.doc('settings/me').set({username:name});
+};
+$('refreshLists').onclick = () => loadLiveLists(true);
+function startFollowing(){
+  followDb = localStore();
+  let firstMe = true;
+  followDb.doc('settings/me').onSnapshot(s => {
+    const was = myUser; myUser = s.exists ? (s.data().username || '') : '';
+    if(firstMe){ firstMe = false; return; }
+    if(myUser !== was) loadLiveLists();
+    renderFollow();
+  });
+  let first = true;
+  followDb.collection('follows').onSnapshot(s => {
+    follows = s.docs.map(d => ({id:d.id, ...d.data()}));
+    if(first){ first = false; loadLiveLists(); return; }
+    // removed people drop out right away; newly followed people get downloaded
+    const before = REFS.length; let changed = false;
+    REFS = REFS.filter(P => !P.auto || follows.some(f => f.id===P.user));
+    REFS.forEach(P => { if(!P.auto) return; const f = follows.find(x => x.id===P.user); const nm = (f && (f.nick || f.name)) || P.name; if(nm !== P.name){ P.name = nm; changed = true; } });
+    if(follows.some(f => !REFS.some(P => P.auto && P.user===f.id) && !listIndex?.errors?.some(e => e.name===f.id))){ loadLiveLists(); return; }
+    const copied = applyMirroredDrops();
+    if(copied) $('followMsg').textContent = `Dropped ${copied} show${copied>1?'s':''} that ${followNamesMirroring()} dropped. Undo (Z) brings them back.`;
+    if(copied || changed || REFS.length !== before){ showRefState(); render(); } else renderFollow();
+  });
+}
+
+// Light / dark toggle: remembers your choice; until you pick one, it follows your system setting
+(() => {
+  const root = document.documentElement, btn = $('themeBtn');
+  const current = () => root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const show = () => { btn.textContent = current()==='dark' ? '☀ Light mode' : '☾ Dark mode'; };
+  try{ const saved = localStorage.getItem('hl-theme'); if(saved) root.dataset.theme = saved; }catch(e){}
+  show();
+  btn.onclick = () => { const next = current()==='dark' ? 'light' : 'dark'; root.dataset.theme = next; try{ localStorage.setItem('hl-theme', next); }catch(e){} show(); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', show);
+})();
+// Results filters
+$('fLetter').insertAdjacentHTML('beforeend', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => `<option value="${c}">${c}</option>`).join(''));
+$('fScore').insertAdjacentHTML('beforeend', LEVELS.map(v => `<option value="${v}">${fmt(v)}</option>`).join(''));
+// Exports exactly the rows and order on screen, with every column
+$('fExport').onclick = async () => {
+  if(!lastView || !lastView.ids.length){ toast('Nothing to export with these filters.'); return; }
+  const {ids, fs} = lastView, q = v => v==null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
+  const num = v => v==null ? '' : (+v).toFixed(1);
+  const head = ['title','english_title','mal_id','anilist_id','old','new','change','median', ...REFS.flatMap(P => [P.name, `gap_${P.name}`])];
+  const lines = ids.map(i => {
+    const it = S.items[i], al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]) || '';
+    return [it.title, T(it), it.id, al, it.old ? num(it.old) : '', num(fs[i]), it.old ? num(fs[i]-it.old) : '', it.site ? num(it.site) : '',
+      ...REFS.flatMap(P => { const r = refScore(it, P); return [r ? num(r) : '', r ? num(fs[i]-r) : '']; })].map(q).join(',');
+  });
+  const csv = [head.map(q).join(','), ...lines].join('\n');
+  if(!await offer('results.csv', csv)) showText(csv, 'Saving files is not available here. The CSV is below to copy.');
+  else toast(`Saved ${ids.length} rows to results.csv.`);
+};
+['fSearch','fLetter','fScore','fKind'].forEach(id => $(id).addEventListener(id==='fSearch' ? 'input' : 'change', () => renderTable()));
+
+// The two tab buttons open one panel at a time; clicking the open one closes it
+const panes = {tabLoad:'loadDetails', tabCompare:'compareDetails'};
+const syncTabs = () => { for(const t in panes) $(t).setAttribute('aria-expanded', String($(panes[t]).open)); };
+for(const t in panes){
+  $(t).onclick = () => { const d = $(panes[t]), open = !d.open; for(const u in panes) $(panes[u]).open = false; d.open = open; syncTabs(); };
+  $(panes[t]).addEventListener('toggle', syncTabs);
+}
+
+S = load() || newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))});
+if(S.source==='sample') $('loadDetails').open = true;
+if(S.source!=='sample' && backfillBench()){ if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; } save(); }
+advance(); render(); showRefState();
+
+// Data from the anime-ranker site: db.json (every anime on AniList: medians, titles, formats, episodes,
+// status, sequel/prequel links) and cover-urls.json (AniList cover image addresses). Both are rebuilt
+// weekly there by its GitHub Action; this page is the schedule site's copy of the ranker.
+const DATA_URL = 'https://ryotsushigawa.github.io/anime-ranker/';
+let dbReadyResolve; const dbReady = new Promise(r => dbReadyResolve = r);
+(async () => {
+  try{
+    const [dbr, cr] = await Promise.all([fetch(DATA_URL + 'db.json'), fetch(DATA_URL + 'cover-urls.json')]);
+    if(cr.ok) Object.assign(coverUrls, await cr.json());
+    if(dbr.ok){
+      DB = (await dbr.json()).rows || {};
+      showInfo = {titles:{}, anilist:{}, formats:{}, episodes:{}};
+      siteScores = {source:'anilist', byMal:{}, byAniList:{}};
+      for(const al in DB){
+        const [mal, med, en, , form, eps] = DB[al];
+        if(med) siteScores.byAniList[al] = med;
+        if(!mal) continue;
+        malToAl[mal] = +al;
+        if(med) siteScores.byMal[mal] = med;
+        if(en) showInfo.titles[mal] = en;
+        if(form) showInfo.formats[mal] = form;
+        if(eps) showInfo.episodes[mal] = eps;
+        showInfo.anilist[mal] = +al;
+      }
+      if(pending){ applySite(pending.entries); if(pending.lists){ applySite(pending.lists.anime); applySite(pending.lists.manga); } renderPending(); }
+      if(S.source!=='sample'){ applySite(S.items); applyMinEps(); } else render();
+      showRefState();
+    }
+  }catch(e){}
+  dbReadyResolve();
+  startFollowing();
+})();
+
+// Seasons missing from someone's list, found through AniList's sequel/prequel links:
+// prequels of anything they started, sequels of anything they completed; a line stops at any show
+// already in the list (so nothing after a dropped or unfinished show); only finished TV, TV short,
+// ONA, OVA and movies with a MAL id are added.
+function missingSeasons(entries){
+  if(!DB) return [];
+  const inList = new Map();
+  entries.forEach(x => { const al = +(x.alId || malToAl[x.id] || 0); if(al) inList.set(al, x.status); });
+  const addable = r => r && r[0] && r[6]==='FINISHED' && ['TV','TV_SHORT','ONA','OVA','MOVIE'].includes(r[4]);
+  const found = new Map();
+  const walk = (start, slot, from) => {
+    const seen = new Set([start]); let frontier = [start];
+    while(frontier.length){
+      const next = [];
+      for(const al of frontier) for(const n of (DB[al]?.[slot] || [])){
+        if(seen.has(n)) continue; seen.add(n);
+        if(inList.has(n) || !DB[n]) continue;
+        if(!addable(DB[n])) continue;
+        if(!found.has(n)) found.set(n, from);
+        next.push(n);
+      }
+      frontier = next;
+    }
+  };
+  for(const [al, st] of inList){
+    const r = DB[al]; if(!r) continue;
+    const from = r[2] || r[3];
+    if(st!=='Plan to Watch') walk(al, 8, from);
+    if(st==='Completed' || st==='Rewatching') walk(al, 7, from);
+  }
+  return [...found].map(([al, from]) => { const r = DB[al];
+    return {e:-1, added:true, id:String(r[0]), alId:al, title:r[3] || r[2], type:(r[4]||'').replace(/_/g,' '), eps:r[5]||0, old:0, site:0, from, status:'Missing season'}; });
+}
+
+// Start from an AniList username: no export file needed
+$('userLoadBtn').onclick = async () => {
+  const name = $('userLoadIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
+  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ showErr('That doesn\'t look like an AniList username (letters, numbers, - and _).'); return; }
+  showErr(''); $('userLoadBtn').disabled = true; $('userLoadBtn').textContent = 'Loading…';
+  try{
+    const L = await getList(name, true);
+    const entries = normScores(L.entries.map((e, i) => ({e:i, id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, old:e.score, site:0, progress:e.progress, status:e.status})));
+    await dbReady; entries.push(...missingSeasons(entries));
+    pending = {source:'json', kind:'anime', xml:null, fileName:`${L.name} (AniList)`, lists:{anime:entries, manga:[]}, entries};
+    applySite(entries); renderPending();
+    if(!myUser && followDb) await followDb.doc('settings/me').set({username:L.name}); // keeps your list in sync from now on
+  }catch(e){ showErr(`Couldn't load that list: ${e.message}. Is the username right and the list public?`); }
+  $('userLoadBtn').disabled = false; $('userLoadBtn').textContent = 'Load my list';
+};
+$('userLoadIn').addEventListener('keydown', e => { if(e.key==='Enter') $('userLoadBtn').click(); });
+})();
+</script>
