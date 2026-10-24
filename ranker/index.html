@@ -422,7 +422,8 @@ const half = v => Math.round(v*2)/2;
 const chipColor = s => `hsl(${Math.round(Math.max(0, s-1)/9*140)} 62% var(--chip-l))`;
 const scoreChip = s => s ? `<span class="score" style="background:${chipColor(s)}">${fmt(s)}</span>` : `<span class="score none">–</span>`;
 
-// Example list. "site" is a made-up community average for the demo only.
+// Example list until the pool below has loaded (or if it can't). "site" is a made-up community
+// average for the demo only.
 const SAMPLE = [
   ['1','Cowboy Bebop','TV',26,9],['5114','Fullmetal Alchemist: Brotherhood','TV',64,10],['9253','Steins;Gate','TV',24,9.5],
   ['30','Neon Genesis Evangelion','TV',26,8],['199','Spirited Away','Movie',1,9],['16498','Attack on Titan','TV',25,8.5],
@@ -431,10 +432,38 @@ const SAMPLE = [
   ['21','One Piece','TV',0,0,8.5],['20','Naruto','TV',220,7],
   // one example show for each lower step, so every benchmark slot starts filled
   ['11757','Sword Art Online','TV',25,6.5],['27899','Tokyo Ghoul √A','TV',12,6],['39617','The Promised Neverland Season 2','TV',11,5.5],
-  ['2476','School Days','TV',12,5],['32379','Berserk (2016)','TV',12,4.5],['32981','Hand Shakers','TV',12,4],
+  ['22199','Akame ga Kill!','TV',24,5],['32379','Berserk (2016)','TV',12,4.5],['32981','Hand Shakers','TV',12,4],
   ['23079','Glasslip','TV',13,3.5],['34771','DYNAMIC CHORD','TV',12,3],['40074','GIBIATE','TV',12,2.5],
-  ['19315','Pupa','TV',12,2],['28929','VAMPIRE HOLMES','TV',12,1.5],['38853','EX-ARM','TV',12,1],['31904','Big Order','TV',10,0.5],
+  ['19315','Pupa','TV',12,2],['28929','VAMPIRE HOLMES','TV',12,1.5],['38853','EX-ARM','TV',12,1],['2476','School Days','TV',12,0.5],
 ].map(([id,title,type,eps,old,site],e) => ({e,id,title,type,eps,old,site:site||0,status:'Completed'}));
+
+// A fresh example list on every load: well-known shows (sample-pool.json, sorted best first by
+// AniList average) cut into 20 slices, one random benchmark from each slice for 10 down to 0.5, so
+// each sits roughly where the community has it; plus a few more shows to rank, some with an old
+// score and some with only a site median. School Days (TV) only ever appears as the 10 or the 0.5.
+const SCHOOL_DAYS = '2476';
+async function rollSample(){
+  // Only formats the Skip settings allow (a skipped show couldn't be a benchmark)
+  const pool = (await (await fetch('sample-pool.json')).json()).shows
+    .filter(s => s[0]!==SCHOOL_DAYS && !tooShort({id:s[0], type:s[2]}));
+  const pick = list => list.splice(Math.floor(Math.random()*list.length), 1)[0];
+  const slices = LEVELS.map((L, i) => pool.slice(Math.floor(i*pool.length/LEVELS.length), Math.floor((i+1)*pool.length/LEVELS.length)));
+  const items = [];
+  const add = ([id, title, format, eps], old, site) => items.push({e:items.length, id, title, type:format==='MOVIE'?'Movie':format, eps, old, site, status:'Completed'});
+  const schoolDays = Math.random() < 0.35 ? (Math.random() < 0.5 ? 10 : 0.5) : null;
+  LEVELS.forEach((L, i) => {
+    if(L===schoolDays) add([SCHOOL_DAYS, 'School Days', 'TV', 12], L, 0);
+    else add(pick(slices[i]), L, 0);
+  });
+  // Shows to rank: an old score near their slice (±½), or only the site's average
+  for(let n = 0; n < 8; n++){
+    const i = Math.floor(Math.random()*LEVELS.length), show = slices[i].length ? pick(slices[i]) : null;
+    if(!show) continue;
+    const near = Math.max(0.5, Math.min(10, LEVELS[i] + (Math.floor(Math.random()*3) - 1)/2));
+    add(show, n < 6 ? near : 0, n < 6 ? 0 : Math.max(0.5, half(show[4]/10)));
+  }
+  return items;
+}
 
 let S = null, pending = null, undoStack = [];
 
@@ -830,7 +859,8 @@ function renderSetup(){
   });
   $('setup').querySelectorAll('[data-skip]').forEach(b => b.onclick = () => {
     const skip = {...skipsOf(), [b.dataset.skip]: b.getAttribute('aria-pressed')!=='true'};
-    PREFS.skip = skip; S.skip = {...skip}; savePrefs(); applySkips();
+    PREFS.skip = skip; S.skip = {...skip}; savePrefs();
+    if(S.source==='sample' && !S.compares) useRolledSample(); else applySkips();
   });
   // A new step size: the show on screen starts over with it (scores given so far stay)
   $('setup').querySelectorAll('[data-opt-step]').forEach(b => b.onclick = () => {
@@ -1421,6 +1451,7 @@ $('resetBtn').onclick = () => {
   try{ localStorage.removeItem(KEY); }catch(e){}
   S = newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))}); undoStack = [];
   advance(); render(); $('loadDetails').open = true;
+  useRolledSample();
 };
 
 /* ---------- export ---------- */
@@ -1806,6 +1837,15 @@ S = load() || newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.ma
 if(S.source==='sample') $('loadDetails').open = true;
 if(S.source!=='sample' && backfillBench()){ if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; } save(); }
 advance(); render(); showRefState();
+// The example list rolls new shows each load (unless you already started playing it)
+function useRolledSample(){
+  rollSample().then(items => {
+    if(S.source!=='sample' || S.compares) return;
+    S = newState({source:'sample', kind:'anime', xml:null, items}); undoStack = [];
+    advance(); render();
+  }).catch(() => {});
+}
+if(S.source==='sample') useRolledSample();
 
 // Data from the anime-ranker site: db.json (every anime on AniList: medians, titles, formats, episodes,
 // status, sequel/prequel links) and cover-urls.json (AniList cover image addresses). Both are rebuilt
