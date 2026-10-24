@@ -60,6 +60,7 @@ textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:
 .chip input{margin:0}
 .opts{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.9rem}
 .opts label{display:inline-flex;gap:6px;align-items:center}
+.opts .optrow{display:inline-flex;gap:4px 12px;align-items:center;flex-wrap:wrap}
 .err{color:var(--lo);font-weight:500}
 
 .stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 18px;display:grid;gap:18px}
@@ -335,11 +336,26 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
 <script>
 (() => {
 const LEVELS = [10,9.5,9,8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,3.5,3,2.5,2,1.5,1,0.5];
-const MIN_SCORE = 0.5; // lowest score you can give
+const MIN_SCORE = 0.5; // lowest site median / imported score kept
 const KEY = 'hl-ranker-v2';
+// How fine scores go (←/→ and the ± buttons move by one step): 1, 0.5 or 0.1 points, shown on the
+// 10-point scale or the 100-point one (7.3 = 73), and whether the show you compare against changes
+// between shows that share its score. Kept in this browser, for every list.
+const PREFS_KEY = 'hl-prefs';
+let PREFS = {step:0.5, scale:10, vary:true};
+try{ PREFS = {...PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')}; }catch(e){}
+const savePrefs = () => { try{ localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); }catch(e){} };
+const STEP = () => PREFS.step;
+const MIN = () => PREFS.step===1 ? 1 : PREFS.step; // lowest score you can give
+const roundStep = v => Math.round(Math.round(v / STEP()) * STEP() * 10) / 10;
+const clampScore = v => Math.max(MIN(), Math.min(10, roundStep(v)));
+// Every score you can give, 10 first
+const scoreValues = () => { const out = []; for(let v = 100; v >= MIN()*10 - 1e-9; v -= STEP()*10) out.push(Math.round(v)/10); return out; };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = s => (+s).toFixed(1);
+const fmt = s => PREFS.scale===100 ? String(Math.round(+s*10)) : (+s).toFixed(1);
+// A step as a label: "1", "½", "0.1" (100-point scale: "10", "5", "1")
+const stepLabel = d => PREFS.scale===100 ? String(Math.round(Math.abs(d)*10)) : Math.abs(d)===0.5 ? '½' : String(Math.abs(d));
 // English titles, formats and episode counts by MAL id, built from db.json
 let showInfo = null;
 // Every anime on AniList (db.json, rebuilt weekly): {anilistId: [malId, median, english, romaji, format, episodes, status, sequels[], prequels[]]}
@@ -413,29 +429,55 @@ function syncRemovedUnused(){
 }
 function load(){ try{ const raw = localStorage.getItem(KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===2) return s; } }catch(e){} return null; }
 
-/* ---------- engine: binary search over the benchmark ladder ---------- */
-function benchList(){ return LEVELS.filter(L => S.bench[L]!=null).map(L => ({s:L, idx:S.bench[L]})); }
+/* ---------- engine ----------
+   1. The ladder: benchmarks at whole or half points (whole only with 1-point steps). The search
+      starts at the benchmark at or below your old score (or the site median) and moves out from
+      there one step, then two, three… while the answers point the same way; once they turn, it
+      halves the remaining gap. So "lower" on an 8 asks about 7.5 next, not 4.
+   2. With 0.1 steps, the show then gets sorted inside its tier (e.g. 7.0–7.4) against shows you
+      already scored there ("soft" benchmarks, not kept as benchmarks; a different one each time).
+   The show you compare against can be any show with the benchmark's exact score (PREFS.vary). */
+function benchList(){ return LEVELS.filter(L => S.bench[L]!=null && (STEP()<1 || L%1===0)).map(L => ({s:L, idx:S.bench[L]})); }
 function benchLevelOf(){ const m = {}; for(const L of LEVELS) if(S.bench[L]!=null) m[S.bench[L]] = L; return m; }
 // Starting guess: your old score, or the site's average if you never scored it
 function guessOf(it){ return it.old || it.site || 0; }
-function probesFor(idx){
-  const g = guessOf(S.items[idx]); if(!S.hints || !g) return [];
-  const B = benchList(); let i = B.findIndex(b => b.s <= g);
-  if(i<0) i = B.length-1;
-  return [i, i-1].filter(p => p>=0 && p<B.length);
+function startIndex(idx){
+  const g = guessOf(S.items[idx]); if(!S.hints || !g) return -1;
+  const B = benchList(); const i = B.findIndex(b => b.s <= g);
+  return i<0 ? B.length-1 : i;
+}
+// The show standing in for a score: the benchmark, or (PREFS.vary) any show with exactly that score
+function standIn(L, benchIdx){
+  if(!PREFS.vary) return benchIdx;
+  const pool = [benchIdx, ...Object.keys(S.results).filter(k => S.results[k]===L).map(Number)];
+  return pool[Math.floor(Math.random()*pool.length)];
 }
 // A show that lands at position p sits below B[p-1] and at or above B[p].
 // If the score steps between those two benchmarks have no benchmark yet, the show
 // becomes the benchmark for the middle empty step, so half points fill in as you play.
+// Returns the tier [min, max] still open (for sorting with 0.1 steps), or null when placed.
 function place(idx, p, B){
-  const upper = p>0 ? B[p-1].s : 10.5, lower = p<B.length ? B[p].s : 0.5;
-  const gaps = LEVELS.filter(L => L<upper && L>lower && S.bench[L]==null);
+  const ladder = STEP()===1 ? 1 : 0.5;
+  const upper = p>0 ? B[p-1].s : 10 + ladder, lower = p<B.length ? B[p].s : ladder;
+  const gaps = LEVELS.filter(L => L<upper && L>lower && S.bench[L]==null && (ladder<1 || L%1===0));
   if(S.fillGaps!==false && gaps.length){
     const L = p===0 ? gaps[gaps.length-1] : p===B.length ? gaps[0] : gaps[Math.floor((gaps.length-1)/2)];
     S.bench[L] = idx; S.lastNew = {idx, L};
-    return;
+    return null;
   }
-  S.results[idx] = p<B.length ? lower : Math.max(MIN_SCORE, upper-0.5);
+  const min = p<B.length ? lower : Math.max(MIN(), upper-ladder), max = Math.round((upper - STEP())*10)/10;
+  if(STEP()>=0.5 || max<=min){ S.results[idx] = min; return null; }
+  return {min, max};
+}
+// Soft benchmarks for a show inside [min, max]: scored shows there (not benchmarks), by score.
+// Picks the score nearest the middle, then one show with it at random.
+function softProbe(c){
+  const scores = [...new Set(Object.keys(S.results).filter(k => +k!==c.idx).map(k => S.results[k]).filter(v => v>=c.fine.min-1e-9 && v<=c.fine.max+1e-9))];
+  if(!scores.length) return null;
+  const mid = (c.fine.min + c.fine.max)/2;
+  scores.sort((a,b) => Math.abs(a-mid) - Math.abs(b-mid) || Math.random()-0.5);
+  const s = scores[0], shows = Object.keys(S.results).filter(k => +k!==c.idx && S.results[k]===s).map(Number);
+  return {s, idx: shows[Math.floor(Math.random()*shows.length)]};
 }
 function advance(){
   if(!benchList().length) return;
@@ -445,15 +487,28 @@ function advance(){
       if(!S.queue.length) return;
       const idx = S.queue.shift();
       if(tooShort(S.items[idx])){ S.short = S.short || []; if(!S.short.includes(idx)) S.short.push(idx); continue; }
-      S.cur = {idx, lo:0, hi:B.length, probes:probesFor(idx), m:-1};
+      const start = startIndex(idx);
+      S.cur = {idx, lo:0, hi:B.length, m:-1, start, gallop: start>=0 ? {dir:0, size:1} : null};
     }
     const c = S.cur;
-    if(c.lo>=c.hi){ place(c.idx, c.lo, B); S.cur = null; continue; }
-    if(c.m>=0) return;
-    let m = -1;
-    while(c.probes.length){ const p = c.probes.shift(); if(p>=c.lo && p<c.hi){ m = p; break; } }
-    if(m<0) m = (c.lo+c.hi)>>1;
-    c.m = m; return;
+    if(c.m>=0 || c.soft) return;
+    // Sorting inside the tier
+    if(c.fine){
+      const probe = softProbe(c);
+      if(!probe){ S.results[c.idx] = roundStep((c.fine.min + c.fine.max)/2); S.cur = null; continue; }
+      c.soft = probe; return;
+    }
+    if(c.lo>=c.hi){
+      const tier = place(c.idx, c.lo, B);
+      if(tier){ c.fine = tier; continue; }
+      S.cur = null; continue;
+    }
+    let m;
+    if(c.start>=0 && c.start>=c.lo && c.start<c.hi && !c.asked) m = c.start;
+    else if(c.gallop && c.gallop.dir<0) m = Math.max(c.lo, c.hi - c.gallop.size);
+    else if(c.gallop && c.gallop.dir>0) m = Math.min(c.hi - 1, c.lo + c.gallop.size - 1);
+    else m = (c.lo+c.hi)>>1;
+    c.m = m; c.asked = true; c.show = standIn(B[m].s, B[m].idx); return;
   }
 }
 function snap(){ undoStack.push(JSON.stringify({queue:S.queue,cur:S.cur,results:S.results,skipped:S.skipped,compares:S.compares,bench:S.bench,lastNew:S.lastNew||null,removed:S.removed||[],dropped:S.dropped||[],nItems:S.items.length})); if(undoStack.length>200) undoStack.shift(); }
@@ -530,14 +585,15 @@ function applyMinEps(){
 }
 // The middle button: "Set" at the benchmark's score means "same level"; ±1/±½ adjust it first
 let direct = null; // {key, v}
+const directKey = () => S.cur.idx + ':' + S.cur.m + ':' + (S.cur.soft ? S.cur.soft.idx : '');
 function directFor(b){
-  const key = S.cur.idx + ':' + S.cur.m;
-  if(!direct || direct.key!==key) direct = {key, v: b.s};
+  const key = directKey();
+  if(!direct || direct.key!==key) direct = {key, v: clampScore(b.s)};
   return direct.v;
 }
 // A score given by hand fills that step's benchmark if it has none yet (same rule as "Fill empty steps")
 function giveScore(idx, v){
-  if(S.fillGaps!==false && S.bench[v]==null && !tooShort(S.items[idx])){
+  if(S.fillGaps!==false && LEVELS.includes(v) && (STEP()<1 || v%1===0) && S.bench[v]==null && !tooShort(S.items[idx])){
     delete S.results[idx]; S.bench[v] = idx; S.lastNew = {idx, L:v};
     return true;
   }
@@ -561,16 +617,16 @@ function agreeRef(pi){
   const it = S.items[S.cur.idx];
   if(pi==null) pi = agreeKeys.length ? agreeKeys[0].ps[0][1] : -1; // A key: the first agree button
   const r = refScore(it, REFS[pi]); if(!r) return;
-  snap(); S.lastNew = null; giveScore(S.cur.idx, Math.max(MIN_SCORE, half(r))); S.cur = null; direct = null;
+  snap(); S.lastNew = null; giveScore(S.cur.idx, clampScore(r)); S.cur = null; direct = null;
   advance(); save(); render();
 }
 function stepDirect(d){
   if(!S.cur || !direct) return;
-  direct.v = Math.max(MIN_SCORE, Math.min(10, direct.v + d));
+  direct.v = clampScore(direct.v + d);
   $('directSet').innerHTML = `Set ${fmt(direct.v)}<span class="kbd">E</span>`;
 }
 function setDirect(){
-  if(!S.cur || !direct || direct.key!==S.cur.idx + ':' + S.cur.m) return;
+  if(!S.cur || !direct || direct.key!==directKey()) return;
   snap(); S.lastNew = null; giveScore(S.cur.idx, direct.v); S.cur = null; direct = null;
   advance(); save(); render();
 }
@@ -583,11 +639,27 @@ function undo(){
   save(); render();
 }
 function answer(d){
-  const c = S.cur; if(!c || c.m<0) return;
-  const B = benchList();
-  snap(); S.compares++; S.lastNew = null;
-  if(d==='same'){ S.results[c.idx] = B[c.m].s; S.cur = null; }
-  else { if(d==='higher') c.hi = c.m; else c.lo = c.m+1; c.m = -1; }
+  const c = S.cur; if(!c || (c.m<0 && !c.soft)) return;
+  snap(); S.compares++; S.lastNew = null; direct = null;
+  if(c.soft){
+    // Inside the tier: the soft benchmark's score splits what's left
+    const s = c.soft.s; c.soft = null;
+    if(d==='same'){ S.results[c.idx] = s; S.cur = null; }
+    else if(d==='higher') c.fine.min = Math.round((s + STEP())*10)/10;
+    else c.fine.max = Math.round((s - STEP())*10)/10;
+    if(S.cur && c.fine.min>c.fine.max){ S.results[c.idx] = d==='higher' ? c.fine.max : c.fine.min; S.cur = null; }
+    if(S.cur && c.fine.min===c.fine.max){ S.results[c.idx] = c.fine.min; S.cur = null; }
+  } else {
+    const B = benchList();
+    if(d==='same'){ S.results[c.idx] = B[c.m].s; S.cur = null; }
+    else {
+      const dir = d==='higher' ? -1 : 1;
+      if(d==='higher') c.hi = c.m; else c.lo = c.m+1;
+      // Same way as before: go a little further out each time (1, 2, 3… steps); turned around: halve from here on
+      if(c.gallop){ if(c.gallop.dir===0 || c.gallop.dir===dir){ c.gallop.size = c.gallop.dir===0 ? 1 : c.gallop.size+1; c.gallop.dir = dir; } else c.gallop = null; }
+      c.m = -1;
+    }
+  }
   advance(); save(); render();
 }
 function skip(){ if(!S.cur) return; snap(); S.skipped.push(S.cur.idx); S.cur = null; advance(); save(); render(); }
@@ -695,7 +767,14 @@ function renderStage(){
       <div class="substrip" style="justify-content:center">${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
       <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div></div>${statsHtml}`;
   } else {
-    const a = S.items[S.cur.idx], b = B[S.cur.m], bi = S.items[b.idx];
+    const a = S.items[S.cur.idx];
+    // Against: a soft benchmark inside the tier, or the benchmark (or a show with exactly its score)
+    const soft = S.cur.soft;
+    const b = soft ? {s: soft.s, idx: soft.idx} : B[S.cur.m];
+    const shown = soft ? soft.idx : (S.cur.show ?? b.idx), bi = S.items[shown];
+    const against = soft ? `Scored ${fmt(b.s)} · sorting inside ${fmt(S.cur.fine.min)}–${fmt(S.cur.fine.max)}`
+      : shown!==b.idx ? `Scored ${fmt(b.s)} · same as the benchmark` : `Benchmark for ${fmt(b.s)}`;
+    const steps = STEP()===1 ? [-1, 1] : [-1, -STEP(), STEP(), 1];
     const g = S.hints && guessOf(a);
     const ln = S.lastNew && S.bench[S.lastNew.L]===S.lastNew.idx ? S.lastNew : null;
     const note = stageNote; stageNote = '';
@@ -705,24 +784,22 @@ function renderStage(){
         <article class="card new"><div class="eyebrow">Scoring now${g?` · started near ${fmt(g)}`:''}${a.added?` · not in your list yet`:''}</div>
           <div class="cardrow">${showInfo&&a.id?`<img class="cv" data-id="${esc(a.id)}" alt="">`:''}<div><div>${titleBlock(a)}</div><div class="meta">${metaLine(a,true)}</div>${a.added&&a.from?`<div class="muted" style="font-size:.84rem">Found through ${esc(a.from)}</div>`:''}</div></div></article>
         <div class="vs" aria-hidden="true">VS</div>
-        <article class="card"><div class="benchscore">${scoreChip(b.s)}<span class="eyebrow">Benchmark for ${fmt(b.s)}</span></div>
+        <article class="card"><div class="benchscore">${scoreChip(b.s)}<span class="eyebrow">${against}</span></div>
           <div class="cardrow">${showInfo&&bi.id?`<img class="cv" data-id="${esc(bi.id)}" alt="">`:''}<div><div>${titleBlock(bi)}</div><div class="meta">${metaLine(bi,false)}</div></div></div></article>
       </div>
       <div class="answers">
         <button class="ans hi" data-a="higher">↑ Higher<span class="kbd">↑</span></button>
         <div class="direct">
-          <button class="btn step" data-step="-1">−1</button>
-          <button class="btn step" data-step="-0.5">−½</button>
-          <button class="btn primary" id="directSet" title="Same level as the benchmark, or adjust first">Set ${fmt(directFor(b))}<span class="kbd">E</span></button>
-          <button class="btn step" data-step="0.5">+½</button>
-          <button class="btn step" data-step="1">+1</button>
+          ${steps.filter(d => d<0).map(d => `<button class="btn step" data-step="${d}">−${stepLabel(d)}</button>`).join('')}
+          <button class="btn primary" id="directSet" title="Same level, or adjust first (← →)">Set ${fmt(directFor(b))}<span class="kbd">E</span></button>
+          ${steps.filter(d => d>0).map(d => `<button class="btn step" data-step="${d}">+${stepLabel(d)}</button>`).join('')}
         </div>
         <button class="ans lo" data-a="lower">↓ Lower<span class="kbd">↓</span></button>
       </div>
       ${(() => {
         // One button per distinct score: people who'd give the same (rounded) score share a button
         const groups = new Map();
-        REFS.forEach((P,pi) => { const r = refScore(a,P); if(!r) return; const v = Math.max(MIN_SCORE, half(r)); if(!groups.has(v)) groups.set(v, []); groups.get(v).push([P,pi]); });
+        REFS.forEach((P,pi) => { const r = refScore(a,P); if(!r) return; const v = clampScore(r); if(!groups.has(v)) groups.set(v, []); groups.get(v).push([P,pi]); });
         // Keys 1, 2, 3... follow the button order
         agreeKeys = [...groups].sort((x, y) => x[1][0][1] - y[1][0][1]).map(([v, ps]) => ({v, ps})); // fixed order: by who comes first in your people list
         return agreeKeys.length ? `<div class="direct">${agreeKeys.map(({v, ps}, n) => `<button class="btn" data-agree="${ps[0][1]}">Agree with ${ps.map(([P]) => esc(P.name)).join(', ')} · ${fmt(v)}${n<9?`<span class="kbd">${n+1}</span>`:''}</button>`).join('')}</div>` : '';
@@ -740,6 +817,11 @@ function renderStage(){
           <label title="Starts each search at your old score, or the site median if you never scored it"><input type="checkbox" id="optHints" ${S.hints?'checked':''}> Start near old score or site median</label>
           <label><input type="checkbox" id="optMinEps" ${S.minEps!==false?'checked':''}> Leave out series under ${MIN_EPS} episodes (movies stay in)</label>
           <label title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark"><input type="checkbox" id="optFill" ${S.fillGaps!==false?'checked':''}> Fill empty steps with new benchmarks</label>
+          <label title="Compare against any show with the benchmark's exact score, not always the benchmark itself"><input type="checkbox" id="optVary" ${PREFS.vary?'checked':''}> Vary the shows you compare against</label>
+          <span class="optrow">Steps (← →)
+            ${[1, 0.5, 0.1].map(v => `<label><input type="radio" name="optStep" value="${v}" ${PREFS.step===v?'checked':''}> ${PREFS.scale===100 ? v*10 : v}</label>`).join('')}</span>
+          <span class="optrow">Scale
+            ${[10, 100].map(v => `<label><input type="radio" name="optScale" value="${v}" ${PREFS.scale===v?'checked':''}> ${v} points</label>`).join('')}</span>
         </div>
       </details>`;
     $('settingsBox').addEventListener('toggle', e => { settingsOpen = e.target.open; });
@@ -755,6 +837,14 @@ function renderStage(){
     $('optHints').onchange = e => { S.hints = e.target.checked; save(); };
     $('optFill').onchange = e => { S.fillGaps = e.target.checked; save(); };
     $('optMinEps').onchange = e => { S.minEps = e.target.checked; applyMinEps(); };
+    $('optVary').onchange = e => { PREFS.vary = e.target.checked; savePrefs(); };
+    // A new step size: the show on screen starts over with it (scores given so far stay)
+    st.querySelectorAll('input[name=optStep]').forEach(r => r.onchange = () => {
+      PREFS.step = +r.value; savePrefs(); direct = null;
+      if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+      advance(); save(); render();
+    });
+    st.querySelectorAll('input[name=optScale]').forEach(r => r.onchange = () => { PREFS.scale = +r.value; savePrefs(); render(); });
   }
   const ub = $('undoBtn'); if(ub) ub.onclick = undo;
   const us = $('unskipBtn'); if(us) us.onclick = unskip;
@@ -953,7 +1043,7 @@ function renderTable(){
     const it = S.items[idx], s = fs[idx], isB = bl[idx]!=null, d = it.old ? s - it.old : null;
     const u = itemUrl(it);
     const ctrl =
-      `${scoreChip(s)} <select data-i="${idx}" aria-label="Change score">${LEVELS.map(v=>`<option value="${v}" ${v===s?'selected':''}>${fmt(v)}</option>`).join('')}<option value="redo">Redo…</option><option value="drop">Dropped</option><option value="nw">Didn't watch</option></select>`;
+      `${scoreChip(s)} <select data-i="${idx}" aria-label="Change score">${[...new Set([...scoreValues(), s])].sort((x,y) => y-x).map(v=>`<option value="${v}" ${v===s?'selected':''}>${fmt(v)}</option>`).join('')}<option value="redo">Redo…</option><option value="drop">Dropped</option><option value="nw">Didn't watch</option></select>`;
     return `<tr><td class="t">${u?`<a href="${u}" target="_blank" rel="noopener">${esc(T(it))}</a>`:esc(T(it))}${isB?'<span class="star">benchmark</span>':''}</td>
       <td class="num">${scoreChip(it.old)}</td>
       <td class="num">${ctrl}</td>
@@ -1007,7 +1097,7 @@ function normStatus(s, kind){
 let preciseScores = false; // true while reading someone else's list: keep their exact decimals
 function normScores(entries){
   const max = Math.max(0, ...entries.map(x => x.old||0));
-  entries.forEach(x => { let v = +x.old||0; if(max>10) v = v/10; x.old = Math.max(0, Math.min(10, preciseScores ? Math.round(v*10)/10 : half(v))); });
+  entries.forEach(x => { let v = +x.old||0; if(max>10) v = v/10; x.old = Math.max(0, Math.min(10, preciseScores || STEP()<0.5 ? Math.round(v*10)/10 : half(v))); });
   return entries;
 }
 function parseJson(text){
@@ -1404,8 +1494,9 @@ document.addEventListener('keydown', e => {
   else if(k==='d'){ dropShow(); }
   else if(k==='a'){ agreeRef(); }
   else if(/^[1-9]$/.test(e.key) && +e.key <= agreeKeys.length){ agreeRef(agreeKeys[+e.key - 1].ps[0][1]); } // 1 = first agree button, 2 = second, …
-  else if(k==='arrowright'){ e.preventDefault(); stepDirect(e.shiftKey ? 0.5 : 1); }
-  else if(k==='arrowleft'){ e.preventDefault(); stepDirect(e.shiftKey ? -0.5 : -1); }
+  // ←/→ move by the chosen step (Settings); with Shift by a whole point
+  else if(k==='arrowright'){ e.preventDefault(); stepDirect(e.shiftKey ? 1 : STEP()); }
+  else if(k==='arrowleft'){ e.preventDefault(); stepDirect(e.shiftKey ? -1 : -STEP()); }
   else if(k==='+'){ stepDirect(1); }
   else if(k==='-'){ stepDirect(-1); }
   else if(k==='enter' && !e.target.closest('button')){ setDirect(); }
