@@ -186,6 +186,12 @@ details.fold > summary::-webkit-details-marker{display:none}
 details.fold > summary::after{content:"Show";font-size:.85rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 12px}
 details.fold[open] > summary::after{content:"Hide"}
 details.fold[open] > summary{margin-bottom:14px}
+.crowded{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin-top:6px;font-size:.86rem}
+.crowded .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.swipehint{display:none;text-align:center;font-size:.8rem;color:var(--muted)}
+@media (pointer:coarse){.swipehint{display:block}}
+.rung.warn input{border-color:#d9a300}
+.rung .flag{color:#d9a300;font-size:.8rem;cursor:help}
 .focusrow{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;font-size:.88rem}
 .focusrow .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .focusrow select{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 12px;max-width:100%}
@@ -370,7 +376,11 @@ details.fold[open] > summary{margin-bottom:14px}
       <label><input type="checkbox" id="wholeNums"> Round to whole numbers (for MyAnimeList, which has no half points)</label>
     </div>
     <div class="row">
-      <button class="btn primary" id="saveXml">Save import file (.xml)</button>
+      <button class="btn go" id="alSave" title="Writes the changed scores straight to your AniList (log in once)">Save to AniList</button>
+      <span class="muted" id="alMsg" style="font-size:.88rem"></span>
+    </div>
+    <div class="row small">
+      <button class="btn" id="saveXml">Save import file (.xml)</button>
       <button class="btn" id="copyXml">Copy import XML</button>
       <button class="btn" id="saveCsv">Save results as CSV</button>
     </div>
@@ -584,6 +594,9 @@ function advance(){
       if(qi<0) return;
       const idx = S.queue.splice(qi, 1)[0];
       if(tooShort(S.items[idx])){ S.short = S.short || []; if(!S.short.includes(idx)) S.short.push(idx); continue; }
+      // A show from a split score is only sorted inside its tier (no ladder)
+      const tier = S.split?.[idx];
+      if(tier){ delete S.split[idx]; S.cur = {idx, m:-1, fine:{min:tier[0], max:tier[1]}}; continue; }
       const start = startIndex(idx);
       S.cur = {idx, lo:0, hi:B.length, m:-1, start, gallop: start>=0 ? {dir:0, size:1} : null};
     }
@@ -608,7 +621,7 @@ function advance(){
     c.m = m; c.asked = true; c.show = standIn(B[m].s, B[m].idx); return;
   }
 }
-function snap(){ undoStack.push(JSON.stringify({queue:S.queue,cur:S.cur,results:S.results,skipped:S.skipped,compares:S.compares,bench:S.bench,lastNew:S.lastNew||null,removed:S.removed||[],dropped:S.dropped||[],nItems:S.items.length})); if(undoStack.length>200) undoStack.shift(); }
+function snap(){ undoStack.push(JSON.stringify({queue:S.queue,cur:S.cur,results:S.results,skipped:S.skipped,compares:S.compares,bench:S.bench,lastNew:S.lastNew||null,removed:S.removed||[],dropped:S.dropped||[],unsure:S.unsure||[],split:S.split||{},nItems:S.items.length})); if(undoStack.length>200) undoStack.shift(); }
 // Later seasons the page added by itself ("Missing season") that you haven't scored leave with a dropped show.
 // Follows AniList sequel links (db.json); a show from your own list ends the line.
 function dropSequels(idx){
@@ -729,6 +742,8 @@ function stepDirect(d){
 }
 function setDirect(){
   if(!S.cur || !direct || direct.key!==directKey()) return;
+  // "Set" at the benchmark's own score is a "same" answer for the benchmark check
+  if(!S.cur.soft && S.cur.m>=0){ const b = benchList()[S.cur.m]; if(b) benchNote(b.s, direct.v===b.s ? 'same' : 'set'); }
   snap(); S.lastNew = null; giveScore(S.cur.idx, direct.v); S.cur = null; direct = null;
   advance(); save(); render();
 }
@@ -753,6 +768,7 @@ function answer(d){
     if(S.cur && c.fine.min===c.fine.max){ S.results[c.idx] = c.fine.min; S.cur = null; }
   } else {
     const B = benchList();
+    benchNote(B[c.m].s, d);
     if(d==='same'){ S.results[c.idx] = B[c.m].s; S.cur = null; }
     else {
       const dir = d==='higher' ? -1 : 1;
@@ -861,7 +877,8 @@ function renderCheck(st, statsHtml){
         <div class="direct"><button class="btn" data-check="same">About the same<span class="kbd">↓</span></button>
           <button class="btn" data-check="skip">Skip pair<span class="kbd">K</span></button></div>
         <button class="ans hi" data-check="right">This one →<span class="kbd">→</span></button>
-      </div>`;
+      </div>
+      <div class="swipehint">Swipe left or right toward the one you liked more, down for about the same</div>`;
   } else {
     body = `<div class="done"><div class="big">Check done</div>
       <div class="muted">${c.asked} pair${c.asked===1?'':'s'} compared · ${c.flagged} didn't match your scores · ${c.fixed} fixed</div>
@@ -1007,10 +1024,120 @@ async function showTierList(){
     };
   }catch(e){ $('tierMsg').textContent = 'Couldn’t draw the picture: ' + e.message; }
 }
+/* ---------- crowded scores ----------
+   A score that six or more of your shows share (benchmarks aside) can be split with 0.1 steps: its
+   shows are sorted against each other inside the half point (8.0–8.4), skipping the ladder. */
+const CROWDED = 6;
+function crowdedScores(){
+  const n = new Map();
+  for(const k in S.results){ if(!inFocus(+k)) continue; const v = S.results[k]; n.set(v, (n.get(v)||0) + 1); }
+  return [...n].filter(([, c]) => c>=CROWDED).sort((a, b) => b[1] - a[1]).map(([s, c]) => ({s, n:c}));
+}
+function splitScore(s){
+  if(STEP()!==0.1) return;
+  const ids = Object.keys(S.results).map(Number).filter(i => S.results[i]===s && inFocus(i));
+  if(ids.length<2) return;
+  snap();
+  const lo = Math.floor(s*2)/2, hi = Math.round((lo + 0.5 - STEP())*10)/10;
+  S.split = S.split || {};
+  for(const i of ids){ delete S.results[i]; S.split[i] = [lo, hi]; }
+  if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+  S.queue.unshift(...shuffle(ids)); advance(); save(); render();
+}
+function crowdedHtml(){
+  const list = crowdedScores().slice(0, 4); if(!list.length) return '';
+  return `<div class="crowded"><span class="lbl">Crowded</span>${list.map(c => STEP()===0.1
+      ? `<button class="pill" data-split="${c.s}" title="Sort these ${c.n} shows against each other inside the half point">${fmt(c.s)} · ${c.n} shows · split</button>`
+      : `<span class="pill" title="Switch to 0.1 steps (Your list & setup) to split them">${fmt(c.s)} · ${c.n} shows</span>`).join('')}
+    ${STEP()===0.1 ? '' : '<span class="muted">0.1 steps can split these</span>'}</div>`;
+}
+
+/* ---------- "not sure" ----------
+   Out of the queue for now, kept in S.unsure until you rank them (e.g. after a rewatch). */
+function notSure(){
+  if(!S.cur) return;
+  snap(); S.unsure = S.unsure || [];
+  if(!S.unsure.includes(S.cur.idx)) S.unsure.push(S.cur.idx);
+  S.cur = null; direct = null; advance(); save(); render();
+}
+function rankUnsure(){ if(!(S.unsure||[]).length) return; snap(); S.queue.unshift(...S.unsure); S.unsure = []; advance(); save(); render(); }
+
+/* ---------- benchmark check ----------
+   Counts, per benchmark score, how often you were asked about it and answered "same". A benchmark
+   that gets "same" a lot covers too much; the Benchmarks list marks it so you can pick a show that
+   sits more clearly at that score. */
+function benchNote(L, idx){
+  S.benchStats = S.benchStats || {};
+  const st = S.benchStats[L] = S.benchStats[L] || [0, 0];
+  st[0]++; if(idx==='same') st[1]++;
+}
+const benchTooBroad = L => { const st = S.benchStats?.[L]; return !!st && st[0]>=8 && st[1]/st[0]>=0.35; };
+
+/* ---------- save straight to AniList ----------
+   Uses the AniList login of the schedule site (same address, so the same browser storage); "Connect
+   AniList" goes through the schedule's login and comes back here. Only changes are written: new
+   scores, shows not on the list yet, and drops. 20 entries per request. */
+function anilistLogin(){
+  let accounts = [], active = '';
+  try{ accounts = JSON.parse(localStorage.getItem('anilistAccounts')) || []; active = localStorage.getItem('anilistActive') || ''; }catch(e){}
+  accounts = accounts.filter(a => a.token && (!a.expires || a.expires > Date.now()));
+  return accounts.find(a => a.name===active) || accounts[accounts.length - 1] || null;
+}
+function connectAniList(){
+  try{ sessionStorage.setItem('anilistReturn', location.href.split('#')[0]); }catch(e){}
+  location.href = 'https://anilist.co/api/v2/oauth/authorize?client_id=54702&response_type=token';
+}
+// What saving would write: [{alId, score, status?, progress?, kind:'score'|'new'|'drop'}]
+function aniListChanges(){
+  const fs = finalScores(), out = [], round = v => S.wholeNums ? Math.round(v) : v;
+  for(const k in fs){
+    const it = S.items[k], al = alOf(it); if(!al) continue;
+    const score = round(fs[k]), isNew = !!it.added;
+    if(!isNew && Math.abs(score - (it.old || 0)) < 0.05 && !(S.markDone!==false && it.status!=='Completed')) continue;
+    const e = {alId:al, score, kind:isNew ? 'new' : 'score'};
+    if(isNew || S.markDone!==false){ e.status = 'COMPLETED'; if(it.eps) e.progress = it.eps; }
+    out.push(e);
+  }
+  for(const k of S.dropped || []){ const it = S.items[k], al = alOf(it); if(al && it.status!=='Dropped') out.push({alId:al, status:'DROPPED', kind:'drop'}); }
+  return out;
+}
+let alArmed = false;
+async function saveToAniList(){
+  const login = anilistLogin(), msg = $('alMsg'), btn = $('alSave');
+  if(S.source==='sample') return; // the example list is never saved anywhere
+  if(!login){ connectAniList(); return; }
+  const changes = aniListChanges();
+  if(!changes.length){ msg.textContent = 'Nothing to save: AniList already has these scores.'; return; }
+  if(!alArmed){
+    const n = k => changes.filter(c => c.kind===k).length;
+    msg.textContent = `Save ${n('score')} new score${n('score')===1?'':'s'}${n('new') ? `, ${n('new')} show${n('new')===1?'':'s'} not on your list yet` : ''}${n('drop') ? `, ${n('drop')} drop${n('drop')===1?'':'s'}` : ''} to ${login.name || 'your AniList'}${S.markDone!==false ? ', marked Completed (see the box above)' : ''}? Click again to save.`;
+    alArmed = true; btn.textContent = 'Yes, save to AniList'; setTimeout(() => { alArmed = false; btn.textContent = 'Save to AniList'; }, 8000);
+    return;
+  }
+  alArmed = false; btn.disabled = true;
+  let done = 0;
+  try{
+    for(let i = 0; i < changes.length; i += 20){
+      const part = changes.slice(i, i + 20);
+      const fields = part.map((c, n) => `e${n}: SaveMediaListEntry(mediaId: ${c.alId}${c.score!=null ? `, scoreRaw: ${Math.round(c.score*10)}` : ''}${c.status ? `, status: ${c.status}` : ''}${c.progress ? `, progress: ${c.progress}` : ''}) { id }`);
+      await anilist(`mutation { ${fields.join(' ')} }`, {}, login.token);
+      done += part.length; msg.textContent = `Saving… ${done} of ${changes.length}`;
+    }
+    // AniList has them now: they count as your old scores from here on
+    const fs = finalScores();
+    for(const k in fs){ const it = S.items[k]; if(alOf(it)){ it.old = fs[k]; it.added = false; if(S.markDone!==false) it.status = 'Completed'; } }
+    for(const k of S.dropped || []) S.items[k].status = 'Dropped';
+    save(); render();
+    msg.textContent = `Saved ${done} change${done===1?'':'s'} to AniList${login.name ? ` (${login.name})` : ''}.`;
+  }catch(e){
+    msg.textContent = `Stopped after ${done} of ${changes.length}: ${e.message}${/invalid token|unauthorized/i.test(e.message) ? ' (log in again with Connect AniList)' : ''}`;
+  }
+  btn.disabled = false; btn.textContent = 'Save to AniList';
+}
 function estLeft(){
   const per = Math.ceil(Math.log2(benchList().length+1));
   const each = S.hints ? Math.min(per, 2.5) : per;
-  return Math.round((S.cur ? Math.ceil(Math.log2(S.cur.hi-S.cur.lo+1)) : 0) + S.queue.length*each);
+  return Math.round((S.cur && S.cur.hi!=null ? Math.ceil(Math.log2(S.cur.hi-S.cur.lo+1)) : S.cur ? 1 : 0) + S.queue.length*each);
 }
 function setBench(L, idx){
   const prev = S.bench[L];
@@ -1022,6 +1149,7 @@ function setBench(L, idx){
     S.bench[L] = idx;
   } else delete S.bench[L];
   if(prev!=null && prev!==idx) S.results[prev] = L; // the old benchmark keeps that score
+  if(S.benchStats) delete S.benchStats[L];          // a new benchmark starts with a clean count
   if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
   undoStack = [];
   advance(); save(); render();
@@ -1134,11 +1262,13 @@ function renderStage(){
   const st = $('stage'), B = benchList();
   const nRemoved = (S.removed||[]).length;
   const nShort = (S.short||[]).length;
-  const nDropped = (S.dropped||[]).length;
-  const total = S.items.length - S.skipped.length - nRemoved - nShort - nDropped;
+  const nDropped = (S.dropped||[]).length, nUnsure = (S.unsure||[]).length;
+  const total = S.items.length - S.skipped.length - nRemoved - nShort - nDropped - nUnsure;
+  // On the finished screens: shows marked "not sure", and crowded scores to split
+  const unsureBtn = nUnsure ? `<button class="btn" id="unsureBtn">Rank the ${nUnsure} marked “not sure”</button>` : '';
   const scored = Object.keys(finalScores()).length, pct = total ? Math.round(scored/total*100) : 0;
   const statsHtml = `<div class="progress"><i style="width:${pct}%"></i></div>
-    <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
+    <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nUnsure?`<span>${nUnsure} not sure</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
   if(!B.length){
     st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
     $('benchPanel').open = true;
@@ -1154,12 +1284,12 @@ function renderStage(){
       <div class="muted">${inIt} show${inIt===1?'':'s'} scored${left ? ` · ${left} more wait in the rest of your list` : ''}</div>
       <div class="substrip" style="justify-content:center"><button class="btn primary" id="tierBtn">Tier list picture</button>
       <button class="btn" id="rerankBtn" title="Put this slice's scored shows back in the queue (benchmarks stay)">Re-rank these</button>
-      <button class="btn" id="allBtn">Back to everything</button></div></div>${statsHtml}`;
+      <button class="btn" id="allBtn">Back to everything</button>${unsureBtn}</div>${crowdedHtml()}</div>${statsHtml}`;
   } else if(!S.cur){
     st.innerHTML = `${picker}<div class="done"><div class="big">All ${scored} scored</div>
       <div class="muted">${S.compares} comparisons. Check the results below, then export.</div>
       <div class="substrip" style="justify-content:center">${canCheck?`<button class="btn primary" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency</button>`:''}<button class="btn" id="tierBtn">Tier list picture</button>${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
-      <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div></div>${statsHtml}`;
+      ${unsureBtn}<button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div>${crowdedHtml()}</div>${statsHtml}`;
   } else {
     const a = S.items[S.cur.idx];
     // Against: a soft benchmark inside the tier, or the benchmark (or a show with exactly its score)
@@ -1190,6 +1320,7 @@ function renderStage(){
         </div>
         <button class="ans lo" data-a="lower">↓ Lower<span class="kbd">↓</span></button>
       </div>
+      <div class="swipehint">Swipe up for higher, down for lower</div>
       ${(() => {
         // One button per distinct score: people who'd give the same (rounded) score share a button
         const groups = new Map();
@@ -1202,6 +1333,7 @@ function renderStage(){
         <button class="btn" id="dropBtn">Dropped<span class="kbd">D</span></button>
         <button class="btn" id="nwBtn">Didn't watch<span class="kbd">X</span></button>
         <button class="btn" id="skipBtn">Skip for now<span class="kbd">K</span></button>
+        <button class="btn" id="notSureBtn" title="Set it aside until you're sure (e.g. after a rewatch)">Not sure<span class="kbd">N</span></button>
         <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button>
         ${canCheck?`<button class="btn" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency<span class="kbd">C</span></button>`:''}
       </div>${statsHtml}`;
@@ -1217,6 +1349,9 @@ function renderStage(){
   const ub = $('undoBtn'); if(ub) ub.onclick = undo;
   const cb = $('checkBtn'); if(cb) cb.onclick = startCheck;
   const tb = $('tierBtn'); if(tb) tb.onclick = showTierList;
+  const ns = $('notSureBtn'); if(ns) ns.onclick = notSure;
+  const ub2 = $('unsureBtn'); if(ub2) ub2.onclick = rankUnsure;
+  st.querySelectorAll('[data-split]').forEach(b => b.onclick = () => splitScore(+b.dataset.split));
   const rr = $('rerankBtn'); if(rr) rr.onclick = rerankSlice;
   const ab = $('allBtn'); if(ab) ab.onclick = () => setFocus(null);
   const fsel = $('focusSel');
@@ -1246,11 +1381,15 @@ function renderLadder(){
     const at = order.filter(i => !removed.has(i) && scoreNow(i)===L), rest = order.filter(i => !removed.has(i) && scoreNow(i)!==L);
     $('benchOptions').innerHTML = [...at, ...rest].map(i => `<option value="${esc(labelOf[i])}">${scoreNow(i)!=null ? fmt(scoreNow(i)) : ''}</option>`).join('');
   };
-  $('benchCount').textContent = `· ${LEVELS.filter(L => S.bench[L]!=null).length} of ${LEVELS.length} set`;
-  $('ladder').innerHTML = LEVELS.map(L => `<div class="rung">${scoreChip(L)}
+  // Benchmark check: one that got "same" in a third or more of 8+ answers covers too much
+  const broad = LEVELS.filter(L => S.bench[L]!=null && benchTooBroad(L));
+  $('benchCount').textContent = `· ${LEVELS.filter(L => S.bench[L]!=null).length} of ${LEVELS.length} set${broad.length ? ` · ⚠ ${broad.length} to look at` : ''}`;
+  const flag = L => { if(!broad.includes(L)) return ''; const [n, same] = S.benchStats[L];
+    return `<span class="flag" title="${same} of ${n} answers were “same”: this show may cover too much. A show that sits more clearly at ${fmt(L)} makes the answers easier.">⚠ </span>`; };
+  $('ladder').innerHTML = LEVELS.map(L => `<div class="rung${broad.includes(L) ? ' warn' : ''}">${scoreChip(L)}
       <input type="text" list="benchOptions" id="bench-${L*10}" data-l="${L}" class="${S.bench[L]==null?'empty':''}" placeholder="Type a title…"
         value="${S.bench[L]!=null ? esc(labelOf[S.bench[L]] || T(S.items[S.bench[L]])) : ''}" aria-label="Benchmark for ${fmt(L)}" autocomplete="off">
-      <span class="n" title="Shows with this score now">${countAt[L]||0}</span></div>`).join('') + '<datalist id="benchOptions"></datalist>';
+      <span class="n" title="Shows with this score now">${flag(L)}${countAt[L]||0}</span></div>`).join('') + '<datalist id="benchOptions"></datalist>';
   $('ladder').querySelectorAll('input[data-l]').forEach(inp => {
     const L = +inp.dataset.l, was = inp.value;
     inp.onfocus = () => { fillList(L); inp.select(); };
@@ -1454,6 +1593,9 @@ function renderExport(){
   $('saveXml').disabled = !canImport || !any;
   $('copyXml').disabled = !canImport || !any;
   $('saveCsv').disabled = !any;
+  // The example list is never saved anywhere
+  $('alSave').hidden = S.source==='sample';
+  if(!alArmed && !$('alSave').disabled) $('alSave').textContent = anilistLogin() ? 'Save to AniList' : 'Connect AniList to save';
   $('exportSteps').hidden = !canImport;
   $('exportOpts').hidden = !canImport;
   $('markDone').checked = S.markDone !== false;
@@ -1883,6 +2025,7 @@ document.addEventListener('keydown', e => {
   else if(k==='arrowdown' || k==='s'){ e.preventDefault(); answer('lower'); }
   else if(k==='e' || k==='='){ setDirect(); }
   else if(k==='k'){ skip(); }
+  else if(k==='n'){ notSure(); }
   else if(k==='x'){ notWatched(); }
   else if(k==='d'){ dropShow(); }
   else if(k==='a'){ agreeRef(); }
@@ -1902,11 +2045,12 @@ document.addEventListener('keydown', e => {
 const AL_STATUS = {CURRENT:'Watching', PLANNING:'Plan to Watch', COMPLETED:'Completed', DROPPED:'Dropped', PAUSED:'On-Hold', REPEATING:'Rewatching'};
 const LIST_CACHE = 'hl-lists', LIST_TTL = 30 * 60 * 1000;
 let lastAniListCall = 0;
-async function anilist(query, variables){
+async function anilist(query, variables, token){
   for(let tries = 0; tries < 4; tries++){
     const wait = lastAniListCall + 800 - Date.now(); if(wait > 0) await new Promise(r => setTimeout(r, wait));
     lastAniListCall = Date.now();
-    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'}, body:JSON.stringify({query, variables})});
+    const headers = {'Content-Type':'application/json', Accept:'application/json', ...(token ? {Authorization:'Bearer ' + token} : {})};
+    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers, body:JSON.stringify({query, variables})});
     if(res.status===429){ await new Promise(r => setTimeout(r, ((+res.headers.get('retry-after')) || 30) * 1000)); continue; }
     const json = await res.json();
     if(!res.ok || json.errors) throw new Error(json.errors?.[0]?.message || `AniList answered ${res.status}`);
@@ -2141,7 +2285,24 @@ function useRolledSample(){
   }).catch(() => {});
 }
 if(S.source==='sample') useRolledSample();
+// Swiping on phones (on the comparison): up = higher, down = lower; in the consistency check
+// left/right picks that side and down means about the same. Short or diagonal moves are ignored.
+{
+  let start = null;
+  $('stage').addEventListener('touchstart', e => {
+    start = e.touches.length===1 && !e.target.closest('select,input,textarea') ? {x:e.touches[0].clientX, y:e.touches[0].clientY} : null;
+  }, {passive:true});
+  $('stage').addEventListener('touchend', e => {
+    if(!start) return;
+    const t = e.changedTouches[0], dx = t.clientX - start.x, dy = t.clientY - start.y; start = null;
+    const vertical = Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx)*1.5, sideways = Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5;
+    if(S.check && !S.check.issue && S.check.pairs.length){
+      if(sideways) checkAnswer(dx < 0 ? 'left' : 'right'); else if(vertical && dy > 0) checkAnswer('same');
+    } else if(!S.check && S.cur && vertical) answer(dy < 0 ? 'higher' : 'lower');
+  }, {passive:true});
+}
 $('tierBtn2').onclick = showTierList;
+$('alSave').onclick = saveToAniList;
 $('tierClose').onclick = () => $('tierDlg').close();
 // Benchmarks and Results stay open or closed the way you left them (in this browser)
 for(const id of ['benchPanel', 'resultsPanel']){
