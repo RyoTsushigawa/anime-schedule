@@ -48,6 +48,13 @@ try {
     auth = { token: params.get('access_token'), expires: Date.now() + Number(params.get('expires_in') || 0) * 1000 };
     accounts.push(auth);
     history.replaceState(null, '', location.pathname + location.search);
+    // Logged in for the ranker (its "Connect AniList"): keep the login and go back there
+    let back = null;
+    try { back = sessionStorage.getItem('anilistReturn'); sessionStorage.removeItem('anilistReturn'); } catch {}
+    if (back && back.startsWith(location.origin + '/')) {
+      try { localStorage.setItem('anilistAccounts', JSON.stringify(accounts)); } catch {}
+      location.replace(back);
+    }
   }
 }
 accounts = accounts.filter(a => !a.expires || a.expires > Date.now());
