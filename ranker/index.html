@@ -186,6 +186,13 @@ details.fold > summary::-webkit-details-marker{display:none}
 details.fold > summary::after{content:"Show";font-size:.85rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 12px}
 details.fold[open] > summary::after{content:"Hide"}
 details.fold[open] > summary{margin-bottom:14px}
+.focusrow{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;font-size:.88rem}
+.focusrow .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.focusrow select{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 12px;max-width:100%}
+.tierdlg{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:16px;width:min(1000px,94vw);display:none;gap:12px}
+.tierdlg[open]{display:grid}
+.tierdlg::backdrop{background:rgba(0,0,0,.6)}
+.tierdlg img{width:100%;height:auto;border-radius:8px;max-height:70vh;object-fit:contain;background:#12151d}
 .card.pick{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
 .card.pick:hover{border-color:var(--hi)}
 .export .row.small .btn{padding:5px 12px;font-size:.88rem}
@@ -325,6 +332,7 @@ details.fold[open] > summary{margin-bottom:14px}
       </summary>
       <div class="substrip">
         <span class="muted" style="font-size:.85rem">Change a score from its menu if a result feels off.</span>
+        <button class="btn" id="tierBtn2" style="padding:3px 12px" title="Covers in rows by score, for what you're ranking now">Tier list picture</button>
         <div id="refSummary" style="font-size:.88rem;flex-basis:100%;min-width:0"></div>
       </div>
       <div class="chart" id="chartBox" hidden>
@@ -382,6 +390,12 @@ details.fold[open] > summary{margin-bottom:14px}
     <div class="toast" id="toast" role="status"></div>
     <textarea class="xmlout" id="xmlOut" hidden readonly></textarea>
   </section>
+  <dialog id="tierDlg" class="tierdlg">
+    <div class="substrip"><b>Tier list picture</b><button class="btn round" id="tierClose" aria-label="Close">✕</button></div>
+    <img id="tierImg" alt="Tier list" hidden>
+    <div class="substrip"><span class="muted" id="tierMsg"></span>
+      <span><button class="btn primary" id="tierCopy">Copy for Discord</button> <button class="btn" id="tierSave">Save .png</button></span></div>
+  </dialog>
 </div>
 
 <script>
@@ -565,8 +579,10 @@ function advance(){
   for(;;){
     const B = benchList();
     if(!S.cur){
-      if(!S.queue.length) return;
-      const idx = S.queue.shift();
+      // The next show: the first in the queue, or the first in the slice you're ranking
+      const qi = S.focus ? S.queue.findIndex(inFocus) : S.queue.length ? 0 : -1;
+      if(qi<0) return;
+      const idx = S.queue.splice(qi, 1)[0];
       if(tooShort(S.items[idx])){ S.short = S.short || []; if(!S.short.includes(idx)) S.short.push(idx); continue; }
       const start = startIndex(idx);
       S.cur = {idx, lo:0, hi:B.length, m:-1, start, gallop: start>=0 ? {dir:0, size:1} : null};
@@ -861,6 +877,136 @@ function renderCheck(st, statsHtml){
   $('undoBtn').onclick = undo;
   const more = $('checkMore'); if(more) more.onclick = startCheck;
 }
+/* ---------- slices: rank one season, year or format at a time ----------
+   S.focus = {kind:'season'|'year'|'format', value}. While it's set, only shows in that slice come
+   up; the others wait in the queue. Seasons come from AniList on demand (cached in this browser). */
+const SEASON_KEY = 'hl-seasons';
+let seasonOf = {}; try{ seasonOf = JSON.parse(localStorage.getItem(SEASON_KEY) || '{}') || {}; }catch(e){}
+const SEASON_NAMES = {WINTER:'Winter', SPRING:'Spring', SUMMER:'Summer', FALL:'Fall'};
+const SEASON_ORDER = ['FALL', 'SUMMER', 'SPRING', 'WINTER'];
+const FORMAT_LABEL = {TV:'TV', TV_SHORT:'Shorts', MOVIE:'Movies', OVA:'OVAs', ONA:'ONAs', SPECIAL:'Specials', TV_SPECIAL:'Specials', MUSIC:'Music videos'};
+const alOf = it => +(it.alId || malToAl[it.id] || (showInfo && it.id && showInfo.anilist?.[it.id]) || 0);
+// Runs after every render: fetches seasons for shows that don't have one yet, in the background
+let seasonsLoading = false, seasonsFailed = false;
+async function loadSeasons(){
+  if(seasonsLoading || seasonsFailed || !S) return;
+  const ids = [...new Set(S.items.map(alOf).filter(a => a && !(a in seasonOf)))];
+  if(!ids.length) return;
+  seasonsLoading = true;
+  try{
+    for(let i = 0; i < ids.length; i += 50){
+      const batch = ids.slice(i, i + 50);
+      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id season seasonYear startDate{year}}}}`, {ids:batch});
+      for(const m of d.Page.media) seasonOf[m.id] = [m.seasonYear || m.startDate?.year || 0, m.season || ''];
+      for(const a of batch) if(!(a in seasonOf)) seasonOf[a] = [0, ''];
+      try{ localStorage.setItem(SEASON_KEY, JSON.stringify(seasonOf)); }catch(e){}
+    }
+  }catch(e){ seasonsFailed = true; }
+  seasonsLoading = false;
+  if(document.activeElement?.id!=='focusSel') renderStage();
+}
+// The slices a show belongs to: {season:'FALL 2025', year:'2025', format:'TV'}
+function sliceKeys(i){
+  const it = S.items[i], [y, s] = seasonOf[alOf(it)] || [0, ''];
+  return {season: y && s ? `${s} ${y}` : '', year: y ? String(y) : '', format: formatOf(it)};
+}
+const inSlice = (f, i) => !f || sliceKeys(i)[f.kind]===f.value;
+const inFocus = i => inSlice(S.focus, i);
+function sliceLabel(f){
+  if(!f) return 'Everything';
+  if(f.kind==='season'){ const [s, y] = f.value.split(' '); return `${SEASON_NAMES[s] || s} ${y}`; }
+  return f.kind==='format' ? (FORMAT_LABEL[f.value] || f.value) : f.value;
+}
+const activeShows = () => { const out = new Set([...(S.removed||[]), ...(S.dropped||[]), ...(S.short||[])]); return S.items.map((_, i) => i).filter(i => !out.has(i)); };
+// The picker: seasons and years you have shows from (newest first), then formats; with what's left to rank
+function focusPicker(){
+  const shows = activeShows(), queued = new Set([...S.queue, ...(S.cur ? [S.cur.idx] : [])]);
+  const group = kind => {
+    const m = new Map();
+    for(const i of shows){ const k = sliceKeys(i)[kind]; if(!k) continue; const e = m.get(k) || {n:0, left:0}; e.n++; if(queued.has(i)) e.left++; m.set(k, e); }
+    const order = kind==='season' ? ([a], [b]) => (+b.split(' ')[1] - +a.split(' ')[1]) || SEASON_ORDER.indexOf(a.split(' ')[0]) - SEASON_ORDER.indexOf(b.split(' ')[0])
+      : kind==='year' ? ([a], [b]) => +b - +a : ([, a], [, b]) => b.n - a.n;
+    return [...m].sort(order).map(([value, e]) => `<option value="${kind}|${esc(value)}" ${S.focus && S.focus.kind===kind && S.focus.value===value ? 'selected' : ''}>${esc(sliceLabel({kind, value}))} · ${e.left ? e.left + ' to rank' : 'done'}</option>`).join('');
+  };
+  return `<div class="focusrow"><span class="lbl">Ranking</span>
+    <select id="focusSel" aria-label="What to rank"><option value="">Everything</option>
+      <optgroup label="Season">${group('season')}</optgroup><optgroup label="Year">${group('year')}</optgroup><optgroup label="Format">${group('format')}</optgroup></select>
+    ${seasonsLoading ? '<span class="muted">loading seasons…</span>' : ''}</div>`;
+}
+function setFocus(f){
+  S.focus = f;
+  if(S.cur && !inFocus(S.cur.idx)){ S.queue.unshift(S.cur.idx); S.cur = null; direct = null; }
+  advance(); save(); render();
+}
+// Puts every show of the slice you already scored back into the queue (benchmarks stay)
+function rerankSlice(){
+  const ids = Object.keys(S.results).map(Number).filter(inFocus);
+  if(!ids.length) return;
+  snap(); for(const i of ids) delete S.results[i];
+  S.queue.unshift(...ids); advance(); save(); render();
+}
+
+/* ---------- tier list picture ----------
+   Covers in rows by whole points (10, 9, 8 …), each with its score, for the slice or everything.
+   Drawn on a canvas (AniList's image server allows it), to save or copy into Discord. */
+async function tierCanvas(ids, title){
+  const fs = finalScores();
+  const shows = ids.filter(i => fs[i]!=null).sort((a, b) => fs[b] - fs[a] || T(S.items[a]).localeCompare(T(S.items[b])));
+  const rows = [];
+  for(const i of shows){ const t = Math.floor(fs[i]); let r = rows.find(r => r.t===t); if(!r) rows.push(r = {t, items:[]}); r.items.push(i); }
+  const W = 1240, PAD = 20, LBL = 96, CW = 92, CH = 130, GAP = 6, HEAD = 76, FOOT = 34;
+  const perLine = Math.floor((W - PAD*2 - LBL - GAP) / (CW + GAP));
+  const rowH = r => Math.ceil(r.items.length / perLine) * (CH + GAP) - GAP;
+  const H = HEAD + rows.reduce((h, r) => h + rowH(r) + GAP*2, 0) + FOOT;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  // Covers (medium size), each loaded once; a missing one becomes a title card
+  const img = src => new Promise(res => { if(!src) return res(null); const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => res(im); im.onerror = () => res(null); im.src = src; setTimeout(() => res(null), 8000); });
+  const covers = await Promise.all(shows.map(i => img((coverUrls[alOf(S.items[i])] || '').replace('/small/', '/medium/'))));
+  const coverOf = new Map(shows.map((i, n) => [i, covers[n]]));
+  g.fillStyle = '#12151d'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#eceef6'; g.font = '600 30px "IBM Plex Sans", system-ui, sans-serif'; g.textBaseline = 'middle';
+  g.fillText(title, PAD, HEAD/2);
+  g.fillStyle = '#9aa1b9'; g.font = '15px "IBM Plex Mono", monospace'; g.textAlign = 'right';
+  g.fillText(`${shows.length} shows`, W - PAD, HEAD/2); g.textAlign = 'left';
+  let y = HEAD;
+  for(const r of rows){
+    const h = rowH(r);
+    g.fillStyle = `hsl(${Math.round(Math.max(0, r.t - 1)/9*140)} 62% 40%)`; g.fillRect(PAD, y, LBL, h);
+    g.fillStyle = '#fff'; g.font = '600 34px "IBM Plex Mono", monospace'; g.textAlign = 'center';
+    g.fillText(PREFS.scale===100 ? String(r.t*10) : String(r.t), PAD + LBL/2, y + h/2); g.textAlign = 'left';
+    r.items.forEach((i, n) => {
+      const x = PAD + LBL + GAP + (n % perLine) * (CW + GAP), yy = y + Math.floor(n / perLine) * (CH + GAP), im = coverOf.get(i);
+      g.fillStyle = '#222738'; g.fillRect(x, yy, CW, CH);
+      if(im){ const s = Math.max(CW/im.width, CH/im.height), w = im.width*s, hh = im.height*s; g.save(); g.beginPath(); g.rect(x, yy, CW, CH); g.clip(); g.drawImage(im, x + (CW - w)/2, yy + (CH - hh)/2, w, hh); g.restore(); }
+      else { g.fillStyle = '#eceef6'; g.font = '12px "IBM Plex Sans", sans-serif'; const words = T(S.items[i]).split(' '); let line = '', ly = yy + 16;
+        for(const wd of words){ if(g.measureText(line + wd).width > CW - 10 && line){ g.fillText(line, x + 5, ly); ly += 15; line = ''; if(ly > yy + CH - 30) break; } line += wd + ' '; }
+        if(ly <= yy + CH - 30) g.fillText(line, x + 5, ly); }
+      g.fillStyle = 'rgba(0,0,0,.72)'; g.fillRect(x, yy + CH - 22, 44, 22);
+      g.fillStyle = '#fff'; g.font = '600 13px "IBM Plex Mono", monospace'; g.fillText(fmt(fs[i]), x + 5, yy + CH - 11);
+    });
+    y += h + GAP*2;
+  }
+  g.fillStyle = '#6b7290'; g.font = '13px "IBM Plex Mono", monospace';
+  g.fillText('Higher or Lower Ranker · ryotsushigawa.github.io/anime-schedule/ranker', PAD, H - FOOT/2);
+  return c;
+}
+async function showTierList(){
+  const ids = activeShows().filter(inFocus), title = S.focus ? `${sliceLabel(S.focus)} tier list` : 'My anime tier list';
+  const dlg = $('tierDlg');
+  $('tierImg').hidden = true; $('tierMsg').textContent = 'Drawing…'; dlg.showModal();
+  try{
+    const c = await tierCanvas(ids, title);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    $('tierImg').src = URL.createObjectURL(blob); $('tierImg').hidden = false; $('tierMsg').textContent = '';
+    $('tierSave').onclick = () => { const a = document.createElement('a'); a.href = $('tierImg').src; a.download = title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.png'; a.click(); };
+    $('tierCopy').onclick = async () => {
+      try{ await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]); $('tierMsg').textContent = 'Copied: paste it into Discord with Ctrl+V.'; }
+      catch(e){ $('tierMsg').textContent = "Your browser didn't allow copying; use Save instead."; }
+    };
+  }catch(e){ $('tierMsg').textContent = 'Couldn’t draw the picture: ' + e.message; }
+}
 function estLeft(){
   const per = Math.ceil(Math.log2(benchList().length+1));
   const each = S.hints ? Math.min(per, 2.5) : per;
@@ -1000,10 +1146,19 @@ function renderStage(){
   }
   if(S.check){ renderCheck(st, statsHtml); return; }
   const canCheck = Object.keys(S.results).length >= 2;
-  if(!S.cur){
-    st.innerHTML = `<div class="done"><div class="big">All ${scored} scored</div>
+  const picker = focusPicker();
+  if(!S.cur && S.focus){
+    // The slice is done (the rest of the list may not be)
+    const inIt = activeShows().filter(inFocus).length, left = S.queue.length;
+    st.innerHTML = `${picker}<div class="done"><div class="big">${esc(sliceLabel(S.focus))} is done</div>
+      <div class="muted">${inIt} show${inIt===1?'':'s'} scored${left ? ` · ${left} more wait in the rest of your list` : ''}</div>
+      <div class="substrip" style="justify-content:center"><button class="btn primary" id="tierBtn">Tier list picture</button>
+      <button class="btn" id="rerankBtn" title="Put this slice's scored shows back in the queue (benchmarks stay)">Re-rank these</button>
+      <button class="btn" id="allBtn">Back to everything</button></div></div>${statsHtml}`;
+  } else if(!S.cur){
+    st.innerHTML = `${picker}<div class="done"><div class="big">All ${scored} scored</div>
       <div class="muted">${S.compares} comparisons. Check the results below, then export.</div>
-      <div class="substrip" style="justify-content:center">${canCheck?`<button class="btn primary" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency</button>`:''}${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
+      <div class="substrip" style="justify-content:center">${canCheck?`<button class="btn primary" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency</button>`:''}<button class="btn" id="tierBtn">Tier list picture</button>${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
       <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div></div>${statsHtml}`;
   } else {
     const a = S.items[S.cur.idx];
@@ -1017,7 +1172,7 @@ function renderStage(){
     const g = S.hints && guessOf(a);
     const ln = S.lastNew && S.bench[S.lastNew.L]===S.lastNew.idx ? S.lastNew : null;
     const note = stageNote; stageNote = '';
-    st.innerHTML = `${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} filled the empty ${fmt(ln.L)} step and is now its benchmark.</div>`:''}
+    st.innerHTML = `${picker}${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} filled the empty ${fmt(ln.L)} step and is now its benchmark.</div>`:''}
       <div class="prompt">Is <b>${esc(T(a))}</b> higher or lower than <b>${esc(T(bi))}</b>?</div>
       <div class="duel">
         <article class="card new"><div class="eyebrow">Scoring now${g?` · started near ${fmt(g)}`:''}${a.added?` · not in your list yet`:''}</div>
@@ -1061,6 +1216,13 @@ function renderStage(){
   }
   const ub = $('undoBtn'); if(ub) ub.onclick = undo;
   const cb = $('checkBtn'); if(cb) cb.onclick = startCheck;
+  const tb = $('tierBtn'); if(tb) tb.onclick = showTierList;
+  const rr = $('rerankBtn'); if(rr) rr.onclick = rerankSlice;
+  const ab = $('allBtn'); if(ab) ab.onclick = () => setFocus(null);
+  const fsel = $('focusSel');
+  if(fsel){
+    fsel.onchange = () => { const [kind, ...v] = fsel.value.split('|'); setFocus(kind ? {kind, value:v.join('|')} : null); };
+  }
   const us = $('unskipBtn'); if(us) us.onclick = unskip;
   const rb = $('restoreBtn'); if(rb) rb.onclick = restoreRemoved;
 }
@@ -1298,7 +1460,7 @@ function renderExport(){
   $('wholeNums').checked = !!S.wholeNums;
   if(!canImport) toast(S.source==='sample' ? 'Load your AniList or MAL list file to get an import file. The example list can only save a CSV.' : 'Pasted titles can be saved as CSV. Load a list file to get an import file.');
 }
-function render(){ renderSource(); renderSetup(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
+function render(){ setTimeout(loadSeasons); renderSource(); renderSetup(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
 
 /* ---------- loading ---------- */
 function normStatus(s, kind){
@@ -1979,6 +2141,8 @@ function useRolledSample(){
   }).catch(() => {});
 }
 if(S.source==='sample') useRolledSample();
+$('tierBtn2').onclick = showTierList;
+$('tierClose').onclick = () => $('tierDlg').close();
 // Benchmarks and Results stay open or closed the way you left them (in this browser)
 for(const id of ['benchPanel', 'resultsPanel']){
   try{ if(localStorage.getItem('hl-open-' + id)==='1') $(id).open = true; }catch(e){}
