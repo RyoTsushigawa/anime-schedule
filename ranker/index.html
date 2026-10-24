@@ -173,6 +173,7 @@ details.settings > summary{list-style:none;display:inline-flex;align-items:cente
 details.settings > summary::-webkit-details-marker{display:none}
 details.settings[open] > summary{background:var(--sunk);color:var(--ink)}
 .setgrid{display:grid;gap:12px;margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg);width:100%}
+.start .setgrid{background:var(--surface);margin-top:2px}
 .setrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
 .setrow > .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-width:6em}
 .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px}
@@ -211,14 +212,15 @@ details.fold[open] > summary{margin-bottom:14px}
       <button class="btn" id="resetBtn" hidden>Start over</button>
     </div>
     <div class="tabs" role="group" aria-label="Panels">
-      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Your list</button>
+      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Your list &amp; setup</button>
       <button class="tab" id="tabCompare" aria-expanded="false" aria-controls="compareDetails">Compare to others<span class="tabnote" id="tabCompareNote"></span></button>
     </div>
     <details class="load" id="loadDetails">
       <summary>Load your list</summary>
       <div class="start">
         <h3>Start with your AniList</h3>
-        <p class="muted">Type your username and go. Your public list loads straight from AniList, with covers and site medians; progress stays in this browser.</p>
+        <p class="muted">Pick how you want to rank, then type your username and go. Your public list loads straight from AniList, with covers and site medians; progress stays in this browser.</p>
+        <div class="setgrid" id="setup"></div>
         <div class="startrow">
           <input type="text" id="userLoadIn" placeholder="AniList username" aria-label="Your AniList username" autocomplete="username">
           <button class="btn go" id="userLoadBtn">Start ranking →</button>
@@ -452,7 +454,8 @@ function newState({source,kind,xml,fileName,items,showOld=true}){
   const bench = autoBench(items), used = new Set(Object.values(bench));
   return {v:2,source,kind,xml,fileName,items,bench,results:{},
     queue:shuffle(items.map((_,i)=>i).filter(i=>!used.has(i))),cur:null,skipped:[],compares:0,
-    hints:true,showOld,markDone:true,wholeNums:false};
+    hints:PREFS.hints ?? true, showOld:PREFS.old ?? showOld, fillGaps:PREFS.fill ?? true, skip:{...skipsOf()},
+    markDone:true, wholeNums:false};
 }
 function save(){ if(S.source==='sample') return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} syncRemoved(); }
 // Copies what you marked "Didn't watch" or "Dropped" (and how each show got into the game) to the page database,
@@ -609,23 +612,28 @@ function notWatched(idx){
   if(S.cur && S.cur.idx===idx) S.cur = null;
   advance(); save(); render();
 }
-// Series with fewer than 6 episodes sit out (movies are exempt). Unknown format or episode count: kept.
-const MIN_EPS = 6;
-function tooShort(it){
-  if(S && S.minEps===false) return false;
-  const f = String(it.type || (showInfo && it.id && showInfo.formats?.[it.id]) || '').toUpperCase().replace(/\s+/g,'_');
-  if(!f || f.includes('MOVIE')) return false;
-  const eps = it.eps || (showInfo && it.id && showInfo.episodes?.[it.id]) || 0;
-  return eps > 0 && eps < MIN_EPS;
+// Formats you can leave out of the game (set up before you start). A left-out show isn't scored
+// and isn't used as a benchmark; unknown formats always stay in.
+const SKIPS = [['short','Shorts'], ['movie','Movies'], ['ova','OVAs'], ['special','Specials'], ['ona','ONAs'], ['music','Music videos']];
+const SKIP_DEFAULT = {short:true, music:true};
+const skipsOf = () => (S && S.skip) || PREFS.skip || SKIP_DEFAULT;
+function formatOf(it){
+  return String((showInfo && it.id && showInfo.formats?.[it.id]) || it.type || '').toUpperCase().replace(/\s+/g,'_');
 }
-function applyMinEps(){
+function tooShort(it){
+  const f = formatOf(it), sk = skipsOf();
+  if(!f) return false;
+  return !!((sk.short && f==='TV_SHORT') || (sk.movie && f.includes('MOVIE')) || (sk.ova && f==='OVA')
+    || (sk.special && f.includes('SPECIAL')) || (sk.ona && f==='ONA') || (sk.music && f==='MUSIC'));
+}
+// After the skips changed: left-out shows that are allowed again rejoin the queue, newly skipped ones leave it
+function applySkips(){
   S.short = S.short || [];
-  if(S.minEps===false){ if(S.short.length){ S.queue.push(...S.short); S.short = []; } }
-  else {
-    const out = S.queue.filter(i => tooShort(S.items[i]));
-    if(S.cur && tooShort(S.items[S.cur.idx])){ out.push(S.cur.idx); S.cur = null; }
-    if(out.length){ S.queue = S.queue.filter(i => !out.includes(i)); S.short.push(...out); }
-  }
+  const back = S.short.filter(i => !tooShort(S.items[i]));
+  if(back.length){ S.short = S.short.filter(i => !back.includes(i)); S.queue.push(...back); }
+  const out = S.queue.filter(i => tooShort(S.items[i]));
+  if(S.cur && tooShort(S.items[S.cur.idx])){ out.push(S.cur.idx); S.cur = null; }
+  if(out.length){ S.queue = S.queue.filter(i => !out.includes(i)); S.short.push(...out); }
   advance(); save(); render();
 }
 // The middle button: "Set" at the benchmark's score means "same level"; ±1/±½ adjust it first
@@ -792,7 +800,46 @@ function renderSource(){
   }
   $('resetBtn').hidden = S.source==='sample';
 }
-let settingsOpen = false;
+// The setup, part of the start box: chosen before loading a list (each new list takes it over) and
+// kept in this browser. Changing it later (Your list) applies to the list in play too.
+function renderSetup(){
+  const sk = skipsOf();
+  $('setup').innerHTML = `
+    <div class="setrow"><span class="lbl">Steps</span>
+      <div class="seg" role="group" aria-label="Score steps (← →)">${[1, 0.5, 0.1].map(v => `<button data-opt-step="${v}" aria-pressed="${PREFS.step===v}">${PREFS.scale===100 ? v*10 : v}</button>`).join('')}</div>
+      <span class="lbl">Scale</span>
+      <div class="seg" role="group" aria-label="Scale">${[10, 100].map(v => `<button data-opt-scale="${v}" aria-pressed="${PREFS.scale===v}">${v}</button>`).join('')}</div>
+    </div>
+    <div class="setrow"><span class="lbl">Skip</span>
+      ${SKIPS.map(([k, label]) => `<button class="pill" data-skip="${k}" aria-pressed="${!!sk[k]}">${label}</button>`).join('')}
+    </div>
+    <div class="setrow"><span class="lbl">Compare</span>
+      <button class="pill" data-opt="vary" aria-pressed="${PREFS.vary}" title="Compare against any show with the benchmark's exact score, not always the benchmark itself">Vary the shows</button>
+      <button class="pill" data-opt="hints" aria-pressed="${!!S.hints}" title="Starts each search at your old score, or the site median if you never scored it">Start near old score</button>
+      <button class="pill" data-opt="fill" aria-pressed="${S.fillGaps!==false}" title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark">Fill empty steps</button>
+      <button class="pill" data-opt="old" aria-pressed="${!!S.showOld}" title="Your old score, the site median and followed people's scores on the cards">Show old &amp; others' scores</button>
+    </div>`;
+  const OPTS = {
+    old: on => { S.showOld = PREFS.old = on; },
+    hints: on => { S.hints = PREFS.hints = on; },
+    fill: on => { S.fillGaps = PREFS.fill = on; },
+    vary: on => { PREFS.vary = on; },
+  };
+  $('setup').querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
+    OPTS[b.dataset.opt](b.getAttribute('aria-pressed')!=='true'); savePrefs(); save(); render();
+  });
+  $('setup').querySelectorAll('[data-skip]').forEach(b => b.onclick = () => {
+    const skip = {...skipsOf(), [b.dataset.skip]: b.getAttribute('aria-pressed')!=='true'};
+    PREFS.skip = skip; S.skip = {...skip}; savePrefs(); applySkips();
+  });
+  // A new step size: the show on screen starts over with it (scores given so far stay)
+  $('setup').querySelectorAll('[data-opt-step]').forEach(b => b.onclick = () => {
+    PREFS.step = +b.dataset.optStep; savePrefs(); direct = null;
+    if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+    advance(); save(); render();
+  });
+  $('setup').querySelectorAll('[data-opt-scale]').forEach(b => b.onclick = () => { PREFS.scale = +b.dataset.optScale; savePrefs(); render(); });
+}
 function renderStage(){
   const st = $('stage'), B = benchList();
   const nRemoved = (S.removed||[]).length;
@@ -801,7 +848,7 @@ function renderStage(){
   const total = S.items.length - S.skipped.length - nRemoved - nShort - nDropped;
   const scored = Object.keys(finalScores()).length, pct = total ? Math.round(scored/total*100) : 0;
   const statsHtml = `<div class="progress"><i style="width:${pct}%"></i></div>
-    <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} under ${MIN_EPS} episodes left out</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
+    <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
   if(!B.length){
     st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
     $('benchPanel').open = true;
@@ -855,27 +902,7 @@ function renderStage(){
         <button class="btn" id="nwBtn">Didn't watch<span class="kbd">X</span></button>
         <button class="btn" id="skipBtn">Skip for now<span class="kbd">K</span></button>
         <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button>
-      </div>${statsHtml}
-      <details class="settings" id="settingsBox" ${settingsOpen?'open':''}>
-        <summary>⚙ Settings</summary>
-        <div class="setgrid">
-          <div class="setrow"><span class="lbl">Steps</span>
-            <div class="seg" role="group" aria-label="Score steps (← →)">${[1, 0.5, 0.1].map(v => `<button data-opt-step="${v}" aria-pressed="${PREFS.step===v}">${PREFS.scale===100 ? v*10 : v}</button>`).join('')}</div>
-            <span class="lbl">Scale</span>
-            <div class="seg" role="group" aria-label="Scale">${[10, 100].map(v => `<button data-opt-scale="${v}" aria-pressed="${PREFS.scale===v}">${v}</button>`).join('')}</div>
-          </div>
-          <div class="setrow"><span class="lbl">Compare</span>
-            <button class="pill" data-opt="vary" aria-pressed="${PREFS.vary}" title="Compare against any show with the benchmark's exact score, not always the benchmark itself">Vary the shows</button>
-            <button class="pill" data-opt="hints" aria-pressed="${!!S.hints}" title="Starts each search at your old score, or the site median if you never scored it">Start near old score</button>
-            <button class="pill" data-opt="fill" aria-pressed="${S.fillGaps!==false}" title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark">Fill empty steps</button>
-          </div>
-          <div class="setrow"><span class="lbl">Show</span>
-            <button class="pill" data-opt="old" aria-pressed="${!!S.showOld}" title="Your old score, the site median and followed people's scores on the cards">Old &amp; others' scores</button>
-            <button class="pill" data-opt="minEps" aria-pressed="${S.minEps!==false}" title="Series with fewer than ${MIN_EPS} episodes sit out; movies stay in">Skip series under ${MIN_EPS} eps</button>
-          </div>
-        </div>
-      </details>`;
-    $('settingsBox').addEventListener('toggle', e => { settingsOpen = e.target.open; });
+      </div>${statsHtml}`;
     fillCovers(st);
     st.querySelectorAll('[data-a]').forEach(btn => btn.onclick = () => answer(btn.dataset.a));
     $('skipBtn').onclick = skip;
@@ -884,25 +911,6 @@ function renderStage(){
     st.querySelectorAll('[data-step]').forEach(btn => btn.onclick = () => { stepDirect(+btn.dataset.step); btn.blur(); });
     $('directSet').onclick = setDirect;
     st.querySelectorAll('[data-agree]').forEach(b => b.onclick = () => agreeRef(+b.dataset.agree));
-    // Settings pills: each flips its option (some redraw, the rest only take effect from the next show)
-    const OPTS = {
-      old: on => { S.showOld = on; save(); render(); },
-      hints: on => { S.hints = on; save(); },
-      fill: on => { S.fillGaps = on; save(); },
-      minEps: on => { S.minEps = on; applyMinEps(); },
-      vary: on => { PREFS.vary = on; savePrefs(); },
-    };
-    st.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
-      const on = b.getAttribute('aria-pressed')!=='true';
-      b.setAttribute('aria-pressed', on); OPTS[b.dataset.opt](on);
-    });
-    // A new step size: the show on screen starts over with it (scores given so far stay)
-    st.querySelectorAll('[data-opt-step]').forEach(b => b.onclick = () => {
-      PREFS.step = +b.dataset.optStep; savePrefs(); direct = null;
-      if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
-      advance(); save(); render();
-    });
-    st.querySelectorAll('[data-opt-scale]').forEach(b => b.onclick = () => { PREFS.scale = +b.dataset.optScale; savePrefs(); render(); });
   }
   const ub = $('undoBtn'); if(ub) ub.onclick = undo;
   const us = $('unskipBtn'); if(us) us.onclick = unskip;
@@ -1142,7 +1150,7 @@ function renderExport(){
   $('wholeNums').checked = !!S.wholeNums;
   if(!canImport) toast(S.source==='sample' ? 'Load your AniList or MAL list file to get an import file. The example list can only save a CSV.' : 'Pasted titles can be saved as CSV. Load a list file to get an import file.');
 }
-function render(){ renderSource(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
+function render(){ renderSource(); renderSetup(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
 
 /* ---------- loading ---------- */
 function normStatus(s, kind){
@@ -1824,7 +1832,7 @@ let dbReadyResolve; const dbReady = new Promise(r => dbReadyResolve = r);
         showInfo.anilist[mal] = +al;
       }
       if(pending){ applySite(pending.entries); if(pending.lists){ applySite(pending.lists.anime); applySite(pending.lists.manga); } renderPending(); }
-      if(S.source!=='sample'){ applySite(S.items); applyMinEps(); } else render();
+      if(S.source!=='sample'){ applySite(S.items); applySkips(); } else render();
       showRefState();
     }
   }catch(e){}
