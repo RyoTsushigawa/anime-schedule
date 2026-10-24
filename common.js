@@ -168,7 +168,7 @@ async function loadSheet(gid, hidden = null) {
       romaji, english: (r[col('Eng Anime Titel')] || '').trim(),
       wo: (r[col('Wo')] || '').trim().toUpperCase(),
       tag: (r[col('Tag')] || '').trim(), time: (r[col('Uhrzeit')] || '').trim(), votes,
-      start: (r[col('Startdatum')] || '').trim(), sort: (r[col('Sort')] || '').trim(),
+      start: (r[col('Startdatum')] || '').trim(), sort: (r[col('Sort')] || '').trim(), slot: (r[col('Slot')] || '').trim(),
       hidden: !!hidden?.rows.has(i + 1), // CSV line i is sheet row i + 1
     };
     // The same show listed twice: the visible row wins, else the upper one.
@@ -190,13 +190,13 @@ function picks(sheet, person) {
   for (const show of sheet.shows) {
     if (show.hidden) continue;
     const v = show.votes[person] || '';
-    if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) add(show, { tag: show.tag, time: show.time });
+    if (/^(ja|vielleicht)$|^wenn belly/i.test(v)) add(show, { tag: show.tag, time: show.time, slot: show.slot });
     else if (v && !/^(nein|default|allein)$/i.test(v)) {
       // A show's name: watched in this row's slot instead. Anything else ("Demons", a group
       // like "Okinawa 3") is a yes for this row.
       const named = resolveName(sheet, v);
-      if (named) add(named, { tag: show.tag || named.tag, time: show.time });
-      else add(show, { tag: show.tag, time: show.time });
+      if (named) add(named, { tag: show.tag || named.tag, time: show.time, slot: show.slot });
+      else add(show, { tag: show.tag, time: show.time, slot: show.slot });
     }
   }
   return result;
