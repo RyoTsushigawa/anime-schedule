@@ -751,10 +751,11 @@ async function entryBefore(mediaId) {
 }
 
 // Every change goes through here and returns what's needed to undo it. Progress on a show that
-// isn't on the Watching list (not on the list at all, or Planning/Paused) also sets it to
-// Watching; otherwise AniList keeps it elsewhere and the page, which reads the Watching list,
-// shows it as unwatched again after a reload.
-const ON_WATCHING_LIST = ['CURRENT', 'REPEATING', 'COMPLETED'];
+// isn't on the Watching list (not on the list at all, or Planning/Paused/Completed/Dropped) also
+// sets it to Watching; otherwise AniList keeps it elsewhere and the page, which reads the Watching
+// list, shows it as unwatched again after a reload. (A show still airing can be on Completed by
+// mistake; AniList moves it to Completed by itself once the last episode is ticked.)
+const ON_WATCHING_LIST = ['CURRENT', 'REPEATING'];
 async function change(mediaId, vars) {
   const before = await entryBefore(mediaId);
   const status = vars.status || (vars.progress !== undefined && !ON_WATCHING_LIST.includes(before.status) ? 'CURRENT' : undefined);
