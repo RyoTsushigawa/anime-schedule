@@ -282,7 +282,16 @@ function applySearch() {
   for (const box of document.querySelectorAll('#list .shared:not([data-search])'))
     box.classList.toggle('hidden-by-search', !!q && !box.querySelector('[data-search]:not(.hidden-by-search)'));
 }
-$('search').addEventListener('input', applySearch);
+// Searching ignores "Today" (the whole week is shown); starting or clearing a search redraws the
+// week with or without the days already past.
+const searching = () => !!norm($('search').value);
+let searchedWeek = false;
+function searchChanged() {
+  if (view === 'week' && fromToday && searching() !== searchedWeek) load(true);
+  else applySearch();
+  searchedWeek = searching();
+}
+$('search').addEventListener('input', searchChanged);
 // The magnifying glass opens the field; an empty field closes again when you click elsewhere,
 // Esc clears and closes it.
 function openSearch(open) {
@@ -293,7 +302,7 @@ function openSearch(open) {
 // The 🔍 opens the field, and closes it again (clearing the search) when it's open.
 $('searchButton').onclick = () => {
   const open = $('searchBox').classList.contains('open');
-  if (open) { $('search').value = ''; applySearch(); }
+  if (open) { $('search').value = ''; searchChanged(); }
   openSearch(!open);
 };
 $('search').addEventListener('blur', e => {
@@ -303,7 +312,7 @@ $('search').addEventListener('blur', e => {
 $('search').addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   $('search').value = '';
-  applySearch();
+  searchChanged();
   openSearch(false);
   $('search').blur();
 });
@@ -440,9 +449,10 @@ function render(items, start, plans) {
   for (const d of days) assignWatchTimes(d);
 
   // Opened or "Today" pressed: the week starts with today, the days already past are left out.
-  // With the arrows it's always the whole week.
+  // With the arrows it's always the whole week, and while searching too (so a show that aired
+  // earlier this week is found).
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
-  const ordered = fromToday && todayIndex > 0 ? days.slice(todayIndex) : days;
+  const ordered = fromToday && !searching() && todayIndex > 0 ? days.slice(todayIndex) : days;
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     // Rows without a ✓ keep its place, so every row's buttons line up.
