@@ -314,12 +314,14 @@ details.fold[open] > summary{margin-bottom:14px}
       <p class="note">Picked from shows you already gave that score. Swap any for one that represents the score better; shows already placed keep their scores.</p>
       <div class="ladder" id="ladder"></div>
     </details>
-    <div class="panel">
-      <div class="substrip">
+    <details class="panel fold" id="resultsPanel">
+      <summary>
         <div>
           <div class="eyebrow">Results</div>
           <h2 id="rankHead">Scored so far</h2>
         </div>
+      </summary>
+      <div class="substrip">
         <span class="muted" style="font-size:.85rem">Change a score from its menu if a result feels off.</span>
         <div id="refSummary" style="font-size:.88rem;flex-basis:100%;min-width:0"></div>
       </div>
@@ -345,7 +347,7 @@ details.fold[open] > summary{margin-bottom:14px}
         <thead id="rankThead"></thead>
         <tbody id="rankBody"></tbody>
       </table></div>
-    </div>
+    </details>
   </section>
 
   <section class="panel export" id="exportPanel">
@@ -1846,6 +1848,11 @@ function useRolledSample(){
   }).catch(() => {});
 }
 if(S.source==='sample') useRolledSample();
+// Benchmarks and Results stay open or closed the way you left them (in this browser)
+for(const id of ['benchPanel', 'resultsPanel']){
+  try{ if(localStorage.getItem('hl-open-' + id)==='1') $(id).open = true; }catch(e){}
+  $(id).addEventListener('toggle', () => { try{ localStorage.setItem('hl-open-' + id, $(id).open ? '1' : '0'); }catch(e){} });
+}
 
 // Data from the anime-ranker site: db.json (every anime on AniList: medians, titles, formats, episodes,
 // status, sequel/prequel links) and cover-urls.json (AniList cover image addresses). Both are rebuilt
