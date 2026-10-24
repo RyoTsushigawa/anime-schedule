@@ -141,7 +141,9 @@ async function plannerData(tab) {
       mask: e.people.reduce((mask, p) => mask | (1 << people.indexOf(p)), 0),
       release,
       short: !!m?.duration && m.duration <= 15,
-      current: day >= 0 ? { day, min: minutesOf(e.slot.time) } : null,
+      // Where the Guckplan has it now: the day, the time, and the slot number (rows without a
+      // time yet are placed by their slot).
+      current: day >= 0 ? { day, min: minutesOf(e.slot.time), slot: Number(e.slot.slot) || null } : null,
     };
   });
   const data = { tab, people, shows, sheet };
@@ -398,12 +400,22 @@ async function findPlan(ctx, onProgress) {
 }
 
 // The plan in the Guckplan now (Tag + Uhrzeit): each evening as its times, shows at the same time
-// side by side. For the cost, every 30 minutes from the evening's first show is one slot.
+// side by side. A row with a day and a slot but no time yet gets that slot's time (the day's start
+// plus 30 minutes per slot). For the cost, every 30 minutes from the evening's first show is one slot.
 function currentPlan(ctx) {
+  const timeOf = s => !s.current ? null
+    : s.current.min ?? (s.current.slot ? ctx.times[s.current.day][s.current.slot - 1] ?? null : null);
   const days = PLAN_DAYS.map((day, d) => {
-    const today = ctx.shows.map((s, i) => ({ s, i })).filter(({ s }) => s.current?.day === d && s.current.min !== null);
-    const times = [...new Set(today.map(({ s }) => s.current.min))].sort((a, b) => a - b);
-    return times.map(at => ({ at, shows: today.filter(({ s }) => s.current.min === at).map(({ i }) => i) }));
+    const today = ctx.shows.map((s, i) => ({ i, at: s.current?.day === d ? timeOf(s) : null })).filter(x => x.at !== null);
+    const times = [...new Set(today.map(x => x.at))].sort((a, b) => a - b);
+    const evening = times.map(at => ({ at, shows: today.filter(x => x.at === at).map(x => x.i) }));
+    // Only a day (no time, no slot): after the evening's last show, one after another.
+    for (const [i, s] of ctx.shows.entries())
+      if (s.current?.day === d && timeOf(s) === null) {
+        const at = evening.length ? evening[evening.length - 1].at + SLOT_LENGTH : ctx.times[d][0];
+        evening.push({ at, shows: [i] });
+      }
+    return evening;
   });
   const plan = days.map(evening => {
     const slots = [];
@@ -415,7 +427,7 @@ function currentPlan(ctx) {
     }
     return slots;
   });
-  const unplaced = ctx.shows.map((s, i) => i).filter(i => !(ctx.shows[i].current && ctx.shows[i].current.min !== null));
+  const unplaced = ctx.shows.map((s, i) => i).filter(i => !ctx.shows[i].current);
   return { days, plan, unplaced };
 }
 
