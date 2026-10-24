@@ -68,9 +68,21 @@ function notice(text) {
   noticeTimer = setTimeout(() => { $('notice').hidden = true; }, 3000);
 }
 
+// The Guckplan tabs, then the season lists ("Winter 2027"), which can be planned from their votes
+// before the season's Guckplan exists. Newest first in each.
+async function seasonListTabs() {
+  const html = await (await fetch(SHEET + '/htmlview')).text();
+  return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
+    .map(([, name, gid]) => ({ name: JSON.parse(`"${name}"`).trim(), gid }))
+    .map(t => ({ ...t, season: t.name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i) }))
+    .filter(t => t.season)
+    .map(({ name, gid, season }) => ({ name, gid, list: true, start: new Date(Number(season[2]), SEASON_MONTH[season[1].toLowerCase()], 1).getTime() }))
+    .sort((a, b) => b.start - a.start);
+}
 const ready = Promise.all([
   fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json()).then(json => { streamsDe = json; }, () => {}),
-  guckplanTabs().then(list => { tabs = list; }, e => console.warn('Sheet tabs not loaded:', e)),
+  Promise.all([guckplanTabs(), seasonListTabs().catch(() => [])])
+    .then(([guckplans, lists]) => { tabs = [...guckplans, ...lists]; }, e => console.warn('Sheet tabs not loaded:', e)),
 ]);
 
 const minutesOf = time => {
@@ -111,6 +123,8 @@ async function plannerData(tab) {
     return {
       title: m?.title?.english || e.show.english || e.show.romaji || m?.title?.romaji,
       sheetTitle: e.show.romaji || e.show.english,
+      row: e.show, // its sheet row, for the export
+      mal: m?.idMal ? `https://myanimelist.net/anime/${m.idMal}` : '',
       people: e.people,
       mask: e.people.reduce((mask, p) => mask | (1 << people.indexOf(p)), 0),
       release,
@@ -118,7 +132,7 @@ async function plannerData(tab) {
       current: day >= 0 ? { day, min: minutesOf(e.slot.time) } : null,
     };
   });
-  const data = { tab, people, shows };
+  const data = { tab, people, shows, sheet };
   planCache.set(tab.gid, data);
   return data;
 }
@@ -126,7 +140,7 @@ async function plannerData(tab) {
 // Each show's AniList entry (episode length, next episode): by id where the weekly LiveChart data
 // knows the show, else by searching its title among airing and upcoming shows.
 async function plannerMedia(shows) {
-  const fields = 'id duration title { romaji english } nextAiringEpisode { airingAt }';
+  const fields = 'id idMal duration title { romaji english } nextAiringEpisode { airingAt }';
   const idOf = show => Object.entries(streamsDe?.status || {})
     .find(([, s]) => titleMatches([show.romaji, show.english], s.titles))?.[0];
   const ids = shows.map(idOf).map(Number);
@@ -402,7 +416,7 @@ async function loadPlanner() {
 
 function plannerSetup(data) {
   const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
-    `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
+    `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');
   // Days across the top, each day's own start time, then whole days off: "Everyone" first.
   const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}`;
   const starts = `<span class="avail-name everyone">Start</span>${PLAN_DAYS.map((day, d) =>
@@ -565,12 +579,14 @@ function showPlan(data, plan) {
   const actions = `<div class="plan-actions">
     <div class="segmented plan-views" role="group" aria-label="Show">${views.map(([v, label]) =>
       `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
-    <button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button></div>`;
+    <button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button>
+    <button id="planXlsx" class="pill" title="The plan as a Guckplan tab: in Google Sheets, File → Import → Insert new sheet">Download .xlsx</button></div>`;
   $('planOut').innerHTML = problems + stats + actions + days + unplaced + breaks;
   const cells = [...document.querySelectorAll('#planOut .time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
   $('planAgain').onclick = () => generatePlan(data);
   $('planCopy').onclick = () => copyPlan(data, plan, times);
+  $('planXlsx').onclick = () => downloadXlsx(data, plan, times);
   for (const b of document.querySelectorAll('[data-plan-view]'))
     b.onclick = () => {
       planView = b.dataset.planView;
@@ -593,6 +609,62 @@ async function copyPlan(data, plan, times) {
   } catch {
     notice("Couldn't copy (the browser didn't allow it)");
   }
+}
+
+// The plan as a Guckplan tab (.xlsx, for File → Import → Insert new sheet), laid out like the
+// Guckplan: Sort, Slot, Anime Titel, Eng Anime Titel (both linking to MyAnimeList), Startdatum, Wo,
+// Tag, Uhrzeit, then everyone's column in their colour. Shows side by side are written the group's
+// way: the show most people watch keeps its row, the others' watchers get that show's name in
+// their cell there, and the others' own rows are hidden. Planned shows come by day and slot; the
+// sheet's other rows (nobody watching, dropped) follow as they were.
+function downloadXlsx(data, plan, times) {
+  const { sheet, shows } = data;
+  // Every person column as in the sheet, the ones hidden there (people no longer taking part) hidden.
+  const columns = sheet.columns || sheet.people.map(name => ({ name, hidden: false }));
+  const people = columns.map(c => c.name);
+  const YES = /^(ja|vielleicht)$|^wenn belly/i;
+  const names = v => v && !YES.test(v) && !/^(nein|default|allein)$/i.test(v) && resolveName(sheet, v);
+  // A show's own row: its watchers say yes there (as they did, else "Ja"); a show's name left from
+  // an earlier pairing becomes "Nein".
+  const ownVotes = s => Object.fromEntries(people.map(p => {
+    const own = s.row.votes?.[p] || '';
+    return [p, s.people.includes(p) ? (YES.test(own) ? own : 'Ja') : names(own) ? 'Nein' : own || 'Default'];
+  }));
+  const rows = [];
+  const placed = new Set();
+  plan.forEach((slots, d) => slots.forEach((slot, k) => {
+    const [main, ...others] = slot.map(i => shows[i]).sort((a, b) => b.people.length - a.people.length);
+    const when = { tag: SHEET_DAYS[d], time: clock(times[d][k]), slot: k + 1 };
+    const votes = ownVotes(main);
+    for (const o of others) for (const p of o.people) votes[p] = o.row.english || o.row.romaji;
+    rows.push({ s: main, ...when, votes, hidden: false });
+    for (const o of others) rows.push({ s: o, ...when, votes: ownVotes(o), hidden: true });
+    for (const i of slot) placed.add(shows[i].row);
+  }));
+  for (const r of sheet.shows)
+    if (!placed.has(r)) rows.push({ s: { row: r, mal: '' }, tag: r.tag, time: r.time, slot: '', votes: { ...r.votes }, hidden: r.hidden });
+
+  const title = data.tab.list ? `Guckplan ${data.tab.name}` : data.tab.name;
+  const blob = xlsxBlob({
+    name: `${title} Vorschlag`,
+    widths: [2, 5, 6, 32, 32, 11, 5, 6, 8, ...columns.map(c => c.hidden ? { width: 12, hidden: true } : 12)],
+    headerRow: 2,
+    header: [{ text: '' }, ...['Sort', 'Slot', 'Anime Titel', 'Eng Anime Titel', 'Startdatum', 'Wo', 'Tag', 'Uhrzeit'].map(text => ({ text })),
+      ...people.map(p => ({ text: p, fill: personColor.get(p) }))],
+    rows: rows.map(({ s, tag, time, slot, votes, hidden }) => ({
+      hidden,
+      cells: ['', s.row.sort || '', slot, { text: s.row.romaji || s.row.english, link: s.mal }, { text: s.row.english || s.row.romaji, link: s.mal },
+        s.row.start || '', s.row.wo || '', tag || '', time || '', ...people.map(p => votes[p] || '')],
+    })),
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title} Vorschlag.xlsx`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  notice('Downloaded: in Google Sheets, File → Import → Upload → "Insert new sheet(s)"');
 }
 
 loadPlanner();
