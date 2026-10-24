@@ -2,8 +2,10 @@
 // (read-only), title matching, AniList requests and small helpers.
 
 const API = 'https://graphql.anilist.co';
-// The group's Google Sheet. The page only reads it (tab list + CSV export), never writes to it.
-const SHEET = 'https://docs.google.com/spreadsheets/d/1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ';
+// The group's Google Sheet (or another copy of it with ?sheet=<id> in the address, e.g. to try the
+// planner on a test copy). The page only reads it (tab list + CSV export), never writes to it.
+const SHEET = 'https://docs.google.com/spreadsheets/d/' +
+  ((new URLSearchParams(location.search).get('sheet') || '').match(/^[\w-]{20,}$/)?.[0] || '1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ');
 const FALLBACK_TAB = { name: 'Guckplan Herbst 2026', gid: '488548700' };
 // First month of each season, as the tabs are named ("Guckplan Winter 2027").
 const SEASON_MONTH = { winter: 0, frühling: 3, fruehling: 3, frühjahr: 3, sommer: 6, herbst: 9 };
@@ -151,19 +153,22 @@ async function loadSheet(gid, hidden = null) {
   const col = name => header.indexOf(name);
   for (const name of ['Anime Titel', 'Tag', 'Uhrzeit'])
     if (col(name) < 0) throw new Error(`the sheet has no "${name}" column anymore`);
-  // Everyone right of "Uhrzeit", except columns hidden by hand.
-  const people = header.flatMap((name, i) => i > col('Uhrzeit') && name && !hidden?.cols.has(i) ? [name] : []);
+  // Everyone right of "Uhrzeit", except columns hidden by hand. (All of them, hidden too, in
+  // `columns`, for the planner's export in the sheet's own layout.)
+  const columns = header.flatMap((name, i) => i > col('Uhrzeit') && name ? [{ name, hidden: !!hidden?.cols.has(i) }] : []);
+  const people = columns.filter(c => !c.hidden).map(c => c.name);
   const shows = [];
   for (const [i, r] of rows.entries()) {
     if (i <= headerIndex) continue;
     const romaji = (r[col('Anime Titel')] || '').trim();
     if (!romaji) break; // the summary block below the list starts after an empty title
     const votes = {};
-    for (const p of people) votes[p] = (r[header.indexOf(p)] || '').trim().replace(/,$/, '');
+    for (const { name: p } of columns) votes[p] = (r[header.indexOf(p)] || '').trim().replace(/,$/, '');
     const show = {
       romaji, english: (r[col('Eng Anime Titel')] || '').trim(),
       wo: (r[col('Wo')] || '').trim().toUpperCase(),
       tag: (r[col('Tag')] || '').trim(), time: (r[col('Uhrzeit')] || '').trim(), votes,
+      start: (r[col('Startdatum')] || '').trim(), sort: (r[col('Sort')] || '').trim(),
       hidden: !!hidden?.rows.has(i + 1), // CSV line i is sheet row i + 1
     };
     // The same show listed twice: the visible row wins, else the upper one.
@@ -171,7 +176,7 @@ async function loadSheet(gid, hidden = null) {
     if (twin < 0) shows.push(show);
     else if (shows[twin].hidden && !show.hidden) shows[twin] = show;
   }
-  return { people, shows };
+  return { people, columns, shows };
 }
 
 // The sheet shows one person watches, each with the slot ({ tag, time }) it's watched in:
