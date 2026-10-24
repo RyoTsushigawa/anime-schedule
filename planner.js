@@ -241,15 +241,22 @@ function planContext(data) {
     for (const e of busy) if (e.day === d && overlaps(e, at)) mask |= e.mask;
     return mask;
   }));
-  // Fixed shows, per show: { day (null = any), slot (0-based, null = any) }, or null.
+  // Fixed shows, per show: { day (null = any), slot (0-based, null = any), dayOnly }, or null.
+  // "Day only" (slot 'none', for late-night shows): on that day but in no slot, so it's left out
+  // of the plan itself (no breaks, no evening length).
   const fixed = data.shows.map(s => {
     const f = planFixed.find(f => f.show === s.sheetTitle);
-    if (!f) return null;
+    // A Guckplan row with a day but no time and no slot is already day-only there.
+    if (!f) return s.current && s.current.min === null && !s.current.slot ? { day: s.current.day, slot: null, dayOnly: true } : null;
     const day = f.day === 'release' ? s.release?.day ?? s.current?.day ?? null : Number(f.day);
     const slot = Number(f.slot) > 0 ? Number(f.slot) - 1 : null;
+    if (f.slot === 'none' && day !== null) return { day, slot: null, dayOnly: true };
     return day === null && slot === null ? null : { day, slot };
   });
-  return { shows: data.shows, people: data.people, times, busy: busyMask, fixed, moveCost: MOVE_COST[planMoves] };
+  // The shows the plan places in slots, and the day-only ones per day.
+  const active = data.shows.map((s, i) => i).filter(i => !fixed[i]?.dayOnly);
+  const dayOnly = PLAN_DAYS.map((day, d) => data.shows.map((s, i) => i).filter(i => fixed[i]?.dayOnly && fixed[i].day === d));
+  return { shows: data.shows, people: data.people, times, busy: busyMask, fixed, active, dayOnly, moveCost: MOVE_COST[planMoves] };
 }
 
 // The cost, and with `details` everything the result page shows.
@@ -310,7 +317,7 @@ function planCost(plan, ctx, details = false) {
 // Start: every show on its release day (or the next day its people can), in release order.
 function startPlan(ctx, shuffle) {
   const plan = [[], [], [], [], [], [], []];
-  const order = ctx.shows.map((s, i) => i);
+  const order = ctx.active.slice();
   if (shuffle) order.sort(() => Math.random() - 0.5);
   for (const i of order) {
     const s = ctx.shows[i];
@@ -334,8 +341,10 @@ function startPlan(ctx, shuffle) {
 // One random change: move a show (to another slot or day, alone or next to other shows), swap two
 // slots of an evening, or swap two shows. Null when the change isn't possible.
 function changePlan(plan, ctx) {
+  const { shows, active } = ctx;
+  if (!active.length) return null;
   const next = plan.map(day => day.map(slot => slot.slice()));
-  const { shows } = ctx;
+  const pickShow = () => active[Math.floor(Math.random() * active.length)];
   const where = i => {
     for (let d = 0; d < 7; d++)
       for (let k = 0; k < next[d].length; k++)
@@ -347,7 +356,7 @@ function changePlan(plan, ctx) {
   const fits = (slot, i) => slot.length < MAX_SIDE_BY_SIDE && !(slotMask(slot) & shows[i].mask);
   const r = Math.random();
   if (r < 0.6) {
-    const i = Math.floor(Math.random() * shows.length);
+    const i = pickShow();
     const [d, k] = where(i);
     next[d][k].splice(next[d][k].indexOf(i), 1);
     if (!next[d][k].length) next[d].splice(k, 1);
@@ -365,7 +374,7 @@ function changePlan(plan, ctx) {
     if (a === b) return null;
     [next[d][a], next[d][b]] = [next[d][b], next[d][a]];
   } else {
-    const a = Math.floor(Math.random() * shows.length), b = Math.floor(Math.random() * shows.length);
+    const a = pickShow(), b = pickShow();
     const [da, ka] = where(a), [db, kb] = where(b);
     if (da === db && ka === kb) return null;
     const sa = next[da][ka], sb = next[db][kb];
@@ -401,22 +410,17 @@ async function findPlan(ctx, onProgress) {
 
 // The plan in the Guckplan now (Tag + Uhrzeit): each evening as its times, shows at the same time
 // side by side. A row with a day and a slot but no time yet gets that slot's time (the day's start
-// plus 30 minutes per slot). For the cost, every 30 minutes from the evening's first show is one slot.
+// plus 30 minutes per slot); a row with only a day is day-only (dayOnly, in no slot). For the cost,
+// every 30 minutes from the evening's first show is one slot.
 function currentPlan(ctx) {
   const timeOf = s => !s.current ? null
     : s.current.min ?? (s.current.slot ? ctx.times[s.current.day][s.current.slot - 1] ?? null : null);
   const days = PLAN_DAYS.map((day, d) => {
     const today = ctx.shows.map((s, i) => ({ i, at: s.current?.day === d ? timeOf(s) : null })).filter(x => x.at !== null);
     const times = [...new Set(today.map(x => x.at))].sort((a, b) => a - b);
-    const evening = times.map(at => ({ at, shows: today.filter(x => x.at === at).map(x => x.i) }));
-    // Only a day (no time, no slot): after the evening's last show, one after another.
-    for (const [i, s] of ctx.shows.entries())
-      if (s.current?.day === d && timeOf(s) === null) {
-        const at = evening.length ? evening[evening.length - 1].at + SLOT_LENGTH : ctx.times[d][0];
-        evening.push({ at, shows: [i] });
-      }
-    return evening;
+    return times.map(at => ({ at, shows: today.filter(x => x.at === at).map(x => x.i) }));
   });
+  const dayOnly = PLAN_DAYS.map((day, d) => ctx.shows.map((s, i) => i).filter(i => ctx.shows[i].current?.day === d && timeOf(ctx.shows[i]) === null));
   const plan = days.map(evening => {
     const slots = [];
     if (!evening.length) return slots;
@@ -428,7 +432,7 @@ function currentPlan(ctx) {
     return slots;
   });
   const unplaced = ctx.shows.map((s, i) => i).filter(i => !ctx.shows[i].current);
-  return { days, plan, unplaced };
+  return { days, plan, unplaced, dayOnly };
 }
 
 // ---------- The planner page ----------
@@ -494,7 +498,7 @@ function plannerSetup(data) {
     <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
     <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
       `<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div>
-    <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, or in a slot</span></div>
+    <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, in a slot, or day only (late night)</span></div>
     <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
     <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Add</button></div>
   </section>`;
@@ -506,7 +510,7 @@ function fixedRows(data) {
   if (!planFixed.length) return '<div class="ep busy-empty">None.</div>';
   const shows = data.shows.map(s => [s.sheetTitle, s.title]).sort((a, b) => a[1].localeCompare(b[1]));
   const days = [['release', 'Release day'], ...PLAN_DAYS_SHORT.map((d, j) => [j, d])];
-  const slots = [['', 'Any slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`])];
+  const slots = [['', 'Any slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`]), ['none', 'Day only (no slot)']];
   return planFixed.map((f, i) => `
     <div class="busy-row" data-i="${i}">
       <select class="pill fixed-show" data-field="show" aria-label="Show">${selectOptions(shows, f.show)}</select>
@@ -583,7 +587,7 @@ function bindPlannerSetup(data) {
       for (const field of row.querySelectorAll('[data-field]'))
         field.onchange = () => {
           const v = field.value;
-          f[field.dataset.field] = field.dataset.field === 'show' || v === 'release' || v === '' ? v : Number(v);
+          f[field.dataset.field] = field.dataset.field === 'show' || v === 'release' || v === 'none' || v === '' ? v : Number(v);
           saveSettings();
         };
       row.querySelector('.busy-remove').onclick = () => { planFixed.splice(Number(row.dataset.i), 1); saveSettings(); redrawFixed(); };
@@ -644,7 +648,8 @@ function showPlan(data, plan) {
       if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'day' : 'days'}</span>`);
     } else notes.push('no weekly release');
     if (s.short) notes.push('short');
-    if (ctx.fixed[i]) notes.push('📌 fixed');
+    if (ctx.fixed[i]?.dayOnly) notes.push('day only');
+    else if (ctx.fixed[i]) notes.push('📌 fixed');
     return `<div class="info"><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
   };
   const row = (at, label, slot, d) => `
@@ -652,15 +657,22 @@ function showPlan(data, plan) {
       <div class="time">${clock(at)}${label ? `<small>${label}</small>` : ''}</div>
       <div class="plan-slot${slot.length > 1 ? ' pair' : ''}">${slot.map(i => showInfo(i, d)).join('<div class="plan-or">‖</div>')}</div>
     </div>`;
-  const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d)).join('');
-  const nowDay = d => now.days[d].map(({ at, shows: slot }) => row(at, '', slot, d)).join('');
+  // Day-only shows (late night): after the evening, without a time.
+  const dayOnlyRows = (list, d) => list.map(i => `
+    <div class="row plan-row">
+      <div class="time">–<small>no slot</small></div>
+      <div class="plan-slot">${showInfo(i, d)}</div>
+    </div>`).join('');
+  const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d)).join('') + dayOnlyRows(ctx.dayOnly[d], d);
+  const nowDay = d => now.days[d].map(({ at, shows: slot }) => row(at, '', slot, d)).join('') + dayOnlyRows(now.dayOnly[d], d);
   const span = (from, to) => from === null ? '' : `<span class="plan-span">${clock(from)}–${clock(to)}</span>`;
   const days = PLAN_DAYS.map((day, d) => {
     const mine = plan[d].length ? span(times[d][0], ends[d]) : '';
     const theirs = now.days[d].length ? span(now.days[d][0].at, nowEnds[d]) : '';
-    if (planView === 'suggestion') return plan[d].length ? `<section class="day"><h2>${day} ${mine}</h2>${suggestionDay(d)}</section>` : '';
-    if (planView === 'now') return now.days[d].length ? `<section class="day"><h2>${day} ${theirs}</h2>${nowDay(d)}</section>` : '';
-    if (!plan[d].length && !now.days[d].length) return '';
+    const hasMine = plan[d].length || ctx.dayOnly[d].length, hasTheirs = now.days[d].length || now.dayOnly[d].length;
+    if (planView === 'suggestion') return hasMine ? `<section class="day"><h2>${day} ${mine}</h2>${suggestionDay(d)}</section>` : '';
+    if (planView === 'now') return hasTheirs ? `<section class="day"><h2>${day} ${theirs}</h2>${nowDay(d)}</section>` : '';
+    if (!hasMine && !hasTheirs) return '';
     return `<section class="day"><h2>${day}</h2><div class="plan-compare">
       <div><div class="plan-side">Guckplan now ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
       <div><div class="plan-side">Suggestion ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
@@ -702,10 +714,14 @@ function showPlan(data, plan) {
 // shows it runs side by side with.
 async function copyPlan(data, plan, times) {
   const lines = [['Anime Titel', 'Tag', 'Uhrzeit', 'Slot', 'Parallel mit'].join('\t')];
-  plan.forEach((slots, d) => slots.forEach((slot, k) => slot.forEach(i => {
-    lines.push([data.shows[i].sheetTitle, SHEET_DAYS[d], clock(times[d][k]), k + 1,
-      slot.filter(j => j !== i).map(j => data.shows[j].sheetTitle).join(', ')].join('\t'));
-  })));
+  const { dayOnly } = planContext(data);
+  plan.forEach((slots, d) => {
+    slots.forEach((slot, k) => slot.forEach(i => {
+      lines.push([data.shows[i].sheetTitle, SHEET_DAYS[d], clock(times[d][k]), k + 1,
+        slot.filter(j => j !== i).map(j => data.shows[j].sheetTitle).join(', ')].join('\t'));
+    }));
+    for (const i of dayOnly[d]) lines.push([data.shows[i].sheetTitle, SHEET_DAYS[d], '', '', ''].join('\t'));
+  });
   try {
     await navigator.clipboard.writeText(lines.join('\n'));
     notice('Plan copied as a table');
@@ -735,15 +751,23 @@ function guckplanRows(data, plan, times) {
   }));
   const rows = [];
   const placed = new Set();
-  plan.forEach((slots, d) => slots.forEach((slot, k) => {
-    const [main, ...others] = slot.map(i => shows[i]).sort((a, b) => b.people.length - a.people.length);
-    const when = { tag: SHEET_DAYS[d], time: clock(times[d][k]), slot: k + 1 };
-    const votes = ownVotes(main);
-    for (const o of others) for (const p of o.people) votes[p] = o.row.english || o.row.romaji;
-    rows.push({ s: main, ...when, votes, hidden: false });
-    for (const o of others) rows.push({ s: o, ...when, votes: ownVotes(o), hidden: true });
-    for (const i of slot) placed.add(shows[i].row);
-  }));
+  const { dayOnly } = planContext(data);
+  plan.forEach((slots, d) => {
+    slots.forEach((slot, k) => {
+      const [main, ...others] = slot.map(i => shows[i]).sort((a, b) => b.people.length - a.people.length);
+      const when = { tag: SHEET_DAYS[d], time: clock(times[d][k]), slot: k + 1 };
+      const votes = ownVotes(main);
+      for (const o of others) for (const p of o.people) votes[p] = o.row.english || o.row.romaji;
+      rows.push({ s: main, ...when, votes, hidden: false });
+      for (const o of others) rows.push({ s: o, ...when, votes: ownVotes(o), hidden: true });
+      for (const i of slot) placed.add(shows[i].row);
+    });
+    // Day-only shows: the day, no slot and no time.
+    for (const i of dayOnly[d]) {
+      rows.push({ s: shows[i], tag: SHEET_DAYS[d], time: '', slot: '', votes: ownVotes(shows[i]), hidden: false });
+      placed.add(shows[i].row);
+    }
+  });
   for (const r of sheet.shows)
     if (!placed.has(r)) rows.push({ s: { row: r, mal: '' }, tag: r.tag, time: r.time, slot: '', votes: { ...r.votes }, hidden: r.hidden });
   const title = data.tab.list ? `Guckplan ${data.tab.name}` : data.tab.name;
