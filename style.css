@@ -237,6 +237,8 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 .busy-row .round { width: 30px; height: 30px; font-size: 12px; }
 .busy-empty { padding: 2px 0; }
 .busy-actions { margin: 8px 10px 0; justify-content: flex-start; }
+.fixed-show { flex: 1; min-width: 160px; max-width: 100%; text-overflow: ellipsis; }
+.plan-moves { margin: 0 10px; }
 /* Side by side: the Guckplan now (left) and the suggestion (right) for each day */
 .plan-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .plan-compare > div { min-width: 0; }
