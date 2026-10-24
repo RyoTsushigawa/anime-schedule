@@ -26,6 +26,10 @@ const PLAN_COST = { hard: 1000, gap: 30, gapSquared: 6, delay: 12, keep: 2, slot
 // is worth about three breaks, so a show only moves when that saves several; "never" makes it as
 // bad as a clash.
 const MOVE_COST = { ok: 0, rarely: 100, never: PLAN_COST.hard };
+// How much a person's breaks count, by their "Breaks" setting: protected people get breaks only
+// when nothing else works, "fine" people take them first.
+const BREAK_WEIGHT = { protect: 3, normal: 1, fine: 0.25 };
+const BREAK_LABEL = { protect: '★ avoid', normal: '', fine: 'ok' };
 const LATE_FROM = 23 * 60;
 const MAX_SIDE_BY_SIDE = 3;
 const EVERYONE = '*'; // stands for the whole group in the settings below
@@ -39,13 +43,15 @@ let planUnavailable = { Belly: [0] };
 let planStarts = { standard: '19:00', days: ['', '', '', '', '', '', ''] };
 let planBusy = null;
 let planMoves = 'rarely';
-let planFixed = []; // [{ show, day: 'release' | 0–6, slot: '' | 1, 2, … }]
+let planFixed = []; // [{ show, day: 'release' | 0–6, slot: '' | 1, 2, … | 'none' }]
+let planBreaks = {}; // person → 'protect' | 'fine' (missing = normal)
 try {
   planUnavailable = JSON.parse(localStorage.getItem('planUnavailable')) || planUnavailable;
   planStarts = JSON.parse(localStorage.getItem('planStarts')) || { ...planStarts, standard: localStorage.getItem('planStart') || '19:00' };
   planBusy = JSON.parse(localStorage.getItem('planBusy'));
   planMoves = MOVE_COST[localStorage.getItem('planMoves')] !== undefined ? localStorage.getItem('planMoves') : planMoves;
   planFixed = JSON.parse(localStorage.getItem('planFixed')) || [];
+  planBreaks = JSON.parse(localStorage.getItem('planBreaks')) || {};
 } catch {}
 const saveSettings = () => {
   try {
@@ -54,6 +60,7 @@ const saveSettings = () => {
     localStorage.setItem('planBusy', JSON.stringify(planBusy || []));
     localStorage.setItem('planMoves', planMoves);
     localStorage.setItem('planFixed', JSON.stringify(planFixed));
+    localStorage.setItem('planBreaks', JSON.stringify(planBreaks));
   } catch {}
 };
 let planTabGid = null;
@@ -256,12 +263,13 @@ function planContext(data) {
   // The shows the plan places in slots, and the day-only ones per day.
   const active = data.shows.map((s, i) => i).filter(i => !fixed[i]?.dayOnly);
   const dayOnly = PLAN_DAYS.map((day, d) => data.shows.map((s, i) => i).filter(i => fixed[i]?.dayOnly && fixed[i].day === d));
-  return { shows: data.shows, people: data.people, times, busy: busyMask, fixed, active, dayOnly, moveCost: MOVE_COST[planMoves] };
+  const breakWeight = data.people.map(p => BREAK_WEIGHT[planBreaks[p]] ?? 1);
+  return { shows: data.shows, people: data.people, times, busy: busyMask, fixed, active, dayOnly, breakWeight, moveCost: MOVE_COST[planMoves] };
 }
 
 // The cost, and with `details` everything the result page shows.
 function planCost(plan, ctx, details = false) {
-  const { shows, times, people, busy, fixed, moveCost } = ctx;
+  const { shows, times, people, busy, fixed, moveCost, breakWeight } = ctx;
   let cost = 0, breaks = 0, moved = 0;
   const personBreaks = details ? people.map(() => []) : null;
   const problems = details ? [] : null;
@@ -306,7 +314,7 @@ function planCost(plan, ctx, details = false) {
         if (masks[k] & bit) { if (first < 0) first = k; last = k; count++; }
       const gaps = first < 0 ? 0 : last - first + 1 - count;
       if (!gaps) continue;
-      cost += PLAN_COST.gap * gaps + PLAN_COST.gapSquared * gaps * gaps;
+      cost += (PLAN_COST.gap * gaps + PLAN_COST.gapSquared * gaps * gaps) * breakWeight[p];
       breaks += gaps;
       if (details) personBreaks[p].push({ day: d, gaps });
     }
@@ -498,11 +506,19 @@ function plannerSetup(data) {
     <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
     <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
       `<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div>
+    <div class="menu-label">Breaks <span class="plan-hint">· tap a name: ★ avoid their breaks most, “ok” = they mind least</span></div>
+    <div class="plan-break-prefs">${data.people.map(p => breakChip(p)).join('')}</div>
     <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, in a slot, or day only (late night)</span></div>
     <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
     <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Add</button></div>
   </section>`;
 }
+
+const breakChip = p => {
+  const pref = planBreaks[p] || 'normal';
+  return `<button class="break-pref ${pref}" data-break-person="${esc(p)}" style="${personStyle(p)}"
+    title="${esc(p)}'s breaks: ${pref === 'protect' ? 'avoid most' : pref === 'fine' ? 'they mind least' : 'normal'}">${esc(p)}${BREAK_LABEL[pref] ? ` <small>${BREAK_LABEL[pref]}</small>` : ''}</button>`;
+};
 
 const selectOptions = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 
@@ -579,6 +595,16 @@ function bindPlannerSetup(data) {
       planMoves = b.dataset.moves;
       for (const o of document.querySelectorAll('[data-moves]')) o.setAttribute('aria-pressed', o === b);
       saveSettings();
+    };
+  const NEXT_PREF = { normal: 'protect', protect: 'fine', fine: 'normal' };
+  for (const b of document.querySelectorAll('[data-break-person]'))
+    b.onclick = () => {
+      const p = b.dataset.breakPerson;
+      const pref = NEXT_PREF[planBreaks[p] || 'normal'];
+      if (pref === 'normal') delete planBreaks[p]; else planBreaks[p] = pref;
+      saveSettings();
+      b.outerHTML = breakChip(p);
+      bindPlannerSetup(data);
     };
   const redrawFixed = () => { $('fixedList').innerHTML = fixedRows(data); bindFixed(); };
   const bindFixed = () => {
