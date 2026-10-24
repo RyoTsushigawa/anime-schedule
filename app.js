@@ -446,7 +446,7 @@ function render(items, start, plans) {
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     // Rows without a ✓ keep its place, so every row's buttons line up.
-    const checkSpace = auth ? '<div class="watch-space"></div>' : '';
+    const checkSpace = auth ? '<div class="watch-space"></div><div class="drop-space"></div>' : '';
     const pause = ({ show, when, news }) => `
       <div class="row pause" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
@@ -486,7 +486,7 @@ function render(items, start, plans) {
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links)}</div>
-        ${watchButton(m.id, Math.max(...episodes))}
+        ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
     const groups = [];
@@ -723,6 +723,13 @@ async function loadMe() {
     myProgress.set(media.id, progress);
     knownEntries.set(media.id, { progress, status });
   }
+  // Dropped shows too, so the Week view shows "Dropped" instead of a Drop button for them.
+  try {
+    const dropped = await anilist(`query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status: DROPPED) {
+      lists { entries { progress status media { id } } } } }`, { user: auth.name });
+    for (const { progress, status, media } of dropped.MediaListCollection.lists.flatMap(l => l.entries))
+      if (!knownEntries.has(media.id)) knownEntries.set(media.id, { progress, status });
+  } catch {}
 }
 
 // $status only when given: CURRENT for a show not on the list yet, DROPPED for "Drop".
@@ -854,7 +861,11 @@ $('list').addEventListener('click', async e => {
 
 // "Drop" in Catch-up: sets the show to Dropped on AniList, so it leaves Catch-up (and doesn't come
 // back as a forgotten Guckplan show). The first click only asks.
-const dropButton = mediaId => `<button class="drop" data-media="${mediaId}" title="Set to Dropped on AniList">Drop</button>`;
+// Already dropped (e.g. from the Week view, where dropped shows stay as long as the Guckplan lists
+// them): a quiet "Dropped" in its place; Ctrl+Z / Undo brings it back.
+const dropButton = mediaId => knownEntries.get(mediaId)?.status === 'DROPPED'
+  ? '<span class="drop dropped" title="Dropped on AniList">Dropped</span>'
+  : `<button class="drop" data-media="${mediaId}" title="Set to Dropped on AniList">Drop</button>`;
 $('list').addEventListener('click', async e => {
   const b = e.target.closest('.drop');
   if (!b || !auth || b.disabled) return;
@@ -1053,6 +1064,11 @@ async function loadCatchup() {
       : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
     $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
   }
+  // Not logged in, or someone else's list: say why there are no ✓ / Drop buttons. (Typing a name
+  // into "Catch-up list of" only shows that list; logging in is "Connect AniList".)
+  if (!mine && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', `<div class="notice">${auth
+    ? `This is ${esc(user)}'s list: ✓ and Drop only work on your own (${esc(auth.name)}).`
+    : 'To tick episodes or drop shows, connect AniList: the person icon at the top right → “Connect AniList”.'}</div>`);
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
   applySearch();
