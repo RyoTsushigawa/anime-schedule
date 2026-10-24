@@ -22,26 +22,38 @@ const MAX_SLOTS = 24;
 // isn't out yet at that slot); a break costs more the more one person has in an evening; every slot
 // from 23:00 on costs extra so evenings stay short-ish.
 const PLAN_COST = { hard: 1000, gap: 30, gapSquared: 6, delay: 12, keep: 2, slot: 4, late: 10 };
+// On top of "delay": each show moved off its release day, by the "Other days" setting. "rarely"
+// is worth about three breaks, so a show only moves when that saves several; "never" makes it as
+// bad as a clash.
+const MOVE_COST = { ok: 0, rarely: 100, never: PLAN_COST.hard };
 const LATE_FROM = 23 * 60;
 const MAX_SIDE_BY_SIDE = 3;
 const EVERYONE = '*'; // stands for the whole group in the settings below
 
 // Settings, kept in this browser: whole days someone can't (person → weekdays, 0 = Monday), the
 // standard start and each weekday's own one ('' = standard), and busy times (person or everyone,
-// day, from, to). Busy times start out filled from the sheet's "Seasonpläne" tab.
+// day, from, to). Busy times start out filled from the sheet's "Seasonpläne" tab. How much to
+// avoid moving shows off their release day (ok | rarely | never), and fixed shows: a show (by its
+// sheet title) kept on its release day or a given day (0 = Monday), and maybe in a given slot.
 let planUnavailable = { Belly: [0] };
 let planStarts = { standard: '19:00', days: ['', '', '', '', '', '', ''] };
 let planBusy = null;
+let planMoves = 'rarely';
+let planFixed = []; // [{ show, day: 'release' | 0–6, slot: '' | 1, 2, … }]
 try {
   planUnavailable = JSON.parse(localStorage.getItem('planUnavailable')) || planUnavailable;
   planStarts = JSON.parse(localStorage.getItem('planStarts')) || { ...planStarts, standard: localStorage.getItem('planStart') || '19:00' };
   planBusy = JSON.parse(localStorage.getItem('planBusy'));
+  planMoves = MOVE_COST[localStorage.getItem('planMoves')] !== undefined ? localStorage.getItem('planMoves') : planMoves;
+  planFixed = JSON.parse(localStorage.getItem('planFixed')) || [];
 } catch {}
 const saveSettings = () => {
   try {
     localStorage.setItem('planUnavailable', JSON.stringify(planUnavailable));
     localStorage.setItem('planStarts', JSON.stringify(planStarts));
     localStorage.setItem('planBusy', JSON.stringify(planBusy || []));
+    localStorage.setItem('planMoves', planMoves);
+    localStorage.setItem('planFixed', JSON.stringify(planFixed));
   } catch {}
 };
 let planTabGid = null;
@@ -227,12 +239,20 @@ function planContext(data) {
     for (const e of busy) if (e.day === d && overlaps(e, at)) mask |= e.mask;
     return mask;
   }));
-  return { shows: data.shows, people: data.people, times, busy: busyMask };
+  // Fixed shows, per show: { day (null = any), slot (0-based, null = any) }, or null.
+  const fixed = data.shows.map(s => {
+    const f = planFixed.find(f => f.show === s.sheetTitle);
+    if (!f) return null;
+    const day = f.day === 'release' ? s.release?.day ?? s.current?.day ?? null : Number(f.day);
+    const slot = Number(f.slot) > 0 ? Number(f.slot) - 1 : null;
+    return day === null && slot === null ? null : { day, slot };
+  });
+  return { shows: data.shows, people: data.people, times, busy: busyMask, fixed, moveCost: MOVE_COST[planMoves] };
 }
 
 // The cost, and with `details` everything the result page shows.
 function planCost(plan, ctx, details = false) {
-  const { shows, times, people, busy } = ctx;
+  const { shows, times, people, busy, fixed, moveCost } = ctx;
   let cost = 0, breaks = 0, moved = 0;
   const personBreaks = details ? people.map(() => []) : null;
   const problems = details ? [] : null;
@@ -256,9 +276,18 @@ function planCost(plan, ctx, details = false) {
             cost += PLAN_COST.hard;
             if (details) problems.push(`${s.title}: only out at ${clock(s.release.min)}`);
           }
-          if (delay) { cost += PLAN_COST.delay * delay; moved++; }
+          if (delay) { cost += PLAN_COST.delay * delay + moveCost; moved++; }
         }
         if (s.current && s.current.day !== d) cost += PLAN_COST.keep;
+        const f = fixed[i];
+        if (f && f.day !== null && f.day !== d) {
+          cost += PLAN_COST.hard;
+          if (details) problems.push(`${s.title}: fixed to ${PLAN_DAYS_SHORT[f.day]}`);
+        }
+        if (f && f.slot !== null && f.slot !== k) {
+          cost += PLAN_COST.hard;
+          if (details) problems.push(`${s.title}: fixed to slot ${f.slot + 1}`);
+        }
       }
     }
     for (let p = 0; p < people.length; p++) {
@@ -285,9 +314,18 @@ function startPlan(ctx, shuffle) {
     const s = ctx.shows[i];
     let d = s.release ? s.release.day : s.current ? s.current.day : Math.floor(Math.random() * 7);
     for (let t = 0; t < 7 && (s.mask & ctx.busy[d][0]); t++) d = (d + 1) % 7;
+    if (ctx.fixed[i]?.day != null) d = ctx.fixed[i].day;
     plan[d].push([i]);
   }
   for (const day of plan) day.sort((a, b) => (ctx.shows[a[0]].release?.min ?? 0) - (ctx.shows[b[0]].release?.min ?? 0));
+  // Shows fixed to a slot go there right away (lowest slot first).
+  for (const day of plan) {
+    const pinned = day.filter(([i]) => ctx.fixed[i]?.slot != null).sort((a, b) => ctx.fixed[a[0]].slot - ctx.fixed[b[0]].slot);
+    for (const slot of pinned) {
+      day.splice(day.indexOf(slot), 1);
+      day.splice(Math.min(ctx.fixed[slot[0]].slot, day.length), 0, slot);
+    }
+  }
   return plan;
 }
 
@@ -313,7 +351,8 @@ function changePlan(plan, ctx) {
     if (!next[d][k].length) next[d].splice(k, 1);
     const s = shows[i];
     const pick = Math.random();
-    const to = pick < 0.5 ? d : pick < 0.8 && s.release ? (s.release.day + Math.floor(Math.random() * 2)) % 7 : Math.floor(Math.random() * 7);
+    const to = ctx.fixed[i]?.day != null ? ctx.fixed[i].day
+      : pick < 0.5 ? d : pick < 0.8 && s.release ? (s.release.day + Math.floor(Math.random() * 2)) % 7 : Math.floor(Math.random() * 7);
     const partners = next[to].flatMap((slot, j) => fits(slot, i) ? [j] : []);
     if (partners.length && Math.random() < 0.45) next[to][partners[Math.floor(Math.random() * partners.length)]].push(i);
     else next[to].splice(Math.floor(Math.random() * (next[to].length + 1)), 0, [i]);
@@ -440,12 +479,34 @@ function plannerSetup(data) {
       <button id="busyAdd" class="pill">+ Add</button>
       <button id="busyReload" class="pill" title="Replace the busy times with the ones in the Seasonpläne tab">↻ From Seasonpläne</button>
     </div>
+    <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
+    <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
+      `<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div>
+    <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, or in a slot</span></div>
+    <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
+    <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Add</button></div>
   </section>`;
+}
+
+const selectOptions = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
+
+function fixedRows(data) {
+  if (!planFixed.length) return '<div class="ep busy-empty">None.</div>';
+  const shows = data.shows.map(s => [s.sheetTitle, s.title]).sort((a, b) => a[1].localeCompare(b[1]));
+  const days = [['release', 'Release day'], ...PLAN_DAYS_SHORT.map((d, j) => [j, d])];
+  const slots = [['', 'Any slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`])];
+  return planFixed.map((f, i) => `
+    <div class="busy-row" data-i="${i}">
+      <select class="pill fixed-show" data-field="show" aria-label="Show">${selectOptions(shows, f.show)}</select>
+      <select class="pill" data-field="day" aria-label="Day">${selectOptions(days, f.day)}</select>
+      <select class="pill" data-field="slot" aria-label="Slot">${selectOptions(slots, f.slot)}</select>
+      <button class="round busy-remove" aria-label="Remove">✕</button>
+    </div>`).join('');
 }
 
 function busyRows(data) {
   if (!planBusy?.length) return '<div class="ep busy-empty">None.</div>';
-  const options = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
+  const options = selectOptions;
   const who = [[EVERYONE, 'Everyone'], ...data.people.map(p => [p, p])];
   return planBusy.map((e, i) => `
     <div class="busy-row" data-i="${i}">
@@ -482,7 +543,7 @@ function bindPlannerSetup(data) {
     };
   const redrawBusy = () => { $('busyList').innerHTML = busyRows(data); bindBusy(); };
   const bindBusy = () => {
-    for (const row of document.querySelectorAll('.busy-row')) {
+    for (const row of document.querySelectorAll('#busyList .busy-row')) {
       const e = planBusy[Number(row.dataset.i)];
       for (const field of row.querySelectorAll('[data-field]'))
         field.onchange = () => { e[field.dataset.field] = field.dataset.field === 'day' ? Number(field.value) : field.value; saveSettings(); };
@@ -496,6 +557,33 @@ function bindPlannerSetup(data) {
     saveSettings();
     redrawBusy();
     notice('Busy times taken from Seasonpläne');
+  };
+  for (const b of document.querySelectorAll('[data-moves]'))
+    b.onclick = () => {
+      planMoves = b.dataset.moves;
+      for (const o of document.querySelectorAll('[data-moves]')) o.setAttribute('aria-pressed', o === b);
+      saveSettings();
+    };
+  const redrawFixed = () => { $('fixedList').innerHTML = fixedRows(data); bindFixed(); };
+  const bindFixed = () => {
+    for (const row of document.querySelectorAll('#fixedList .busy-row')) {
+      const f = planFixed[Number(row.dataset.i)];
+      for (const field of row.querySelectorAll('[data-field]'))
+        field.onchange = () => {
+          const v = field.value;
+          f[field.dataset.field] = field.dataset.field === 'show' || v === 'release' || v === '' ? v : Number(v);
+          saveSettings();
+        };
+      row.querySelector('.busy-remove').onclick = () => { planFixed.splice(Number(row.dataset.i), 1); saveSettings(); redrawFixed(); };
+    }
+  };
+  bindFixed();
+  $('fixedAdd').onclick = () => {
+    const free = data.shows.find(s => !planFixed.some(f => f.show === s.sheetTitle));
+    if (!free) return;
+    planFixed.push({ show: free.sheetTitle, day: 'release', slot: '' });
+    saveSettings();
+    redrawFixed();
   };
   $('planRun').onclick = () => generatePlan(data);
 }
@@ -544,6 +632,7 @@ function showPlan(data, plan) {
       if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'day' : 'days'}</span>`);
     } else notes.push('no weekly release');
     if (s.short) notes.push('short');
+    if (ctx.fixed[i]) notes.push('📌 fixed');
     return `<div class="info"><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
   };
   const row = (at, label, slot, d) => `
@@ -580,6 +669,7 @@ function showPlan(data, plan) {
     <div class="segmented plan-views" role="group" aria-label="Show">${views.map(([v, label]) =>
       `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
     <button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button>
+    <button id="planSheet" class="pill" title="A code for the Season-Helfer in the sheet: Season-Helfer → 3. Watch-Plan einfügen, then paste">Copy for Season-Helfer</button>
     <button id="planXlsx" class="pill" title="The plan as a Guckplan tab: in Google Sheets, File → Import → Insert new sheet">Download .xlsx</button></div>`;
   $('planOut').innerHTML = problems + stats + actions + days + unplaced + breaks;
   const cells = [...document.querySelectorAll('#planOut .time')];
@@ -587,6 +677,7 @@ function showPlan(data, plan) {
   $('planAgain').onclick = () => generatePlan(data);
   $('planCopy').onclick = () => copyPlan(data, plan, times);
   $('planXlsx').onclick = () => downloadXlsx(data, plan, times);
+  $('planSheet').onclick = () => copyForSheet(data, plan, times);
   for (const b of document.querySelectorAll('[data-plan-view]'))
     b.onclick = () => {
       planView = b.dataset.planView;
@@ -611,13 +702,13 @@ async function copyPlan(data, plan, times) {
   }
 }
 
-// The plan as a Guckplan tab (.xlsx, for File → Import → Insert new sheet), laid out like the
-// Guckplan: Sort, Slot, Anime Titel, Eng Anime Titel (both linking to MyAnimeList), Startdatum, Wo,
-// Tag, Uhrzeit, then everyone's column in their colour. Shows side by side are written the group's
-// way: the show most people watch keeps its row, the others' watchers get that show's name in
-// their cell there, and the others' own rows are hidden. Planned shows come by day and slot; the
-// sheet's other rows (nobody watching, dropped) follow as they were.
-function downloadXlsx(data, plan, times) {
+// The plan as Guckplan rows, for the .xlsx and the Season-Helfer: Sort, Slot, Anime Titel, Eng
+// Anime Titel (both linking to MyAnimeList), Startdatum, Wo, Tag, Uhrzeit, then everyone's column.
+// Shows side by side are written the group's way: the show most people watch keeps its row, the
+// others' watchers get that show's name in their cell there, and the others' own rows are hidden.
+// Planned shows come by day and slot; the sheet's other rows (nobody watching, dropped) follow as
+// they were.
+function guckplanRows(data, plan, times) {
   const { sheet, shows } = data;
   // Every person column as in the sheet, the ones hidden there (people no longer taking part) hidden.
   const columns = sheet.columns || sheet.people.map(name => ({ name, hidden: false }));
@@ -643,8 +734,14 @@ function downloadXlsx(data, plan, times) {
   }));
   for (const r of sheet.shows)
     if (!placed.has(r)) rows.push({ s: { row: r, mal: '' }, tag: r.tag, time: r.time, slot: '', votes: { ...r.votes }, hidden: r.hidden });
-
   const title = data.tab.list ? `Guckplan ${data.tab.name}` : data.tab.name;
+  return { title, columns, people, rows };
+}
+
+// The plan as a Guckplan tab (.xlsx, for File → Import → Insert new sheet), everyone's column in
+// their colour, the ones hidden in the sheet hidden.
+function downloadXlsx(data, plan, times) {
+  const { title, columns, people, rows } = guckplanRows(data, plan, times);
   const blob = xlsxBlob({
     name: `${title} Vorschlag`,
     widths: [2, 5, 6, 32, 32, 11, 5, 6, 8, ...columns.map(c => c.hidden ? { width: 12, hidden: true } : 12)],
@@ -665,6 +762,27 @@ function downloadXlsx(data, plan, times) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   notice('Downloaded: in Google Sheets, File → Import → Upload → "Insert new sheet(s)"');
+}
+
+// The plan as a code for the Season-Helfer script in the sheet (Season-Helfer → "3. Watch-Plan
+// einfügen", paste it there): it copies the newest Guckplan tab, so the formatting, dropdowns and
+// counts below stay exactly as they are, and fills in these rows. Each row: Sort, Slot, Anime
+// Titel, Eng Anime Titel, MyAnimeList link, Startdatum, Wo, Tag, Uhrzeit, hidden, then the votes
+// in the order of `people`.
+async function copyForSheet(data, plan, times) {
+  const { title, people, rows } = guckplanRows(data, plan, times);
+  const code = 'GUCKPLAN1:' + JSON.stringify({
+    name: `${title} Vorschlag`, people,
+    rows: rows.map(({ s, tag, time, slot, votes, hidden }) => [s.row.sort || '', slot, s.row.romaji || s.row.english,
+      s.row.english || s.row.romaji, s.mal || '', s.row.start || '', s.row.wo || '', tag || '', time || '', hidden ? 1 : 0,
+      ...people.map(p => votes[p] || '')]),
+  });
+  try {
+    await navigator.clipboard.writeText(code);
+    notice('Plan code copied: in the sheet, Season-Helfer → "3. Watch-Plan einfügen" and paste it');
+  } catch {
+    notice("Couldn't copy (the browser didn't allow it)");
+  }
 }
 
 loadPlanner();
