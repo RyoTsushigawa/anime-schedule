@@ -28,8 +28,8 @@ const PLAN_COST = { hard: 1000, gap: 30, gapSquared: 6, delay: 12, keep: 2, slot
 const MOVE_COST = { ok: 0, rarely: 100, never: PLAN_COST.hard };
 // How much a person's breaks count, by their "Breaks" setting: protected people get breaks only
 // when nothing else works, "fine" people take them first.
-const BREAK_WEIGHT = { protect: 3, normal: 1, fine: 0.25 };
-const BREAK_LABEL = { protect: '★ avoid', normal: '', fine: 'ok' };
+const BREAK_WEIGHT = { protect: 3, normal: 1, fine: 0.2 };
+const BREAK_LABEL = { protect: '★', normal: '', fine: '☕' };
 const LATE_FROM = 23 * 60;
 const MAX_SIDE_BY_SIDE = 3;
 const EVERYONE = '*'; // stands for the whole group in the settings below
@@ -45,6 +45,7 @@ let planBusy = null;
 let planMoves = 'rarely';
 let planFixed = []; // [{ show, day: 'release' | 0–6, slot: '' | 1, 2, … | 'none' }]
 let planBreaks = {}; // person → 'protect' | 'fine' (missing = normal)
+let planUntil = {}; // person (or EVERYONE) → 'HH:MM' their last show has to be over by
 try {
   planUnavailable = JSON.parse(localStorage.getItem('planUnavailable')) || planUnavailable;
   planStarts = JSON.parse(localStorage.getItem('planStarts')) || { ...planStarts, standard: localStorage.getItem('planStart') || '19:00' };
@@ -52,6 +53,7 @@ try {
   planMoves = MOVE_COST[localStorage.getItem('planMoves')] !== undefined ? localStorage.getItem('planMoves') : planMoves;
   planFixed = JSON.parse(localStorage.getItem('planFixed')) || [];
   planBreaks = JSON.parse(localStorage.getItem('planBreaks')) || {};
+  planUntil = JSON.parse(localStorage.getItem('planUntil')) || {};
 } catch {}
 const saveSettings = () => {
   try {
@@ -61,6 +63,7 @@ const saveSettings = () => {
     localStorage.setItem('planMoves', planMoves);
     localStorage.setItem('planFixed', JSON.stringify(planFixed));
     localStorage.setItem('planBreaks', JSON.stringify(planBreaks));
+    localStorage.setItem('planUntil', JSON.stringify(planUntil));
   } catch {}
 };
 let planTabGid = null;
@@ -246,6 +249,9 @@ function planContext(data) {
     let mask = 0;
     for (const [person, days] of Object.entries(planUnavailable)) if (days.includes(d)) mask |= maskOf(person);
     for (const e of busy) if (e.day === d && overlaps(e, at)) mask |= e.mask;
+    // "Until": a slot that isn't over by then.
+    for (const [person, until] of Object.entries(planUntil))
+      if (minutesOf(until) !== null && at + SLOT_LENGTH > minutesOf(until)) mask |= maskOf(person);
     return mask;
   }));
   // Fixed shows, per show: { day (null = any), slot (0-based, null = any), dayOnly }, or null.
@@ -481,14 +487,16 @@ function plannerSetup(data) {
   const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
     `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');
   // Days across the top, each day's own start time, then whole days off: "Everyone" first.
-  const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}`;
+  const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}<span class="avail-head" title="Last show over by">Until</span>`;
   const starts = `<span class="avail-name everyone">Start</span>${PLAN_DAYS.map((day, d) =>
     `<input class="avail-start" data-day="${d}" value="${esc(planStarts.days[d] || '')}" placeholder="${esc(planStarts.standard)}"
-      inputmode="numeric" maxlength="5" aria-label="Start on ${day}" title="Start on ${day} (empty = standard)">`).join('')}`;
+      inputmode="numeric" maxlength="5" aria-label="Start on ${day}" title="Start on ${day} (empty = standard)">`).join('')}<span></span>`;
   const grid = [EVERYONE, ...data.people].map(p => `
     <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Everyone' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
       `<button class="avail-day" data-person="${esc(p)}" data-day="${d}" aria-pressed="${(planUnavailable[p] || []).includes(d)}"
-        title="${p === EVERYONE ? 'Nobody watches' : esc(p) + " can't"} on ${PLAN_DAYS[d]}">${day.slice(0, 2)}</button>`).join('')}`).join('');
+        title="${p === EVERYONE ? 'Nobody watches' : esc(p) + " can't"} on ${PLAN_DAYS[d]}">${day.slice(0, 2)}</button>`).join('')}
+      <input class="avail-start avail-until" data-person="${esc(p)}" value="${esc(planUntil[p] || '')}" placeholder="–" inputmode="numeric" maxlength="5"
+        aria-label="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by" title="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by (empty = no limit)">`).join('');
   return `<section class="plan-card">
     <div class="plan-head">
       <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>
@@ -506,7 +514,7 @@ function plannerSetup(data) {
     <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
     <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
       `<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div>
-    <div class="menu-label">Breaks <span class="plan-hint">· tap a name: ★ avoid their breaks most, “ok” = they mind least</span></div>
+    <div class="menu-label">Breaks <span class="plan-hint">· tap a name: ★ = avoid their breaks, ☕ = they get breaks first</span></div>
     <div class="plan-break-prefs">${data.people.map(p => breakChip(p)).join('')}</div>
     <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, in a slot, or day only (late night)</span></div>
     <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
@@ -517,7 +525,7 @@ function plannerSetup(data) {
 const breakChip = p => {
   const pref = planBreaks[p] || 'normal';
   return `<button class="break-pref ${pref}" data-break-person="${esc(p)}" style="${personStyle(p)}"
-    title="${esc(p)}'s breaks: ${pref === 'protect' ? 'avoid most' : pref === 'fine' ? 'they mind least' : 'normal'}">${esc(p)}${BREAK_LABEL[pref] ? ` <small>${BREAK_LABEL[pref]}</small>` : ''}</button>`;
+    title="${esc(p)}'s breaks: ${pref === 'protect' ? 'avoid them' : pref === 'fine' ? 'they get breaks first' : 'normal'}">${BREAK_LABEL[pref] ? `${BREAK_LABEL[pref]} ` : ''}${esc(p)}</button>`;
 };
 
 const selectOptions = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
@@ -558,7 +566,14 @@ function bindPlannerSetup(data) {
     for (const input of document.querySelectorAll('.avail-start')) input.placeholder = planStarts.standard;
     saveSettings();
   };
-  for (const input of document.querySelectorAll('.avail-start'))
+  for (const input of document.querySelectorAll('.avail-until'))
+    input.onchange = () => {
+      const p = input.dataset.person;
+      if (minutesOf(input.value) !== null) planUntil[p] = input.value; else delete planUntil[p];
+      input.value = planUntil[p] || '';
+      saveSettings();
+    };
+  for (const input of document.querySelectorAll('.avail-start:not(.avail-until)'))
     input.onchange = () => {
       planStarts.days[Number(input.dataset.day)] = minutesOf(input.value) !== null ? input.value : '';
       input.value = planStarts.days[Number(input.dataset.day)];
