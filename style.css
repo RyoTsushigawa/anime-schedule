@@ -239,6 +239,12 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 .busy-actions { margin: 8px 10px 0; justify-content: flex-start; }
 .fixed-show { flex: 1; min-width: 160px; max-width: 100%; text-overflow: ellipsis; }
 .plan-moves { margin: 0 10px; }
+.plan-break-prefs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px; }
+.break-pref { --tint: var(--person, var(--accent)); border: 1px solid color-mix(in srgb, var(--tint) 50%, transparent);
+  border-radius: 99px; padding: 3px 10px; font-size: 13px; color: var(--text); background: color-mix(in srgb, var(--tint) 20%, transparent); }
+.break-pref small { font-size: 11px; font-weight: 600; }
+.break-pref.protect { background: var(--tint); border-color: var(--tint); color: var(--person-text, var(--accent-text)); font-weight: 600; }
+.break-pref.fine { background: transparent; border-style: dashed; color: var(--muted); }
 /* Side by side: the Guckplan now (left) and the suggestion (right) for each day */
 .plan-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .plan-compare > div { min-width: 0; }
