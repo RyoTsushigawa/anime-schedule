@@ -149,6 +149,43 @@ td select{border:1px solid var(--line);background:var(--bg);border-radius:5px;fo
 .toast{min-height:1.4em;font-size:.88rem}
 textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
 
+/* ---- calmer look: pills, one clear start, secondary things folded away ---- */
+[hidden]{display:none!important}
+header.top{position:relative;padding-right:52px}
+header.top #themeBtn{position:absolute;right:0;top:0}
+.round{width:38px;height:38px;border-radius:50%;padding:0;display:inline-grid;place-items:center;font-size:1.05rem}
+.tab{border-radius:999px;padding:6px 14px;font-size:.9rem;background:transparent}
+.tab::before,.tab[aria-expanded="true"]::before{content:none}
+.start{display:grid;gap:10px;margin-top:14px;padding:20px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.start h3{font-family:var(--display);font-weight:400;font-size:1.3rem}
+.start p{margin:0;font-size:.9rem}
+.startrow{display:flex;gap:8px;flex-wrap:wrap}
+.startrow input{flex:1 1 14em;min-width:0;font-size:1.05rem;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface)}
+.btn.go{background:var(--hi);color:var(--hi-ink);border-color:var(--hi);font-size:1.05rem;padding:12px 22px;border-radius:10px;font-weight:600}
+details.more{margin-top:12px}
+details.more > summary,details.howto > summary{cursor:pointer;color:var(--muted);font-size:.9rem;width:max-content}
+details.howto[open] > summary{margin-bottom:8px}
+.minor{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.minor .btn{background:transparent;border-color:transparent;color:var(--muted);padding:5px 10px;font-size:.88rem}
+.minor .btn:hover:not(:disabled){border-color:var(--line);color:var(--ink)}
+details.settings{border-top:0;padding-top:0;justify-self:center;width:100%;display:grid;justify-items:center}
+details.settings > summary{list-style:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 14px;font-size:.88rem}
+details.settings > summary::-webkit-details-marker{display:none}
+details.settings[open] > summary{background:var(--sunk);color:var(--ink)}
+.setgrid{display:grid;gap:12px;margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg);width:100%}
+.setrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.setrow > .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-width:6em}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:4px 14px;color:var(--muted);font-family:var(--mono);font-size:.85rem}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
+.pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:.86rem;color:var(--muted)}
+.pill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
+details.fold > summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:end;gap:10px}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::after{content:"Show";font-size:.85rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 12px}
+details.fold[open] > summary::after{content:"Hide"}
+details.fold[open] > summary{margin-bottom:14px}
+.export .row.small .btn{padding:5px 12px;font-size:.88rem}
 @media (max-width:760px){
   .loadgrid{grid-template-columns:1fr}
   .lower{grid-template-columns:1fr}
@@ -162,10 +199,10 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
 
 <div class="wrap">
   <header class="top">
-    <button class="btn" id="themeBtn" style="float:right;margin-left:12px" aria-label="Switch light or dark mode"></button>
+    <button class="btn round" id="themeBtn" aria-label="Switch light or dark mode"></button>
     <div class="eyebrow">List re-scoring game</div>
     <h1>Higher or Lower Ranker</h1>
-    <p class="muted">One show you've already scored stands for each step from 10 down to 0.5, in half points. Every other show is compared against those benchmarks and gets the score of the highest benchmark it beats or matches. Start with your AniList username: site medians, English titles, covers and any seasons missing from your list are filled in automatically, and your progress stays in this browser.</p>
+    <p class="muted">Rescore your list one show at a time: higher or lower than a show you already scored?</p>
   </header>
 
   <section class="panel" id="loadPanel">
@@ -174,19 +211,21 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
       <button class="btn" id="resetBtn" hidden>Start over</button>
     </div>
     <div class="tabs" role="group" aria-label="Panels">
-      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Load your list</button>
+      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Your list</button>
       <button class="tab" id="tabCompare" aria-expanded="false" aria-controls="compareDetails">Compare to others<span class="tabnote" id="tabCompareNote"></span></button>
     </div>
     <details class="load" id="loadDetails">
       <summary>Load your list</summary>
-      <div class="drop" style="margin-top:14px">
-        <h3>Your AniList username</h3>
-        <p class="muted" style="margin:0;font-size:.88rem">The quickest start: your public AniList list loads directly. It also keeps your list in sync, so shows you finish later join your queue by themselves.</p>
-        <div class="opts">
-          <input type="text" id="userLoadIn" class="field" placeholder="AniList username" aria-label="Your AniList username" autocomplete="username">
-          <button class="btn primary" id="userLoadBtn">Load my list</button>
+      <div class="start">
+        <h3>Start with your AniList</h3>
+        <p class="muted">Type your username and go. Your public list loads straight from AniList, with covers and site medians; progress stays in this browser.</p>
+        <div class="startrow">
+          <input type="text" id="userLoadIn" placeholder="AniList username" aria-label="Your AniList username" autocomplete="username">
+          <button class="btn go" id="userLoadBtn">Start ranking →</button>
         </div>
       </div>
+      <details class="more">
+      <summary>Other ways: a list file, or pasted titles</summary>
       <div class="loadgrid">
         <div class="drop" id="drop">
           <h3>Or a list file (AniList or MyAnimeList)</h3>
@@ -210,6 +249,7 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
         <div><input type="file" id="siteIn" accept=".json,application/json"></div>
         <div class="muted" id="siteMsg" style="font-size:.88rem"></div>
       </div>
+      </details>
       <div class="pending" id="pending" hidden></div>
       <p class="err" id="loadErr" hidden></p>
     </details>
@@ -262,14 +302,16 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
   <section class="stage" id="stage" aria-live="polite"></section>
 
   <section class="lower">
-    <div class="panel">
-      <div>
-        <div class="eyebrow">Benchmarks</div>
-        <h2>One show for each score</h2>
-      </div>
-      <p class="note">Picked from shows you already gave that score. Swap any of them for a show that better represents the score. Changing a benchmark doesn't re-score shows already placed.</p>
+    <details class="panel fold" id="benchPanel">
+      <summary>
+        <div>
+          <div class="eyebrow">Benchmarks</div>
+          <h2>One show for each score <span class="muted" id="benchCount" style="font-weight:400;font-size:.9rem"></span></h2>
+        </div>
+      </summary>
+      <p class="note">Picked from shows you already gave that score. Swap any for one that represents the score better; shows already placed keep their scores.</p>
       <div class="ladder" id="ladder"></div>
-    </div>
+    </details>
     <div class="panel">
       <div class="substrip">
         <div>
@@ -318,16 +360,19 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
       <button class="btn" id="copyXml">Copy import XML</button>
       <button class="btn" id="saveCsv">Save results as CSV</button>
     </div>
-    <div class="row">
-      <button class="btn" id="backupBtn">Back up progress (.json)</button>
-      <label class="btn" style="cursor:pointer">Restore progress… <input type="file" id="restoreIn" accept=".json,application/json" hidden></label>
-      <span class="muted" style="font-size:.85rem">Your progress lives in this browser. A backup moves it to another browser or computer, or brings it over from the Claude version.</span>
+    <details class="howto" id="exportSteps">
+      <summary>How to import it</summary>
+      <ol class="steps">
+        <li><b>AniList:</b> set your scoring system to <b>10 Point Decimal</b> (or <b>100 Point</b>) in Settings → Lists, then upload under Settings → Import Lists → MyAnimeList (anilist.co/settings/import).</li>
+        <li><b>MyAnimeList:</b> tick the round-to-whole-numbers box first, then upload at myanimelist.net/import.php using <b>MyAnimeList Import</b>.</li>
+        <li>The file holds every scored show and benchmark. Shows are matched by their MyAnimeList ID.</li>
+      </ol>
+    </details>
+    <div class="row small">
+      <button class="btn" id="backupBtn">Back up progress</button>
+      <label class="btn" style="cursor:pointer">Restore… <input type="file" id="restoreIn" accept=".json,application/json" hidden></label>
+      <span class="muted" style="font-size:.82rem">Moves your progress to another browser.</span>
     </div>
-    <ol class="steps" id="exportSteps">
-      <li><b>AniList:</b> set your scoring system to <b>10 Point Decimal</b> in Settings → Lists so half points show, then upload under Settings → Import Lists → MyAnimeList (anilist.co/settings/import).</li>
-      <li><b>MyAnimeList:</b> tick the round-to-whole-numbers box first, then upload at myanimelist.net/import.php using <b>MyAnimeList Import</b>.</li>
-      <li>The file holds every scored show and benchmark. Shows are matched by their MyAnimeList ID.</li>
-    </ol>
     <div class="toast" id="toast" role="status"></div>
     <textarea class="xmlout" id="xmlOut" hidden readonly></textarea>
   </section>
@@ -740,7 +785,7 @@ function refSummary(){
 function renderSource(){
   const line = $('sourceLine');
   if(S.source==='sample'){
-    line.innerHTML = `<span class="tag">Example list</span> <span class="muted">Try a few rounds, then load your own list below.</span>`;
+    line.innerHTML = `<span class="tag">Example list</span> <span class="muted">Below is an example to try. Start with your own list here.</span>`;
   } else {
     const what = S.source==='paste' ? 'Pasted titles' : `${esc(S.fileName||'List export')} · ${S.kind}`;
     line.innerHTML = `<span class="tag">${what}</span> <span class="muted">${S.items.length} shows. Progress saves in this browser.</span>`;
@@ -759,6 +804,7 @@ function renderStage(){
     <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} under ${MIN_EPS} episodes left out</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
   if(!B.length){
     st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
+    $('benchPanel').open = true;
     return;
   }
   if(!S.cur){
@@ -804,24 +850,29 @@ function renderStage(){
         agreeKeys = [...groups].sort((x, y) => x[1][0][1] - y[1][0][1]).map(([v, ps]) => ({v, ps})); // fixed order: by who comes first in your people list
         return agreeKeys.length ? `<div class="direct">${agreeKeys.map(({v, ps}, n) => `<button class="btn" data-agree="${ps[0][1]}">Agree with ${ps.map(([P]) => esc(P.name)).join(', ')} · ${fmt(v)}${n<9?`<span class="kbd">${n+1}</span>`:''}</button>`).join('')}</div>` : '';
       })()}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      <div class="minor">
         <button class="btn" id="dropBtn">Dropped<span class="kbd">D</span></button>
         <button class="btn" id="nwBtn">Didn't watch<span class="kbd">X</span></button>
         <button class="btn" id="skipBtn">Skip for now<span class="kbd">K</span></button>
         <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button>
       </div>${statsHtml}
       <details class="settings" id="settingsBox" ${settingsOpen?'open':''}>
-        <summary>Settings</summary>
-        <div class="opts">
-          <label><input type="checkbox" id="optOld" ${S.showOld?'checked':''}> Show other scores</label>
-          <label title="Starts each search at your old score, or the site median if you never scored it"><input type="checkbox" id="optHints" ${S.hints?'checked':''}> Start near old score or site median</label>
-          <label><input type="checkbox" id="optMinEps" ${S.minEps!==false?'checked':''}> Leave out series under ${MIN_EPS} episodes (movies stay in)</label>
-          <label title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark"><input type="checkbox" id="optFill" ${S.fillGaps!==false?'checked':''}> Fill empty steps with new benchmarks</label>
-          <label title="Compare against any show with the benchmark's exact score, not always the benchmark itself"><input type="checkbox" id="optVary" ${PREFS.vary?'checked':''}> Vary the shows you compare against</label>
-          <span class="optrow">Steps (← →)
-            ${[1, 0.5, 0.1].map(v => `<label><input type="radio" name="optStep" value="${v}" ${PREFS.step===v?'checked':''}> ${PREFS.scale===100 ? v*10 : v}</label>`).join('')}</span>
-          <span class="optrow">Scale
-            ${[10, 100].map(v => `<label><input type="radio" name="optScale" value="${v}" ${PREFS.scale===v?'checked':''}> ${v} points</label>`).join('')}</span>
+        <summary>⚙ Settings</summary>
+        <div class="setgrid">
+          <div class="setrow"><span class="lbl">Steps</span>
+            <div class="seg" role="group" aria-label="Score steps (← →)">${[1, 0.5, 0.1].map(v => `<button data-opt-step="${v}" aria-pressed="${PREFS.step===v}">${PREFS.scale===100 ? v*10 : v}</button>`).join('')}</div>
+            <span class="lbl">Scale</span>
+            <div class="seg" role="group" aria-label="Scale">${[10, 100].map(v => `<button data-opt-scale="${v}" aria-pressed="${PREFS.scale===v}">${v}</button>`).join('')}</div>
+          </div>
+          <div class="setrow"><span class="lbl">Compare</span>
+            <button class="pill" data-opt="vary" aria-pressed="${PREFS.vary}" title="Compare against any show with the benchmark's exact score, not always the benchmark itself">Vary the shows</button>
+            <button class="pill" data-opt="hints" aria-pressed="${!!S.hints}" title="Starts each search at your old score, or the site median if you never scored it">Start near old score</button>
+            <button class="pill" data-opt="fill" aria-pressed="${S.fillGaps!==false}" title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark">Fill empty steps</button>
+          </div>
+          <div class="setrow"><span class="lbl">Show</span>
+            <button class="pill" data-opt="old" aria-pressed="${!!S.showOld}" title="Your old score, the site median and followed people's scores on the cards">Old &amp; others' scores</button>
+            <button class="pill" data-opt="minEps" aria-pressed="${S.minEps!==false}" title="Series with fewer than ${MIN_EPS} episodes sit out; movies stay in">Skip series under ${MIN_EPS} eps</button>
+          </div>
         </div>
       </details>`;
     $('settingsBox').addEventListener('toggle', e => { settingsOpen = e.target.open; });
@@ -833,18 +884,25 @@ function renderStage(){
     st.querySelectorAll('[data-step]').forEach(btn => btn.onclick = () => { stepDirect(+btn.dataset.step); btn.blur(); });
     $('directSet').onclick = setDirect;
     st.querySelectorAll('[data-agree]').forEach(b => b.onclick = () => agreeRef(+b.dataset.agree));
-    $('optOld').onchange = e => { S.showOld = e.target.checked; save(); render(); };
-    $('optHints').onchange = e => { S.hints = e.target.checked; save(); };
-    $('optFill').onchange = e => { S.fillGaps = e.target.checked; save(); };
-    $('optMinEps').onchange = e => { S.minEps = e.target.checked; applyMinEps(); };
-    $('optVary').onchange = e => { PREFS.vary = e.target.checked; savePrefs(); };
+    // Settings pills: each flips its option (some redraw, the rest only take effect from the next show)
+    const OPTS = {
+      old: on => { S.showOld = on; save(); render(); },
+      hints: on => { S.hints = on; save(); },
+      fill: on => { S.fillGaps = on; save(); },
+      minEps: on => { S.minEps = on; applyMinEps(); },
+      vary: on => { PREFS.vary = on; savePrefs(); },
+    };
+    st.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
+      const on = b.getAttribute('aria-pressed')!=='true';
+      b.setAttribute('aria-pressed', on); OPTS[b.dataset.opt](on);
+    });
     // A new step size: the show on screen starts over with it (scores given so far stay)
-    st.querySelectorAll('input[name=optStep]').forEach(r => r.onchange = () => {
-      PREFS.step = +r.value; savePrefs(); direct = null;
+    st.querySelectorAll('[data-opt-step]').forEach(b => b.onclick = () => {
+      PREFS.step = +b.dataset.optStep; savePrefs(); direct = null;
       if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
       advance(); save(); render();
     });
-    st.querySelectorAll('input[name=optScale]').forEach(r => r.onchange = () => { PREFS.scale = +r.value; savePrefs(); render(); });
+    st.querySelectorAll('[data-opt-scale]').forEach(b => b.onclick = () => { PREFS.scale = +b.dataset.optScale; savePrefs(); render(); });
   }
   const ub = $('undoBtn'); if(ub) ub.onclick = undo;
   const us = $('unskipBtn'); if(us) us.onclick = unskip;
@@ -870,6 +928,7 @@ function renderLadder(){
     const at = order.filter(i => !removed.has(i) && scoreNow(i)===L), rest = order.filter(i => !removed.has(i) && scoreNow(i)!==L);
     $('benchOptions').innerHTML = [...at, ...rest].map(i => `<option value="${esc(labelOf[i])}">${scoreNow(i)!=null ? fmt(scoreNow(i)) : ''}</option>`).join('');
   };
+  $('benchCount').textContent = `· ${LEVELS.filter(L => S.bench[L]!=null).length} of ${LEVELS.length} set`;
   $('ladder').innerHTML = LEVELS.map(L => `<div class="rung">${scoreChip(L)}
       <input type="text" list="benchOptions" id="bench-${L*10}" data-l="${L}" class="${S.bench[L]==null?'empty':''}" placeholder="Type a title…"
         value="${S.bench[L]!=null ? esc(labelOf[S.bench[L]] || T(S.items[S.bench[L]])) : ''}" aria-label="Benchmark for ${fmt(L)}" autocomplete="off">
@@ -1701,7 +1760,7 @@ function startFollowing(){
 (() => {
   const root = document.documentElement, btn = $('themeBtn');
   const current = () => root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const show = () => { btn.textContent = current()==='dark' ? '☀ Light mode' : '☾ Dark mode'; };
+  const show = () => { btn.textContent = current()==='dark' ? '☀' : '☾'; btn.title = current()==='dark' ? 'Light mode' : 'Dark mode'; };
   try{ const saved = localStorage.getItem('hl-theme'); if(saved) root.dataset.theme = saved; }catch(e){}
   show();
   btn.onclick = () => { const next = current()==='dark' ? 'light' : 'dark'; root.dataset.theme = next; try{ localStorage.setItem('hl-theme', next); }catch(e){} show(); };
