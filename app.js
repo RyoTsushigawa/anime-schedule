@@ -180,6 +180,41 @@ async function downloadAirings(start) {
   }
 }
 
+// When the weekly LiveChart data is out of date (its "next episode" has already passed), AniList's
+// next airing episode decides whether a show has a break: AniList id → {episode, at} (null = none
+// scheduled), kept 6 hours; ids still waiting for a lookup are collected in render().
+const NEXT_KEEP_MS = 6 * 3600000;
+const aniNext = new Map();
+const pendingNext = new Set();
+function nextFromAniList(id) {
+  if (!aniNext.has(id)) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('next:' + id));
+      if (saved && Date.now() - saved.time < NEXT_KEEP_MS) aniNext.set(id, saved.next);
+    } catch {}
+  }
+  if (!aniNext.has(id)) pendingNext.add(id);
+  return aniNext.get(id);
+}
+async function lookUpNext() {
+  const ids = [...pendingNext];
+  pendingNext.clear();
+  let media = [];
+  try {
+    media = (await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id nextAiringEpisode { episode airingAt } } } }',
+      { ids: ids.map(Number) })).Page.media;
+  } catch {
+    for (const id of ids) aniNext.set(id, null); // AniList busy: no break shown this visit
+    return;
+  }
+  for (const id of ids) {
+    const n = media.find(m => String(m.id) === String(id))?.nextAiringEpisode;
+    const next = n ? { episode: n.episode, at: n.airingAt } : null;
+    aniNext.set(id, next);
+    try { localStorage.setItem('next:' + id, JSON.stringify({ time: Date.now(), next })); } catch {}
+  }
+}
+
 // Older shows in the plan (rewatches): looked up on AniList by title once, kept for 7 days.
 // title → media, null = not found; shows still waiting for a lookup are collected in render().
 const rewatchMedia = new Map();
@@ -432,17 +467,26 @@ function render(items, start, plans) {
   const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
   const weekEnd = days[6].date.getTime() + 86400000;
   const unknown = [];
+  const breaks = []; // also listed at the top, with the reason
   for (const [show, slot] of [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : [])) {
     if (found.has(show)) continue;
     // The same show listed twice in the sheet, already on the schedule through its other row.
     if ([...found].some(f => titleMatches([f.romaji, f.english], [show.romaji, show.english]))) continue;
-    const status = Object.values(streamsDe?.status || {}).find(s => titleMatches([show.romaji, show.english], s.titles));
-    if (status && !status.next) continue; // finished
+    const [alId, status] = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches([show.romaji, show.english], s.titles)) || [];
+    let upcoming = status?.next;
+    // LiveChart's next episode already passed: the weekly data is behind, AniList knows better
+    if (upcoming && upcoming.at * 1000 < days[0].date.getTime()) {
+      const fresh = nextFromAniList(alId);
+      if (fresh === undefined) { unknown.push(show); continue; } // still asking AniList
+      upcoming = fresh && { episode: fresh.episode, at: fresh.at + (streamsDe?.release?.[alId]?.offset || 0) };
+    }
+    if (status && !upcoming) continue; // finished
     const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
     if (!day || weekEnd < Date.now()) { unknown.push(show); continue; }
-    const next = status && new Date(status.next.at * 1000);
+    const next = upcoming && new Date(upcoming.at * 1000);
     if (next && next >= weekEnd) {
-      day.rows.push({ pause: true, show, slot, when: next, news: status.news || [] });
+      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode, news: status.news || [] });
+      breaks.push({ show, when: next, episode: upcoming.episode, news: status.news || [] });
       found.add(show);
       continue;
     }
@@ -464,14 +508,19 @@ function render(items, start, plans) {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     // Rows without a ✓ keep its place, so every row's buttons line up.
     const checkSpace = auth ? '<div class="watch-space"></div><div class="drop-space"></div>' : '';
-    const pause = ({ show, when, news }) => `
+    // The reason: the newest LiveChart headline about the break (linked to the article), or a
+    // note that none was announced.
+    const pause = ({ show, when, episode, news }) => `
       <div class="row pause" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
-          <div class="ep">No episode this week · back ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+          <div class="ep">No episode this week · ${episode ? `episode ${episode} ` : ''}${episode ? 'on' : 'back'} ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+          <div class="ep reason">${news.length
+            ? `<a href="${safeUrl(news[0].url)}" target="_blank" rel="noopener">${esc(news[0].title)}</a>`
+            : 'No reason announced on LiveChart'}</div>
         </div>
-        <div class="links">${news.slice(0, 1).map(n => `<a class="cr news" href="${safeUrl(n.url)}" target="_blank" rel="noopener" title="${esc(n.title)}">Why?</a>`).join('')}</div>
+        <div class="links"></div>
         ${checkSpace}
       </div>`;
     const rewatch = ({ m, links, watchAt }) => `
@@ -520,9 +569,16 @@ function render(items, start, plans) {
   // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
   const age = streamsDe?.generated && Math.floor((Date.now() - Date.parse(streamsDe.generated)) / 86400000);
   if (age >= 14) html = `<div class="notice">Stream links were last updated ${age} days ago; the weekly refresh may have stopped.</div>` + html;
-  // At the very top, in red: plan shows that couldn't be placed this week.
-  if (unknown.length) html = `<details class="warning"><summary>${unknown.length} ${unknown.length === 1 ? 'show' : 'shows'} from the Guckplan ${unknown.length === 1 ? "isn't" : "aren't"} airing this week (or couldn't be matched)</summary>
-    <ul>${unknown.map(s => `<li>${esc(s.english || s.romaji)}</li>`).join('')}</ul></details>` + html;
+  // At the very top, in red, one line per show: breaks with the reason (the newest LiveChart
+  // headline about it, linked) and when it's back, then plan shows that couldn't be placed.
+  const dayName = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const lines = [
+    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> isn't airing this week → ${b.news.length
+      ? `<a href="${safeUrl(b.news[0].url)}" target="_blank" rel="noopener">${esc(b.news[0].title)}</a>`
+      : '<span class="why">no reason announced on LiveChart</span>'} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
+    ...unknown.map(s => `<div><b>${esc(s.english || s.romaji)}</b> isn't airing this week → <span class="why">nothing found for it this week (or couldn't be matched)</span></div>`),
+  ];
+  if (lines.length) html = `<div class="alerts" role="status">${lines.join('')}</div>` + html;
   document.body.style.removeProperty('--time-width');
   $('list').innerHTML = html;
   // Same width for every time cell (the widest one), so covers and titles line up.
@@ -1167,6 +1223,7 @@ async function load(refresh = false) {
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
     // Rewatches seen for the first time: look them up, then show them.
     if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
+    if (pendingNext.size) lookUpNext().then(() => load(true));
     // A new week starts at the top (with "Today", that's today itself).
     if (!refresh) window.scrollTo(0, 0);
   } catch (e) {
