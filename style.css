@@ -191,6 +191,16 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .watch.done { background: var(--green); color: #fff; }
 .drop { flex: none; min-width: 52px; height: 30px; padding: 0 8px; border-radius: 8px; color: var(--muted); font-size: 12px; }
 .drop-space { flex: none; width: 52px; }
+/* ⇄ (owner only) and its dialogs */
+.move { flex: none; width: 30px; height: 30px; border-radius: 8px; color: var(--muted); font-size: 14px; padding: 0; }
+.dlg { border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text); padding: 16px; width: min(380px, 92vw); }
+.dlg::backdrop { background: rgba(0, 0, 0, .55); }
+.dlg form { display: grid; gap: 10px; }
+.dlg .muted { color: var(--muted); font-size: 13px; }
+.dlg-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dlg select, .dlg input { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+.dlg input { flex: 1; min-width: 0; }
+.dlg .pill.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .drop[data-sure] { color: #e5484d; border-color: #e5484d; }
 .drop.dropped { display: inline-grid; place-items: center; border: 1px dashed var(--line); color: var(--muted); font-size: 11px; }
 #notice { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10; display: flex; gap: 12px; align-items: center;
