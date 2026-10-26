@@ -180,6 +180,12 @@ async function downloadAirings(start) {
   }
 }
 
+// The owner gets a ⇄ on each show to move it (others just see it in its new place).
+const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'no day';
+const moveButton = (show, slot) => !movesKey || !show ? '' :
+  `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
+    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" title="Move to another day or time (everyone sees it)">⇄</button>`;
+
 // Why a show has a break: LiveChart's timetable note for that week, else its newest break
 // headline (linked), else `none` (already HTML). A note is cut down to its cause ("…no broadcast
 // today due to sports coverage." → "sports coverage"); otherwise its "today" becomes its day.
@@ -419,6 +425,11 @@ function render(items, start, plans) {
         if (people.includes(p) && !merged.get(show)?.time) merged.set(show, slot);
         who.set(show, [...who.get(show) || [], p]);
       }
+    // Shows moved out of their Guckplan slot (moves.json), this week or from now on
+    for (const [show, slot] of merged) {
+      const mv = moveFor(show, start);
+      if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot });
+    }
     whoBySheet.set(s, who);
     return [s, merged];
   }));
@@ -465,7 +476,7 @@ function render(items, start, plans) {
     // One entry per show and week; several episodes (batch drops, double episodes) are merged.
     const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
     if (existing) existing.episodes.push(it.episode);
-    else day.rows.push({ it, m, links, when, slot, episodes: [it.episode], who: whoBySheet.get(sheet).get(show) });
+    else day.rows.push({ it, m, links, when, slot, show, episodes: [it.episode], who: whoBySheet.get(sheet).get(show) });
   }
 
   // Shows from this week's plan without an episode, checked against LiveChart (weekly script):
@@ -523,7 +534,7 @@ function render(items, start, plans) {
     const checkSpace = auth ? '<div class="watch-space"></div><div class="drop-space"></div>' : '';
     // The reason: the newest LiveChart headline about the break (linked to the article), or a
     // note that none was announced.
-    const pause = ({ show, when, episode, note, news }) => `
+    const pause = ({ show, slot, when, episode, note, news }) => `
       <div class="row pause" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         <div class="info">
@@ -531,7 +542,7 @@ function render(items, start, plans) {
           <div class="ep">No episode this week · ${episode ? `episode ${episode} ` : ''}${episode ? 'on' : 'back'} ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
           <div class="ep reason">${reasonHtml(note, news, 'No reason announced on LiveChart')}</div>
         </div>
-        <div class="links"></div>
+        <div class="links">${moveButton(show, slot)}</div>
         ${checkSpace}
       </div>`;
     const rewatch = ({ m, links, watchAt }) => `
@@ -554,7 +565,7 @@ function render(items, start, plans) {
       return choices.time === 'watch' ? watch
         : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : release;
     };
-    const episodeRow = ({ it, m, links, when, watchAt, episodes, who }) => `
+    const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
       <div class="row" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time">${timeCell(when, watchAt)}</div>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
@@ -562,7 +573,7 @@ function render(items, start, plans) {
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
-        <div class="links">${linkButtons(links)}</div>
+        <div class="links">${linkButtons(links)}${moveButton(show, slot)}</div>
         ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
@@ -1263,8 +1274,125 @@ $('others').onchange = () => {
   load(true); // redraw in place, no jump back to today
 };
 
+// ---------- Moved shows ----------
+// moves.json on the site moves a show out of its Guckplan slot without touching the sheet:
+// {updated, moves: [{show (norm of its sheet title), title, tag ('Sa.'), time ('21:00' or ''),
+// week (that week's Monday, '2026-10-26', or '' = from now on)}]}. Everyone sees the moves; only
+// a browser holding a GitHub key that may write to the site's repository gets "Move" (⚙ menu).
+const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
+let moves = [];
+let movesKey = '';
+try { movesKey = localStorage.getItem('movesKey') || ''; } catch {}
+const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+async function loadMoves() {
+  let site = null, own = null;
+  try { site = await (await fetch('moves.json', { cache: 'no-cache' })).json(); } catch {}
+  // Right after a move the site takes a minute to update: until then this browser's copy is newer
+  try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
+  const newest = own && (!site || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
+  moves = newest?.moves || [];
+}
+// The move for a show in the week starting `monday`: that week's own, else a lasting one
+function moveFor(show, monday) {
+  const key = norm(show.romaji || show.english);
+  return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
+}
+async function saveMoves(next) {
+  // Moves for weeks long gone are dropped along the way
+  next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
+  const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
+  const current = await fetch(MOVES_API + '?ref=main', { headers, cache: 'no-store' });
+  const sha = current.ok ? (await current.json()).sha : undefined;
+  const file = { updated: new Date().toISOString(), moves: next };
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
+  const res = await fetch(MOVES_API, { method: 'PUT', headers,
+    body: JSON.stringify({ message: 'Move shows', content, branch: 'main', ...(sha && { sha }) }) });
+  if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'the GitHub key may not write here' : `GitHub answered ${res.status}`);
+  moves = next;
+  try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
+}
+
+// The ⚙ "Moving shows" entry only shows where a key is saved; the first time, open the site with
+// #moves at the end of the address.
+$('movesSetup').hidden = !movesKey;
+function openKeyDialog() {
+  $('keyInput').value = '';
+  $('keyMsg').textContent = movesKey ? 'A key is saved in this browser.' : '';
+  $('keyDlg').showModal();
+}
+$('movesSetup').onclick = openKeyDialog;
+if (location.hash === '#moves') { history.replaceState(null, '', location.pathname + location.search); openKeyDialog(); }
+$('keySave').onclick = async () => {
+  const key = $('keyInput').value.trim();
+  if (!key) return;
+  $('keyMsg').textContent = 'Checking…';
+  try {
+    const res = await fetch('https://api.github.com/repos/RyoTsushigawa/anime-schedule', { headers: { Authorization: `Bearer ${key}` } });
+    const repo = res.ok ? await res.json() : null;
+    if (!repo?.permissions?.push) throw new Error(res.ok ? "this key can't change the site" : `GitHub answered ${res.status}`);
+    movesKey = key;
+    try { localStorage.setItem('movesKey', key); } catch {}
+    $('movesSetup').hidden = false;
+    $('keyMsg').textContent = 'Saved. Shows in the week now have ⇄ to move them.';
+    load(true);
+  } catch (e) { $('keyMsg').textContent = `Not saved: ${e.message}`; }
+};
+$('keyRemove').onclick = () => {
+  movesKey = '';
+  try { localStorage.removeItem('movesKey'); } catch {}
+  $('keyMsg').textContent = 'Removed from this browser.';
+  load(true);
+};
+
+// ⇄ on a row: a new day and time, for this week or from now on; or back to the Guckplan slot
+let moving = null, moveScope = 'week';
+const setMoveScope = scope => {
+  moveScope = scope;
+  $('moveWeek').setAttribute('aria-pressed', scope === 'week');
+  $('moveAlways').setAttribute('aria-pressed', scope === 'always');
+};
+$('moveWeek').onclick = () => setMoveScope('week');
+$('moveAlways').onclick = () => setMoveScope('always');
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('.move');
+  if (!b) return;
+  moving = { key: norm(b.dataset.moveTitle), name: b.dataset.moveName };
+  const week = isoDay(weekStart(weekOffset));
+  const mv = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
+  $('moveName').textContent = moving.name;
+  $('moveFrom').textContent = mv ? `Moved ${mv.week ? 'for this week' : 'from now on'}; “Back” returns it to the Guckplan slot.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
+  $('moveTag').value = b.dataset.tag || 'Mo.';
+  $('moveTime').value = b.dataset.time || '';
+  setMoveScope(mv && !mv.week ? 'always' : 'week');
+  $('moveReset').hidden = !mv;
+  $('moveMsg').textContent = '';
+  $('moveDlg').showModal();
+});
+async function storeMoves(next, done) {
+  $('moveMsg').textContent = 'Saving…';
+  try {
+    await saveMoves(next);
+    $('moveDlg').close();
+    notice(`${done} Everyone sees it in about a minute.`);
+    load(true);
+  } catch (e) { $('moveMsg').textContent = `Not saved: ${e.message}`; }
+}
+$('moveSave').onclick = () => {
+  const time = $('moveTime').value.trim();
+  if (time && !parseTime(time)) { $('moveMsg').textContent = 'Time like 21:00, or empty for the next free slot.'; return; }
+  const week = moveScope === 'week' ? isoDay(weekStart(weekOffset)) : '';
+  const next = moves.filter(m => !(m.show === moving.key && m.week === week))
+    .concat({ show: moving.key, title: moving.name, tag: $('moveTag').value, time, week });
+  storeMoves(next, `${moving.name} moved to ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' this week' : ''}.`);
+};
+$('moveReset').onclick = () => {
+  const week = isoDay(weekStart(weekOffset));
+  storeMoves(moves.filter(m => !(m.show === moving.key && (m.week === week || !m.week))), `${moving.name} is back in its Guckplan slot.`);
+};
+
 // The German links and the sheet's tab list, fetched side by side; load() waits for both.
 const ready = Promise.all([
+  loadMoves(),
   fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
     .then(json => { streamsDe = json; }, e => console.warn('streams-de.json not loaded:', e)),
   savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
