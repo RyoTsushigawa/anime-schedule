@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-26T17:45:02.445Z",
+ "generated": "2026-10-26T18:04:43.884Z",
  "byAnilist": {
   "152677": [
    {
@@ -810,7 +810,13 @@
     "episode": 5,
     "at": 1794124800
    },
-   "news": []
+   "news": [],
+   "notes": [
+    {
+     "at": 1793518200,
+     "text": "There will be no broadcast today due to sports coverage."
+    }
+   ]
   },
   "191656": {
    "titles": [
