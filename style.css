@@ -166,6 +166,8 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .row.aired { opacity: .6; }
 .row.pause { opacity: .6; border-style: dashed; padding: 10px 8px; }
 .row.pause .time { color: var(--muted); font-weight: 500; }
+.row.pause .reason { font-style: italic; }
+.row.pause .reason a { color: inherit; text-decoration: underline dotted; }
 .cr.news { background: transparent; color: var(--text); border: 1px solid var(--line); }
 /* Shows sharing one watch slot: one card, rows split by a thin line */
 .shared { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
@@ -205,6 +207,12 @@ details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1
   background: color-mix(in srgb, #e5484d 10%, transparent); }
 details.warning summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 6px 0 0; padding-left: 20px; }
+/* The week's breaks and unplaced shows, one line each, always open */
+.alerts { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1px solid #e5484d; border-radius: 10px;
+  background: color-mix(in srgb, #e5484d 10%, transparent); font-size: 13px; display: grid; gap: 4px; }
+.alerts b { font-weight: 600; }
+.alerts a { color: inherit; text-decoration: underline dotted; }
+.alerts .why { opacity: .85; }
 /* Buttons on one line, so rows keep their height when "Other services" adds some */
 @media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
 @media (max-width: 560px) {
