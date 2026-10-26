@@ -1,0 +1,14 @@
+name: LiveChart test
+on: workflow_dispatch
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA="Mozilla/5.0 (personal Guckplan schedule; one request every 5s)"
+          for p in "/timetable" "/anime/13118/schedules" "/anime/13118/streams" "/anime/13118/headlines" "/fall-2026/tv"; do
+            code=$(curl -s -o page.html -w "%{http_code}" -A "$UA" "https://www.livechart.me$p")
+            echo "$p -> $code, $(wc -c < page.html) bytes, notes: $(grep -o 'lc-timetable-timeslot__note' page.html | wc -l), cards: $(grep -o 'data-controller=\"release-schedule\"' page.html | wc -l)"
+            sleep 6
+          done
+          curl -s https://ipinfo.io/country
