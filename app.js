@@ -180,6 +180,15 @@ async function downloadAirings(start) {
   }
 }
 
+// Why a show has a break: LiveChart's timetable note for that week, else its newest break
+// headline (linked), else `none` (already HTML). A note is cut down to its cause ("…no broadcast
+// today due to sports coverage." → "sports coverage"); otherwise its "today" becomes its day.
+const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
+  || note.text.replace(/\btoday\b/i, 'on ' + new Date(note.at * 1000).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }));
+const reasonHtml = (note, news, none) => note
+  ? esc(noteReason(note))
+  : news?.length ? `<a href="${safeUrl(news[0].url)}" target="_blank" rel="noopener">${esc(news[0].title)}</a>` : none;
+
 // When the weekly LiveChart data is out of date (its "next episode" has already passed), AniList's
 // next airing episode decides whether a show has a break: AniList id → {episode, at} (null = none
 // scheduled), kept 6 hours; ids still waiting for a lookup are collected in render().
@@ -485,8 +494,12 @@ function render(items, start, plans) {
     if (!day || weekEnd < Date.now()) { unknown.push(show); continue; }
     const next = upcoming && new Date(upcoming.at * 1000);
     if (next && next >= weekEnd) {
-      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode, news: status.news || [] });
-      breaks.push({ show, when: next, episode: upcoming.episode, news: status.news || [] });
+      // The reason: LiveChart's timetable note for this week ("no broadcast today due to sports
+      // coverage"), else its newest break headline
+      const note = (status.notes || []).find(n => n.at * 1000 >= days[0].date.getTime() - 86400000 && n.at * 1000 < weekEnd);
+      const why = { note: note || null, news: status.news || [] };
+      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode, ...why });
+      breaks.push({ show, when: next, episode: upcoming.episode, ...why });
       found.add(show);
       continue;
     }
@@ -510,15 +523,13 @@ function render(items, start, plans) {
     const checkSpace = auth ? '<div class="watch-space"></div><div class="drop-space"></div>' : '';
     // The reason: the newest LiveChart headline about the break (linked to the article), or a
     // note that none was announced.
-    const pause = ({ show, when, episode, news }) => `
+    const pause = ({ show, when, episode, note, news }) => `
       <div class="row pause" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
           <div class="ep">No episode this week · ${episode ? `episode ${episode} ` : ''}${episode ? 'on' : 'back'} ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-          <div class="ep reason">${news.length
-            ? `<a href="${safeUrl(news[0].url)}" target="_blank" rel="noopener">${esc(news[0].title)}</a>`
-            : 'No reason announced on LiveChart'}</div>
+          <div class="ep reason">${reasonHtml(note, news, 'No reason announced on LiveChart')}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}
@@ -573,9 +584,8 @@ function render(items, start, plans) {
   // headline about it, linked) and when it's back, then plan shows that couldn't be placed.
   const dayName = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const lines = [
-    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> isn't airing this week → ${b.news.length
-      ? `<a href="${safeUrl(b.news[0].url)}" target="_blank" rel="noopener">${esc(b.news[0].title)}</a>`
-      : '<span class="why">no reason announced on LiveChart</span>'} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
+    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> isn't airing this week → ${reasonHtml(b.note, b.news,
+      '<span class="why">no reason announced on LiveChart</span>')} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
     ...unknown.map(s => `<div><b>${esc(s.english || s.romaji)}</b> isn't airing this week → <span class="why">nothing found for it this week (or couldn't be matched)</span></div>`),
   ];
   if (lines.length) html = `<div class="alerts" role="status">${lines.join('')}</div>` + html;
