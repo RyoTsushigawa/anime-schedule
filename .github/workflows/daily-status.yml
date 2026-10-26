@@ -1,0 +1,35 @@
+# Every day: breaks and their reasons, next episodes and the season lists from LiveChart
+# (tools/build-streams.mjs --status-only), so the page stays current even when the PC at home is
+# off. The German stream links can only come from Germany: those stay as the weekly run from home
+# (Sunday 20:00, Windows task) left them.
+name: Daily LiveChart status
+
+on:
+  schedule:
+    - cron: '30 15 * * *'   # 15:30 UTC = 16:30 in Germany (17:30 in summer)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read LiveChart (one request every 5 seconds, about 15 minutes)
+        run: node tools/build-streams.mjs --status-only
+      - name: Save the new data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add streams-de.json seasons.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Daily LiveChart status"
+          # the PC at home may have published meanwhile; put this commit on top of it
+          git pull --rebase origin main
+          git push
