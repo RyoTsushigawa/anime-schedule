@@ -7,7 +7,7 @@ jobs:
       - run: |
           UA="Mozilla/5.0 (personal Guckplan schedule; one request every 5s)"
           for p in "/timetable?date=2026-10-26"; do
-            code=$(curl -s -o page.html -w "%{http_code} -> %{redirect_url}" -A "$UA" "https://www.livechart.me$p")
+            code=$(curl -sL -o page.html -w "%{http_code} -> %{redirect_url}" -A "$UA" "https://www.livechart.me$p")
             echo "$p -> $code, $(wc -c < page.html) bytes, notes: $(grep -o 'lc-timetable-timeslot__note' page.html | wc -l), cards: $(grep -o 'data-controller=\"release-schedule\"' page.html | wc -l)"
             sleep 6
           done
