@@ -7,7 +7,7 @@
      Injected code couldn't run or send anything (like AniList logins) anywhere else. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
   img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://docs.google.com
-  https://*.googleusercontent.com https://sheets.googleapis.com; manifest-src 'self'; worker-src 'self';
+  https://*.googleusercontent.com https://sheets.googleapis.com https://api.github.com; manifest-src 'self'; worker-src 'self';
   object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Simulcast Schedule</title>
@@ -84,6 +84,7 @@
             <a href="planner.html" target="_blank" rel="noopener" title="Opens in a new tab; only suggests, changes nothing">Watch plan generator ↗</a>
             <a href="ranker/" target="_blank" rel="noopener" title="Rescore your list show by show (opens in a new tab)">Higher or Lower ranker ↗</a>
             <button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button>
+            <button id="movesSetup" class="muted" title="Move shows out of their Guckplan slot for everyone (needs a GitHub key)">⇄ Moving shows</button>
           </div>
         </section>
       </div>
@@ -129,6 +130,43 @@
 </header>
 <main id="list"><div class="status">Loading…</div></main>
 <!-- After a ✓, Drop or "Mark all as watched": what happened, and Undo (Ctrl+Z on a keyboard) -->
+<!-- Moving a show out of its Guckplan slot (only with a GitHub key that may write to the site) -->
+<dialog id="moveDlg" class="dlg">
+  <form method="dialog">
+    <b id="moveName"></b>
+    <div class="muted" id="moveFrom"></div>
+    <div class="dlg-row">
+      <select id="moveTag" aria-label="Day">
+        <option value="Mo.">Mon</option><option value="Di.">Tue</option><option value="Mi.">Wed</option><option value="Do.">Thu</option>
+        <option value="Fr.">Fri</option><option value="Sa.">Sat</option><option value="So.">Sun</option>
+      </select>
+      <input id="moveTime" placeholder="time, e.g. 21:00" inputmode="numeric" maxlength="5" aria-label="Time (empty = next free slot)">
+    </div>
+    <div class="segmented" role="group" aria-label="For">
+      <button type="button" id="moveWeek" aria-pressed="true">This week</button><button type="button" id="moveAlways" aria-pressed="false">From now on</button>
+    </div>
+    <div class="muted" id="moveMsg"></div>
+    <div class="dlg-row">
+      <button type="button" id="moveSave" class="pill primary">Move</button>
+      <button type="button" id="moveReset" class="pill">Back to the Guckplan slot</button>
+      <button value="cancel" class="pill">Cancel</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="keyDlg" class="dlg">
+  <form method="dialog">
+    <b>Moving shows</b>
+    <div class="muted">Moves are saved on the site for everyone, so this browser needs a GitHub key that may change the site's
+      files: a fine-grained token for <b>anime-schedule</b> with <b>Contents: read and write</b>. It stays in this browser only.</div>
+    <input id="keyInput" type="password" placeholder="github_pat_…" autocomplete="off" aria-label="GitHub key">
+    <div class="muted" id="keyMsg"></div>
+    <div class="dlg-row">
+      <button type="button" id="keySave" class="pill primary">Save key</button>
+      <button type="button" id="keyRemove" class="pill">Remove key</button>
+      <button value="cancel" class="pill">Close</button>
+    </div>
+  </form>
+</dialog>
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
 
 <script src="common.js"></script>
