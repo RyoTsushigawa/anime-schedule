@@ -643,7 +643,7 @@
    ],
    "next": {
     "episode": 5,
-    "at": 1793638800
+    "at": 1793639160
    },
    "news": []
   },
@@ -708,8 +708,8 @@
     "Dark Machine: The Animation"
    ],
    "next": {
-    "episode": 3,
-    "at": 1793124900
+    "episode": 4,
+    "at": 1793729700
    },
    "news": []
   },
@@ -774,8 +774,8 @@
     "Suikoden: The Anime"
    ],
    "next": {
-    "episode": 4,
-    "at": 1793111400
+    "episode": 5,
+    "at": 1793716200
    },
    "news": []
   },
@@ -796,8 +796,8 @@
     "Battle Spirits [Re]: Zekkai no Kuu"
    ],
    "next": {
-    "episode": 4,
-    "at": 1793111400
+    "episode": 5,
+    "at": 1793716200
    },
    "news": []
   },
@@ -879,8 +879,8 @@
     "Chitose Is in the Ramune Bottle Part 2"
    ],
    "next": {
-    "episode": 3,
-    "at": 1793118600
+    "episode": 4,
+    "at": 1793723400
    },
    "news": []
   },
@@ -923,8 +923,8 @@
     "Super Psychic Policeman Chojo"
    ],
    "next": {
-    "episode": 4,
-    "at": 1793112300
+    "episode": 5,
+    "at": 1793717100
    },
    "news": []
   },
@@ -990,9 +990,15 @@
    ],
    "next": {
     "episode": 5,
-    "at": 1793629800
+    "at": 1794234600
    },
-   "news": []
+   "news": [],
+   "notes": [
+    {
+     "at": 1793628000,
+     "text": "Today's broadcast is a recap episode."
+    }
+   ]
   },
   "204389": {
    "titles": [
@@ -1066,8 +1072,8 @@
     "Nia Liston: The Merciless Maiden"
    ],
    "next": {
-    "episode": 4,
-    "at": 1793103900
+    "episode": 5,
+    "at": 1793708700
    },
    "news": []
   },
@@ -1088,8 +1094,8 @@
     "The Exiled Cheating Magician Enjoys an Unrestrained Second Life. I Can Give \"Strengthening Points\" Not Only to Weapons, But Also to Everything, and I Can Unlock the Effect at Any Time of My Will, But are the Rest Okay?"
    ],
    "next": {
-    "episode": 4,
-    "at": 1793115000
+    "episode": 5,
+    "at": 1793719800
    },
    "news": []
   },
@@ -1099,8 +1105,8 @@
     "Red River"
    ],
    "next": {
-    "episode": 17,
-    "at": 1793122200
+    "episode": 18,
+    "at": 1793726640
    },
    "news": []
   },
@@ -1154,8 +1160,8 @@
     "The Cold Sato-san is Only Sweet to Me"
    ],
    "next": {
-    "episode": 4,
-    "at": 1793107800
+    "episode": 5,
+    "at": 1793712600
    },
    "news": []
   },
@@ -1303,5 +1309,5 @@
    "news": []
   }
  },
- "statusUpdated": "2026-10-26T18:27:30.615Z"
+ "statusUpdated": "2026-10-27T20:20:36.343Z"
 }
