@@ -1032,8 +1032,14 @@ $('list').addEventListener('click', async e => {
 // Every show on the list with episodes out on our service that haven't been watched yet,
 // the longest-waiting first, with the next episode to watch.
 // When an episode counts as missed in Catch-up (seconds): its Guckplan watch slot ("Tag" +
-// "Uhrzeit") is over, or, without a time, the watch day is over; never before it's out.
-function dueAt(released, slot) {
+// "Uhrzeit") is over, or, without a time, the watch day is over; never before it's out. A show
+// moved for that week (or from now on, moves.json) counts in its new slot.
+function dueAt(released, slot, show) {
+  const monday = new Date(released * 1000);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
+  const mv = show && moveFor(show, monday);
+  if (mv) slot = { tag: mv.tag, time: mv.time };
   const day = watchDay(new Date(released * 1000), slot?.tag, slot?.time);
   const hm = parseTime(slot?.time);
   if (hm) day.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
@@ -1079,12 +1085,13 @@ async function loadCatchup() {
     const offset = streamsDe?.release?.[m.id]?.offset || 0;
     const next = m.nextAiringEpisode;
     const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
-    const slot = mySlots.find(([s]) => titleMatches([s.romaji, s.english], mediaTitles(m)))?.[1] || show;
+    const mine = mySlots.find(([s]) => titleMatches([s.romaji, s.english], mediaTitles(m)));
+    const slot = mine?.[1] || show;
     const released = ep => next.airingAt - (next.episode - ep) * week + offset;
     // Out so far: everything before the next episode, minus the newest ones whose watch time
     // hasn't passed yet (you're only behind once the planned slot is over).
     let out = next ? next.episode - 1 : m.status === 'FINISHED' ? m.episodes : 0;
-    while (next && out > progress && dueAt(released(out), slot) > now) out--;
+    while (next && out > progress && dueAt(released(out), slot, mine?.[0] || show) > now) out--;
     if (!out || out <= progress) continue;
     const first = progress + 1;
     const since = next ? released(first) : 0;
