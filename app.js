@@ -97,6 +97,25 @@ const SERVICES = [
   { match: /^adn$|animation digital network/i, label: 'ADN', color: '#0096d6', wo: 'ADN' },
 ];
 
+// Data that couldn't be loaded fresh (offline, AniList busy, Google or the site not answering):
+// source → what's shown instead, listed above the schedule so an old or partial copy never passes
+// for the current one, and cleared once that source answers again. Keys with a ':' belong to one
+// week or list and only show there; the others always show.
+const dataNotes = new Map();
+function setNote(source, text) {
+  if ((dataNotes.get(source) || null) === (text || null)) return false;
+  text ? dataNotes.set(source, text) : dataNotes.delete(source);
+  return true;
+}
+const unreachable = name => navigator.onLine === false ? "You're offline" : `${name} didn't answer`;
+const savedAt = time => new Date(time).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+function notesHtml(scoped = []) {
+  const lines = new Set([...dataNotes].filter(([k]) => !k.includes(':') || scoped.includes(k)).map(([, t]) => t));
+  return lines.size ? `<div class="datanote" role="status">${[...lines].map(t => `<div>${esc(t)}</div>`).join('')}</div>` : '';
+}
+// A load that failed with nothing saved to show instead: the reason and a way to try again
+const failed = text => `<div class="status">${esc(text)}<br><button class="pill retry">Try again</button></div>`;
+
 const sheets = new Map();
 // A tab's Guckplan: the last copy shown in this browser at once, then the current one when it arrives.
 // Comes with `catalog`, the season's full show list, for looking up names people abbreviate.
@@ -104,7 +123,8 @@ const sheetFor = tab => {
   const key = tab.gid + ':' + (tab.catalogGid || '');
   if (!sheets.has(key)) {
     const onChange = fresh => { sheets.set(key, Promise.resolve(fresh)); load(true); };
-    sheets.set(key, savedOrFresh('sheet:' + key, () => loadPlan(tab), onChange)
+    const onFresh = e => { if (setNote('sheet ' + tab.gid, e && `${unreachable('Google Sheets')}: “${tab.name}” as last saved in this browser.`)) load(true); };
+    sheets.set(key, savedOrFresh('sheet:' + key, () => loadPlan(tab), onChange, onFresh)
       .catch(e => { sheets.delete(key); throw e; }));
   }
   return sheets.get(key);
@@ -137,18 +157,20 @@ async function downloadWeek(start) {
     // Older copy: show it now and update in the background (re-rendering if anything changed).
     downloadAirings(start).then(items => {
       storeWeek(storeKey, items);
+      const noted = setNote(storeKey, null);
       if (JSON.stringify(items) !== JSON.stringify(saved.items)) {
         cache.set(start.getTime(), Promise.resolve(items));
         load(true);
-      }
-    }, () => {});
+      } else if (noted) load(true);
+    }, () => { if (setNote(storeKey, `${unreachable('AniList')}: airings as saved ${savedAt(saved.time)}.`)) load(true); });
     return saved.items;
   }
   let items;
   try {
     items = await downloadAirings(start);
   } catch (e) {
-    throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute.");
+    throw new Error(navigator.onLine === false ? "You're offline, and this week isn't saved in this browser yet."
+      : "AniList isn't answering right now (it limits how often it can be asked). Try again in a minute.");
   }
   storeWeek(storeKey, items);
   return items;
@@ -219,7 +241,7 @@ async function lookUpNext() {
     media = (await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id nextAiringEpisode { episode airingAt } } } }',
       { ids: ids.map(Number) })).Page.media;
   } catch {
-    for (const id of ids) aniNext.set(id, null); // AniList busy: no break shown this visit
+    for (const id of ids) aniNext.set(id, 'failed'); // AniList busy: listed as unknown this visit
     return;
   }
   for (const id of ids) {
@@ -258,8 +280,8 @@ async function lookUpRewatches() {
     try {
       media = (await anilist(REWATCH_QUERY, { search: show.romaji || show.english })).Media;
     } catch (e) {
-      // Not on AniList: remember that. AniList busy: skip for this visit (the next one tries again).
-      rewatchMedia.set(key, null);
+      // Not on AniList: remember that. AniList busy: unknown for this visit (the next one tries again).
+      rewatchMedia.set(key, 'failed');
       if (e.status !== 404) continue;
       media = null;
     }
@@ -509,9 +531,12 @@ function render(items, start, plans) {
   // their slot. The rest is listed below. Pause and rewatch only from this week on.
   const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
   const weekEnd = days[6].date.getTime() + 86400000;
-  const unknown = [];
+  const unknown = []; // { show, why }
   const breaks = []; // also listed at the top, with the reason
-  for (const [show, slot] of [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : [])) {
+  const busy = () => `${unreachable('AniList')}, so it's unknown whether it airs`;
+  // Without the LiveChart data (streams-de.json didn't load) breaks and rewatches can't be told
+  // from finished shows: none are guessed (the note at the top says so).
+  for (const [show, slot] of !streamsDe ? [] : [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : [])) {
     if (found.has(show)) continue;
     // The same show listed twice in the sheet, already on the schedule through its other row.
     if ([...found].some(f => titleMatches([f.romaji, f.english], [show.romaji, show.english]))) continue;
@@ -520,12 +545,13 @@ function render(items, start, plans) {
     // LiveChart's next episode already passed: the weekly data is behind, AniList knows better
     if (upcoming && upcoming.at * 1000 < days[0].date.getTime()) {
       const fresh = nextFromAniList(alId);
-      if (fresh === undefined) { unknown.push(show); continue; } // still asking AniList
+      if (fresh === undefined) { unknown.push({ show, why: 'checking AniList…' }); continue; }
+      if (fresh === 'failed') { unknown.push({ show, why: busy() }); continue; }
       upcoming = fresh && { episode: fresh.episode, at: fresh.at + (streamsDe?.release?.[alId]?.offset || 0) };
     }
     if (status && !upcoming) continue; // finished
     const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
-    if (!day || weekEnd < Date.now()) { unknown.push(show); continue; }
+    if (!day || weekEnd < Date.now()) { unknown.push({ show }); continue; }
     const next = upcoming && new Date(upcoming.at * 1000);
     if (next && next >= weekEnd) {
       // The reason: LiveChart's timetable note for this week ("no broadcast today due to sports
@@ -538,11 +564,12 @@ function render(items, start, plans) {
       continue;
     }
     const media = !status && rewatchFor(show);
-    if (media && media.status === 'FINISHED') {
+    if (media === 'failed') unknown.push({ show, why: busy() });
+    else if (media && media.status === 'FINISHED') {
       const links = streamLinks(media, show.wo, media.title.english || media.title.romaji);
       day.rows.push({ rewatch: true, m: media, links, slot, when: day.date });
       found.add(show);
-    } else unknown.push(show);
+    } else unknown.push({ show, why: media === undefined ? 'checking AniList…' : '' });
   }
   for (const d of days) assignWatchTimes(d);
 
@@ -565,8 +592,8 @@ function render(items, start, plans) {
           <div class="ep">No episode this week · ${episode ? `episode ${episode} ` : ''}${episode ? 'on' : 'back'} ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
           <div class="ep reason">${reasonHtml(note, news, 'No reason announced on LiveChart')}</div>
         </div>
-        <div class="links">${moveButton(show, slot)}</div>
-        ${checkSpace}
+        <div class="links"></div>
+        ${checkSpace}${moveButton(show, slot)}
       </div>`;
     const rewatch = ({ m, links, watchAt }) => `
       <div class="row" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
@@ -577,7 +604,7 @@ function render(items, start, plans) {
           <div class="ep">Rewatch</div>
         </div>
         <div class="links">${linkButtons(links)}</div>
-        ${checkSpace}
+        ${checkSpace}${movesKey ? '<div class="move-space"></div>' : ''}
       </div>`;
     const row = r => r.pause ? pause(r) : r.rewatch ? rewatch(r) : episodeRow(r);
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
@@ -596,8 +623,8 @@ function render(items, start, plans) {
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
-        <div class="links">${linkButtons(links)}${moveButton(show, slot)}</div>
-        ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}
+        <div class="links">${linkButtons(links)}</div>
+        ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}${moveButton(show, slot)}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
     const groups = [];
@@ -620,9 +647,12 @@ function render(items, start, plans) {
   const lines = [
     ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> isn't airing this week → ${reasonHtml(b.note, b.news,
       '<span class="why">no reason announced on LiveChart</span>')} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
-    ...unknown.map(s => `<div><b>${esc(s.english || s.romaji)}</b> isn't airing this week → <span class="why">nothing found for it this week (or couldn't be matched)</span></div>`),
+    ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> isn't airing this week → <span class="why">${esc(why || "nothing found for it this week (or couldn't be matched)")}</span></div>`),
   ];
   if (lines.length) html = `<div class="alerts" role="status">${lines.join('')}</div>` + html;
+  // Above everything: data that's old or missing (this week's and last week's airings count here)
+  const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
+  html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
   document.body.style.removeProperty('--time-width');
   $('list').innerHTML = html;
   // Same width for every time cell (the widest one), so covers and titles line up.
@@ -652,10 +682,12 @@ async function anilistList(user) {
   try {
     const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
     try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
+    setNote(key, null);
     return entries;
   } catch (e) {
-    if (saved) return saved.entries;
-    throw e;
+    if (!saved) throw e;
+    setNote(key, `${unreachable('AniList')}: ${user}'s list as saved ${savedAt(saved.time)}.`);
+    return saved.entries;
   }
 }
 
@@ -804,6 +836,16 @@ for (const b of document.querySelectorAll('[data-set]'))
     if (b.dataset.set !== 'accent') load(true);
   };
 
+// ⚙ Show: the Drop buttons and the ⇄ (owner only) can be hidden; both on unless switched off.
+for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]) {
+  try { $(id).checked = localStorage.getItem(id) !== '0'; } catch { $(id).checked = true; }
+  document.body.classList.toggle(cls, !$(id).checked);
+  $(id).onchange = () => {
+    try { localStorage.setItem(id, $(id).checked ? '1' : '0'); } catch {}
+    document.body.classList.toggle(cls, !$(id).checked);
+  };
+}
+
 // "Who's watching": name chips of everyone watching each show; on unless switched off.
 try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
 $('who').onchange = () => {
@@ -847,9 +889,11 @@ $('refreshData').onclick = async () => {
     const res = await fetch('streams-de.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error(`stream data: ${res.status}`);
     streamsDe = await res.json();
+    setNote('streams', null);
     await loadMoves();
     if (auth) await loadMe().catch(() => {}); // ticks from elsewhere (AniList itself, the phone)
     tabs = await guckplanTabs();
+    setNote('tabs', null);
     try { localStorage.setItem('tabs', JSON.stringify(tabs)); } catch {}
     await load(true, true);
     restoreAnchor(anchor);
@@ -1163,13 +1207,19 @@ async function loadCatchup(strict = false) {
     entries = await anilistList(user);
   } catch (e) {
     if (strict) throw new Error(`AniList: ${e.message}`);
-    if (view === shown) $('list').innerHTML = `<div class="status">Couldn't load ${esc(user)}'s AniList list (${esc(e.message)}).</div>`;
+    if (view === shown) $('list').innerHTML = failed(navigator.onLine === false
+      ? `You're offline, and ${user}'s AniList list isn't saved in this browser yet.` : `Couldn't load ${user}'s AniList list (${e.message}).`);
     return;
   }
   if (view !== shown) return;
   // This season's Guckplan, for each show's "Wo" (that service's button first).
   let plan = null;
-  try { plan = await sheetFor(tabFor(tabs, new Date())); } catch {}
+  try {
+    plan = await sheetFor(tabFor(tabs, new Date()));
+    setNote('catchup:plan', null);
+  } catch (e) {
+    setNote('catchup:plan', `${unreachable('Google Sheets')}: without the Guckplan, watch slots and planned shows missing from the list are left out.`);
+  }
   // Plus the Solo person's Guckplan shows that aren't on the AniList Watching list (forgotten).
   const planShows = await missingPlanShows(plan, entries);
   if (view !== shown) return;
@@ -1270,6 +1320,7 @@ async function loadCatchup(strict = false) {
       : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
     $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
   }
+  $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
   // Not logged in, or someone else's list: say why there are no ✓ / Drop buttons. (Typing a name
   // into "Catch-up list of" only shows that list; logging in is "Connect AniList".)
   if (!mine && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', `<div class="notice">${auth
@@ -1302,7 +1353,9 @@ async function missingPlanShows(plan, entries) {
     try {
       const data = auth ? await anilistAsMe(query, { ids }) : await anilist(query, { ids });
       planShowsCache = { key, time: Date.now(), media: data.Page.media };
+      setNote('catchup:missing', null);
     } catch {
+      setNote('catchup:missing', `${unreachable('AniList')}: planned shows missing from the AniList list couldn't be checked.`);
       return [];
     }
   }
@@ -1341,13 +1394,17 @@ async function load(refresh = false, strict = false) {
   const plans = new Map();
   const problems = [];
   await Promise.all([...needed.values()].map(t => sheetFor(t)
-    .then(sheet => plans.set(t.gid, sheet))
-    .catch(e => problems.push(`${t.name}: ${e.message}`))));
+    .then(sheet => { plans.set(t.gid, sheet); setNote('missing ' + t.gid, null); })
+    .catch(e => {
+      problems.push(`${t.name}: ${e.message}`);
+      setNote('missing ' + t.gid, `${unreachable('Google Sheets')}: “${t.name}” couldn't be read, its shows are missing.`);
+    })));
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
   if (view !== 'week') return; // switched to Catch-up meanwhile
   if (!weekTabs.some(t => plans.has(t.gid))) {
     if (strict) throw new Error(`Guckplan: ${problems.join('; ') || 'not readable'}`);
-    $('list').innerHTML = `<div class="status">Couldn't read the Guckplan (${esc(problems.join('; ') || 'unknown error')}).</div>`;
+    $('list').innerHTML = failed(navigator.onLine === false ? "You're offline, and this Guckplan isn't saved in this browser yet."
+      : `Couldn't read the Guckplan (${problems.join('; ') || 'unknown error'}).`);
     return;
   }
   $('tabName').textContent = weekTabs.map(t => t.name).join(' / ');
@@ -1365,9 +1422,10 @@ async function load(refresh = false, strict = false) {
     if (!refresh) window.scrollTo(0, 0);
   } catch (e) {
     if (strict) throw e;
-    $('list').innerHTML = `<div class="status">Couldn't load the schedule: ${esc(e.message)}</div>`;
+    $('list').innerHTML = failed(`Couldn't load the schedule: ${e.message}`);
   }
 }
+$('list').addEventListener('click', e => { if (e.target.closest('.retry')) load(); });
 
 // The page opens "from today"; the arrows show whole weeks. "Today" goes to this week from today,
 // and pressed again shows the whole week; it's highlighted while "from today" is on.
@@ -1403,7 +1461,13 @@ try { movesKey = localStorage.getItem('movesKey') || ''; } catch {}
 const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 async function loadMoves() {
   let site = null, own = null;
-  try { site = await (await fetch('moves.json', { cache: 'no-cache' })).json(); } catch {}
+  try {
+    const res = await fetch('moves.json', { cache: 'no-cache' });
+    site = res.status === 404 ? { moves: [] } : await res.json();
+    setNote('moves', null);
+  } catch {
+    setNote('moves', `${unreachable('The site')}: moved shows couldn't be loaded, so all shows are in their Guckplan slots.`);
+  }
   // Right after a move the site takes a minute to update: until then this browser's copy is newer
   try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
   const newest = own && (!site || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
@@ -1431,7 +1495,7 @@ async function saveMoves(next) {
 
 // The ⚙ "Moving shows" entry only shows where a key is saved; the first time, open the site with
 // #moves at the end of the address.
-$('movesSetup').hidden = !movesKey;
+$('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
 function openKeyDialog() {
   $('keyInput').value = '';
   $('keyMsg').textContent = movesKey ? 'A key is saved in this browser.' : '';
@@ -1449,13 +1513,14 @@ $('keySave').onclick = async () => {
     if (!repo?.permissions?.push) throw new Error(res.ok ? "this key can't change the site" : `GitHub answered ${res.status}`);
     movesKey = key;
     try { localStorage.setItem('movesKey', key); } catch {}
-    $('movesSetup').hidden = false;
+    $('movesSetup').hidden = $('moveToggle').hidden = false;
     $('keyMsg').textContent = 'Saved. Shows in the week now have ⇄ to move them.';
     load(true);
   } catch (e) { $('keyMsg').textContent = `Not saved: ${e.message}`; }
 };
 $('keyRemove').onclick = () => {
   movesKey = '';
+  $('moveToggle').hidden = true;
   try { localStorage.removeItem('movesKey'); } catch {}
   $('keyMsg').textContent = 'Removed from this browser.';
   load(true);
@@ -1511,16 +1576,31 @@ $('moveReset').onclick = () => {
 const ready = Promise.all([
   loadMoves(),
   fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
-    .then(json => { streamsDe = json; }, e => console.warn('streams-de.json not loaded:', e)),
+    .then(json => { streamsDe = json; }, e => {
+      console.warn('streams-de.json not loaded:', e);
+      setNote('streams', `${unreachable('The site')}: the stream data didn't load, so links come from AniList and breaks and rewatches aren't shown.`);
+    }),
   savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
-    .then(list => { tabs = list; }, e => console.warn('Sheet tabs not loaded:', e)),
+    .then(list => { tabs = list; }, e => {
+      console.warn('Sheet tabs not loaded:', e);
+      setNote('tabs', `${unreachable('Google Sheets')}: the list of Guckplan tabs is unknown, so “${FALLBACK_TAB.name}” is shown.`);
+    }),
   loadMe().catch(e => console.warn('AniList account not loaded:', e)),
 ]);
 updateConnect();
 load();
 
 // Home screen app: the service worker keeps the page fresh online and available offline.
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('No offline copy:', e));
+// An installed app can stay open for days without reloading: whenever it's brought back, the browser
+// looks for a new version, and once that has taken over, a bar offers to reload into it.
+if ('serviceWorker' in navigator) {
+  const hadWorker = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(e => console.warn('No offline copy:', e));
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) $('update').hidden = false; });
+  $('updateReload').onclick = () => location.reload();
+}
 
 function setMode(next) {
   mode = next;
