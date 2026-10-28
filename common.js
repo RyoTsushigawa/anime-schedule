@@ -35,17 +35,19 @@ function parseCsv(text) {
 
 // Returns the copy saved in this browser right away (if there is one) and downloads a fresh one in
 // the background; onChange runs when the fresh copy differs. Without a saved copy it waits for the download.
-function savedOrFresh(key, download, onChange) {
+// onFresh(error) says whether the download worked (null) while a saved copy is shown.
+function savedOrFresh(key, download, onChange, onFresh = () => {}) {
   let saved = null;
   try { saved = localStorage.getItem(key); } catch {}
   const fresh = download().then(value => {
     const json = JSON.stringify(value);
     try { localStorage.setItem(key, json); } catch {}
+    if (saved) onFresh(null);
     if (saved && json !== saved) onChange(value);
     return value;
   });
   if (!saved) return fresh;
-  fresh.catch(e => console.warn(`${key}: kept the saved copy,`, e));
+  fresh.catch(e => { console.warn(`${key}: kept the saved copy,`, e); onFresh(e); });
   return Promise.resolve(JSON.parse(saved));
 }
 
@@ -255,7 +257,8 @@ async function anilist(query, variables = {}, token) {
       if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { status: res.status });
       return json.data;
     }
-    if (attempt >= RETRY_WAITS.length) throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute");
+    // Offline: no point waiting for retries
+    if (attempt >= RETRY_WAITS.length || (!res && navigator.onLine === false)) throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute");
     const status = document.querySelector('#list .status');
     if (status) status.textContent = 'AniList is busy, trying again…';
     await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
