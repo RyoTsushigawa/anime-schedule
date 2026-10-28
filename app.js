@@ -382,14 +382,14 @@ $('search').addEventListener('keydown', e => {
 });
 
 // On a phone the three header rows take a quarter of the screen: they slide away while scrolling
-// down and come back on the slightest scroll up (never near the top, while searching, or with a
-// menu open).
+// down (from the very top on) and come back on the slightest scroll up (never at the top itself,
+// while searching, or with a menu open).
 {
   let lastY = scrollY;
   const header = document.querySelector('header');
   addEventListener('scroll', () => {
     const y = scrollY;
-    const keep = innerWidth > 560 || y < 120 || document.body.classList.contains('searching')
+    const keep = innerWidth > 560 || y <= 4 || document.body.classList.contains('searching')
       || document.querySelector('header .popover:not([hidden])') || header.contains(document.activeElement);
     if (keep || y < lastY - 4) header.classList.remove('away');
     else if (y > lastY + 4) header.classList.add('away');
@@ -955,48 +955,61 @@ function listChanged(mediaId, progress, statusChanged) {
 // Each action (one ✓, one Drop, one "Mark all as watched") is one step; undoing puts every show
 // of that step back the way it was, newest step first. Only for 10 minutes, and only where AniList
 // still has what this page saved: a show changed elsewhere meanwhile (AniList itself, another
-// device) is left alone rather than overwritten.
+// device) is left alone rather than overwritten. Each step belongs to the AniList login that made
+// it: with another account active it waits until that one is active again. If AniList fails
+// halfway, the shows not yet put back stay on the stack, so Undo can simply be tried again.
 const UNDO_MS = 10 * 60 * 1000;
 const undoSteps = [];
 function remember(records, text) {
-  if (!records.length) return;
-  undoSteps.push({ records, time: Date.now() });
+  if (!records.length || !auth) return;
+  undoSteps.push({ records, time: Date.now(), token: auth.token, name: auth.name || 'the other account' });
   notice(text, true);
 }
 let undoing = false;
 async function undo() {
   if (!auth || undoing) return;
-  const last = undoSteps.pop();
+  const last = undoSteps.at(-1);
   if (!last) return;
   if (Date.now() - last.time > UNDO_MS) { undoSteps.length = 0; notice('Too late to undo; change it on AniList instead.'); return; }
-  const step = last.records;
+  if (last.token !== auth.token) { notice(`Made with ${last.name}: switch back to that account to undo it.`); return; }
+  undoSteps.pop();
   undoing = true;
   notice('Undoing…');
-  const changedElsewhere = [];
-  try {
-    for (const [i, { mediaId, before, after, entryId }] of [...step].reverse().entries()) {
+  const left = [...last.records]; // newest change first comes off the end
+  let done = 0, elsewhere = 0, failed = null;
+  while (left.length) {
+    const { mediaId, before, after, entryId } = left.at(-1);
+    try {
       const now = await entryNow(mediaId);
-      if (!now.onList || now.progress !== after.progress || now.status !== after.status) { changedElsewhere.push(mediaId); continue; }
-      if (before.onList) {
-        await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status });
-        knownEntries.set(mediaId, { progress: before.progress, status: before.status });
-        myProgress.set(mediaId, before.progress);
-      } else {
-        await anilistAsMe('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: entryId });
-        knownEntries.delete(mediaId);
-        notOnList.add(mediaId);
-        myProgress.delete(mediaId);
+      if (!now.onList || now.progress !== after.progress || now.status !== after.status) elsewhere++;
+      else {
+        if (before.onList) {
+          await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status });
+          knownEntries.set(mediaId, { progress: before.progress, status: before.status });
+          myProgress.set(mediaId, before.progress);
+        } else {
+          await anilistAsMe('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: entryId });
+          knownEntries.delete(mediaId);
+          notOnList.add(mediaId);
+          myProgress.delete(mediaId);
+        }
+        listChanged(mediaId, before.progress || 0, true);
+        done++;
       }
-      listChanged(mediaId, before.progress || 0, true);
-      if (i < step.length - 1) await new Promise(r => setTimeout(r, 700));
-    }
-    const done = step.length - changedElsewhere.length;
-    notice(changedElsewhere.length
-      ? `${done ? `Undone for ${done}; ` : ''}${changedElsewhere.length === 1 ? (done ? 'one show was' : 'This show was') : `${changedElsewhere.length} shows were`} changed elsewhere meanwhile and left as is.`
-      : step.length > 1 ? `Undone (${step.length} shows)` : 'Undone');
-  } catch (err) {
-    notice(`Couldn't undo: ${err.message}`);
+    } catch (err) { failed = err; break; }
+    left.pop(); // this show is settled (put back, or changed elsewhere)
+    if (left.length) await new Promise(r => setTimeout(r, 700));
   }
+  const parts = [];
+  if (done) parts.push(last.records.length > 1 ? `Undone for ${done}` : 'Undone');
+  if (elsewhere) parts.push(`${elsewhere === 1 ? (done || failed ? 'one show was' : 'This show was') : `${elsewhere} shows were`} changed elsewhere meanwhile and left as is`);
+  if (failed) {
+    // The rest stays for another try (same account, same 10 minutes)
+    undoSteps.push({ ...last, records: left });
+    parts.push(`${left.length === 1 ? 'one show is' : `${left.length} shows are`} still to undo (${failed.message})`);
+  }
+  const text = parts.join('; ');
+  notice(text.charAt(0).toUpperCase() + text.slice(1) + '.', !!failed);
   undoing = false;
   load(true);
 }
