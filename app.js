@@ -373,7 +373,7 @@ function applySearch() {
 const searching = () => !!norm($('search').value);
 let searchedWeek = false;
 function searchChanged() {
-  if (view === 'week' && fromToday && searching() !== searchedWeek) load(true);
+  if (view === 'week' && range !== 'week' && searching() !== searchedWeek) load(true);
   else applySearch();
   searchedWeek = searching();
 }
@@ -573,11 +573,12 @@ function render(items, start, plans) {
   }
   for (const d of days) assignWatchTimes(d);
 
-  // Opened or "Today" pressed: the week starts with today, the days already past are left out.
-  // With the arrows it's always the whole week, and while searching too (so a show that aired
-  // earlier this week is found).
+  // Opened or "From today" pressed: the week starts with today, the days already past are left
+  // out; "Today": today only. With the arrows it's always the whole week, and while searching too
+  // (so a show that aired earlier this week is found).
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
-  const ordered = fromToday && !searching() && todayIndex > 0 ? days.slice(todayIndex) : days;
+  const ordered = searching() || todayIndex < 0 || range === 'week' ? days
+    : range === 'today' ? [days[todayIndex]] : days.slice(todayIndex);
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     // Rows without a ✓ keep its place, so every row's buttons line up.
@@ -1427,21 +1428,24 @@ async function load(refresh = false, strict = false) {
 }
 $('list').addEventListener('click', e => { if (e.target.closest('.retry')) load(); });
 
-// The page opens "from today"; the arrows show whole weeks. "Today" goes to this week from today,
-// and pressed again shows the whole week; it's highlighted while "from today" is on.
-let fromToday = true;
-function setFromToday(on) {
-  fromToday = on;
-  $('thisWeek').setAttribute('aria-pressed', on);
+// Which days of the week show: 'rest' (today to Sunday, how the page opens), 'today' (today only)
+// or 'week' (all of it; the arrows always show whole weeks). "Today" and "From today" go to this
+// week that way, and pressed again show the whole week; the one in use is highlighted.
+let range = 'rest';
+function setRange(next) {
+  range = next;
+  $('thisWeek').setAttribute('aria-pressed', range === 'today');
+  $('fromToday').setAttribute('aria-pressed', range === 'rest');
 }
-setFromToday(true);
-$('prev').onclick = () => { weekOffset--; setFromToday(false); load(); };
-$('next').onclick = () => { weekOffset++; setFromToday(false); load(); };
-$('thisWeek').onclick = () => {
-  setFromToday(!(weekOffset === 0 && fromToday));
-  weekOffset = 0;
-  load();
-};
+setRange('rest');
+$('prev').onclick = () => { weekOffset--; setRange('week'); load(); };
+$('next').onclick = () => { weekOffset++; setRange('week'); load(); };
+for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
+  $(id).onclick = () => {
+    setRange(weekOffset === 0 && range === value ? 'week' : value);
+    weekOffset = 0;
+    load();
+  };
 try { localStorage.removeItem('todayFirst'); } catch {}
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
