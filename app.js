@@ -26,7 +26,7 @@ try {
   mode = localStorage.getItem('mode') === 'group' ? 'group' : 'solo';
   soloPerson = localStorage.getItem('soloPerson') || DEFAULT_PERSON;
   const saved = JSON.parse(localStorage.getItem('people'));
-  if (Array.isArray(saved)) { selectedPeople.clear(); saved.forEach(p => selectedPeople.add(p)); }
+  if (Array.isArray(saved)) { selectedPeople.clear(); saved.filter(p => typeof p === 'string').forEach(p => selectedPeople.add(p)); }
 } catch {}
 const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
 // Optional AniList login (implicit grant, client 54702): lets ✓ write watched episodes to the
@@ -338,6 +338,13 @@ function applySearch() {
     day.classList.toggle('hidden-by-search', !!q && !day.querySelector('[data-search]:not(.hidden-by-search)'));
   for (const box of document.querySelectorAll('#list .shared:not([data-search])'))
     box.classList.toggle('hidden-by-search', !!q && !box.querySelector('[data-search]:not(.hidden-by-search)'));
+  // Nothing left: say so instead of an empty page
+  let none = $('noMatch');
+  if (q && items.length && !document.querySelector('#list [data-search]:not(.hidden-by-search)')) {
+    if (!none) { none = document.createElement('div'); none.id = 'noMatch'; none.className = 'nomatch'; }
+    none.textContent = `No show matches “${$('search').value.trim()}”${view === 'week' ? ' this week' : ''}.`;
+    if (!none.isConnected) $('list').prepend(none);
+  } else none?.remove();
 }
 // Searching ignores "Today" (the whole week is shown); starting or clearing a search redraws the
 // week with or without the days already past.
@@ -373,6 +380,22 @@ $('search').addEventListener('keydown', e => {
   openSearch(false);
   $('search').blur();
 });
+
+// On a phone the three header rows take a quarter of the screen: they slide away while scrolling
+// down and come back on the slightest scroll up (never near the top, while searching, or with a
+// menu open).
+{
+  let lastY = scrollY;
+  const header = document.querySelector('header');
+  addEventListener('scroll', () => {
+    const y = scrollY;
+    const keep = innerWidth > 560 || y < 120 || document.body.classList.contains('searching')
+      || document.querySelector('header .popover:not([hidden])') || header.contains(document.activeElement);
+    if (keep || y < lastY - 4) header.classList.remove('away');
+    else if (y > lastY + 4) header.classList.add('away');
+    if (Math.abs(y - lastY) > 4) lastY = y;
+  }, { passive: true });
+}
 
 // Fades rows whose watch time has passed; runs after each render and every 30 seconds, so
 // they fade while the page stays open.
@@ -748,8 +771,14 @@ $('themeButton').onclick = () => setTheme(document.documentElement.hasAttribute(
 // ⚙ choices (buttons with data-set="name" data-value="…"), remembered per browser: the time shown
 // in the week, the Catch-up order and the accent color.
 const choices = { time: 'release', sort: 'oldest', accent: 'person' };
+// A saved value only counts if it's one the page knows (an old or broken one falls back)
+const CHOICE_OK = {
+  time: v => ['release', 'watch', 'both'].includes(v),
+  sort: v => ['oldest', 'behind', 'az'].includes(v),
+  accent: v => v === 'person' || /^#[0-9a-f]{6}$/i.test(v),
+};
 for (const name of Object.keys(choices))
-  try { choices[name] = localStorage.getItem(name) || choices[name]; } catch {}
+  try { const v = localStorage.getItem(name); if (CHOICE_OK[name](v)) choices[name] = v; } catch {}
 function setChoice(name, value) {
   choices[name] = value;
   for (const b of document.querySelectorAll(`[data-set="${name}"]`))
@@ -782,14 +811,62 @@ $('who').onchange = () => {
   load(true);
 };
 
-// Refresh data: forget the saved copies (weeks, sheet, AniList lists, rewatch lookups) and load
-// everything fresh. Settings and logins stay.
-$('refreshData').onclick = () => {
+// Refresh data: forget the saved copies (weeks, sheet, AniList lists, rewatch and next-episode
+// lookups) and load everything fresh, in place: same view, week, people and settings, and the row
+// at the top of the screen stays there. What's on screen stays until the new data is in; if
+// anything fails, the copies from before come back and a short notice says so.
+const FRESH_KEYS = /^(week:|sheet:|list:|rewatch:|next:|tabs$)/;
+let refreshing = false;
+// The first row under the header (by its titles and day), to find it again after redrawing
+function scrollAnchor() {
+  const below = document.querySelector('header').getBoundingClientRect().bottom;
+  const row = [...document.querySelectorAll('#list [data-search]:not(.hidden-by-search)')].find(r => r.getBoundingClientRect().bottom > below);
+  return row ? { key: row.dataset.search, day: row.closest('.day')?.querySelector('h2')?.textContent, top: row.getBoundingClientRect().top } : { y: scrollY };
+}
+function restoreAnchor(a) {
+  const rows = [...document.querySelectorAll('#list [data-search]')];
+  const row = a.key && (rows.find(r => r.dataset.search === a.key && r.closest('.day')?.querySelector('h2')?.textContent === a.day)
+    || rows.find(r => r.dataset.search === a.key));
+  if (row) scrollBy(0, row.getBoundingClientRect().top - a.top);
+  else if (a.y !== undefined) scrollTo(0, a.y);
+}
+$('refreshData').onclick = async () => {
+  if (refreshing) return;
+  refreshing = true;
+  $('refreshData').disabled = true;
+  $('settingsMenu').hidden = true;
+  $('settingsButton').setAttribute('aria-expanded', 'false');
+  const anchor = scrollAnchor();
+  // Everything that's about to be replaced, to put back if the refresh fails
+  const kept = {};
+  try { for (const k of Object.keys(localStorage)) if (FRESH_KEYS.test(k)) { kept[k] = localStorage.getItem(k); localStorage.removeItem(k); } } catch {}
+  const memory = { weeks: new Map(cache), sheetsCopy: new Map(sheets), rewatch: new Map(rewatchMedia), next: new Map(aniNext), streams: streamsDe, moved: moves, tabList: tabs, plans: { ...planShowsCache } };
+  cache.clear(); sheets.clear(); rewatchMedia.clear(); aniNext.clear(); planShowsCache.time = 0;
+  notice('Refreshing…');
   try {
-    for (const k of Object.keys(localStorage))
-      if (/^(week:|sheet:|list:|rewatch:|tabs$)/.test(k)) localStorage.removeItem(k);
-  } catch {}
-  location.reload();
+    const res = await fetch('streams-de.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`stream data: ${res.status}`);
+    streamsDe = await res.json();
+    await loadMoves();
+    if (auth) await loadMe().catch(() => {}); // ticks from elsewhere (AniList itself, the phone)
+    tabs = await guckplanTabs();
+    try { localStorage.setItem('tabs', JSON.stringify(tabs)); } catch {}
+    await load(true, true);
+    restoreAnchor(anchor);
+    notice('Data refreshed');
+  } catch (e) {
+    try { for (const [k, v] of Object.entries(kept)) localStorage.setItem(k, v); } catch {}
+    cache.clear(); for (const [k, v] of memory.weeks) cache.set(k, v);
+    sheets.clear(); for (const [k, v] of memory.sheetsCopy) sheets.set(k, v);
+    for (const [k, v] of memory.rewatch) rewatchMedia.set(k, v);
+    for (const [k, v] of memory.next) aniNext.set(k, v);
+    streamsDe = memory.streams; moves = memory.moved; tabs = memory.tabList; planShowsCache = memory.plans;
+    await load(true).catch(() => {});
+    restoreAnchor(anchor);
+    notice(`Couldn't refresh (${e.message}); still showing the data from before.`);
+  }
+  $('refreshData').disabled = false;
+  refreshing = false;
 };
 
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
@@ -833,16 +910,17 @@ const SAVE_PROGRESS = `mutation ($mediaId: Int, $progress: Int, $status: MediaLi
 
 // ---------- Undo (Ctrl+Z, or the notice's "Undo") ----------
 
-// How the logged-in viewer's entries looked, to put them back: from their Watching list and the
-// forgotten Guckplan shows; anything else is asked from AniList before changing it.
+// How the logged-in viewer's entries look (for the Week view's buttons): from their Watching list
+// and the forgotten Guckplan shows.
 const knownEntries = new Map(); // media id → { progress, status }
 const notOnList = new Set();    // media ids known not to be on the list
-async function entryBefore(mediaId) {
-  if (knownEntries.has(mediaId)) return { onList: true, ...knownEntries.get(mediaId) };
-  if (notOnList.has(mediaId)) return { onList: false };
+// The entry as AniList has it right now (asked every time: it may have changed elsewhere since
+// the page loaded its copy of the list)
+async function entryNow(mediaId) {
   const entry = (await anilistAsMe('query ($id: Int) { Media(id: $id) { mediaListEntry { progress status } } }', { id: mediaId })).Media.mediaListEntry;
   return entry ? { onList: true, progress: entry.progress, status: entry.status } : { onList: false };
 }
+const entryBefore = entryNow;
 
 // Every change goes through here and returns what's needed to undo it. Progress on a show that
 // isn't on the Watching list (not on the list at all, or Planning/Paused/Completed/Dropped) also
@@ -858,7 +936,7 @@ async function change(mediaId, vars) {
   notOnList.delete(mediaId);
   myProgress.set(mediaId, saved.progress);
   listChanged(mediaId, saved.progress, !!status);
-  return { mediaId, before, entryId: saved.id };
+  return { mediaId, before, after: { progress: saved.progress, status: saved.status }, entryId: saved.id };
 }
 
 // Keep the saved Watching list in step, so Catch-up shows changes right away; a status change
@@ -875,21 +953,30 @@ function listChanged(mediaId, progress, statusChanged) {
 }
 
 // Each action (one ✓, one Drop, one "Mark all as watched") is one step; undoing puts every show
-// of that step back the way it was, newest step first.
+// of that step back the way it was, newest step first. Only for 10 minutes, and only where AniList
+// still has what this page saved: a show changed elsewhere meanwhile (AniList itself, another
+// device) is left alone rather than overwritten.
+const UNDO_MS = 10 * 60 * 1000;
 const undoSteps = [];
 function remember(records, text) {
   if (!records.length) return;
-  undoSteps.push(records);
+  undoSteps.push({ records, time: Date.now() });
   notice(text, true);
 }
 let undoing = false;
 async function undo() {
-  const step = undoSteps.pop();
-  if (!step || !auth || undoing) return;
+  if (!auth || undoing) return;
+  const last = undoSteps.pop();
+  if (!last) return;
+  if (Date.now() - last.time > UNDO_MS) { undoSteps.length = 0; notice('Too late to undo; change it on AniList instead.'); return; }
+  const step = last.records;
   undoing = true;
   notice('Undoing…');
+  const changedElsewhere = [];
   try {
-    for (const [i, { mediaId, before, entryId }] of [...step].reverse().entries()) {
+    for (const [i, { mediaId, before, after, entryId }] of [...step].reverse().entries()) {
+      const now = await entryNow(mediaId);
+      if (!now.onList || now.progress !== after.progress || now.status !== after.status) { changedElsewhere.push(mediaId); continue; }
       if (before.onList) {
         await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status });
         knownEntries.set(mediaId, { progress: before.progress, status: before.status });
@@ -903,7 +990,10 @@ async function undo() {
       listChanged(mediaId, before.progress || 0, true);
       if (i < step.length - 1) await new Promise(r => setTimeout(r, 700));
     }
-    notice(step.length > 1 ? `Undone (${step.length} shows)` : 'Undone');
+    const done = step.length - changedElsewhere.length;
+    notice(changedElsewhere.length
+      ? `${done ? `Undone for ${done}; ` : ''}${changedElsewhere.length === 1 ? (done ? 'one show was' : 'This show was') : `${changedElsewhere.length} shows were`} changed elsewhere meanwhile and left as is.`
+      : step.length > 1 ? `Undone (${step.length} shows)` : 'Undone');
   } catch (err) {
     notice(`Couldn't undo: ${err.message}`);
   }
@@ -1047,7 +1137,7 @@ function dueAt(released, slot, show) {
   return Math.max(released, day.getTime() / 1000);
 }
 
-async function loadCatchup() {
+async function loadCatchup(strict = false) {
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
   const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
@@ -1059,6 +1149,7 @@ async function loadCatchup() {
   try {
     entries = await anilistList(user);
   } catch (e) {
+    if (strict) throw new Error(`AniList: ${e.message}`);
     if (view === shown) $('list').innerHTML = `<div class="status">Couldn't load ${esc(user)}'s AniList list (${esc(e.message)}).</div>`;
     return;
   }
@@ -1213,13 +1304,17 @@ async function missingPlanShows(plan, entries) {
 }
 
 // refresh: re-render after newer sheet data arrived, without jumping to today.
-async function load(refresh = false) {
-  if (listView()) return loadCatchup();
+// strict (Refresh data): no "Loading…" over what's on screen, and a failure is thrown to the caller
+// instead of replacing the schedule with an error.
+async function load(refresh = false, strict = false) {
+  if (listView()) return loadCatchup(strict);
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
-  const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  // The year only when it isn't this one, or the week spans New Year ("Dec 28, 2026 – Jan 3, 2027")
+  const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
+  const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
   $('week').textContent = `${fmt(start)} – ${fmt(end)}`;
-  if (!cache.has(start.getTime())) $('list').innerHTML = '<div class="status">Loading…</div>';
+  if (!cache.has(start.getTime()) && !strict) $('list').innerHTML = '<div class="status">Loading…</div>';
   // Last week too: an episode airing after its watch day is watched the following week.
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   // Start AniList right away; it runs while the sheet loads.
@@ -1238,6 +1333,7 @@ async function load(refresh = false) {
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
   if (view !== 'week') return; // switched to Catch-up meanwhile
   if (!weekTabs.some(t => plans.has(t.gid))) {
+    if (strict) throw new Error(`Guckplan: ${problems.join('; ') || 'not readable'}`);
     $('list').innerHTML = `<div class="status">Couldn't read the Guckplan (${esc(problems.join('; ') || 'unknown error')}).</div>`;
     return;
   }
@@ -1255,6 +1351,7 @@ async function load(refresh = false) {
     // A new week starts at the top (with "Today", that's today itself).
     if (!refresh) window.scrollTo(0, 0);
   } catch (e) {
+    if (strict) throw e;
     $('list').innerHTML = `<div class="status">Couldn't load the schedule: ${esc(e.message)}</div>`;
   }
 }
