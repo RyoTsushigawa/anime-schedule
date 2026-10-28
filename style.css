@@ -34,11 +34,12 @@ button:disabled { opacity: .55; cursor: default; }
 /* One keyboard focus ring everywhere (mouse clicks don't show it) */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .weeknav { display: flex; align-items: center; gap: 4px; }
-.weeknav .icon, #thisWeek { height: 32px; }
+.weeknav .icon, #thisWeek, #fromToday { height: 32px; }
 .weeknav .icon { width: 32px; padding: 0; font-size: 20px; line-height: 1; }
 #week { color: var(--text); font-size: 14px; font-weight: 600; min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
 #thisWeek { margin-left: 6px; padding: 0 12px; }
-#thisWeek[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+#fromToday { padding: 0 12px; white-space: nowrap; }
+#thisWeek[aria-pressed="true"], #fromToday[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 /* Solo | Group */
 .segmented { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
 .segmented button { border: 0; border-radius: 99px; padding: 4px 14px; background: transparent; color: var(--muted); font-size: 13px; }
@@ -149,9 +150,9 @@ img.avatar { object-fit: cover; }
   .controls-left > .segmented:first-child button { flex: 1; }
   .weeknav { width: 100%; }
   #week { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .weeknav .icon, #thisWeek { height: 34px; }
+  .weeknav .icon, #thisWeek, #fromToday { height: 34px; }
   .weeknav .icon { width: 34px; }
-  #thisWeek { margin-left: 0; padding: 0 12px; }
+  #thisWeek, #fromToday { margin-left: 0; padding: 0 10px; }
   .segmented button { padding: 4px 8px; font-size: 12px; min-height: 30px; }
   .controls-left { gap: 5px; }
   #soloPerson, #groupButton { padding: 5px 8px; font-size: 12px; }
