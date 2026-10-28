@@ -53,6 +53,8 @@
             <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
             <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
             <label class="toggle week-only" title="Everyone in the Guckplan who watches each show"><input type="checkbox" id="who">Who's watching</label>
+            <label class="toggle" title="The Drop button next to each ✓ (when connected to AniList)"><input type="checkbox" id="dropButtons">Drop buttons</label>
+            <label class="toggle week-only" id="moveToggle" title="The ⇄ on each show to move it to another day or time" hidden><input type="checkbox" id="moveButtons">⇄ Move</label>
           </div>
         </section>
         <section class="week-only">
@@ -168,6 +170,7 @@
   </form>
 </dialog>
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
+<div id="update" role="status" hidden><span>A new version of the site is ready.</span><button id="updateReload">Reload</button></div>
 
 <script src="common.js"></script>
 <script src="app.js"></script>
