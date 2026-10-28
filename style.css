@@ -28,11 +28,16 @@ h1 { font-size: 18px; margin: 0; line-height: 1.2; }
 #tabName { color: var(--muted); font-size: 12px; }
 button, input, select { font: inherit; color: inherit; }
 button, select { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
-button:hover, select:hover { border-color: var(--accent); }
+/* Hover only where there is a mouse (on phones it would stick after a tap) */
+@media (hover: hover) { button:hover, select:hover { border-color: var(--accent); } }
+button:disabled { opacity: .55; cursor: default; }
+/* One keyboard focus ring everywhere (mouse clicks don't show it) */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .weeknav { display: flex; align-items: center; gap: 4px; }
-.weeknav .icon { width: 32px; height: 32px; padding: 0; font-size: 20px; line-height: 1; }
-#week { color: var(--muted); font-size: 14px; min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
-#thisWeek { margin-left: 6px; }
+.weeknav .icon, #thisWeek { height: 32px; }
+.weeknav .icon { width: 32px; padding: 0; font-size: 20px; line-height: 1; }
+#week { color: var(--text); font-size: 14px; font-weight: 600; min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
+#thisWeek { margin-left: 6px; padding: 0 12px; }
 #thisWeek[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 /* Solo | Group */
 .segmented { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
@@ -143,10 +148,11 @@ img.avatar { object-fit: cover; }
   .controls-left > .segmented:first-child { flex: 1 1 100%; }
   .controls-left > .segmented:first-child button { flex: 1; }
   .weeknav { width: 100%; }
-  #week { flex: 1; min-width: 0; font-size: 12px; white-space: nowrap; }
-  .weeknav .icon { width: 28px; height: 30px; }
-  #thisWeek { margin-left: 0; padding: 6px 10px; }
-  .segmented button { padding: 4px 8px; font-size: 12px; }
+  #week { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .weeknav .icon, #thisWeek { height: 34px; }
+  .weeknav .icon { width: 34px; }
+  #thisWeek { margin-left: 0; padding: 0 12px; }
+  .segmented button { padding: 4px 8px; font-size: 12px; min-height: 30px; }
   .controls-left { gap: 5px; }
   #soloPerson, #groupButton { padding: 5px 8px; font-size: 12px; }
   .controls { margin-top: 8px; gap: 8px 6px; }
@@ -162,10 +168,14 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .day { margin-bottom: 22px; }
 .day h2 { font-size: 15px; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; }
 .day.is-today h2 { background: var(--today); color: var(--accent); }
-.row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 6px; }
-.row.aired { opacity: .6; }
-.row.pause { opacity: .6; border-style: dashed; padding: 10px 8px; }
-.row.pause .time { color: var(--muted); font-weight: 500; }
+.row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px 8px 8px; margin-bottom: 6px; }
+/* Watched (its slot is over) and paused shows step back: no card, muted time and title, a faded
+   cover; the text itself stays fully readable. */
+.row.aired, .row.pause { background: transparent; }
+.row.aired .time, .row.aired .title, .row.pause .time, .row.pause .title { color: var(--muted); }
+.row.aired img { opacity: .5; }
+.row.pause { border-style: dashed; padding: 10px 8px; }
+.row.pause .time { font-weight: 500; }
 .row.pause .reason { font-style: italic; }
 .row.pause .reason a { color: inherit; text-decoration: underline dotted; }
 .cr.news { background: transparent; color: var(--text); border: 1px solid var(--line); }
@@ -173,11 +183,13 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .shared { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
 .shared .row { border: 0; border-radius: 0; margin: 0; }
 .shared .row + .row { border-top: 1px dashed var(--line); }
-.info .ep { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info .ep { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .row img { width: 44px; height: 62px; object-fit: cover; border-radius: 6px; flex: none; background: var(--line); }
 .time { width: var(--time-width, auto); flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
 .info { flex: 1; min-width: 0; }
-.title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Long titles get a second line instead of being cut after a few words */
+.title { font-weight: 600; line-height: 1.25; overflow: hidden; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .title a { color: inherit; text-decoration: none; }
 .title a:hover { text-decoration: underline; }
 .ep { color: var(--muted); font-size: 13px; }
@@ -211,7 +223,7 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 #noticeUndo { flex: none; border-color: var(--accent); color: var(--accent); font-weight: 600; padding: 5px 12px; }
 #noticeUndo[hidden] { display: none; }
 .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
-.status { color: var(--muted); text-align: center; padding: 40px 0; }
+.status, .nomatch { color: var(--muted); text-align: center; padding: 40px 0; }
 details { color: var(--muted); font-size: 13px; margin-top: 28px; }
 details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1px solid #e5484d; border-radius: 10px;
   background: color-mix(in srgb, #e5484d 10%, transparent); }
@@ -228,6 +240,22 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 @media (max-width: 560px) {
   .row img { display: none; }
   .cr { padding: 7px 9px; }
+  .row { gap: 10px; }
+  .time { font-size: 14px; }
+}
+/* Fingers need a bit more room than a mouse */
+@media (pointer: coarse) {
+  .watch, .move { width: 36px; height: 36px; }
+  .drop { height: 36px; }
+  .watch-space { width: 36px; }
+}
+/* Header hidden while scrolling down on a phone, back when scrolling up */
+@media (max-width: 560px) {
+  header { transition: transform .2s ease; }
+  header.away { transform: translateY(-100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
 /* ---------- Watch plan generator (planner.html) ---------- */
