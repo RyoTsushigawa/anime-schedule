@@ -71,6 +71,7 @@ function saveAccounts() {
 }
 saveAccounts();
 const myProgress = new Map(); // media id → episodes watched, for the logged-in viewer
+let accountLoading = false;
 
 // Week schedule or Catch-up (from an AniList list), remembered per browser.
 const DEFAULT_ANILIST = 'RyoTsushigawa';
@@ -142,6 +143,31 @@ function weekStart(offset) {
 // instant, and as a fallback for 7 days when AniList is unreachable or limiting requests.
 const WEEK_CACHE_MS = 30 * 60 * 1000;
 const WEEK_KEEP_MS = 7 * 86400 * 1000;
+const fallbackWeeks = new Set();
+async function liveChartWeek(start) {
+  await ready;
+  if (!Object.keys(streamsDe?.status || {}).length) return null;
+  const end = new Date(start); end.setDate(end.getDate() + 7);
+  const items = [];
+  for (const [id, status] of Object.entries(streamsDe.status)) {
+    if (!/^\d+$/.test(id) || !status.titles?.length) continue;
+    const seen = new Set();
+    for (const airing of [...status.airings || [], ...status.next ? [status.next] : []]) {
+      // LiveChart's times already include the platform offset; render() adds it once.
+      const at = airing.at - (streamsDe.release?.[id]?.offset || 0);
+      if (!Number.isInteger(airing.episode) || airing.episode < 1 || !Number.isFinite(at) || at * 1000 < start || at * 1000 >= end || seen.has(airing.episode)) continue;
+      seen.add(airing.episode);
+      items.push({ airingAt: at, episode: airing.episode, media: {
+        id: Number(id), isAdult: false, title: { romaji: status.titles[0], english: status.titles[1] || status.titles[0] },
+        synonyms: status.titles, siteUrl: status.url || `https://anilist.co/anime/${id}`,
+        coverImage: { medium: '' }, externalLinks: [],
+      } });
+    }
+  }
+  fallbackWeeks.add(start.getTime());
+  setNote('week:' + start.getTime(), `${unreachable('AniList')}: using LiveChart (${savedAt(Date.parse(streamsDe.statusUpdated || streamsDe.generated))}) and the Guckplan. Unconfirmed episode numbers are left out.`);
+  return items;
+}
 function fetchWeek(start) {
   const key = start.getTime();
   if (!cache.has(key)) cache.set(key, downloadWeek(start).catch(e => { cache.delete(key); throw e; }));
@@ -156,6 +182,7 @@ async function downloadWeek(start) {
   if (saved) {
     // Older copy: show it now and update in the background (re-rendering if anything changed).
     downloadAirings(start).then(items => {
+      fallbackWeeks.delete(start.getTime());
       storeWeek(storeKey, items);
       const noted = setNote(storeKey, null);
       if (JSON.stringify(items) !== JSON.stringify(saved.items)) {
@@ -169,10 +196,14 @@ async function downloadWeek(start) {
   try {
     items = await downloadAirings(start);
   } catch (e) {
+    const fallback = await liveChartWeek(start);
+    if (fallback) return fallback;
     throw new Error(navigator.onLine === false ? "You're offline, and this week isn't saved in this browser yet."
       : "AniList isn't answering right now (it limits how often it can be asked). Try again in a minute.");
   }
   storeWeek(storeKey, items);
+  fallbackWeeks.delete(start.getTime());
+  setNote(storeKey, null);
   return items;
 }
 
@@ -196,7 +227,7 @@ async function downloadAirings(start) {
   const to = Math.floor(end / 1000);
   const items = [];
   for (let page = 1; ; page++) {
-    const data = await anilist(QUERY, { page, from, to });
+    const data = await anilist(QUERY, { page, from, to }, undefined, { retries: 0, timeout: 8000 });
     items.push(...data.Page.airingSchedules);
     if (!data.Page.pageInfo.hasNextPage) return items;
   }
@@ -344,7 +375,7 @@ try { resumeServices = JSON.parse(localStorage.getItem('resumeServices')) || {};
 const serviceKey = label => label.replace(/ 🔍$/, '');
 function linkButtons(links, mediaId) {
   const preferred = $('resumeWatching').checked ? resumeServices[mediaId] : null;
-  const attrs = l => `data-stream-show="${Number(mediaId)}" data-stream-service="${esc(serviceKey(l.label))}"`;
+  const attrs = l => Number(mediaId) > 0 ? `data-stream-show="${Number(mediaId)}" data-stream-service="${esc(serviceKey(l.label))}"` : '';
   const label = l => esc(l.label) + (serviceKey(l.label) === preferred ? ' · Resume' : '');
   const button = l => l.main
     ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" ${attrs(l)}>${label(l)}</a>`
@@ -462,6 +493,7 @@ function assignWatchTimes(day) {
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 function render(items, start, plans) {
   const restore = preserveListPosition();
+  const fallback = fallbackWeeks.has(start.getTime());
   // Shows any selected person watches (solo: one person, group: the toggled ones); nobody = nothing.
   const people = activePeople();
   if (!people.length) {
@@ -551,6 +583,22 @@ function render(items, start, plans) {
     if ([...found].some(f => titleMatches([f.romaji, f.english], [show.romaji, show.english]))) continue;
     const [alId, status] = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches([show.romaji, show.english], s.titles)) || [];
     let upcoming = status?.next;
+    if (fallback) {
+      const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
+      if (!day) { unknown.push({ show, why: 'No watch day set in the Guckplan' }); continue; }
+      const note = (status?.notes || []).find(n => n.at * 1000 >= start.getTime() - 86400000 && n.at * 1000 < weekEnd);
+      if (upcoming?.at * 1000 >= weekEnd && note) {
+        const why = { note: note || null, news: status.news || [] };
+        const when = new Date(upcoming.at * 1000);
+        day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode, ...why });
+        breaks.push({ show, when, episode: upcoming.episode, ...why });
+      } else {
+        const m = { id: Number(alId) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [] };
+        day.rows.push({ fallback: true, show, slot, when: day.date, m, links: streamLinks(m, show.wo, show.english || show.romaji), who: [...whoBySheet.values()].find(w => w.has(show))?.get(show) });
+      }
+      found.add(show);
+      continue;
+    }
     // LiveChart's next episode already passed: the weekly data is behind, AniList knows better
     if (upcoming && upcoming.at * 1000 < days[0].date.getTime()) {
       const fresh = nextFromAniList(alId);
@@ -616,7 +664,11 @@ function render(items, start, plans) {
         <div class="links">${linkButtons(links, m.id)}</div>
         ${checkSpace}${movesKey ? '<div class="move-space"></div>' : ''}
       </div>`;
-    const row = r => r.pause ? pause(r) : r.rewatch ? rewatch(r) : episodeRow(r);
+    const row = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
+    const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" ${searchKey(show.english, show.romaji)}>
+      <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
+      <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Episode not confirmed${whoChips(who)}</div></div>
+      <div class="links">${linkButtons(links, m.id)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
     const hm = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const timeCell = (when, watchAt) => {
@@ -628,7 +680,7 @@ function render(items, start, plans) {
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
       <div class="row" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time">${timeCell(when, watchAt)}</div>
-        <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
+        ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
@@ -1048,7 +1100,7 @@ let bulkSaving = false;
 function syncSavingButtons() {
   for (const b of document.querySelectorAll('#list button[data-media]')) {
     const saving = pendingChanges.has(Number(b.dataset.media));
-    b.disabled = saving || bulkSaving;
+    b.disabled = saving || bulkSaving || accountLoading;
     if (saving) {
       if (!b.hasAttribute('data-idle-title')) b.dataset.idleTitle = b.title;
       b.title = 'Saving to AniList…';
@@ -1061,7 +1113,7 @@ function syncSavingButtons() {
   }
   for (const id of ['markAll', 'cancelMark', 'noticeUndo']) {
     const button = $(id);
-    if (button) button.disabled = bulkSaving || pendingChanges.size > 0;
+    if (button) button.disabled = accountLoading || bulkSaving || pendingChanges.size > 0;
   }
 }
 async function change(mediaId, vars) {
@@ -1800,8 +1852,12 @@ const ready = Promise.all([
       console.warn('Sheet tabs not loaded:', e);
       setNote('tabs', `${unreachable('Google Sheets')}: the list of Guckplan tabs is unknown, so “${FALLBACK_TAB.name}” is shown.`);
     }),
-  loadMe().catch(e => console.warn('AniList account not loaded:', e)),
 ]);
+// An AniList outage must not hold the independent schedule sources hostage.
+accountLoading = !!auth;
+const accountLoad = loadMe().catch(e => console.warn('AniList account not loaded:', e))
+  .finally(() => { accountLoading = false; syncSavingButtons(); });
+ready.then(() => accountLoad.then(() => load(true)));
 updateConnect();
 load();
 
