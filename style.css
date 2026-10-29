@@ -78,6 +78,7 @@ body.pace .seasonal-only { display: none; }
 .settings { position: relative; }
 .popover.menu { left: auto; right: 0; width: 210px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
 .menu section + section { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+#settingsMenu { max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); overflow-y: auto; overscroll-behavior: contain; }
 .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
 /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
 .pills { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
