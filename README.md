@@ -6,6 +6,13 @@ with buttons for the legal streaming services in Germany.
 - **The Guckplan** comes live from the group's Google Sheet (tabs named `Guckplan <Winter|Frühling|Sommer|Herbst> <Year>`).
   The page only reads the sheet, never writes to it. Each episode uses the tab its air date belongs to.
 - **Airing times** come live from AniList.
+- **AniList outage fallback:** use the browser's last saved week first; without one, use the site's
+  independently updated LiveChart release records and the Guckplan. Unconfirmed episodes keep their
+  watch day and stream links, labelled “Episode not confirmed”, without an episode tick. A visible
+  notice identifies the fallback and its update time. No weekly dates or episode numbers are guessed.
+  Daily LiveChart runs retain observed releases for six weeks; existing installations begin with the
+  next-episode data already present. Catch-up uses its saved AniList list when available; progress
+  changes and first-time list downloads still require AniList.
 - **German streams** come from LiveChart.me and are saved in `streams-de.json` once a week, together with
   release times on our services, each show's next episode and recent break/delay headlines.
 - Shows without an episode that week appear as **Pause** (back date + announcement) when LiveChart has a
