@@ -247,6 +247,10 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
   border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; }
 #notice[hidden] { display: none; }
 #noticeText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#notice { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+#noticeText { white-space: normal; overflow-wrap: anywhere; }
+#noticeUndo { min-height: 40px; }
+#list button[aria-busy] { cursor: progress; }
 #noticeUndo { flex: none; border-color: var(--accent); color: var(--accent); font-weight: 600; padding: 5px 12px; }
 #noticeUndo[hidden] { display: none; }
 .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
