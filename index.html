@@ -96,6 +96,7 @@
             <button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button>
             <button id="backupSettings" title="Download preferences and planner settings; excludes logins and keys">Back up settings</button>
             <button id="restoreSettings">Restore settings</button>
+            <button id="keyboardHelp">Keyboard shortcuts <span aria-hidden="true">?</span></button>
             <input id="settingsFile" type="file" accept=".json,application/json" hidden>
           </div>
         </section>
@@ -197,6 +198,20 @@
 <div id="update" role="status" hidden><span>A new version of the site is ready.</span><button id="updateReload">Reload</button></div>
 
 <dialog id="restoreDialog" class="dlg" aria-labelledby="restoreTitle"><h2 id="restoreTitle">Restore settings?</h2><p>This replaces your preferences, planner settings and saved service choices.</p><p class="muted">Your AniList login and shared schedule stay as they are.</p><div class="dlg-row"><button id="cancelRestore" class="pill">Cancel</button><button id="confirmRestore" class="pill primary">Restore and reload</button></div></dialog>
+<dialog id="keyboardDialog" class="dlg" aria-labelledby="keyboardTitle">
+  <h2 id="keyboardTitle">Keyboard shortcuts</h2>
+  <dl class="keyboard-guide">
+    <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next week (Week view)</dd></div>
+    <div><dt><kbd>T</kbd></dt><dd>Show today</dd></div>
+    <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Week / Catch-up / Non-seasonal</dd></div>
+    <div><dt><kbd>/</kbd></dt><dd>Search shows</dd></div>
+    <div><dt><kbd>Esc</kbd></dt><dd>Close search or menu</dd></div>
+    <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Undo your last AniList change</dd></div>
+    <div><dt><kbd>?</kbd></dt><dd>Show this guide</dd></div>
+  </dl>
+  <p class="muted">Navigation shortcuts pause while typing, using a menu, or filling in a dialog.</p>
+  <div class="dlg-row"><button id="keyboardClose" class="pill">Close</button></div>
+</dialog>
 <script src="common.js"></script>
 <script src="app.js"></script>
 </body>
