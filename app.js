@@ -412,13 +412,13 @@ function linkButtons(links, mediaId, watchers) {
   const source = fallbackLinks.byAnilist[mediaId] || {};
   const title = links.title || source.title || 'anime';
   const alternatives = [];
-  if (rei) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
+  if (rei && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
     : { label: 'Nyaa search', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
   if (others && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
     : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
-  return (others ? shown.map(button).join('') : '') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
+  return shown.map(button).join('') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
 }
 
 // Search: hides the shows (rows, or a Catch-up show's block) whose titles don't contain what's
