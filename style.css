@@ -18,6 +18,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
 header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 16px; }
 .bar { max-width: 1000px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
@@ -77,12 +78,14 @@ body.pace .seasonal-only { display: none; }
 /* ⚙ settings menu: sections of rows, each row a name (with a short hint) and its control on the right */
 .settings { position: relative; }
 .popover.menu { left: auto; right: 0; width: 210px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
+.popover { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .menu section + section { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
 #settingsMenu { max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); overflow-y: auto; overscroll-behavior: contain; }
 #accountMenu, #people { max-height: calc(100vh - 160px); max-height: calc(100dvh - 160px); overflow-y: auto; overscroll-behavior: contain; }
 .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
 /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
 .pills { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
+.menu .pills > button, .menu .pills > a, .menu .toggle { min-height: 32px; line-height: 1.3; text-align: center; }
 .pills .pill-row { display: flex; gap: 6px; }
 /* Segmented choices and color dots inside a menu: full width, evenly spread */
 .menu .segmented { display: flex; margin: 4px 8px 8px; }
@@ -123,7 +126,7 @@ body.pace .seasonal-only { display: none; }
 }
 .toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .toggle:has(input:checked), .pills button.current { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
-.pills button.muted { color: var(--muted); border-style: dashed; }
+.pills button.muted { color: var(--muted); }
 /* AniList accounts: the name's initial in a small circle */
 .avatar { width: 18px; height: 18px; margin-left: -6px; border-radius: 50%; display: grid; place-items: center; flex: none;
   background: color-mix(in srgb, var(--accent) 20%, var(--card)); color: var(--accent); font-size: 10px; font-weight: 700; }
@@ -204,7 +207,7 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .title a { color: inherit; text-decoration: none; }
 .title a:hover { text-decoration: underline; }
 .ep { color: var(--muted); font-size: 13px; }
-.cr { flex: none; background: var(--accent); color: var(--accent-text); text-decoration: none; font-weight: 600; font-size: 13px; padding: 7px 12px; border-radius: 8px; white-space: nowrap; }
+.cr { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 32px; border: 1px solid transparent; background: var(--accent); color: var(--accent-text); text-decoration: none; font-weight: 600; font-size: 13px; line-height: 1.2; padding: 6px 12px; border-radius: 8px; white-space: nowrap; }
 .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
 .cr.other { background: transparent; border: 1px solid; font-weight: 500; }
 .cr.none { background: #1e1e22; color: #ffffff; box-shadow: inset 0 0 0 1px #3a3a42; }
@@ -225,6 +228,11 @@ main { padding: 16px; max-width: 1000px; margin: 0 auto; }
 body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .move-space { display: none; }
 .dlg { border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text); padding: 16px; width: min(380px, 92vw); }
 .dlg::backdrop { background: rgba(0, 0, 0, .55); }
+.dlg { max-height: calc(100dvh - 32px); overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,.25); }
+.dlg h2 { margin: 0 0 12px; font-size: 17px; line-height: 1.3; }
+.dlg p { margin: 0 0 12px; font-size: 14px; }
+.dlg .dlg-row:last-child { justify-content: flex-end; }
+.row > .watch, .row > .drop, .row > .score, .row > .move { min-height: 32px; }
 .dlg form { display: grid; gap: 10px; }
 .dlg .muted { color: var(--muted); font-size: 13px; }
 .dlg-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
