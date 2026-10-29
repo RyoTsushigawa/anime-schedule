@@ -339,11 +339,17 @@ function watchDay(aired, tag, time) {
 // Our services as buttons; anything else only with the "Other services" toggle, outlined.
 // The piracy label only when no button is left: none of our services, or (with the toggle on)
 // no service at all.
-function linkButtons(links) {
+let resumeServices = {};
+try { resumeServices = JSON.parse(localStorage.getItem('resumeServices')) || {}; } catch {}
+const serviceKey = label => label.replace(/ 🔍$/, '');
+function linkButtons(links, mediaId) {
+  const preferred = $('resumeWatching').checked ? resumeServices[mediaId] : null;
+  const attrs = l => `data-stream-show="${Number(mediaId)}" data-stream-service="${esc(serviceKey(l.label))}"`;
+  const label = l => esc(l.label) + (serviceKey(l.label) === preferred ? ' · Resume' : '');
   const button = l => l.main
-    ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`
-    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${esc(l.label)}</a>`;
-  const shown = links.filter(l => l.main || $('others').checked);
+    ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" ${attrs(l)}>${label(l)}</a>`
+    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have" ${attrs(l)}>${label(l)}</a>`;
+  const shown = links.filter(l => l.main || $('others').checked).sort((a, b) => Number(serviceKey(b.label) === preferred) - Number(serviceKey(a.label) === preferred));
   // The piracy label is a rickroll, nothing more.
   if (!shown.length) return '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any streaming service">Piracy</a>';
   return shown.map(button).join('');
@@ -604,7 +610,7 @@ function render(items, start, plans) {
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">Rewatch</div>
         </div>
-        <div class="links">${linkButtons(links)}</div>
+        <div class="links">${linkButtons(links, m.id)}</div>
         ${checkSpace}${movesKey ? '<div class="move-space"></div>' : ''}
       </div>`;
     const row = r => r.pause ? pause(r) : r.rewatch ? rewatch(r) : episodeRow(r);
@@ -624,7 +630,7 @@ function render(items, start, plans) {
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
-        <div class="links">${linkButtons(links)}</div>
+        <div class="links">${linkButtons(links, m.id)}</div>
         ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}${moveButton(show, slot)}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
@@ -1383,7 +1389,7 @@ async function loadCatchup(strict = false) {
       <div class="info">${title(m)}
         <div class="ep">${out - first + 1} to catch up${out > first ? ` · Ep ${first}–${out}` : ''}${note(missing)}</div>
       </div>
-      ${showLinks ? `<div class="links">${linkButtons(links)}</div>` : ''}
+      ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
       ${mine ? check(m, out, missing) + dropButton(m.id) : ''}
     </div>`;
   // A header per show (cover, title, links, Drop; while selecting its ✓ is the switch), then every
@@ -1394,7 +1400,7 @@ async function loadCatchup(strict = false) {
       <div class="row show-head">
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep">${eps.length} to catch up${note(missing)}</div></div>
-        ${showLinks ? `<div class="links">${linkButtons(links)}</div>` : ''}
+        ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
         ${mine ? (selecting ? selector(m) : '') + dropButton(m.id) : ''}
       </div>${eps.map(ep => `
       <div class="row compact">
@@ -1411,7 +1417,7 @@ async function loadCatchup(strict = false) {
       <div class="info">${title(m)}
         <div class="ep">${progress} of ${m.episodes || out} watched</div>
       </div>
-      ${showLinks ? `<div class="links">${linkButtons(links)}</div>` : ''}
+      ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
       ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) + dropButton(m.id) : ''}
     </div>`;
   if (!mine || shown === 'pace') selecting = false;
@@ -1833,3 +1839,94 @@ function fillPeople(people) {
     return b;
   }));
 }
+
+// Last used service per show; refreshed URLs still come from the current stream data.
+try { $('resumeWatching').checked = localStorage.getItem('resumeWatching') === '1'; } catch {}
+$('resumeWatching').onchange = () => {
+  try { localStorage.setItem('resumeWatching', $('resumeWatching').checked ? '1' : '0'); } catch {}
+  load(true);
+};
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[data-stream-show]');
+  if (!link || !$('resumeWatching').checked) return;
+  const id = link.dataset.streamShow, service = link.dataset.streamService;
+  resumeServices[id] = service;
+  try { localStorage.setItem('resumeServices', JSON.stringify(resumeServices)); } catch {}
+  document.querySelectorAll('a[data-stream-show]').forEach(button => {
+    if (button.dataset.streamShow !== id) return;
+    button.textContent = button.textContent.replace(/ · Resume$/, '') + (button.dataset.streamService === service ? ' · Resume' : '');
+    if (button.dataset.streamService === service) button.parentElement.prepend(button);
+  });
+});
+
+// Explicit allowlist excludes account sessions, access keys and cached personal lists.
+const BACKUP_KEYS = ['mode', 'soloPerson', 'people', 'view', 'anilistUser', 'theme', 'time', 'sort', 'accent',
+  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'resumeServices',
+  'planUnavailable', 'planStarts', 'planStart', 'planBusy', 'planMoves', 'planFixed', 'planBreaks', 'planUntil', 'planView'];
+function settingsBackup() {
+  const settings = {};
+  for (const key of BACKUP_KEYS) {
+    const value = localStorage.getItem(key);
+    if (value !== null) settings[key] = value;
+  }
+  return { app: 'anime-schedule', version: 1, saved: new Date().toISOString(), settings };
+}
+function readSettingsBackup(text) {
+  if (text.length > 1000000) throw new Error('This backup is too large.');
+  const data = JSON.parse(text);
+  if (data?.app !== 'anime-schedule' || data.version !== 1 || !data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings))
+    throw new Error('Choose an Anime Schedule settings backup.');
+  const settings = {};
+  for (const key of BACKUP_KEYS) if (Object.hasOwn(data.settings, key)) {
+    if (typeof data.settings[key] !== 'string' || data.settings[key].length > 200000) throw new Error('Invalid setting: ' + key);
+    settings[key] = data.settings[key];
+  }
+  if (settings.resumeServices) {
+    const services = JSON.parse(settings.resumeServices);
+    if (!services || Array.isArray(services) || typeof services !== 'object' || Object.entries(services).some(([id, name]) => !/^\d+$/.test(id) || typeof name !== 'string' || name.length > 200))
+      throw new Error('Invalid saved services.');
+  }
+  for (const key of ['people', 'planUnavailable', 'planStarts', 'planBusy', 'planFixed', 'planBreaks', 'planUntil'])
+    if (settings[key]) {
+      const value = JSON.parse(settings[key]);
+      if (!value || typeof value !== 'object') throw new Error('Invalid setting: ' + key);
+      if (['people', 'planBusy', 'planFixed'].includes(key) && !Array.isArray(value)) throw new Error('Invalid setting: ' + key);
+    }
+  for (const key of ['time', 'sort', 'accent']) if (settings[key] && !CHOICE_OK[key](settings[key])) throw new Error('Invalid setting: ' + key);
+  return settings;
+}
+$('backupSettings').onclick = () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(settingsBackup(), null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url; link.download = 'anime-schedule-settings-' + new Date().toISOString().slice(0, 10) + '.json';
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+$('restoreSettings').onclick = () => $('settingsFile').click();
+let pendingSettings;
+$('settingsFile').onchange = async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    if (file.size > 1000000) throw new Error('This backup is too large.');
+    pendingSettings = readSettingsBackup(await file.text());
+    $('restoreDialog').showModal();
+  } catch (error) { notice('Could not restore: ' + error.message); }
+  event.target.value = '';
+};
+$('confirmRestore').onclick = () => {
+  const before = settingsBackup().settings;
+  try {
+    for (const key of BACKUP_KEYS) {
+      if (Object.hasOwn(pendingSettings, key)) localStorage.setItem(key, pendingSettings[key]);
+      else localStorage.removeItem(key);
+    }
+  } catch {
+    for (const key of BACKUP_KEYS) {
+      if (Object.hasOwn(before, key)) localStorage.setItem(key, before[key]);
+      else localStorage.removeItem(key);
+    }
+    notice('Could not save settings; your previous settings were kept.'); return;
+  }
+  location.reload();
+};
+$('cancelRestore').onclick = () => $('restoreDialog').close();
