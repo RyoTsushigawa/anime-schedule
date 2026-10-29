@@ -389,6 +389,8 @@ $('search').addEventListener('input', searchChanged);
 function openSearch(open) {
   $('searchBox').classList.toggle('open', open);
   document.body.classList.toggle('searching', open);
+  $('searchButton').setAttribute('aria-expanded', String(open));
+  $('searchButton').setAttribute('aria-label', open ? 'Clear and close search' : 'Search shows');
   if (open) $('search').focus();
 }
 // The 🔍 opens the field, and closes it again (clearing the search) when it's open.
@@ -406,7 +408,7 @@ $('search').addEventListener('keydown', e => {
   $('search').value = '';
   searchChanged();
   openSearch(false);
-  $('search').blur();
+  $('searchButton').focus();
 });
 
 // On a phone the three header rows take a quarter of the screen: they slide away while scrolling
@@ -780,6 +782,13 @@ function updateConnect() {
 
 // ⚙ and the AniList button open and close their menus; a click anywhere else closes them.
 function showMenu(menu, button, open) {
+  if (open) {
+    for (const [other, trigger] of [['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
+      if (other === menu) continue;
+      $(other).hidden = true;
+      $(trigger).setAttribute('aria-expanded', 'false');
+    }
+  }
   $(menu).hidden = !open;
   $(button).setAttribute('aria-expanded', open);
 }
@@ -1785,12 +1794,19 @@ function updateGroupButton() {
 }
 updateGroupButton();
 function showPeople(open) {
-  $('people').hidden = !open;
-  $('groupButton').setAttribute('aria-expanded', open);
+  showMenu('people', 'groupButton', open);
 }
 $('groupButton').onclick = () => showPeople($('people').hidden);
 document.addEventListener('click', e => { if (!e.target.closest('.picker')) showPeople(false); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') showPeople(false); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+  for (const [menu, button] of [['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
+    if ($(menu).hidden) continue;
+    showMenu(menu, button, false);
+    $(button).focus();
+    break;
+  }
+});
 $('soloPerson').onchange = () => {
   soloPerson = $('soloPerson').value;
   colorSolo();
