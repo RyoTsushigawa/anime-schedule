@@ -946,11 +946,41 @@ async function loadMe() {
     for (const { progress, status, media } of dropped.MediaListCollection.lists.flatMap(l => l.entries))
       if (!knownEntries.has(media.id)) knownEntries.set(media.id, { progress, status });
   } catch {}
+  // How the account scores (10 points, 100 points, stars…), asked once per account
+  if (!auth.scoreFormat) {
+    try {
+      auth.scoreFormat = (await anilistAsMe('{ Viewer { mediaListOptions { scoreFormat } } }')).Viewer.mediaListOptions.scoreFormat;
+      saveAccounts();
+    } catch {}
+  }
+  await loadToScore();
 }
 
-// $status only when given: CURRENT for a show not on the list yet, DROPPED for "Drop".
-const SAVE_PROGRESS = `mutation ($mediaId: Int, $progress: Int, $status: MediaListStatus) {
-  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) { id progress status }
+// Completed shows: their score for the Week view's ★ button, and the ones finished within the last
+// 60 days without a score yet, listed at the end of Catch-up ("Finished · not scored yet").
+const TO_SCORE_DAYS = 60;
+let toScore = [];
+async function loadToScore() {
+  if (!auth?.name) return;
+  try {
+    const done = await anilist(`query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status: COMPLETED) {
+      lists { entries { progress status score completedAt { year month day }
+        media { id siteUrl synonyms title { romaji english } coverImage { medium } } } } } }`, { user: auth.name });
+    const entries = done.MediaListCollection.lists.flatMap(l => l.entries);
+    for (const { progress, status, score, media } of entries)
+      if (!knownEntries.has(media.id) || knownEntries.get(media.id).status === 'COMPLETED') knownEntries.set(media.id, { progress, status, score });
+    const since = Date.now() - TO_SCORE_DAYS * 86400000;
+    toScore = entries.filter(e => !e.score && e.completedAt?.year
+      && new Date(e.completedAt.year, (e.completedAt.month || 1) - 1, e.completedAt.day || 1) >= since)
+      .map(e => ({ media: e.media, completed: new Date(e.completedAt.year, (e.completedAt.month || 1) - 1, e.completedAt.day || 1) }))
+      .sort((a, b) => b.completed - a.completed);
+  } catch {}
+}
+
+// $status only when given: CURRENT for a show not on the list yet, DROPPED for "Drop"; $score only
+// when scoring (in the account's own format).
+const SAVE_PROGRESS = `mutation ($mediaId: Int, $progress: Int, $status: MediaListStatus, $score: Float) {
+  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status, score: $score) { id progress status score }
 }`;
 
 // ---------- Undo (Ctrl+Z, or the notice's "Undo") ----------
@@ -962,8 +992,8 @@ const notOnList = new Set();    // media ids known not to be on the list
 // The entry as AniList has it right now (asked every time: it may have changed elsewhere since
 // the page loaded its copy of the list)
 async function entryNow(mediaId) {
-  const entry = (await anilistAsMe('query ($id: Int) { Media(id: $id) { mediaListEntry { progress status } } }', { id: mediaId })).Media.mediaListEntry;
-  return entry ? { onList: true, progress: entry.progress, status: entry.status } : { onList: false };
+  const entry = (await anilistAsMe('query ($id: Int) { Media(id: $id) { mediaListEntry { progress status score } } }', { id: mediaId })).Media.mediaListEntry;
+  return entry ? { onList: true, progress: entry.progress, status: entry.status, score: entry.score } : { onList: false };
 }
 const entryBefore = entryNow;
 
@@ -977,11 +1007,11 @@ async function change(mediaId, vars) {
   const before = await entryBefore(mediaId);
   const status = vars.status || (vars.progress !== undefined && !ON_WATCHING_LIST.includes(before.status) ? 'CURRENT' : undefined);
   const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars, status })).SaveMediaListEntry;
-  knownEntries.set(mediaId, { progress: saved.progress, status: saved.status });
+  knownEntries.set(mediaId, { progress: saved.progress, status: saved.status, score: saved.score });
   notOnList.delete(mediaId);
   myProgress.set(mediaId, saved.progress);
   listChanged(mediaId, saved.progress, !!status);
-  return { mediaId, before, after: { progress: saved.progress, status: saved.status }, entryId: saved.id };
+  return { mediaId, before, after: { progress: saved.progress, status: saved.status, score: saved.score }, entryId: saved.id };
 }
 
 // Keep the saved Watching list in step, so Catch-up shows changes right away; a status change
@@ -1026,11 +1056,11 @@ async function undo() {
     const { mediaId, before, after, entryId } = left.at(-1);
     try {
       const now = await entryNow(mediaId);
-      if (!now.onList || now.progress !== after.progress || now.status !== after.status) elsewhere++;
+      if (!now.onList || now.progress !== after.progress || now.status !== after.status || now.score !== after.score) elsewhere++;
       else {
         if (before.onList) {
-          await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status });
-          knownEntries.set(mediaId, { progress: before.progress, status: before.status });
+          await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status, score: before.score });
+          knownEntries.set(mediaId, { progress: before.progress, status: before.status, score: before.score });
           myProgress.set(mediaId, before.progress);
         } else {
           await anilistAsMe('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: entryId });
@@ -1096,18 +1126,88 @@ $('list').addEventListener('click', async e => {
   try {
     const record = await change(mediaId, { progress, status: b.dataset.add ? 'CURRENT' : undefined });
     remember([record], `${title}: episode ${progress} watched`);
+    // The last episode: AniList set it to Completed, so ask for the score right away
+    if (record.after.status === 'COMPLETED' && record.before.status !== 'COMPLETED' && !record.after.score) {
+      openScore(mediaId, title);
+      loadToScore().then(() => load(true));
+    }
   } catch (err) {
     b.title = `Couldn't save: ${err.message}`;
   }
   load(true);
 });
 
+// ---------- Scores (completed shows) ----------
+
+// The account's score format (AniList profile setting): 100 or 10 points as a number, 10 points,
+// 5 stars or 3 smileys as buttons. A score of 0 means none.
+const SMILEYS = ['🙁', '😐', '🙂'];
+const scoreFormat = () => auth?.scoreFormat || 'POINT_10_DECIMAL';
+const showScore = score => scoreFormat() === 'POINT_5' ? '★'.repeat(score)
+  : scoreFormat() === 'POINT_3' ? SMILEYS[score - 1] || score : String(score);
+const scoreButton = mediaId => {
+  const score = knownEntries.get(mediaId)?.score;
+  return `<button class="score${score ? ' scored' : ''}" data-score-media="${mediaId}" title="${score ? 'Change the score' : 'Score it'} on AniList">${score ? esc(showScore(score)) : '★ Score'}</button>`;
+};
+let scoring = null; // { mediaId, title }
+function openScore(mediaId, title) {
+  scoring = { mediaId, title };
+  const format = scoreFormat();
+  const current = knownEntries.get(mediaId)?.score || 0;
+  $('scoreName').textContent = title;
+  $('scoreMsg').textContent = '';
+  $('scoreClear').hidden = !current;
+  $('scoreSave').hidden = !['POINT_100', 'POINT_10_DECIMAL'].includes(format); // buttons save by themselves
+  const box = $('scoreInput');
+  if (format === 'POINT_100' || format === 'POINT_10_DECIMAL') {
+    const max = format === 'POINT_100' ? 100 : 10;
+    box.innerHTML = `<input id="scoreValue" type="number" min="${max / 10}" max="${max}" step="${max === 100 ? 1 : 0.5}"
+      inputmode="decimal" value="${current || ''}" placeholder="1–${max}" aria-label="Score out of ${max}"><span class="muted">/ ${max}</span>`;
+  } else {
+    const values = { POINT_10: 10, POINT_5: 5, POINT_3: 3 }[format] || 10;
+    box.innerHTML = Array.from({ length: values }, (_, i) => i + 1).map(v =>
+      `<button type="button" class="pill${v === current ? ' primary' : ''}" data-score="${v}">${esc(format === 'POINT_5' ? v + '★' : showScore(v))}</button>`).join('');
+  }
+  $('scoreDlg').showModal();
+  $('scoreValue')?.focus();
+}
+async function saveScore(score) {
+  const { mediaId, title } = scoring;
+  $('scoreMsg').textContent = 'Saving…';
+  try {
+    const record = await change(mediaId, { score });
+    $('scoreDlg').close();
+    toScore = toScore.filter(t => t.media.id !== mediaId || !score);
+    remember([record], score ? `${title}: scored ${showScore(record.after.score)}` : `${title}: score removed`);
+    load(true);
+  } catch (e) { $('scoreMsg').textContent = `Not saved: ${e.message}`; }
+}
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('[data-score-media]');
+  if (b && auth) openScore(Number(b.dataset.scoreMedia), rowTitle(b));
+});
+$('scoreInput').addEventListener('click', e => {
+  const b = e.target.closest('[data-score]');
+  if (b) saveScore(Number(b.dataset.score));
+});
+$('scoreSave').onclick = () => {
+  const input = $('scoreValue');
+  if (!input) return; // the buttons save by themselves
+  const v = Number(input.value);
+  if (!input.value || !(v >= Number(input.min) && v <= Number(input.max))) { $('scoreMsg').textContent = `A score from ${input.min} to ${input.max}.`; return; }
+  saveScore(v);
+};
+$('scoreDlg').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'scoreValue') { e.preventDefault(); $('scoreSave').click(); } });
+$('scoreClear').onclick = () => saveScore(0);
+
 // "Drop" in Catch-up: sets the show to Dropped on AniList, so it leaves Catch-up (and doesn't come
 // back as a forgotten Guckplan show). The first click only asks.
 // Already dropped (e.g. from the Week view, where dropped shows stay as long as the Guckplan lists
 // them): a quiet "Dropped" in its place; Ctrl+Z / Undo brings it back.
+// Completed: ★ to score it in Drop's place (the score once given).
 const dropButton = mediaId => knownEntries.get(mediaId)?.status === 'DROPPED'
   ? '<span class="drop dropped" title="Dropped on AniList">Dropped</span>'
+  : knownEntries.get(mediaId)?.status === 'COMPLETED' ? scoreButton(mediaId)
   : `<button class="drop" data-media="${mediaId}" title="Set to Dropped on AniList">Drop</button>`;
 $('list').addEventListener('click', async e => {
   const b = e.target.closest('.drop');
@@ -1320,6 +1420,16 @@ async function loadCatchup(strict = false) {
           <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
       : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
     $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
+    // Your own list: shows finished lately that have no score yet, each with ★ to score it
+    const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
+    if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Finished · not scored yet</h2>${unscored.map(({ media: m, completed }) => `
+      <div class="row" ${searchKey(...mediaTitles(m))}>
+        <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
+        <div class="info">${title(m)}
+          <div class="ep">Completed ${completed.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</div>
+        </div>
+        ${scoreButton(m.id)}
+      </div>`).join('')}</section>`);
   }
   $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
   // Not logged in, or someone else's list: say why there are no ✓ / Drop buttons. (Typing a name
