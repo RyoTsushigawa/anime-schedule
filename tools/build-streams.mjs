@@ -10,6 +10,7 @@
 // timetable notes, and seasons.json.
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { parseSubsPlease, matchSubsPlease, parseAniWorld, matchAniWorld } from './fallback-links.mjs';
 
 const SHEET = 'https://docs.google.com/spreadsheets/d/1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ';
 const FALLBACK_TAB = { name: 'Guckplan Herbst 2026', gid: '488548700' };
@@ -218,7 +219,8 @@ async function timetableNotes() {
 // --seasons-only: just the season lists (seasons.json), without the streams.
 const seasonsOnly = process.argv.includes('--seasons-only');
 const statusOnly = process.argv.includes('--status-only');
-process.argv = process.argv.filter(a => a !== '--seasons-only' && a !== '--status-only');
+const fallbackOnly = process.argv.includes('--fallback-links-only');
+process.argv = process.argv.filter(a => !['--seasons-only', '--status-only', '--fallback-links-only'].includes(a));
 
 const cards = [];
 const bySeason = {};
@@ -230,6 +232,38 @@ for (const season of seasons()) {
 }
 await writeSeasons(bySeason);
 if (seasonsOnly) process.exit(0);
+try {
+  const res = await fetch('https://subsplease.org/shows/', { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`Show index returned ${res.status}`);
+  const index = parseSubsPlease(await res.text());
+  if (index.length < 100) throw new Error('Show index incomplete; kept previous links');
+  let aniWorld = [];
+  try {
+    const response = await fetch('https://aniworld.to/animes', { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error('AniWorld index unavailable');
+    aniWorld = parseAniWorld(await response.text());
+    if (aniWorld.length < 100) throw new Error('AniWorld index incomplete');
+  } catch (error) { console.log(error.message); aniWorld = []; }
+  const output = fileURLToPath(new URL('../fallback-links.json', import.meta.url));
+  let old;
+  try { old = JSON.parse(await readFile(output, 'utf8')); } catch {}
+  const byAnilist = {};
+  for (const card of cards) {
+    if (!card.anilist) continue;
+    const show = matchSubsPlease(card.titles, index);
+    const alternate = matchAniWorld(card.titles, aniWorld);
+    byAnilist[card.anilist] = { title: card.titles[0],
+      ...(show && { subsplease: show.url }),
+      ...(alternate ? { aniworld: alternate.url } : !aniWorld.length && old?.byAnilist?.[card.anilist]?.aniworld ? { aniworld: old.byAnilist[card.anilist].aniworld } : {}) };
+  }
+  if (old && Object.keys(byAnilist).length < Object.keys(old.byAnilist || {}).length / 2) throw new Error('Too few matches; kept previous links');
+  await writeFile(output, JSON.stringify({ generated: new Date().toISOString(), byAnilist }, null, 1) + '\n');
+  console.log(`Verified show links: ${Object.values(byAnilist).filter(s => s.subsplease).length} SubsPlease, ${Object.values(byAnilist).filter(s => s.aniworld).length} AniWorld`);
+} catch (error) {
+  console.log(`Fallback links not updated: ${error.message}`);
+  if (fallbackOnly) process.exit(1);
+}
+if (fallbackOnly) process.exit(0);
 
 const titles = await sheetTitles();
 console.log(`Guckplan: ${titles.length} shows`);
