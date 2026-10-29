@@ -1160,9 +1160,11 @@ function openScore(mediaId, title) {
   $('scoreSave').hidden = !['POINT_100', 'POINT_10_DECIMAL'].includes(format); // buttons save by themselves
   const box = $('scoreInput');
   if (format === 'POINT_100' || format === 'POINT_10_DECIMAL') {
+    // 100 points: whole numbers from 1. 10 points with decimals: the arrows step by .5, but any one
+    // decimal (8.3) is fine, as on AniList.
     const max = format === 'POINT_100' ? 100 : 10;
-    box.innerHTML = `<input id="scoreValue" type="number" min="${max / 10}" max="${max}" step="${max === 100 ? 1 : 0.5}"
-      inputmode="decimal" value="${current || ''}" placeholder="1–${max}" aria-label="Score out of ${max}"><span class="muted">/ ${max}</span>`;
+    box.innerHTML = `<input id="scoreValue" type="number" min="${max === 100 ? 1 : 0.5}" max="${max}" step="${max === 100 ? 1 : 0.5}"
+      inputmode="decimal" value="${current || ''}" placeholder="${max === 100 ? 1 : 0.5}–${max}" aria-label="Score out of ${max}"><span class="muted">/ ${max}</span>`;
   } else {
     const values = { POINT_10: 10, POINT_5: 5, POINT_3: 3 }[format] || 10;
     box.innerHTML = Array.from({ length: values }, (_, i) => i + 1).map(v =>
@@ -1193,7 +1195,8 @@ $('scoreInput').addEventListener('click', e => {
 $('scoreSave').onclick = () => {
   const input = $('scoreValue');
   if (!input) return; // the buttons save by themselves
-  const v = Number(input.value);
+  // One decimal at most (whole numbers on the 100 scale), like AniList stores it
+  const v = Math.round(Number(input.value.replace(',', '.')) * (input.step === '1' ? 1 : 10)) / (input.step === '1' ? 1 : 10);
   if (!input.value || !(v >= Number(input.min) && v <= Number(input.max))) { $('scoreMsg').textContent = `A score from ${input.min} to ${input.max}.`; return; }
   saveScore(v);
 };
