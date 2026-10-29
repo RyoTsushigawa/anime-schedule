@@ -51,6 +51,7 @@
           <div class="menu-label">Show</div>
           <div class="pills">
             <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
+            <label class="toggle" title="Put your last used service first for each show"><input type="checkbox" id="resumeWatching">Resume watching</label>
             <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
             <label class="toggle week-only" title="Everyone in the Guckplan who watches each show"><input type="checkbox" id="who">Who's watching</label>
             <label class="toggle" title="The Drop button next to each ✓ (when connected to AniList)"><input type="checkbox" id="dropButtons">Drop buttons</label>
@@ -86,6 +87,9 @@
             <a href="planner.html" target="_blank" rel="noopener" title="Opens in a new tab; only suggests, changes nothing">Watch plan generator ↗</a>
             <a href="ranker/" target="_blank" rel="noopener" title="Rescore your list show by show (opens in a new tab)">Higher or Lower ranker ↗</a>
             <button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button>
+            <button id="backupSettings" title="Download preferences and planner settings; excludes logins and keys">Back up settings</button>
+            <button id="restoreSettings">Restore settings</button>
+            <input id="settingsFile" type="file" accept=".json,application/json" hidden>
             <button id="movesSetup" class="muted" title="Move shows out of their Guckplan slot for everyone (needs a GitHub key)">⇄ Moving shows</button>
           </div>
         </section>
@@ -186,6 +190,7 @@
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
 <div id="update" role="status" hidden><span>A new version of the site is ready.</span><button id="updateReload">Reload</button></div>
 
+<dialog id="restoreDialog" class="dlg" aria-labelledby="restoreTitle"><h2 id="restoreTitle">Restore settings?</h2><p>This replaces your preferences, planner settings and saved service choices.</p><p class="muted">Your AniList login and shared schedule stay as they are.</p><div class="dlg-row"><button id="cancelRestore" class="pill">Cancel</button><button id="confirmRestore" class="pill primary">Restore and reload</button></div></dialog>
 <script src="common.js"></script>
 <script src="app.js"></script>
 </body>
