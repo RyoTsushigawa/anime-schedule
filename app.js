@@ -1152,6 +1152,8 @@ const scoreButton = mediaId => {
 let scoring = null; // { mediaId, title }
 function openScore(mediaId, title) {
   scoring = { mediaId, title };
+  showSettings(false);
+  showMenu('accountMenu', 'accountButton', false);
   const format = scoreFormat();
   const current = knownEntries.get(mediaId)?.score || 0;
   $('scoreName').textContent = title;
