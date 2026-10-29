@@ -108,6 +108,7 @@ body.pace .seasonal-only { display: none; }
 .chip[style*="--person"][aria-pressed="true"]::before { background: var(--person-text); opacity: .5; }
 .pills .pill-row > button { flex: 1; justify-content: center; }
 .pills a { text-decoration: none; justify-content: center; }
+.menu .toggle { justify-content: center; } /* ⚙ Show: centered like the links below */
 .toggle, .pills button, .pills a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px;
   border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; user-select: none; }
 .toggle:hover, .pills button:hover, .pills a:hover { border-color: var(--accent); }
