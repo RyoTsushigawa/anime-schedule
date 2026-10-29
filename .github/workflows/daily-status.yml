@@ -27,7 +27,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add streams-de.json seasons.json
+          git add streams-de.json seasons.json fallback-links.json
           git diff --cached --quiet && exit 0
           git commit -m "Daily LiveChart status"
           # the PC at home may have published meanwhile; put this commit on top of it
