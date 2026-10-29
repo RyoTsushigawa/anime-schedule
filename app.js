@@ -82,6 +82,15 @@ try {
   $('anilistUser').value = localStorage.getItem('anilistUser') ?? DEFAULT_ANILIST;
 } catch {}
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
+let fallbackLinks = { byAnilist: {} };
+async function loadFallbackLinks() {
+  try {
+    const response = await fetch('fallback-links.json', { cache: 'no-cache' });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data?.byAnilist && typeof data.byAnilist === 'object') fallbackLinks = data;
+  } catch {} // A show-specific search remains usable if the index update is unavailable.
+}
 let tabs = []; // Guckplan tabs, newest first
 // Each tab's sheet: { people: [...], shows: [{ romaji, english, wo, tag, time, votes: { name: value } }] }
 
@@ -339,6 +348,7 @@ async function lookUpRewatches() {
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
 function streamLinks(media, wo, searchTitle) {
   const links = [];
+  links.title = searchTitle || media.title?.english || media.title?.romaji || '';
   // German availability from LiveChart (tools/build-streams.mjs) wins over AniList's worldwide links.
   const de = streamsDe?.byAnilist[media.id];
   if (de?.length) {
@@ -388,7 +398,7 @@ function watchDay(aired, tag, time) {
 let resumeServices = {};
 try { resumeServices = JSON.parse(localStorage.getItem('resumeServices')) || {}; } catch {}
 const serviceKey = label => label.replace(/ 🔍$/, '');
-function linkButtons(links, mediaId) {
+function linkButtons(links, mediaId, watchers) {
   const preferred = $('resumeWatching').checked ? resumeServices[mediaId] : null;
   const attrs = l => Number(mediaId) > 0 ? `data-stream-show="${Number(mediaId)}" data-stream-service="${esc(serviceKey(l.label))}"` : '';
   const label = l => esc(l.label) + (serviceKey(l.label) === preferred ? ' · Resume' : '');
@@ -396,9 +406,19 @@ function linkButtons(links, mediaId) {
     ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" ${attrs(l)}>${label(l)}</a>`
     : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have" ${attrs(l)}>${label(l)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked).sort((a, b) => Number(serviceKey(b.label) === preferred) - Number(serviceKey(a.label) === preferred));
-  // The piracy label is a rickroll, nothing more.
-  if (!shown.length) return '<a class="cr none" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" title="Not on any streaming service">Piracy</a>';
-  return shown.map(button).join('');
+  const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
+  const rei = people.some(p => p.toLowerCase() === 'rei');
+  const others = !people.length || people.some(p => p.toLowerCase() !== 'rei');
+  const source = fallbackLinks.byAnilist[mediaId] || {};
+  const title = links.title || source.title || 'anime';
+  const alternatives = [];
+  if (rei) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
+    ? { label: 'SubsPlease', url: source.subsplease }
+    : { label: 'Nyaa search', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
+  if (others && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
+    ? { label: 'AniWorld', url: source.aniworld }
+    : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
+  return (others ? shown.map(button).join('') : '') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
 }
 
 // Search: hides the shows (rows, or a Catch-up show's block) whose titles don't contain what's
@@ -646,7 +666,7 @@ function render(items, start, plans) {
     else if (media && media.status === 'FINISHED') {
       if (finishedThisSeason(media, start)) continue; // A season ending is not an automatic rewatch.
       const links = streamLinks(media, show.wo, media.title.english || media.title.romaji);
-      day.rows.push({ rewatch: true, m: media, links, slot, when: day.date });
+      day.rows.push({ rewatch: true, m: media, links, slot, when: day.date, who: [...whoBySheet.values()].find(w => w.has(show))?.get(show) });
       found.add(show);
     } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
       const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
@@ -683,7 +703,7 @@ function render(items, start, plans) {
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
       </div>`;
-    const rewatch = ({ m, links, watchAt }) => `
+    const rewatch = ({ m, links, watchAt, who }) => `
       <div class="row" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
         <div class="time">Rewatch</div>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
@@ -691,14 +711,14 @@ function render(items, start, plans) {
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">Rewatch</div>
         </div>
-        <div class="links">${linkButtons(links, m.id)}</div>
+        <div class="links">${linkButtons(links, m.id, who)}</div>
         ${checkSpace}${movesKey ? '<div class="move-space"></div>' : ''}
       </div>`;
     const row = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
     const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
       <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Episode not confirmed${whoChips(who)}</div></div>
-      <div class="links">${linkButtons(links, m.id)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
+      <div class="links">${linkButtons(links, m.id, who)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
     const hm = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const timeCell = (when, watchAt) => {
@@ -715,7 +735,7 @@ function render(items, start, plans) {
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
-        <div class="links">${linkButtons(links, m.id)}</div>
+        <div class="links">${linkButtons(links, m.id, who)}</div>
         ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}${moveButton(show, slot)}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
@@ -1016,6 +1036,7 @@ $('refreshData').onclick = async () => {
     streamsDe = await res.json();
     setNote('streams', null);
     await loadMoves();
+    await loadFallbackLinks();
     if (auth) await loadMe().catch(() => {}); // ticks from elsewhere (AniList itself, the phone)
     tabs = await guckplanTabs();
     setNote('tabs', null);
@@ -1872,6 +1893,7 @@ $('moveReset').onclick = () => {
 
 // The German links and the sheet's tab list, fetched side by side; load() waits for both.
 const ready = Promise.all([
+  loadFallbackLinks(),
   loadMoves(),
   fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
     .then(json => { streamsDe = json; }, e => {
