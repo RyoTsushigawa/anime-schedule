@@ -514,7 +514,18 @@ function newState({source,kind,xml,fileName,items,showOld=true}){
     hints:PREFS.hints ?? true, showOld:PREFS.old ?? showOld, fillGaps:PREFS.fill ?? true, skip:{...skipsOf()},
     markDone:true, wholeNums:false};
 }
-function save(){ if(S.source==='sample') return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} syncRemoved(); }
+function save(){
+  if(S.source==='sample') return;
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); document.getElementById('saveWarning')?.remove(); }
+  catch(e){
+    if(!document.getElementById('saveWarning')){
+      const warning = document.createElement('p'); warning.id = 'saveWarning'; warning.setAttribute('role','alert');
+      warning.textContent = 'Your browser could not save progress. Keep this tab open and use Back up progress below before leaving.';
+      $('backupBtn').parentElement.prepend(warning);
+    }
+  }
+  syncRemoved();
+}
 // Copies what you marked "Didn't watch" or "Dropped" (and how each show got into the game) to the page database,
 // so Claude can read it and tune which seasons get added automatically. Writes only when the lists change.
 let removedTimer = null, removedSent = '';
@@ -2050,7 +2061,7 @@ async function anilist(query, variables, token){
     const wait = lastAniListCall + 800 - Date.now(); if(wait > 0) await new Promise(r => setTimeout(r, wait));
     lastAniListCall = Date.now();
     const headers = {'Content-Type':'application/json', Accept:'application/json', ...(token ? {Authorization:'Bearer ' + token} : {})};
-    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers, body:JSON.stringify({query, variables})});
+    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers, body:JSON.stringify({query, variables}), signal:AbortSignal.timeout(20000)});
     if(res.status===429){ await new Promise(r => setTimeout(r, ((+res.headers.get('retry-after')) || 30) * 1000)); continue; }
     const json = await res.json();
     if(!res.ok || json.errors) throw new Error(json.errors?.[0]?.message || `AniList answered ${res.status}`);
@@ -2062,8 +2073,13 @@ async function getList(userName, force = false){
   const key = userName.toLowerCase();
   let cache = {}; try{ cache = JSON.parse(localStorage.getItem(LIST_CACHE) || '{}') || {}; }catch(e){}
   if(!force && cache[key] && Date.now() - new Date(cache[key].updated).getTime() < LIST_TTL) return cache[key];
-  const d = await anilist(`query($u:String){MediaListCollection(userName:$u,type:ANIME){user{name}
-    lists{entries{status progress score(format:POINT_10_DECIMAL) media{id idMal format episodes title{romaji english} coverImage{medium}}}}}}`, {u:userName});
+  let d;
+  try{ d = await anilist(`query($u:String){MediaListCollection(userName:$u,type:ANIME){user{name}
+    lists{entries{status progress score(format:POINT_10_DECIMAL) media{id idMal format episodes title{romaji english} coverImage{medium}}}}}}`, {u:userName}); }
+  catch(e){
+    if(cache[key]?.entries) return {...cache[key], stale:true};
+    throw e;
+  }
   const c = d.MediaListCollection, seen = new Set(), entries = [];
   for(const l of c.lists) for(const e of l.entries){
     const m = e.media; if(seen.has(m.id)) continue; seen.add(m.id); // custom lists repeat entries
@@ -2103,7 +2119,7 @@ function toRef(L){
   const byMal = {}, byAl = {}; let count = 0;
   const list = L.entries.map(e => ({id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, status:e.status, score:e.score}));
   list.forEach(x => { if(!x.score) return; count++; if(x.id) byMal[x.id] = x.score; if(x.alId) byAl[x.alId] = x.score; });
-  return {name:L.name, user:L.name.toLowerCase(), byMal, byAl, count, list, auto:true, updated:L.updated};
+  return {name:L.name, user:L.name.toLowerCase(), byMal, byAl, count, list, auto:true, updated:L.updated, stale:!!L.stale};
 }
 // Shows you completed on AniList that aren't in the game yet join the queue (anything already here, including removed or dropped, is left alone)
 function mergeMyEntries(entries){
@@ -2148,6 +2164,7 @@ function applyMirroredDrops(){
 // Downloads everyone you follow (and your own list) from AniList, then applies sync and copied drops
 async function loadLiveLists(force = false){
   if(loadingLists) return; loadingLists = true;
+  $('refreshLists').disabled = true; $('refreshLists').textContent = 'Refreshing…';
   listIndex = {made:new Date().toISOString(), people:[], errors:[]};
   const loaded = [];
   $('followMsg').textContent = follows.length || myUser ? 'Loading lists from AniList…' : '';
@@ -2155,21 +2172,24 @@ async function loadLiveLists(force = false){
     try{
       const L = await getList(f.name || f.id, force), P = toRef(L);
       if(f.nick) P.name = f.nick;
-      loaded.push(P); listIndex.people.push({name:L.name, count:P.count, updated:L.updated});
+      loaded.push(P); listIndex.people.push({name:L.name, count:P.count, updated:L.updated, stale:!!L.stale});
     }catch(e){ listIndex.errors.push({name:f.id, error:e.message}); }
     renderFollow();
   }
   // a followed person replaces a file-loaded copy of the same name
   REFS = [...REFS.filter(P => !P.auto && !loaded.some(L => L.user===P.name.toLowerCase() || L.name.toLowerCase()===P.name.toLowerCase())), ...loaded];
-  let added = 0, meErr = '';
-  if(myUser){ try{ added = mergeMyEntries((await getList(myUser, force)).entries); }catch(e){ meErr = e.message; } }
+  let added = 0, meErr = '', meStale = false;
+  if(myUser){ try{ const L = await getList(myUser, force); meStale = !!L.stale; added = mergeMyEntries(L.entries); }catch(e){ meErr = e.message; } }
   const copied = applyMirroredDrops();
   const msgs = [];
   if(added) msgs.push(`${added} show${added>1?'s':''} you completed on AniList joined your queue.`);
   if(copied) msgs.push(`${copied} show${copied>1?'s':''} dropped because ${followNamesMirroring()} dropped ${copied>1?'them':'it'}. Undo (Z) brings ${copied>1?'them':'it'} back.`);
   if(meErr) msgs.push(`Couldn't load your own list (${myUser}): ${meErr}`);
+  if(meStale || listIndex.people.some(p => p.stale)) msgs.push('AniList is unavailable. Using saved lists; try Reload lists now later.');
+  if(!msgs.length && (myUser || follows.length)) msgs.push('Lists are up to date.');
   $('followMsg').textContent = msgs.join(' ');
   loadingLists = false;
+  $('refreshLists').disabled = false; $('refreshLists').textContent = 'Reload lists now';
   showRefState(); render();
 }
 function renderFollow(){
@@ -2178,7 +2198,7 @@ function renderFollow(){
   const failed = name => listIndex?.errors?.find(e => e.name.toLowerCase()===name);
   box.innerHTML = follows.map(f => {
     const p = inIndex(f.id), err = failed(f.id);
-    const state = p ? `${p.count} scored · loaded ${new Date(p.updated).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : err ? `couldn't load: ${esc(err.error)}` : 'loading…';
+    const state = p ? `${p.count} scored · ${p.stale ? 'saved copy from ' + new Date(p.updated).toLocaleDateString() : 'updated ' + new Date(p.updated).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : err ? `couldn't load: ${esc(err.error)}` : 'loading…';
     return `<span class="chip"><input class="field nick" data-nick="${esc(f.id)}" value="${esc(f.nick || f.name || f.id)}" title="Nickname shown on the page (AniList: ${esc(f.name || f.id)})" aria-label="Nickname for ${esc(f.name || f.id)}" style="width:8em;padding:1px 6px"> <span class="muted">${f.nick ? `@${esc(f.name || f.id)} · ` : ''}${state}</span>
       <label title="Shows they dropped are dropped for you too" style="display:inline-flex;gap:4px;align-items:center;font-size:.8rem"><input type="checkbox" data-mirror="${esc(f.id)}" ${f.mirrorDrops?'checked':''}> copy their drops</label>
       <button class="btn" data-unfollow="${esc(f.id)}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`;
@@ -2205,11 +2225,12 @@ $('followBtn').onclick = async () => {
 };
 $('followIn').addEventListener('keydown', e => { if(e.key==='Enter') $('followBtn').click(); });
 $('meSave').onclick = async () => {
-  const name = $('meUser').value.trim().replace(/^@/, '');
+  const name = $('meUser').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
   if(name && !/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username.'; return; }
   await followDb.doc('settings/me').set({username:name});
 };
 $('refreshLists').onclick = () => loadLiveLists(true);
+$('meUser').addEventListener('keydown', e => { if(e.key==='Enter') $('meSave').click(); });
 function startFollowing(){
   followDb = localStore();
   let firstMe = true;
@@ -2317,8 +2338,11 @@ const DATA_URL = 'https://ryotsushigawa.github.io/anime-ranker/';
 let dbReadyResolve; const dbReady = new Promise(r => dbReadyResolve = r);
 (async () => {
   try{
-    const [dbr, cr] = await Promise.all([fetch(DATA_URL + 'db.json'), fetch(DATA_URL + 'cover-urls.json')]);
-    if(cr.ok) Object.assign(coverUrls, await cr.json());
+    // Optional covers must not hold up list syncing or starting a game.
+    fetch(DATA_URL + 'cover-urls.json', {signal:AbortSignal.timeout(15000)})
+      .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+      .then(covers => { Object.assign(coverUrls, covers); render(); }).catch(() => {});
+    const dbr = await fetch(DATA_URL + 'db.json', {signal:AbortSignal.timeout(15000)});
     if(dbr.ok){
       DB = (await dbr.json()).rows || {};
       showInfo = {titles:{}, anilist:{}, formats:{}, episodes:{}};
@@ -2384,6 +2408,7 @@ $('userLoadBtn').onclick = async () => {
   showErr(''); $('userLoadBtn').disabled = true; $('userLoadBtn').textContent = 'Loading…';
   try{
     const L = await getList(name, true);
+    if(L.stale) showErr('AniList is unavailable. Loaded your saved list from ' + new Date(L.updated).toLocaleDateString() + '.');
     const entries = normScores(L.entries.map((e, i) => ({e:i, id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, old:e.score, site:0, progress:e.progress, status:e.status})));
     await dbReady; entries.push(...missingSeasons(entries));
     pending = {source:'json', kind:'anime', xml:null, fileName:`${L.name} (AniList)`, lists:{anime:entries, manga:[]}, entries};
