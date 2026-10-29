@@ -237,12 +237,15 @@ console.log(`Guckplan: ${titles.length} shows`);
 // When the titles don't line up ("Part 2" vs "2nd Cour"), ask AniList which show is meant and
 // find its LiveChart entry by the AniList link on the card.
 async function anilistId(title) {
+  try {
   const res = await fetch('https://graphql.anilist.co', {
+    signal: AbortSignal.timeout(8000),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ query: 'query ($s: String) { Media(search: $s, type: ANIME) { id } }', variables: { s: title } }),
   });
-  return res.ok ? String((await res.json()).data.Media?.id || '') : '';
+  return res.ok ? String((await res.json()).data?.Media?.id || '') : '';
+  } catch { return ''; } // Optional title matching must not stop LiveChart updates during an outage.
 }
 
 let slotNotes = {};
@@ -261,6 +264,10 @@ for (const t of titles) {
   const best = Math.max(0, ...scored.map(x => x.s));
   let card = scored.find(x => x.s === best)?.c;
   if (!card?.anilist) {
+    const known = Object.entries(previous?.status || {}).find(([, s]) => titleScore(t, s.titles || []) === 2)?.[0];
+    if (known) card = cards.find(c => c.anilist === known) || card;
+  }
+  if (!card?.anilist) {
     const id = await anilistId(t[0]) || await anilistId(t[1]);
     card = id && cards.find(c => c.anilist === id);
   }
@@ -274,7 +281,14 @@ for (const t of titles) {
   if (statusOnly && next) next.at += (previous?.release?.[card.anilist]?.offset || 0) - (offset?.offset || 0);
   const news = await breakNews(card.id);
   const notes = slotNotes[card.id] || [];
-  status[card.anilist] = { titles: t, next, news, ...(notes.length && { notes }) };
+  // Keep observed releases, not extrapolated weekly dates: delays and batches must stay exact.
+  // New observations replace the old date for that episode if LiveChart reschedules it.
+  const old = previous?.status?.[card.anilist];
+  const observed = new Map([...(old?.airings || []), ...(old?.next ? [old.next] : []), ...(next ? [next] : [])]
+    .filter(a => Number.isInteger(a.episode) && a.at > Date.now() / 1000 - 42 * 86400)
+    .map(a => [a.episode, a]));
+  status[card.anilist] = { titles: t, url: `https://www.livechart.me/anime/${card.id}`, next,
+    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(notes.length && { notes }) };
   console.log(`${t[1] || t[0]}: ${byAnilist[card.anilist].map(s => s.name + (s.extra ? ` (+${s.extra})` : '')).join(', ') || '(none)'}` +
     (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min` : '') +
     (next ? '' : ' · nothing scheduled') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
