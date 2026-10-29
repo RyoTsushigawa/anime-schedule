@@ -79,6 +79,7 @@ body.pace .seasonal-only { display: none; }
 .popover.menu { left: auto; right: 0; width: 210px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; padding: 6px; }
 .menu section + section { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
 #settingsMenu { max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); overflow-y: auto; overscroll-behavior: contain; }
+#accountMenu, #people { max-height: calc(100vh - 160px); max-height: calc(100dvh - 160px); overflow-y: auto; overscroll-behavior: contain; }
 .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
 /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
 .pills { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
@@ -93,7 +94,7 @@ body.pace .seasonal-only { display: none; }
 /* "Person": the chosen person's color, shown as a ring of everyone's colors */
 .swatches .person-swatch { --swatch: var(--accent);
   background: conic-gradient(#8e7cc3, #b6d7a8, #ee6fa7, #0000ff, #9900ff, #a4c2f4, #ec4399, #38761d, #35dcd2, #8e7cc3); }
-.pills #refreshData { justify-content: center; }
+.pills > button { justify-content: center; }
 /* Small second line in the time cell ("Both"), and who's watching in Group mode */
 .time small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
 /* People in their Guckplan colors: vibrant in the selectors at the top; on the shows kept soft
@@ -114,6 +115,12 @@ body.pace .seasonal-only { display: none; }
   border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; user-select: none; }
 .toggle:hover, .pills button:hover, .pills a:hover { border-color: var(--accent); }
 .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+@media (pointer: coarse) {
+  .menu .pills button, .menu .pills a, .menu .toggle, #people .chip { min-height: 44px; }
+  .menu .segmented button { min-height: 40px; }
+  .menu .field input { min-height: 44px; font-size: 16px; }
+  #search { font-size: 16px; } /* Prevent phone browsers zooming the page when searching. */
+}
 .toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .toggle:has(input:checked), .pills button.current { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .pills button.muted { color: var(--muted); border-style: dashed; }
