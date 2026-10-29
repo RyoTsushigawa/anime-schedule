@@ -3,6 +3,11 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
+Keyboard: **← / →** changes weeks in Week view; **T** shows today; **1 / 2 / 3** opens
+Week / Catch-up / Non-seasonal; **/** focuses search; **?** opens the shortcut guide (also in
+Settings). Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser modifiers.
+**Ctrl/Cmd+Z** still undoes the latest AniList change outside text fields and dialogs.
+
 - **The Guckplan** comes live from the group's Google Sheet (tabs named `Guckplan <Winter|Frühling|Sommer|Herbst> <Year>`).
   The page only reads the sheet, never writes to it. Each episode uses the tab its air date belongs to.
 - **Airing times** come live from AniList.
