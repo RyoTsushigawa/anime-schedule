@@ -294,6 +294,25 @@ for (const t of titles) {
     (next ? '' : ' · nothing scheduled') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
 }
 
+// Explicit media status is independent of a missing next-episode date. Keep the last confirmed
+// status on API failure; never turn a blank schedule into FINISHED.
+const statusIds = Object.keys(status);
+for (let i = 0; i < statusIds.length; i += 50) {
+  const ids = statusIds.slice(i, i + 50);
+  for (const id of ids) if (previous?.status?.[id]?.airingStatus) status[id].airingStatus = previous.status[id].airingStatus;
+  try {
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST', signal: AbortSignal.timeout(8000), headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id status startDate { year month day } endDate { year month day } } } }', variables: { ids: ids.map(Number) } }),
+    });
+    if (!res.ok) throw new Error('Status API unavailable');
+    const data = await res.json();
+    if (!Array.isArray(data.data?.Page?.media)) throw new Error('Status response incomplete');
+    for (const m of data.data.Page.media) if (status[m.id] && m.status) status[m.id].airingStatus = { status: m.status,
+      startDate: m.startDate, endDate: m.endDate, checked: new Date().toISOString() };
+  } catch { console.log('Airing status lookup unavailable; kept previously confirmed status.'); }
+}
+
 // Status only: the streams and offsets (and their date) stay as they were
 if (statusOnly) {
   if (Object.keys(status).length < Object.keys(previous?.status || {}).length / 2) {
