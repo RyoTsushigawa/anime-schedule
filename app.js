@@ -1211,7 +1211,7 @@ async function undo() {
 }
 document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
-  if (e.target.closest?.('input, textarea, select')) return; // typing: the field's own undo
+  if (e.isComposing || e.altKey || document.querySelector('dialog[open]') || e.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return; // typing: the field's own undo
   e.preventDefault();
   undo();
 });
@@ -2083,3 +2083,44 @@ $('confirmRestore').onclick = () => {
   location.reload();
 };
 $('cancelRestore').onclick = () => $('restoreDialog').close();
+
+// Read-only navigation shortcuts: never hijack typing, native controls, dialogs or browser keys.
+let keyboardReturnFocus = null;
+function openKeyboardHelp() {
+  keyboardReturnFocus = document.activeElement;
+  showSettings(false);
+  showMenu('accountMenu', 'accountButton', false);
+  showPeople(false);
+  $('keyboardDialog').showModal();
+}
+$('keyboardHelp').onclick = openKeyboardHelp;
+$('keyboardClose').onclick = () => $('keyboardDialog').close();
+$('keyboardDialog').addEventListener('close', () => {
+  const target = keyboardReturnFocus?.closest('#settingsMenu') ? $('settingsButton') : keyboardReturnFocus;
+  target?.focus({ preventScroll: true });
+});
+for (const [id, key, hint] of [
+  ['prev', 'ArrowLeft', 'Previous week (←)'], ['next', 'ArrowRight', 'Next week (→)'],
+  ['viewWeek', '1', 'Week (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
+  ['searchButton', '/', 'Search shows (/)'], ['keyboardHelp', 'Shift+/', 'Keyboard shortcuts (?)'],
+]) {
+  $(id).setAttribute('aria-keyshortcuts', key);
+  $(id).title = hint;
+}
+document.addEventListener('keydown', event => {
+  if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
+  if (document.querySelector('dialog[open], .popover:not([hidden])')) return;
+  const key = event.key.toLowerCase();
+  if (event.shiftKey && key !== '?') return;
+  let action;
+  if (key === 'arrowleft' && view === 'week') action = () => $('prev').click();
+  else if (key === 'arrowright' && view === 'week') action = () => $('next').click();
+  else if (key === '/') action = () => openSearch(true);
+  else if (key === '?') action = openKeyboardHelp;
+  else if (key === 't') action = () => { setView('week'); weekOffset = 0; setRange('today'); load(); };
+  else if (['1', '2', '3'].includes(key)) action = () => $({ 1: 'viewWeek', 2: 'viewCatchup', 3: 'viewPace' }[key]).click();
+  if (!action) return;
+  event.preventDefault();
+  action();
+});
