@@ -211,6 +211,31 @@ details.fold[open] > summary{margin-bottom:14px}
   .answers .direct{grid-column:1 / -1;order:3}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* Keep maintenance controls quiet while the comparison stays prominent. */
+#loadPanel{padding:12px 18px}
+.settings > summary{display:flex;align-items:center;gap:14px;cursor:pointer;font-weight:600;list-style:none}
+.settings > summary::-webkit-details-marker{display:none}
+.settings > summary::after{content:'+';margin-left:auto;color:var(--muted)}
+.settings[open] > summary::after{content:'−'}
+.settings > summary span{font-size:.82rem;font-weight:400}
+.settings[open] > summary{margin-bottom:16px}
+.rank-help{color:var(--muted);font-size:.82rem}
+.rank-help > summary{cursor:pointer;width:fit-content}
+.rank-help p{max-width:70ch;margin:10px 0;line-height:1.7}
+kbd{font:inherit;font-family:var(--mono)}
+.progress-summary{display:flex;justify-content:center;gap:16px;align-items:baseline;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+#progressDetails > summary{cursor:pointer}
+#progressDetails[open]{flex-basis:100%;text-align:center}
+#progressDetails .stats{margin-top:10px}
+.lower .panel{padding:14px 18px}
+.lower h2,#exportMenu h2{font-size:1rem;margin:0}
+#exportPanel{padding:14px 18px}
+#exportMenu[open]{display:grid;gap:14px}
+#exportMenu[open] > summary{margin-bottom:0}
+#exportMenu > summary{align-items:center}
+#toast:empty{display:none}
+@media(max-width:520px){.settings > summary span{display:none}.lower{gap:10px}.rank-help{font-size:.78rem}}
 </style>
 
 <div class="wrap">
@@ -222,19 +247,21 @@ details.fold[open] > summary{margin-bottom:14px}
   </header>
 
   <section class="panel" id="loadPanel">
+    <details class="settings" id="settingsPanel">
+      <summary>Settings <span class="muted">List, preferences &amp; people</span></summary>
     <div class="banner">
       <div id="sourceLine"></div>
       <button class="btn" id="resetBtn" hidden>Start over</button>
     </div>
     <div class="tabs" role="group" aria-label="Panels">
-      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Your list &amp; setup</button>
+      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Your list &amp; preferences</button>
       <button class="tab" id="tabCompare" aria-expanded="false" aria-controls="compareDetails">Compare to others<span class="tabnote" id="tabCompareNote"></span></button>
     </div>
     <details class="load" id="loadDetails">
       <summary>Load your list</summary>
       <div class="start">
         <h3>Start with your AniList</h3>
-        <p class="muted">Pick how you want to rank, then type your username and go. Your public list loads straight from AniList, with covers and site medians; progress stays in this browser.</p>
+        <p class="muted">Load your public AniList to begin. Progress saves in this browser.</p>
         <div class="setgrid" id="setup"></div>
         <div class="startrow">
           <input type="text" id="userLoadIn" placeholder="AniList username" aria-label="Your AniList username" autocomplete="username">
@@ -314,16 +341,17 @@ details.fold[open] > summary{margin-bottom:14px}
         </div>
       </div>
     </details>
+    </details>
   </section>
 
+  <details class="rank-help" id="rankHelp"><summary>How to play &amp; shortcuts</summary><p>Compare the two shows. Pick Higher or Lower, or set a score directly. Undo is always available during this visit.</p><p><kbd>↑</kbd> Higher · <kbd>↓</kbd> Lower · <kbd>←</kbd> / <kbd>→</kbd> Adjust score · <kbd>E</kbd> Set score · <kbd>Z</kbd> Undo · <kbd>K</kbd> Skip · <kbd>N</kbd> Not sure · <kbd>1–9</kbd> Agree with a friend</p><p>On a phone, swipe up for higher or down for lower.</p></details>
   <section class="stage" id="stage" aria-live="polite"></section>
 
   <section class="lower">
     <details class="panel fold" id="benchPanel">
       <summary>
         <div>
-          <div class="eyebrow">Benchmarks</div>
-          <h2>One show for each score <span class="muted" id="benchCount" style="font-weight:400;font-size:.9rem"></span></h2>
+          <h2>Benchmarks <span class="muted" id="benchCount" style="font-weight:400;font-size:.9rem"></span></h2>
         </div>
       </summary>
       <p class="note">Picked from shows you already gave that score. Swap any for one that represents the score better; shows already placed keep their scores.</p>
@@ -332,8 +360,7 @@ details.fold[open] > summary{margin-bottom:14px}
     <details class="panel fold" id="resultsPanel">
       <summary>
         <div>
-          <div class="eyebrow">Results</div>
-          <h2 id="rankHead">Scored so far</h2>
+          <h2 id="rankHead">Results</h2>
         </div>
       </summary>
       <div class="substrip">
@@ -367,10 +394,9 @@ details.fold[open] > summary{margin-bottom:14px}
   </section>
 
   <section class="panel export" id="exportPanel">
-    <div>
-      <div class="eyebrow">Export</div>
-      <h2>Send the new scores back</h2>
-    </div>
+    <details class="fold" id="exportMenu">
+      <summary><h2>Export &amp; backup</h2></summary>
+      <p class="note">Save scores to AniList, download results, or move your progress to another browser.</p>
     <div class="opts" id="exportOpts">
       <label><input type="checkbox" id="markDone"> Mark every scored show as Completed, with all episodes watched</label>
       <label><input type="checkbox" id="wholeNums"> Round to whole numbers (for MyAnimeList, which has no half points)</label>
@@ -397,6 +423,7 @@ details.fold[open] > summary{margin-bottom:14px}
       <label class="btn" style="cursor:pointer">Restore… <input type="file" id="restoreIn" accept=".json,application/json" hidden></label>
       <span class="muted" style="font-size:.82rem">Moves your progress to another browser.</span>
     </div>
+    </details>
     <div class="toast" id="toast" role="status"></div>
     <textarea class="xmlout" id="xmlOut" hidden readonly></textarea>
   </section>
@@ -520,6 +547,7 @@ function save(){
   catch(e){
     if(!document.getElementById('saveWarning')){
       const warning = document.createElement('p'); warning.id = 'saveWarning'; warning.setAttribute('role','alert');
+      $('exportMenu').open = true;
       warning.textContent = 'Your browser could not save progress. Keep this tab open and use Back up progress below before leaving.';
       $('backupBtn').parentElement.prepend(warning);
     }
@@ -1269,6 +1297,8 @@ function renderSetup(){
   });
   $('setup').querySelectorAll('[data-opt-scale]').forEach(b => b.onclick = () => { PREFS.scale = +b.dataset.optScale; savePrefs(); render(); });
 }
+let progressDetailsOpen = false;
+$('stage').addEventListener('toggle', e => { if(e.target.id==='progressDetails') progressDetailsOpen = e.target.open; }, true);
 function renderStage(){
   const st = $('stage'), B = benchList();
   const nRemoved = (S.removed||[]).length;
@@ -1279,7 +1309,7 @@ function renderStage(){
   const unsureBtn = nUnsure ? `<button class="btn" id="unsureBtn">Rank the ${nUnsure} marked “not sure”</button>` : '';
   const scored = Object.keys(finalScores()).length, pct = total ? Math.round(scored/total*100) : 0;
   const statsHtml = `<div class="progress"><i style="width:${pct}%"></i></div>
-    <div class="stats"><span>${scored} / ${total} scored</span><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nUnsure?`<span>${nUnsure} not sure</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div>`;
+    <div class="progress-summary"><span>${scored} scored · ${Math.max(0,total-scored)} left</span><details id="progressDetails" ${progressDetailsOpen?'open':''}><summary>Details</summary><div class="stats"><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nUnsure?`<span>${nUnsure} not sure</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div></details></div>`;
   if(!B.length){
     st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
     $('benchPanel').open = true;
@@ -1731,7 +1761,7 @@ function renderPending(){
     if(items.length < 2){ showErr('Pick at least two shows.'); return; }
     S = newState({source:pending.source, kind:pending.kind, xml:pending.xml, fileName:pending.fileName, items, showOld:$('pOld').checked});
     pending = null; undoStack = []; showErr(''); renderPending();
-    $('loadDetails').open = false;
+    $('loadDetails').open = false; $('settingsPanel').open = false;
     advance(); save(); render();
     $('stage').scrollIntoView({behavior:'smooth', block:'start'});
   };
@@ -1883,7 +1913,7 @@ $('resetBtn').onclick = () => {
   clearTimeout(resetArmed); resetArmed = null; b.textContent = 'Start over';
   try{ localStorage.removeItem(KEY); }catch(e){}
   S = newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))}); undoStack = [];
-  advance(); render(); $('loadDetails').open = true;
+  advance(); render(); $('settingsPanel').open = true; $('loadDetails').open = true;
   useRolledSample();
 };
 
@@ -2015,7 +2045,7 @@ $('saveCsv').onclick = async () => {
 };
 
 document.addEventListener('keydown', e => {
-  if(e.target.closest('input,textarea,select') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.target.closest('input,textarea,select,summary') || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase();
   // Consistency check: ←/→ pick a side, ↓ about the same, K skip (or keep), 1–3 a fix, Esc back
   if(S.check){
@@ -2294,7 +2324,7 @@ for(const t in panes){
 }
 
 S = load() || newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))});
-if(S.source==='sample') $('loadDetails').open = true;
+if(S.source==='sample'){ $('settingsPanel').open = true; $('loadDetails').open = true; }
 if(S.source!=='sample' && backfillBench()){ if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; } save(); }
 advance(); render(); showRefState();
 // The example list rolls new shows each load (unless you already started playing it)
@@ -2325,12 +2355,6 @@ if(S.source==='sample') useRolledSample();
 $('tierBtn2').onclick = showTierList;
 $('alSave').onclick = saveToAniList;
 $('tierClose').onclick = () => $('tierDlg').close();
-// Benchmarks and Results stay open or closed the way you left them (in this browser)
-for(const id of ['benchPanel', 'resultsPanel']){
-  try{ if(localStorage.getItem('hl-open-' + id)==='1') $(id).open = true; }catch(e){}
-  $(id).addEventListener('toggle', () => { try{ localStorage.setItem('hl-open-' + id, $(id).open ? '1' : '0'); }catch(e){} });
-}
-
 // Data from the anime-ranker site: db.json (every anime on AniList: medians, titles, formats, episodes,
 // status, sequel/prequel links) and cover-urls.json (AniList cover image addresses). Both are rebuilt
 // weekly there by its GitHub Action; this page is the schedule site's copy of the ranker.
