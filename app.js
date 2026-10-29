@@ -461,6 +461,7 @@ function assignWatchTimes(day) {
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 function render(items, start, plans) {
+  const restore = preserveListPosition();
   // Shows any selected person watches (solo: one person, group: the toggled ones); nobody = nothing.
   const people = activePeople();
   if (!people.length) {
@@ -669,6 +670,8 @@ function render(items, start, plans) {
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
   applySearch();
+  syncSavingButtons();
+  restore();
 }
 
 // ---------- Catch-up ----------
@@ -878,15 +881,40 @@ let refreshing = false;
 // The first row under the header (by its titles and day), to find it again after redrawing
 function scrollAnchor() {
   const below = document.querySelector('header').getBoundingClientRect().bottom;
-  const row = [...document.querySelectorAll('#list [data-search]:not(.hidden-by-search)')].find(r => r.getBoundingClientRect().bottom > below);
-  return row ? { key: row.dataset.search, day: row.closest('.day')?.querySelector('h2')?.textContent, top: row.getBoundingClientRect().top } : { y: scrollY };
+  const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest('.hidden-by-search') && r.getBoundingClientRect().bottom > below);
+  return { y: scrollY, candidates: rows.map(row => ({
+    key: row.closest('[data-search]')?.dataset.search,
+    day: row.closest('.day')?.querySelector('h2')?.textContent,
+    episode: row.querySelector('.time')?.textContent,
+    top: row.getBoundingClientRect().top,
+  })).filter(r => r.key) };
 }
 function restoreAnchor(a) {
-  const rows = [...document.querySelectorAll('#list [data-search]')];
-  const row = a.key && (rows.find(r => r.dataset.search === a.key && r.closest('.day')?.querySelector('h2')?.textContent === a.day)
-    || rows.find(r => r.dataset.search === a.key));
-  if (row) scrollBy(0, row.getBoundingClientRect().top - a.top);
-  else if (a.y !== undefined) scrollTo(0, a.y);
+  const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest('.hidden-by-search'));
+  for (const saved of a.candidates || []) {
+    const row = rows.find(r => r.closest('[data-search]')?.dataset.search === saved.key
+      && r.closest('.day')?.querySelector('h2')?.textContent === saved.day
+      && r.querySelector('.time')?.textContent === saved.episode);
+    if (row) { scrollBy(0, row.getBoundingClientRect().top - saved.top); return; }
+  }
+  scrollTo(0, a.y);
+}
+// Capture immediately before replacing rows, so scrolling during a slow request is respected.
+function preserveListPosition() {
+  const anchor = scrollAnchor();
+  const focused = document.activeElement;
+  const focusMedia = focused?.closest('#list button[data-media]') ? { media: focused.dataset.media, ep: focused.dataset.ep,
+    kind: ['watch', 'drop', 'score', 'move'].find(c => focused.classList.contains(c)) } : null;
+  const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.querySelector('summary')?.textContent));
+  return () => {
+    for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(d.querySelector('summary')?.textContent);
+    if (focusMedia && !focused.isConnected && !document.querySelector('dialog[open]')) {
+      const next = [...document.querySelectorAll('#list button[data-media]')].find(b => !b.disabled && b.dataset.media === focusMedia.media
+        && b.dataset.ep === focusMedia.ep && b.classList.contains(focusMedia.kind));
+      next?.focus({ preventScroll: true });
+    }
+    restoreAnchor(anchor);
+  };
 }
 $('refreshData').onclick = async () => {
   if (refreshing) return;
@@ -894,7 +922,6 @@ $('refreshData').onclick = async () => {
   $('refreshData').disabled = true;
   $('settingsMenu').hidden = true;
   $('settingsButton').setAttribute('aria-expanded', 'false');
-  const anchor = scrollAnchor();
   // Everything that's about to be replaced, to put back if the refresh fails
   const kept = {};
   try { for (const k of Object.keys(localStorage)) if (FRESH_KEYS.test(k)) { kept[k] = localStorage.getItem(k); localStorage.removeItem(k); } } catch {}
@@ -912,7 +939,6 @@ $('refreshData').onclick = async () => {
     setNote('tabs', null);
     try { localStorage.setItem('tabs', JSON.stringify(tabs)); } catch {}
     await load(true, true);
-    restoreAnchor(anchor);
     notice('Data refreshed');
   } catch (e) {
     try { for (const [k, v] of Object.entries(kept)) localStorage.setItem(k, v); } catch {}
@@ -922,7 +948,6 @@ $('refreshData').onclick = async () => {
     for (const [k, v] of memory.next) aniNext.set(k, v);
     streamsDe = memory.streams; moves = memory.moved; tabs = memory.tabList; planShowsCache = memory.plans;
     await load(true).catch(() => {});
-    restoreAnchor(anchor);
     notice(`Couldn't refresh (${e.message}); still showing the data from before.`);
   }
   $('refreshData').disabled = false;
@@ -1018,7 +1043,32 @@ const entryBefore = entryNow;
 // list, shows it as unwatched again after a reload. (A show still airing can be on Completed by
 // mistake; AniList moves it to Completed by itself once the last episode is ticked.)
 const ON_WATCHING_LIST = ['CURRENT', 'REPEATING'];
+const pendingChanges = new Set();
+let bulkSaving = false;
+function syncSavingButtons() {
+  for (const b of document.querySelectorAll('#list button[data-media]')) {
+    const saving = pendingChanges.has(Number(b.dataset.media));
+    b.disabled = saving || bulkSaving;
+    if (saving) {
+      if (!b.hasAttribute('data-idle-title')) b.dataset.idleTitle = b.title;
+      b.title = 'Saving to AniList…';
+    } else if (b.hasAttribute('data-idle-title')) {
+      b.title = b.dataset.idleTitle;
+      delete b.dataset.idleTitle;
+    }
+    if (saving) b.setAttribute('aria-busy', 'true');
+    else b.removeAttribute('aria-busy');
+  }
+  for (const id of ['markAll', 'cancelMark', 'noticeUndo']) {
+    const button = $(id);
+    if (button) button.disabled = bulkSaving || pendingChanges.size > 0;
+  }
+}
 async function change(mediaId, vars) {
+  if (pendingChanges.has(mediaId)) throw new Error('This show is still saving.');
+  pendingChanges.add(mediaId);
+  syncSavingButtons();
+  try {
   const before = await entryBefore(mediaId);
   const status = vars.status || (vars.progress !== undefined && !ON_WATCHING_LIST.includes(before.status) ? 'CURRENT' : undefined);
   const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars, status })).SaveMediaListEntry;
@@ -1027,6 +1077,10 @@ async function change(mediaId, vars) {
   myProgress.set(mediaId, saved.progress);
   listChanged(mediaId, saved.progress, !!status);
   return { mediaId, before, after: { progress: saved.progress, status: saved.status, score: saved.score }, entryId: saved.id };
+  } finally {
+    pendingChanges.delete(mediaId);
+    syncSavingButtons();
+  }
 }
 
 // Keep the saved Watching list in step, so Catch-up shows changes right away; a status change
@@ -1057,7 +1111,7 @@ function remember(records, text) {
 }
 let undoing = false;
 async function undo() {
-  if (!auth || undoing) return;
+  if (!auth || undoing || bulkSaving || pendingChanges.size) return;
   const last = undoSteps.at(-1);
   if (!last) return;
   if (Date.now() - last.time > UNDO_MS) { undoSteps.length = 0; notice('Too late to undo; change it on AniList instead.'); return; }
@@ -1117,7 +1171,7 @@ function notice(text, withUndo = false) {
   $('noticeUndo').hidden = !withUndo;
   $('notice').hidden = false;
   clearTimeout(noticeTimer);
-  noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 8000 : 3000);
+  noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
 }
 $('noticeUndo').onclick = () => undo();
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'show';
@@ -1130,7 +1184,7 @@ const watchButton = (mediaId, episode, add = false) => !auth ? '' :
 const before = new Map();
 $('list').addEventListener('click', async e => {
   const b = e.target.closest('.watch');
-  if (!b || !auth || b.dataset.select) return; // while selecting, ✓ only picks
+  if (!b || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return; // while selecting, ✓ only picks
   const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
   const current = myProgress.get(mediaId) || 0;
   let progress;
@@ -1148,6 +1202,7 @@ $('list').addEventListener('click', async e => {
     }
   } catch (err) {
     b.title = `Couldn't save: ${err.message}`;
+    notice(`Couldn't save ${title}: ${err.message}. You can try again.`);
   }
   load(true);
 });
@@ -1243,7 +1298,10 @@ $('list').addEventListener('click', async e => {
   try {
     remember([await change(Number(b.dataset.media), { status: 'DROPPED' })], `${title} dropped`);
   } catch (err) {
-    b.textContent = `Couldn't drop: ${err.message}`;
+    delete b.dataset.sure;
+    b.textContent = 'Drop';
+    b.disabled = false;
+    notice(`Couldn't drop ${title}: ${err.message}. You can try again.`);
     return;
   }
   load(true);
@@ -1280,6 +1338,8 @@ $('list').addEventListener('click', async e => {
   }
   b.disabled = true;
   const targets = catchupTargets.filter(t => !skipped.has(t.mediaId));
+  bulkSaving = true;
+  syncSavingButtons();
   selecting = false;
   const records = []; // the whole run is one undo step
   for (const [i, { mediaId, progress, add }] of targets.entries()) {
@@ -1289,11 +1349,17 @@ $('list').addEventListener('click', async e => {
     } catch (err) {
       b.textContent = `Stopped at ${i + 1}/${targets.length}: ${err.message}`;
       remember(records, `${records.length} of ${targets.length} shows marked as watched`);
+      bulkSaving = false;
+      syncSavingButtons();
+      notice(`Saved ${records.length} of ${targets.length} shows. Stopped: ${err.message}`, records.length > 0);
+      load(true);
       return;
     }
     await new Promise(r => setTimeout(r, 700));
   }
   remember(records, `${records.length} ${records.length === 1 ? 'show' : 'shows'} marked as watched`);
+  bulkSaving = false;
+  syncSavingButtons();
   load(true);
 });
 
@@ -1315,7 +1381,7 @@ function dueAt(released, slot, show) {
   return Math.max(released, day.getTime() / 1000);
 }
 
-async function loadCatchup(strict = false) {
+async function loadCatchup(strict = false, refresh = false) {
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
   const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
@@ -1328,6 +1394,10 @@ async function loadCatchup(strict = false) {
     entries = await anilistList(user);
   } catch (e) {
     if (strict) throw new Error(`AniList: ${e.message}`);
+    if (refresh && view === shown && document.querySelector('#list .row')) {
+      notice(`Couldn't refresh ${name}: ${e.message}. Still showing the previous data.`);
+      return;
+    }
     if (view === shown) $('list').innerHTML = failed(navigator.onLine === false
       ? `You're offline, and ${user}'s AniList list isn't saved in this browser yet.` : `Couldn't load ${user}'s AniList list (${e.message}).`);
     return;
@@ -1430,6 +1500,7 @@ async function loadCatchup(strict = false) {
       ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) + dropButton(m.id) : ''}
     </div>`;
   if (!mine || shown === 'pace') selecting = false;
+  const restore = preserveListPosition();
   if (shown === 'pace') {
     ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) : byTitle);
     $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
@@ -1460,6 +1531,8 @@ async function loadCatchup(strict = false) {
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
   applySearch();
+  syncSavingButtons();
+  restore();
 }
 
 // The Solo person's Guckplan shows (this season, known to the weekly LiveChart data) that aren't
@@ -1504,14 +1577,14 @@ async function missingPlanShows(plan, entries) {
 // strict (Refresh data): no "Loading…" over what's on screen, and a failure is thrown to the caller
 // instead of replacing the schedule with an error.
 async function load(refresh = false, strict = false) {
-  if (listView()) return loadCatchup(strict);
+  if (listView()) return loadCatchup(strict, refresh);
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   // The year only when it isn't this one, or the week spans New Year ("Dec 28, 2026 – Jan 3, 2027")
   const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
   $('week').textContent = `${fmt(start)} – ${fmt(end)}`;
-  if (!cache.has(start.getTime()) && !strict) $('list').innerHTML = '<div class="status">Loading…</div>';
+  if (!cache.has(start.getTime()) && !strict && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = '<div class="status">Loading…</div>';
   // Last week too: an episode airing after its watch day is watched the following week.
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   // Start AniList right away; it runs while the sheet loads.
@@ -1534,6 +1607,10 @@ async function load(refresh = false, strict = false) {
   if (view !== 'week') return; // switched to Catch-up meanwhile
   if (!weekTabs.some(t => plans.has(t.gid))) {
     if (strict) throw new Error(`Guckplan: ${problems.join('; ') || 'not readable'}`);
+    if (refresh && document.querySelector('#list .row')) {
+      notice("Couldn't refresh the Guckplan. Still showing the previous data.");
+      return;
+    }
     $('list').innerHTML = failed(navigator.onLine === false ? "You're offline, and this Guckplan isn't saved in this browser yet."
       : `Couldn't read the Guckplan (${problems.join('; ') || 'unknown error'}).`);
     return;
@@ -1553,6 +1630,10 @@ async function load(refresh = false, strict = false) {
     if (!refresh) window.scrollTo(0, 0);
   } catch (e) {
     if (strict) throw e;
+    if (refresh && document.querySelector('#list .row')) {
+      notice(`Couldn't refresh the schedule: ${e.message}. Still showing the previous data.`);
+      return;
+    }
     $('list').innerHTML = failed(`Couldn't load the schedule: ${e.message}`);
   }
 }
