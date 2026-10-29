@@ -253,15 +253,25 @@ const reasonHtml = (note, news, none) => note
 // scheduled), kept 6 hours; ids still waiting for a lookup are collected in render().
 const NEXT_KEEP_MS = 6 * 3600000;
 const aniNext = new Map();
+const airingFacts = new Map(); // Media airing status, never the viewer's Completed/Watching status.
 const pendingNext = new Set();
+const dateOf = d => d?.year && d?.month && d?.day ? new Date(d.year, d.month - 1, d.day).getTime() : null;
+const finishedBy = (facts, end) => facts?.status === 'FINISHED' && (!dateOf(facts.endDate) || dateOf(facts.endDate) < end);
+function finishedThisSeason(media, start) {
+  const since = new Date(start); since.setMonth(since.getMonth() - 3);
+  return (dateOf(media.endDate) || dateOf(media.startDate) || 0) >= since.getTime();
+}
 function nextFromAniList(id) {
   if (!aniNext.has(id)) {
     try {
       const saved = JSON.parse(localStorage.getItem('next:' + id));
-      if (saved && Date.now() - saved.time < NEXT_KEEP_MS) aniNext.set(id, saved.next);
+      if (saved && Date.now() - saved.time < NEXT_KEEP_MS) {
+        aniNext.set(id, saved.next);
+        if (saved.facts) airingFacts.set(id, saved.facts);
+      }
     } catch {}
   }
-  if (!aniNext.has(id)) pendingNext.add(id);
+  if ((!aniNext.has(id) || !airingFacts.has(id)) && aniNext.get(id) !== 'failed') pendingNext.add(id);
   return aniNext.get(id);
 }
 async function lookUpNext() {
@@ -269,17 +279,21 @@ async function lookUpNext() {
   pendingNext.clear();
   let media = [];
   try {
-    media = (await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id nextAiringEpisode { episode airingAt } } } }',
-      { ids: ids.map(Number) })).Page.media;
+    for (let i = 0; i < ids.length; i += 50) media.push(...(await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id status startDate { year month day } endDate { year month day } nextAiringEpisode { episode airingAt } } } }',
+      { ids: ids.slice(i, i + 50).map(Number) }, undefined, { retries: 0, timeout: 8000 })).Page.media);
   } catch {
     for (const id of ids) aniNext.set(id, 'failed'); // AniList busy: listed as unknown this visit
     return;
   }
   for (const id of ids) {
-    const n = media.find(m => String(m.id) === String(id))?.nextAiringEpisode;
+    const m = media.find(m => String(m.id) === String(id));
+    if (!m) { aniNext.set(id, 'failed'); continue; }
+    const n = m.nextAiringEpisode;
     const next = n ? { episode: n.episode, at: n.airingAt } : null;
+    const facts = { status: m.status, startDate: m.startDate, endDate: m.endDate };
+    airingFacts.set(id, facts);
     aniNext.set(id, next);
-    try { localStorage.setItem('next:' + id, JSON.stringify({ time: Date.now(), next })); } catch {}
+    try { localStorage.setItem('next:' + id, JSON.stringify({ time: Date.now(), next, facts })); } catch {}
   }
 }
 
@@ -289,7 +303,8 @@ const rewatchMedia = new Map();
 const pendingRewatch = new Set();
 const REWATCH_QUERY = `query ($search: String) {
   Media(search: $search, type: ANIME) {
-    id status siteUrl title { romaji english } coverImage { medium } externalLinks { site url }
+    id status startDate { year month day } endDate { year month day } nextAiringEpisode { episode airingAt }
+    siteUrl title { romaji english } coverImage { medium } externalLinks { site url }
   }
 }`;
 function rewatchFor(show) {
@@ -583,6 +598,7 @@ function render(items, start, plans) {
     if ([...found].some(f => titleMatches([f.romaji, f.english], [show.romaji, show.english]))) continue;
     const [alId, status] = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches([show.romaji, show.english], s.titles)) || [];
     let upcoming = status?.next;
+    if (finishedBy(airingFacts.get(alId) || status?.airingStatus, weekEnd)) continue;
     if (fallback) {
       const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
       if (!day) { unknown.push({ show, why: 'No watch day set in the Guckplan' }); continue; }
@@ -600,13 +616,18 @@ function render(items, start, plans) {
       continue;
     }
     // LiveChart's next episode already passed: the weekly data is behind, AniList knows better
-    if (upcoming && upcoming.at * 1000 < days[0].date.getTime()) {
+    if (status && (!upcoming || upcoming.at * 1000 < days[0].date.getTime())) {
       const fresh = nextFromAniList(alId);
+      if (finishedBy(airingFacts.get(alId), weekEnd)) continue;
       if (fresh === undefined) { unknown.push({ show, why: 'checking AniList…' }); continue; }
       if (fresh === 'failed') { unknown.push({ show, why: busy() }); continue; }
       upcoming = fresh && { episode: fresh.episode, at: fresh.at + (streamsDe?.release?.[alId]?.offset || 0) };
     }
-    if (status && !upcoming) continue; // finished
+    if (status && !upcoming) {
+      unknown.push({ show, why: airingFacts.get(alId)?.status === 'RELEASING'
+        ? 'Still airing; no next episode date announced' : 'Airing status could not be confirmed' });
+      continue;
+    }
     const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
     if (!day || weekEnd < Date.now()) { unknown.push({ show }); continue; }
     const next = upcoming && new Date(upcoming.at * 1000);
@@ -623,10 +644,19 @@ function render(items, start, plans) {
     const media = !status && rewatchFor(show);
     if (media === 'failed') unknown.push({ show, why: busy() });
     else if (media && media.status === 'FINISHED') {
+      if (finishedThisSeason(media, start)) continue; // A season ending is not an automatic rewatch.
       const links = streamLinks(media, show.wo, media.title.english || media.title.romaji);
       day.rows.push({ rewatch: true, m: media, links, slot, when: day.date });
       found.add(show);
-    } else unknown.push({ show, why: media === undefined ? 'checking AniList…' : '' });
+    } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
+      const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
+      const why = { note: null, news: [] };
+      day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode, ...why });
+      breaks.push({ show, when, episode: media.nextAiringEpisode.episode, ...why });
+      found.add(show);
+    } else unknown.push({ show, why: media === undefined ? 'Checking airing status…'
+      : media?.status === 'RELEASING' ? 'Still airing; no episode date confirmed for this week'
+      : 'Could not match the show or confirm its airing status' });
   }
   for (const d of days) assignWatchTimes(d);
 
@@ -709,9 +739,9 @@ function render(items, start, plans) {
   const lines = [
     ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> isn't airing this week → ${reasonHtml(b.note, b.news,
       '<span class="why">no reason announced on LiveChart</span>')} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
-    ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> isn't airing this week → <span class="why">${esc(why || "nothing found for it this week (or couldn't be matched)")}</span></div>`),
+    ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'No episode confirmed for this week; airing status unknown')}</span></div>`),
   ];
-  if (lines.length) html = `<div class="alerts" role="status">${lines.join('')}</div>` + html;
+  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary>Schedule notices <span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
   // Above everything: data that's old or missing (this week's and last week's airings count here)
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
@@ -957,9 +987,9 @@ function preserveListPosition() {
   const focused = document.activeElement;
   const focusMedia = focused?.closest('#list button[data-media]') ? { media: focused.dataset.media, ep: focused.dataset.ep,
     kind: ['watch', 'drop', 'score', 'move'].find(c => focused.classList.contains(c)) } : null;
-  const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.querySelector('summary')?.textContent));
+  const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.id || d.querySelector('summary')?.textContent));
   return () => {
-    for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(d.querySelector('summary')?.textContent);
+    for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(d.id || d.querySelector('summary')?.textContent);
     if (focusMedia && !focused.isConnected && !document.querySelector('dialog[open]')) {
       const next = [...document.querySelectorAll('#list button[data-media]')].find(b => !b.disabled && b.dataset.media === focusMedia.media
         && b.dataset.ep === focusMedia.ep && b.classList.contains(focusMedia.kind));
@@ -977,8 +1007,8 @@ $('refreshData').onclick = async () => {
   // Everything that's about to be replaced, to put back if the refresh fails
   const kept = {};
   try { for (const k of Object.keys(localStorage)) if (FRESH_KEYS.test(k)) { kept[k] = localStorage.getItem(k); localStorage.removeItem(k); } } catch {}
-  const memory = { weeks: new Map(cache), sheetsCopy: new Map(sheets), rewatch: new Map(rewatchMedia), next: new Map(aniNext), streams: streamsDe, moved: moves, tabList: tabs, plans: { ...planShowsCache } };
-  cache.clear(); sheets.clear(); rewatchMedia.clear(); aniNext.clear(); planShowsCache.time = 0;
+  const memory = { weeks: new Map(cache), sheetsCopy: new Map(sheets), rewatch: new Map(rewatchMedia), next: new Map(aniNext), facts: new Map(airingFacts), streams: streamsDe, moved: moves, tabList: tabs, plans: { ...planShowsCache } };
+  cache.clear(); sheets.clear(); rewatchMedia.clear(); aniNext.clear(); airingFacts.clear(); planShowsCache.time = 0;
   notice('Refreshing…');
   try {
     const res = await fetch('streams-de.json', { cache: 'no-cache' });
@@ -998,6 +1028,7 @@ $('refreshData').onclick = async () => {
     sheets.clear(); for (const [k, v] of memory.sheetsCopy) sheets.set(k, v);
     for (const [k, v] of memory.rewatch) rewatchMedia.set(k, v);
     for (const [k, v] of memory.next) aniNext.set(k, v);
+    for (const [k, v] of memory.facts) airingFacts.set(k, v);
     streamsDe = memory.streams; moves = memory.moved; tabs = memory.tabList; planShowsCache = memory.plans;
     await load(true).catch(() => {});
     notice(`Couldn't refresh (${e.message}); still showing the data from before.`);
