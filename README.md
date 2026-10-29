@@ -3,6 +3,15 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
+- **Alternative show links:** refreshed automatically with the daily LiveChart job in
+  `fallback-links.json`. Rei always gets a verified SubsPlease show page when matched, otherwise
+  a Nyaa title search. Other viewers keep their normal services; with none visible, they get
+  a verified AniWorld series page, or an explicitly labelled AniWorld search. Mixed groups use
+  the actual viewers of each show. No guessed show slugs or episode download URLs are generated.
+- **Schedule notices:** collapsed by default; confirmed breaks and unconfirmed schedules are
+  counted separately. Explicit `FINISHED` media status suppresses end-of-run warnings; an empty
+  next-episode date alone does not mean finished. Recent season finishes are not treated as rewatches.
+
 Keyboard: **← / →** changes weeks in Week view; **T** shows today; **1 / 2 / 3** opens
 Week / Catch-up / Non-seasonal; **/** focuses search; **?** opens the shortcut guide (also in
 Settings). Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser modifiers.
