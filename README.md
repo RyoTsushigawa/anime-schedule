@@ -4,8 +4,8 @@ Weekly anime schedule for the Guckplan group: shows the episodes each person wat
 with buttons for the legal streaming services in Germany.
 
 - **Alternative show links:** refreshed automatically with the daily LiveChart job in
-  `fallback-links.json`. Rei always gets a verified SubsPlease show page when matched, otherwise
-  a Nyaa title search. Other viewers keep their normal services; with none visible, they get
+  `fallback-links.json`. Everyone keeps their normal services. Only with no visible service does
+  Rei get a verified SubsPlease show page when matched, otherwise a Nyaa title search. Other viewers get
   a verified AniWorld series page, or an explicitly labelled AniWorld search. Mixed groups use
   the actual viewers of each show. No guessed show slugs or episode download URLs are generated.
 - **Schedule notices:** collapsed by default; confirmed breaks and unconfirmed schedules are
