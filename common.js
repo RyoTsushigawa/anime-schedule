@@ -241,11 +241,12 @@ const mediaTitles = m => [m.title.romaji, m.title.english, ...(m.synonyms || [])
 // header browsers need, so that shows up as a network error: both (and server errors) get a few
 // retries with waits, and a "Loading…" message on the page says so meanwhile.
 const RETRY_WAITS = [4000, 12000, 30000];
-async function anilist(query, variables = {}, token) {
+async function anilist(query, variables = {}, token, options = {}) {
   for (let attempt = 0; ; attempt++) {
     let res = null;
     try {
       res = await fetch(API, {
+        signal: AbortSignal.timeout(options.timeout || 12000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token && { Authorization: 'Bearer ' + token }) },
         body: JSON.stringify({ query, variables }),
@@ -258,7 +259,7 @@ async function anilist(query, variables = {}, token) {
       return json.data;
     }
     // Offline: no point waiting for retries
-    if (attempt >= RETRY_WAITS.length || (!res && navigator.onLine === false)) throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute");
+    if (attempt >= (options.retries ?? RETRY_WAITS.length) || (!res && navigator.onLine === false)) throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute");
     const status = document.querySelector('#list .status');
     if (status) status.textContent = 'AniList is busy, trying again…';
     await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
