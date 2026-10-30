@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-29T18:59:50.218Z",
+ "updated": "2026-10-30T19:09:30.941Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -21,6 +21,13 @@
    "tag": "Do.",
    "time": "20:00",
    "week": ""
+  },
+  {
+   "show": "toaruanbunoitem",
+   "title": "A Certain Dark Side's Item",
+   "tag": "Fr.",
+   "time": "22:00",
+   "week": "2026-10-26"
   }
  ]
 }
