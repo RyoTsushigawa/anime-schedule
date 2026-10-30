@@ -42,7 +42,7 @@
       {target:document.querySelector('#list .row') || $('list'),title:'Open a show, then tick it',text:'Service buttons open the show. With an account connected, ✓ sets progress up to that episode. Undo at the bottom, or Ctrl/⌘+Z, reverses a mistake.'},
       {target:$('accountButton'),title:'Your lists live here',text:'Connect AniList or MyAnimeList here. Once both are connected, choose a matching account and enable Sync both lists for new actions made in this schedule.'},
       {target:$('settingsButton'),title:'Display preferences',text:'Change links, viewers, time and colour here. More options holds refresh, backup and keyboard shortcuts.'},
-      {target:$('editSchedule'),title:'Move shows together',text:'Edit schedule reveals the ⇄ handles. Drag one to a day or time slot, then confirm. A shared slot means parallel shows. Everyone sees a saved move.'},
+      {target:$('editSchedule'),title:'Move shows together',text:'Edit schedule lets you drag whole show cards to a day or slot, then confirm. On phones, hold a card briefly first. A shared slot means parallel shows. Click ⇄ to type instead.'},
       {target:document.querySelector('.site-tools'),title:'Other tools',text:'The watch planner and Higher / Lower ranker are down here. You can reopen this guide from the question mark any time.'},
     ].filter(s => s.target && !s.target.hidden && s.target.getClientRects().length && getComputedStyle(s.target).display !== 'none');
     if (!steps.length) { guide.showModal(); return; }
