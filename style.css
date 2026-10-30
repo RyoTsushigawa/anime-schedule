@@ -141,6 +141,8 @@ img.avatar { object-fit: cover; }
 .field { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; font-size: 12px; color: var(--muted); }
 .field input { width: 100%; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; }
 .field input:focus { outline: none; border-color: var(--accent); }
+.field select { width: 100%; min-width: 0; font-size: 13px; padding: 6px 8px; }
+.sync-hint { font-size: 11px; color: var(--muted); margin: 0; padding: 0 10px 10px; }
 .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .segmented button { white-space: nowrap; }
