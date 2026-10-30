@@ -3,6 +3,12 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
+The planner and ranker links live below the schedule. Owners enter/leave moving mode with
+“Edit schedule” above the week; editing access is managed from the footer. Settings contains
+display choices, with refresh/backup/shortcuts under “More options”. Catch-up stream links
+default on unless explicitly disabled. Single open episodes use one compact card, while
+multiple episodes stay grouped chronologically with ✓ at the far right.
+
 **MyAnimeList accounts:** open the account menu → Connect MyAnimeList. The Cloudflare helper
 (`https://anime-schedule-mal.shigeruhagano.workers.dev`) handles OAuth and keeps MAL credentials
 off GitHub. MAL accounts support Week/Catch-up/Non-seasonal, ✓, Drop, whole-number scores and Undo.
