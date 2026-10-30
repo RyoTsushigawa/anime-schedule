@@ -3,6 +3,20 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
+**MyAnimeList accounts:** open the account menu → Connect MyAnimeList. The Cloudflare helper
+(`https://anime-schedule-mal.shigeruhagano.workers.dev`) handles OAuth and keeps MAL credentials
+off GitHub. MAL accounts support Week/Catch-up/Non-seasonal, ✓, Drop, whole-number scores and Undo.
+ID mappings come from AniList `idMal` and the LiveChart season index, never guessed titles.
+Native MAL metadata and saved mappings remain usable if AniList is down.
+
+**Optional two-list sync:** connect both accounts, choose the counterpart under “Keep lists
+together”, then enable “Sync both lists”. Only subsequent actions made in this schedule are
+mirrored; no existing list is imported or overwritten. Pairing is explicit and per browser,
+including when names differ. Undo restores each provider's exact original values. Scores
+convert between scales (MAL uses whole numbers). Partial failures are shown; a partner that
+is already further ahead is not reduced when marking an earlier episode watched.
+The ranker's separate AniList writes are not included in this schedule-specific pairing.
+
 - **Alternative show links:** refreshed automatically with the daily LiveChart job in
   `fallback-links.json`. Everyone keeps their normal services. Only with no visible service does
   Rei get a verified SubsPlease show page when matched, otherwise a Nyaa title search. Other viewers get
