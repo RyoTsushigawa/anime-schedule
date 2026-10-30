@@ -106,9 +106,3 @@ Changes to the page made on this PC are uploaded by the next weekly run, or righ
 ## Trying it locally
 
 Open it through a small web server (browsers block `fetch()` from `file://`), for example `npx serve .` in this folder.
-
-In AniWorld mode, AnimeParadise search is also offered as a backup, only when no
-regular service is shown. The Index lists AnimeParadise as “No Ads” (checked
-2026-10-30 at https://theindex.moe/library/anime); this is the directory's rating,
-not a guarantee about future site behavior. Searches use the show's title rather
-than guessing a show-page URL.
