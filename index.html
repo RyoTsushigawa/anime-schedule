@@ -55,7 +55,6 @@
             <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
             <label class="toggle week-only" title="Show who's watching each show"><input type="checkbox" id="who" aria-label="Who's watching">Viewers</label>
             <label class="toggle" title="The Drop button next to each ✓ (when connected to AniList)"><input type="checkbox" id="dropButtons">Drop buttons</label>
-            <label class="toggle week-only" id="moveToggle" title="The ⇄ on each show to move it to another day or time" hidden><input type="checkbox" id="moveButtons">⇄ Move</label>
           </div>
         </section>
         <section class="week-only">
@@ -83,15 +82,7 @@
           </div>
         </section>
         <section>
-          <div class="menu-label">Tools</div>
-          <div class="pills">
-            <a href="planner.html" target="_blank" rel="noopener" title="Watch plan generator · opens in a new tab">Watch planner ↗</a>
-            <a href="ranker/" target="_blank" rel="noopener" title="Higher or Lower ranker · opens in a new tab">Higher / Lower ↗</a>
-            <button id="movesSetup" class="muted" title="Move shows out of their Guckplan slot for everyone (needs a GitHub key)">⇄ Moving shows</button>
-          </div>
-        </section>
-        <section>
-          <div class="menu-label">Data &amp; settings</div>
+          <details class="menu-extra"><summary>More options</summary>
           <div class="pills">
             <button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button>
             <div class="pill-row"><button id="backupSettings" title="Back up settings; excludes logins and keys">Back up</button>
@@ -99,6 +90,7 @@
             <button id="keyboardHelp">Keyboard shortcuts <span aria-hidden="true">?</span></button>
             <input id="settingsFile" type="file" accept=".json,application/json" hidden>
           </div>
+          </details>
         </section>
       </div>
     </div>
@@ -138,6 +130,7 @@
       <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
       <div id="people" class="popover" role="group" aria-label="People" hidden></div>
     </div>
+    <button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" hidden>Edit schedule</button>
     </div>
     <div class="weeknav">
       <button id="prev" class="icon" aria-label="Previous week">‹</button>
@@ -148,6 +141,12 @@
   </div>
 </header>
 <main id="list"><div class="status">Loading…</div></main>
+<footer class="site-tools" aria-label="Other tools">
+  <a href="planner.html" target="_blank" rel="noopener">Watch planner ↗</a>
+  <a href="ranker/" target="_blank" rel="noopener">Higher / Lower ↗</a>
+  <button id="movesSetup" type="button" title="Manage access to shared schedule editing" hidden>Editing access</button>
+</footer>
+<span id="moveToggle" hidden><input type="checkbox" id="moveButtons" hidden></span>
 <!-- After a ✓, Drop or "Mark all as watched": what happened, and Undo (Ctrl+Z on a keyboard) -->
 <!-- Moving a show out of its Guckplan slot (only with a GitHub key that may write to the site) -->
 <dialog id="moveDlg" class="dlg">
