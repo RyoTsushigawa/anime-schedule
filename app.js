@@ -1010,13 +1010,24 @@ for (const b of document.querySelectorAll('[data-set]'))
 
 // ⚙ Show: the Drop buttons and the ⇄ (owner only) can be hidden; both on unless switched off.
 for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]) {
-  try { $(id).checked = localStorage.getItem(id) !== '0'; } catch { $(id).checked = true; }
+  try { $(id).checked = id === 'moveButtons' ? localStorage.getItem(id) === '1' : localStorage.getItem(id) !== '0'; } catch { $(id).checked = id !== 'moveButtons'; }
   document.body.classList.toggle(cls, !$(id).checked);
   $(id).onchange = () => {
     try { localStorage.setItem(id, $(id).checked ? '1' : '0'); } catch {}
     document.body.classList.toggle(cls, !$(id).checked);
+    if (id === 'moveButtons') syncMoveEditor();
   };
 }
+function syncMoveEditor() {
+  $('editSchedule').hidden = $('moveToggle').hidden;
+  const on = $('moveButtons').checked;
+  $('editSchedule').textContent = on ? 'Done editing' : 'Edit schedule';
+  $('editSchedule').setAttribute('aria-pressed', String(on));
+}
+$('editSchedule').onclick = () => {
+  $('moveButtons').checked = !$('moveButtons').checked;
+  $('moveButtons').dispatchEvent(new Event('change'));
+};
 
 // "Who's watching": name chips of everyone watching each show; on unless switched off.
 try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
@@ -1687,7 +1698,7 @@ async function loadCatchup(strict = false, refresh = false) {
   // A ✓ on a forgotten show also puts it on the AniList list as Watching.
   const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
   catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
-  const note = missing => missing ? ' · not on your AniList yet' : '';
+  const note = missing => missing ? ` · not on your ${listService()} yet` : '';
   // While picking shows for "Mark all as watched", each show's ✓ is its switch: filled = included.
   const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Include in Mark all as watched">✓</button>`;
@@ -1696,30 +1707,30 @@ async function loadCatchup(strict = false, refresh = false) {
   const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
-    <div class="row" ${searchKey(...mediaTitles(m))}>
-      <div class="time">Ep ${first}</div>
+    <div class="row catchup-single" ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${out - first + 1} to catch up${out > first ? ` · Ep ${first}–${out}` : ''}${note(missing)}</div>
+        <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Episode ${first}`}${note(missing)}</div>
       </div>
       ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
-      ${mine ? check(m, out, missing) + dropButton(m.id) : ''}
+      ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
     </div>`;
   // A header per show (cover, title, links, Drop; while selecting its ✓ is the switch), then every
   // open episode as an equal slim row with its own ✓.
   const perEpisode = ({ m, first, out, missing, links }) => {
     const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
-    return `<div class="shared" ${searchKey(...mediaTitles(m))}>
+    if (eps.length === 1) return grouped({m,first,out,missing,links});
+    return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head">
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep">${eps.length} to catch up${note(missing)}</div></div>
+        <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div></div>
         ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
-        ${mine ? (selecting ? selector(m) : '') + dropButton(m.id) : ''}
+        ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
       <div class="row compact">
         <div class="time">Ep ${ep}</div>
         <div class="info"></div>
-        ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, ep, missing)) + '<div class="drop-space"></div>' : ''}
+        ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, ep, missing)) : ''}
       </div>`).join('')}</div>`;
   };
   // At your own pace: one row per show with the next episode and its ✓ (that episode only).
@@ -1949,6 +1960,7 @@ async function saveMoves(next) {
 // The ⚙ "Moving shows" entry only shows where a key is saved; the first time, open the site with
 // #moves at the end of the address.
 $('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
+syncMoveEditor();
 function openKeyDialog() {
   $('keyInput').value = '';
   $('keyMsg').textContent = movesKey ? 'A key is saved in this browser.' : '';
@@ -1967,13 +1979,16 @@ $('keySave').onclick = async () => {
     movesKey = key;
     try { localStorage.setItem('movesKey', key); } catch {}
     $('movesSetup').hidden = $('moveToggle').hidden = false;
-    $('keyMsg').textContent = 'Saved. Shows in the week now have ⇄ to move them.';
+    syncMoveEditor();
+    $('keyMsg').textContent = 'Saved. Use “Edit schedule” above the week to move shows.';
     load(true);
   } catch (e) { $('keyMsg').textContent = `Not saved: ${e.message}`; }
 };
 $('keyRemove').onclick = () => {
   movesKey = '';
   $('moveToggle').hidden = true;
+  $('movesSetup').hidden = true;
+  syncMoveEditor();
   try { localStorage.removeItem('movesKey'); } catch {}
   $('keyMsg').textContent = 'Removed from this browser.';
   load(true);
@@ -2093,7 +2108,7 @@ setView(view);
 $('viewWeek').onclick = () => { setView('week'); load(); };
 $('viewCatchup').onclick = () => { setView('catchup'); load(); };
 $('viewPace').onclick = () => { setView('pace'); load(); };
-try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') === '1'; } catch {}
+try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') !== '0'; } catch { $('catchupLinks').checked = true; }
 $('catchupLinks').onchange = () => {
   try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
   load(true);
