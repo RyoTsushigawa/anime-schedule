@@ -457,7 +457,6 @@ function linkButtons(links, mediaId, watchers) {
   if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
     : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
-  if (streaming && !shown.length) alternatives.push({ label: 'AnimeParadise search', url: 'https://www.animeparadise.moe/search?q=' + encodeURIComponent(title) });
   return shown.map(button).join('') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
 }
 
