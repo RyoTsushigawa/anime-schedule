@@ -49,11 +49,11 @@
       <div id="settingsMenu" class="popover menu" hidden>
         <section>
           <div class="menu-label">Show</div>
-          <div class="pills">
+          <div class="pills settings-options">
             <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
-            <label class="toggle" title="Put your last used service first for each show"><input type="checkbox" id="resumeWatching">Resume watching</label>
+            <label class="toggle" title="Put your last used service first for each show"><input type="checkbox" id="resumeWatching" aria-label="Resume watching">Resume links</label>
             <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
-            <label class="toggle week-only" title="Everyone in the Guckplan who watches each show"><input type="checkbox" id="who">Who's watching</label>
+            <label class="toggle week-only" title="Show who's watching each show"><input type="checkbox" id="who" aria-label="Who's watching">Viewers</label>
             <label class="toggle" title="The Drop button next to each ✓ (when connected to AniList)"><input type="checkbox" id="dropButtons">Drop buttons</label>
             <label class="toggle week-only" id="moveToggle" title="The ⇄ on each show to move it to another day or time" hidden><input type="checkbox" id="moveButtons">⇄ Move</label>
           </div>
@@ -85,8 +85,8 @@
         <section>
           <div class="menu-label">Tools</div>
           <div class="pills">
-            <a href="planner.html" target="_blank" rel="noopener" title="Opens in a new tab; only suggests, changes nothing">Watch plan generator ↗</a>
-            <a href="ranker/" target="_blank" rel="noopener" title="Rescore your list show by show (opens in a new tab)">Higher or Lower ranker ↗</a>
+            <a href="planner.html" target="_blank" rel="noopener" title="Watch plan generator · opens in a new tab">Watch planner ↗</a>
+            <a href="ranker/" target="_blank" rel="noopener" title="Higher or Lower ranker · opens in a new tab">Higher / Lower ↗</a>
             <button id="movesSetup" class="muted" title="Move shows out of their Guckplan slot for everyone (needs a GitHub key)">⇄ Moving shows</button>
           </div>
         </section>
@@ -94,8 +94,8 @@
           <div class="menu-label">Data &amp; settings</div>
           <div class="pills">
             <button id="refreshData" class="muted" title="Forget the saved copies and load everything fresh">↻ Refresh data</button>
-            <button id="backupSettings" title="Download preferences and planner settings; excludes logins and keys">Back up settings</button>
-            <button id="restoreSettings">Restore settings</button>
+            <div class="pill-row"><button id="backupSettings" title="Back up settings; excludes logins and keys">Back up</button>
+            <button id="restoreSettings" title="Restore settings from a backup">Restore</button></div>
             <button id="keyboardHelp">Keyboard shortcuts <span aria-hidden="true">?</span></button>
             <input id="settingsFile" type="file" accept=".json,application/json" hidden>
           </div>
@@ -113,10 +113,10 @@
             <input id="anilistUser" placeholder="AniList name" aria-label="AniList name" spellcheck="false"></label>
         </section>
         <section id="listSyncSection" hidden>
-          <div class="menu-label">Keep lists together</div>
+          <div class="menu-label">List sync</div>
           <label class="field"><span>Also update</span><select id="syncTarget" aria-label="Account to sync with"></select></label>
           <div class="pills"><label class="toggle"><input id="syncBoth" type="checkbox">Sync both lists</label></div>
-          <p class="sync-hint">Only changes made here. Scores convert between account scales; MAL uses whole numbers.</p>
+          <p class="sync-hint">New changes only. MAL scores round to whole numbers.</p>
         </section>
       </div>
     </div>
