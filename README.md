@@ -9,6 +9,14 @@ display choices, with refresh/backup/shortcuts under “More options”. Catch-u
 default on unless explicitly disabled. Single open episodes use one compact card, while
 multiple episodes stay grouped chronologically with ✓ at the far right.
 
+The small **?** next to the title opens a quick guide and optional read-only site tour.
+The tour highlights visible controls without switching views or changing any list data.
+MAL avatars are refreshed from the connected profile, with an initial if unavailable.
+In **Edit schedule**, drag a ⇄ handle (mouse or touch) onto a day to append a 30-minute slot,
+or onto another show to share its planned slot. Dropping only prefills the move dialog:
+the owner confirms before anything is saved for everyone. Escape cancels a drag. Clicking
+the handle still opens the original typed destination controls.
+
 **MyAnimeList accounts:** open the account menu → Connect MyAnimeList. The Cloudflare helper
 (`https://anime-schedule-mal.shigeruhagano.workers.dev`) handles OAuth and keeps MAL credentials
 off GitHub. MAL accounts support Week/Catch-up/Non-seasonal, ✓, Drop, whole-number scores and Undo.
