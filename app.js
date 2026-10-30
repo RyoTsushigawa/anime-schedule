@@ -905,11 +905,20 @@ function updateConnect() {
   $('anilistUser').readOnly = auth?.provider === 'mal';
   $('anilistUser').placeholder = auth?.provider === 'mal' ? 'MyAnimeList account' : 'AniList name';
   // A pill: optionally the account's picture or initial, then the text.
-  const item = (text, onclick, { account = null, muted = false, current = false } = {}) => {
+  const item = (text, onclick, { account = null, muted = false, current = false, label = null } = {}) => {
     const b = document.createElement('button');
     b.className = (muted ? 'muted' : '') + (current ? ' current' : '');
-    if (account) b.append(avatarOf(account, 'avatar'));
-    b.append(text);
+    if (account) {
+      b.classList.add('account-choice');
+      b.setAttribute('aria-pressed', String(current));
+      const provider = account.provider === 'mal' ? 'MAL' : 'AniList';
+      const name = document.createElement('span'); name.className = 'account-name'; name.textContent = account.name || 'Account';
+      const badge = document.createElement('span'); badge.className = 'provider-badge'; badge.textContent = provider;
+      b.append(avatarOf(account, 'avatar'), name, badge);
+      b.title = `${provider}: ${account.name || 'Account'}`;
+      b.setAttribute('aria-label', b.title);
+    } else b.append(text);
+    if (label) { b.setAttribute('aria-label', label); b.title = label; }
     b.onclick = onclick;
     return b;
   };
@@ -921,7 +930,7 @@ function updateConnect() {
   };
   $('accountSection').replaceChildren(
     ...accounts.map(a => item(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name || 'Account'}`, () => a !== auth && useAccount(a), { account: a, current: a === auth })),
-    item('+ Connect AniList', connect, { muted: true }), item('+ Connect MyAnimeList', MAL.connect, { muted: true }),
+    row(item('+ AniList', connect, { muted: true, label:'Connect AniList' }), item('+ MAL', MAL.connect, { muted: true, label:'Connect MyAnimeList' })),
     ...(auth ? [row(item('Log out', disconnect, { muted: true }))] : []),
   );
   updateSyncControls();
