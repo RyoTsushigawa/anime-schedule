@@ -36,7 +36,7 @@ const MAL = (() => {
     const { session } = await request(null, '/auth/exchange', { method: 'POST', body: JSON.stringify({ code }) });
     const account = { provider: 'mal', token: session, expires: Date.now() + 30 * 86400000, scoreFormat: 'POINT_10' };
     const me = await profile(account);
-    return { ...account, name: me.name, avatar: '' };
+    return { ...account, name: me.name, avatar: typeof me.picture === 'string' ? me.picture : me.picture?.medium || me.picture?.large || '' };
   }
   const normalizedEntry = value => value ? { progress: value.num_episodes_watched ?? value.num_watched_episodes ?? 0,
     status: value.is_rewatching ? 'REPEATING' : statuses[value.status] || 'PLANNING', score: value.score || 0 } : null;
