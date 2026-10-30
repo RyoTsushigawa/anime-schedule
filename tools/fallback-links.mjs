@@ -31,7 +31,11 @@ export function parseAniWorld(html) {
 }
 const seriesTitle = text => fallbackTitle(String(text).replace(/\b(?:\d+(?:st|nd|rd|th)\s+season|season\s*\d+|s\d+|cour\s*\d+|part\s*\d+)\b/gi, ''));
 export function matchAniWorld(titles, index) {
-  const exact = new Set(titles.filter(Boolean).map(fallbackTitle));
+  const aliases = {
+    magicalgirlraisingprojectrestart: 'Magical Girl Raising Project',
+    mahoushoujoikuseikeikakurestart: 'Magical Girl Raising Project',
+  };
+  const exact = new Set(titles.filter(Boolean).flatMap(t => [fallbackTitle(t), ...aliases[fallbackTitle(t)] ? [fallbackTitle(aliases[fallbackTitle(t)])] : []]));
   let matches = index.filter(show => exact.has(fallbackTitle(show.title)));
   if (!matches.length) matches = index.filter(show => show.titles.some(t => exact.has(fallbackTitle(t))));
   if (!matches.length) {
