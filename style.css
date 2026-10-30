@@ -288,6 +288,9 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .tour-panel p { font-size: 13px; line-height: 1.5; }
 .tour-highlight { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 .move { touch-action: none; cursor: grab; }
+.move-card { cursor: grab; }
+.move-card:active { cursor: grabbing; }
+.move-card a, .move-card button { cursor: pointer; }
 .move:active { cursor: grabbing; }
 .move-dragging { opacity: .55; }
 .drop-day { outline: 2px dashed var(--accent); outline-offset: 5px; border-radius: 10px; }
