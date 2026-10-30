@@ -12,10 +12,15 @@ multiple episodes stay grouped chronologically with ✓ at the far right.
 The small **?** next to the title opens a quick guide and optional read-only site tour.
 The tour highlights visible controls without switching views or changing any list data.
 MAL avatars are refreshed from the connected profile, with an initial if unavailable.
-In **Edit schedule**, drag a ⇄ handle (mouse or touch) onto a day to append a 30-minute slot,
+In **Edit schedule**, drag the whole show card onto a day to append a 30-minute slot,
 or onto another show to share its planned slot. Dropping only prefills the move dialog:
 the owner confirms before anything is saved for everyone. Escape cancels a drag. Clicking
 the handle still opens the original typed destination controls.
+On phones, hold a non-interactive part of a card for 300 ms before dragging; normal swipes
+still scroll. Buttons and service links remain clickable. Settings → Fallback links chooses
+AniWorld or torrents for the selected people, remembered in this browser and included in
+settings backups. Defaults remain torrents for Rei and AniWorld for others. Mixed group
+preferences can show both alternatives. Available service buttons always take priority.
 
 **MyAnimeList accounts:** open the account menu → Connect MyAnimeList. The Cloudflare helper
 (`https://anime-schedule-mal.shigeruhagano.workers.dev`) handles OAuth and keeps MAL credentials
@@ -101,3 +106,9 @@ Changes to the page made on this PC are uploaded by the next weekly run, or righ
 ## Trying it locally
 
 Open it through a small web server (browsers block `fetch()` from `file://`), for example `npx serve .` in this folder.
+
+In AniWorld mode, AnimeParadise search is also offered as a backup, only when no
+regular service is shown. The Index lists AnimeParadise as “No Ads” (checked
+2026-10-30 at https://theindex.moe/library/anime); this is the directory's rating,
+not a guarantee about future site behavior. Searches use the show's title rather
+than guessing a show-page URL.
