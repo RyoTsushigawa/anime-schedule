@@ -146,6 +146,7 @@ img.avatar { object-fit: cover; }
 /* Compact menus: state controls remain pills; actions are quiet, aligned rows. */
 #settingsMenu .settings-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 #settingsMenu .settings-options .toggle { min-width: 0; min-height: 38px; padding: 5px 6px; font-size: 12px; line-height: 1.2; }
+#settingsMenu #moveToggle { grid-column: 1 / -1; }
 .menu .menu-label { padding-top: 6px; }
 .menu section + section { margin-top: 4px; padding-top: 4px; }
 .menu .pills > a, .menu .pills > button:not(.account-choice), .menu .pill-row > button {
