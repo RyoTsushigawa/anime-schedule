@@ -252,7 +252,7 @@ try {
     if (!card.anilist) continue;
     const show = matchSubsPlease(card.titles, index);
     const alternate = matchAniWorld(card.titles, aniWorld);
-    byAnilist[card.anilist] = { title: card.titles[0],
+    byAnilist[card.anilist] = { title: card.titles[0], malId: Number(card.list.mal?.match(/\/anime\/(\d+)/)?.[1]) || null,
       ...(show && { subsplease: show.url }),
       ...(alternate ? { aniworld: alternate.url } : !aniWorld.length && old?.byAnilist?.[card.anilist]?.aniworld ? { aniworld: old.byAnilist[card.anilist].aniworld } : {}) };
   }
