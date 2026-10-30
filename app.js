@@ -269,7 +269,7 @@ async function downloadAirings(start) {
 const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'no day';
 const moveButton = (show, slot) => !movesKey || !show ? '' :
   `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
-    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" title="Move to another day or time (everyone sees it)">⇄</button>`;
+    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" draggable="true" title="Drag to a day or slot, or click to enter a destination">⇄</button>`;
 
 // Why a show has a break: LiveChart's timetable note for that week, else its newest break
 // headline (linked), else `none` (already HTML). A note is cut down to its cause ("…no broadcast
@@ -509,7 +509,7 @@ $('search').addEventListener('keydown', e => {
   addEventListener('scroll', () => {
     const y = scrollY;
     const keep = innerWidth > 560 || y <= 4 || document.body.classList.contains('searching')
-      || document.querySelector('header .popover:not([hidden])') || header.contains(document.activeElement);
+      || document.body.classList.contains('touring') || document.querySelector('header .popover:not([hidden])') || header.contains(document.activeElement);
     if (keep || y < lastY - 4) header.classList.remove('away');
     else if (y > lastY + 4) header.classList.add('away');
     if (Math.abs(y - lastY) > 4) lastY = y;
@@ -690,7 +690,7 @@ function render(items, start, plans) {
     else if (media && media.status === 'FINISHED') {
       if (finishedThisSeason(media, start)) continue; // A season ending is not an automatic rewatch.
       const links = streamLinks(media, show.wo, media.title.english || media.title.romaji);
-      day.rows.push({ rewatch: true, m: media, links, slot, when: day.date, who: [...whoBySheet.values()].find(w => w.has(show))?.get(show) });
+      day.rows.push({ rewatch: true, m: media, links, slot, show, when: day.date, who: [...whoBySheet.values()].find(w => w.has(show))?.get(show) });
       found.add(show);
     } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
       const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
@@ -716,8 +716,8 @@ function render(items, start, plans) {
     const checkSpace = auth ? '<div class="watch-space"></div><div class="drop-space"></div>' : '';
     // The reason: the newest LiveChart headline about the break (linked to the article), or a
     // note that none was announced.
-    const pause = ({ show, slot, when, episode, note, news }) => `
-      <div class="row pause" ${searchKey(show.english, show.romaji)}>
+    const pause = ({ show, slot, when, episode, note, news, watchAt }) => `
+      <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
@@ -727,8 +727,8 @@ function render(items, start, plans) {
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
       </div>`;
-    const rewatch = ({ m, links, watchAt, who }) => `
-      <div class="row" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
+    const rewatch = ({ m, links, watchAt, who, show, slot }) => `
+      <div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
         <div class="time">Rewatch</div>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
@@ -736,10 +736,10 @@ function render(items, start, plans) {
           <div class="ep">Rewatch</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
-        ${checkSpace}${movesKey ? '<div class="move-space"></div>' : ''}
+        ${checkSpace}${moveButton(show, slot)}
       </div>`;
     const row = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
-    const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" ${searchKey(show.english, show.romaji)}>
+    const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
       <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Episode not confirmed${whoChips(who)}</div></div>
       <div class="links">${linkButtons(links, m.id, who)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
@@ -752,7 +752,7 @@ function render(items, start, plans) {
         : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : release;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
-      <div class="row" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
+      <div class="row" data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time">${timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
@@ -771,7 +771,7 @@ function render(items, start, plans) {
     const body = groups.length
       ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
       : '<div class="ep" style="padding:0 10px">Nothing airing</div>';
-    return `<section class="day${date.toDateString() === today ? ' is-today' : ''}"><h2>${heading}</h2>${body}</section>`;
+    return `<section class="day${date.toDateString() === today ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2>${heading}</h2>${body}</section>`;
   }).join('');
 
   // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
@@ -1130,6 +1130,7 @@ async function loadMe() {
     const me = await MAL.profile(account);
     if (auth !== account) return;
     account.name = me.name; account.scoreFormat = 'POINT_10';
+    account.avatar = typeof me.picture === 'string' ? me.picture : me.picture?.medium || me.picture?.large || '';
     saveAccounts(); $('anilistUser').value = account.name; updateConnect();
     const { entries } = await MAL.list(account);
     if (auth !== account) return;
@@ -2005,7 +2006,11 @@ $('moveWeek').onclick = () => setMoveScope('week');
 $('moveAlways').onclick = () => setMoveScope('always');
 $('list').addEventListener('click', e => {
   const b = e.target.closest('.move');
-  if (!b) return;
+  if (!b || document.body.dataset.suppressMoveClick) return;
+  openMoveDialog(b);
+});
+function openMoveDialog(b, destination = null) {
+  if (!movesKey || !b) return;
   moving = { key: norm(b.dataset.moveTitle), name: b.dataset.moveName };
   const week = isoDay(weekStart(weekOffset));
   const mv = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
@@ -2016,8 +2021,14 @@ $('list').addEventListener('click', e => {
   setMoveScope(mv && !mv.week ? 'always' : 'week');
   $('moveReset').hidden = !mv;
   $('moveMsg').textContent = '';
+  if (destination) {
+    $('moveTag').value = destination.tag;
+    $('moveTime').value = destination.time;
+    setMoveScope('week');
+    $('moveMsg').textContent = destination.parallel ? 'This shares the destination show’s slot. Save to confirm, or choose another time.' : 'Save to confirm this destination.';
+  }
   $('moveDlg').showModal();
-});
+}
 async function storeMoves(next, done) {
   $('moveMsg').textContent = 'Saving…';
   try {
@@ -2319,7 +2330,7 @@ for (const [id, key, hint] of [
 document.addEventListener('keydown', event => {
   if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
   if (event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
-  if (document.querySelector('dialog[open], .popover:not([hidden])')) return;
+  if (document.body.classList.contains('dnd-moving') || document.querySelector('dialog[open], .popover:not([hidden])')) return;
   const key = event.key.toLowerCase();
   if (event.shiftKey && key !== '?') return;
   let action;
