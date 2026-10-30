@@ -6,8 +6,8 @@
 <!-- Only this page's own code runs, and it only talks to AniList, the Google Sheet and itself.
      Injected code couldn't run or send anything (like AniList logins) anywhere else. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-  img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://docs.google.com
-  https://*.googleusercontent.com https://sheets.googleapis.com https://api.github.com; manifest-src 'self'; worker-src 'self';
+  img-src 'self' https://*.anilist.co https://cdn.myanimelist.net; connect-src 'self' https://graphql.anilist.co https://docs.google.com
+  https://*.googleusercontent.com https://sheets.googleapis.com https://api.github.com https://anime-schedule-mal.shigeruhagano.workers.dev; manifest-src 'self'; worker-src 'self';
   object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Simulcast Schedule</title>
@@ -107,10 +107,16 @@
       <button id="accountButton" class="round" aria-label="AniList" aria-haspopup="true" aria-expanded="false"></button>
       <div id="accountMenu" class="popover menu" hidden>
         <section>
-          <div class="menu-label">AniList</div>
+          <div class="menu-label">List accounts</div>
           <div id="accountSection" class="pills"></div>
           <label class="field catchup-only"><span>Catch-up list of</span>
             <input id="anilistUser" placeholder="AniList name" aria-label="AniList name" spellcheck="false"></label>
+        </section>
+        <section id="listSyncSection" hidden>
+          <div class="menu-label">Keep lists together</div>
+          <label class="field"><span>Also update</span><select id="syncTarget" aria-label="Account to sync with"></select></label>
+          <div class="pills"><label class="toggle"><input id="syncBoth" type="checkbox">Sync both lists</label></div>
+          <p class="sync-hint">Only changes made here. Scores convert between account scales; MAL uses whole numbers.</p>
         </section>
       </div>
     </div>
@@ -170,7 +176,7 @@
 <dialog id="scoreDlg" class="dlg">
   <form method="dialog">
     <b id="scoreName"></b>
-    <div class="muted">Completed. Your score on AniList:</div>
+    <div class="muted" id="scoreService">Completed. Your score on AniList:</div>
     <div class="dlg-row" id="scoreInput"></div>
     <div class="muted" id="scoreMsg"></div>
     <div class="dlg-row">
@@ -206,13 +212,14 @@
     <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Week / Catch-up / Non-seasonal</dd></div>
     <div><dt><kbd>/</kbd></dt><dd>Search shows</dd></div>
     <div><dt><kbd>Esc</kbd></dt><dd>Close search or menu</dd></div>
-    <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Undo your last AniList change</dd></div>
+    <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Undo your last list change</dd></div>
     <div><dt><kbd>?</kbd></dt><dd>Show this guide</dd></div>
   </dl>
   <p class="muted">Navigation shortcuts pause while typing, using a menu, or filling in a dialog.</p>
   <div class="dlg-row"><button id="keyboardClose" class="pill">Close</button></div>
 </dialog>
 <script src="common.js"></script>
+<script src="mal.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
