@@ -106,3 +106,9 @@ Changes to the page made on this PC are uploaded by the next weekly run, or righ
 ## Trying it locally
 
 Open it through a small web server (browsers block `fetch()` from `file://`), for example `npx serve .` in this folder.
+
+0neko is an outage-only replacement for AniWorld, opening the show's AniList ID
+at `https://0neko.cc/#/anime/ID`. The source-health workflow checks every 30 minutes
+(GitHub may delay scheduled runs). Two failed requests are required; blocked or
+unrecognised responses are unknown. Only a confirmed outage checked within 90
+minutes changes the button. Legal services and torrent preferences take priority.
