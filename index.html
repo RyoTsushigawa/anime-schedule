@@ -26,7 +26,7 @@
   <!-- Row 1: title left, 🔍 and ⚙ top right. Row 2: view and person left; week right. -->
   <div class="bar">
     <div class="brand">
-      <h1>Simulcast Schedule</h1>
+      <div class="brand-title"><h1>Simulcast Schedule</h1><button id="helpButton" class="help-icon" aria-label="How to use this site" aria-haspopup="dialog" title="Quick guide and site tour">?</button></div>
       <div id="tabName">Guckplan</div>
     </div>
     <div class="top-actions">
@@ -217,8 +217,28 @@
   <p class="muted">Navigation shortcuts pause while typing, using a menu, or filling in a dialog.</p>
   <div class="dlg-row"><button id="keyboardClose" class="pill">Close</button></div>
 </dialog>
+<dialog id="helpDialog" class="dlg quick-guide" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">A quick guide</h2>
+  <div class="help-sections">
+    <section><h3>Choose your plan</h3><p><b>Solo</b> shows one person’s plan. <b>Group</b> combines the people you select. Select nobody to show nothing.</p></section>
+    <section><h3>Pick a view</h3><p><b>Week</b> follows the group’s watch days. <b>Catch-up</b> lists missed seasonal episodes. <b>Non-seasonal</b> keeps older shows at your own pace.</p></section>
+    <section><h3>Watch, then tick ✓</h3><p>Service buttons open the show. Connect an account to use ✓, Drop and scores. Ticking an episode sets your progress up to that episode, including earlier ones. Use <b>Undo</b> or Ctrl/⌘+Z for mistakes.</p></section>
+    <section><h3>Catch up your way</h3><p><b>Single episodes</b> keeps each show’s episodes together in order. <b>Mark all as watched</b> first lets you exclude shows with their ✓; press again to save.</p></section>
+    <section><h3>Connect your lists</h3><p>The account icon connects AniList or MyAnimeList. With both connected, select the matching account and enable <b>Sync both lists</b> to mirror new changes made here. Existing lists are not copied.</p></section>
+    <section><h3>Make it yours</h3><p>Settings controls links, viewers, time and colour. <b>More options</b> contains refresh, backups and shortcuts. The planner and ranker are below the schedule.</p></section>
+    <section><h3>Move a show</h3><p>With editing access, use <b>Edit schedule</b>. Drag a show’s ⇄ onto a day or slot, then save the destination. Dropping on another show shares its time slot. Click ⇄ to enter a destination instead. Saved moves are shared with everyone.</p></section>
+  </div>
+  <div class="dlg-row"><button id="helpShortcuts" class="pill">Shortcuts</button><button id="helpTour" class="pill primary">Show me around</button><button id="helpClose" class="pill">Close</button></div>
+</dialog>
+<dialog id="tourDialog" class="dlg tour-panel" aria-labelledby="tourTitle" aria-describedby="tourText">
+  <div id="tourProgress" class="muted"></div><h2 id="tourTitle"></h2><p id="tourText"></p>
+  <div class="dlg-row"><button id="tourStop" class="pill">Exit tour</button><button id="tourBack" class="pill">Back</button><button id="tourNext" class="pill primary">Next</button></div>
+</dialog>
+<div id="dragHint" class="drag-hint" role="status" hidden></div>
 <script src="common.js"></script>
 <script src="mal.js"></script>
 <script src="app.js"></script>
+<script src="help.js"></script>
+<script src="drag-moves.js"></script>
 </body>
 </html>
