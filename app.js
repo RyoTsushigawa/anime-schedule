@@ -106,6 +106,15 @@ try {
 } catch {}
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
 let fallbackLinks = { byAnilist: {} };
+let sourceHealth = null;
+fetch('source-health.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : null).then(data => {
+  sourceHealth = data;
+  if (aniWorldDown()) load(true);
+}).catch(() => {});
+function aniWorldDown() {
+  const age = Date.now() - Date.parse(sourceHealth?.checked);
+  return sourceHealth?.aniworld === 'down' && age >= 0 && age < 90 * 60000;
+}
 const fallbackSources = new Map();
 try { for (const [person,value] of Object.entries(JSON.parse(localStorage.getItem('fallbackSources') || '{}'))) if (['aniworld','torrent'].includes(value)) fallbackSources.set(person,value); } catch {}
 const fallbackChoice = person => fallbackSources.get(person) || (person.toLowerCase() === 'rei' ? 'torrent' : 'aniworld');
@@ -454,7 +463,8 @@ function linkButtons(links, mediaId, watchers) {
   if (torrent && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
     : { label: 'Nyaa search', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
-  if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
+  if (streaming && !shown.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
+  else if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
     : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
   return shown.map(button).join('') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
