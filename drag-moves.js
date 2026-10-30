@@ -1,9 +1,26 @@
 // Dragging only chooses a destination. The existing shared-move dialog confirms the write.
 (() => {
   let source = null, target = null, dragWeek = null, touch = null;
+  let cardTouch = null, holdTimer = null;
   const hint = $('dragHint');
   const allowed = () => !!movesKey && view === 'week' && !document.body.classList.contains('no-move');
+  function prepareCards() {
+    if (!globalThis.document?.documentElement) { observer.disconnect(); return; }
+    for (const row of document.querySelectorAll('#list .row')) {
+      const on = allowed() && !!row.querySelector('button.move');
+      row.draggable = on; row.classList.toggle('move-card',on);
+    }
+  }
+  const observer = new MutationObserver(prepareCards);
+  observer.observe($('list'),{childList:true,subtree:true});
+  observer.observe(document.body,{attributes:true,attributeFilter:['class']});
+  prepareCards();
+  function cardSource(element) {
+    if (element?.closest?.('button:not(.move), input, select, textarea, .links a')) return null;
+    return element?.closest?.('#list .row')?.querySelector('button.move') || null;
+  }
   function clean(suppress = false) {
+    clearTimeout(holdTimer); holdTimer = null; cardTouch = null;
     document.querySelectorAll('.drop-day,.drop-slot,.move-dragging').forEach(el=>el.classList.remove('drop-day','drop-slot','move-dragging'));
     document.body.classList.remove('dnd-moving'); hint.hidden = true;
     source = null; target = null; touch = null;
@@ -45,8 +62,8 @@
     if (valid && button && to) openMoveDialog(button,{tag:to.tag,time:to.time,parallel:to.parallel});
   }
   $('list').addEventListener('dragstart',event=>{
-    const button = event.target.closest?.('button.move');
-    if (!button || !begin(button)) return;
+    const button = cardSource(event.target);
+    if (!button || !begin(button)) { if (allowed()) event.preventDefault(); return; }
     event.dataTransfer?.setData('text/plain',button.dataset.moveTitle);
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
   });
@@ -78,5 +95,37 @@
     if (active) {event.preventDefault();hover(document.elementFromPoint(event.clientX,event.clientY));drop();} else touch=null;
   });
   document.addEventListener('pointercancel',()=>{if(touch) clean(true);});
+  // Long-press a card on phones; a normal swipe before the hold threshold still scrolls.
+  $('list').addEventListener('touchstart',event=>{
+    if (!allowed() || event.touches.length!==1 || event.target.closest('a,button,input,select,textarea')) return;
+    const button = cardSource(event.target), point=event.touches[0];
+    if (!button) return;
+    cardTouch={button,x:point.clientX,y:point.clientY,active:false};
+    holdTimer=setTimeout(()=>{if(cardTouch) cardTouch.active=begin(button);},300);
+  },{passive:true});
+  document.addEventListener('touchmove',event=>{
+    if (!cardTouch || !event.touches.length) return;
+    const point=event.touches[0];
+    if (!cardTouch.active) {
+      if (Math.hypot(point.clientX-cardTouch.x,point.clientY-cardTouch.y)>8) {clearTimeout(holdTimer);cardTouch=null;}
+      return;
+    }
+    event.preventDefault(); hover(document.elementFromPoint(point.clientX,point.clientY));
+    if(point.clientY<100) scrollBy(0,-16); else if(point.clientY>innerHeight-80) scrollBy(0,16);
+  },{passive:false});
+  document.addEventListener('touchend',event=>{
+    if(!cardTouch) return;
+    clearTimeout(holdTimer);
+    if(cardTouch.active) {
+      event.preventDefault(); const point=event.changedTouches[0];
+      if(point) hover(document.elementFromPoint(point.clientX,point.clientY));
+      drop();
+    } else cardTouch=null;
+  },{passive:false});
+  document.addEventListener('touchcancel',()=>{if(cardTouch) clean(true);});
+  document.addEventListener('contextmenu',event=>{if(cardTouch?.active) event.preventDefault();});
+  document.addEventListener('click',event=>{
+    if(document.body.dataset.suppressMoveClick && event.target.closest?.('#list .row')) {event.preventDefault();event.stopPropagation();}
+  },true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape' && source){event.preventDefault();clean(true);}});
 })();
