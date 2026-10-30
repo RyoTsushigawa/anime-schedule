@@ -106,6 +106,22 @@ try {
 } catch {}
 let streamsDe = null; // streams-de.json: { generated, byAnilist: { anilistId: [{ name, url }] } }
 let fallbackLinks = { byAnilist: {} };
+const fallbackSources = new Map();
+try { for (const [person,value] of Object.entries(JSON.parse(localStorage.getItem('fallbackSources') || '{}'))) if (['aniworld','torrent'].includes(value)) fallbackSources.set(person,value); } catch {}
+const fallbackChoice = person => fallbackSources.get(person) || (person.toLowerCase() === 'rei' ? 'torrent' : 'aniworld');
+function updateFallbackControls() {
+  const selected = new Set(activePeople().map(fallbackChoice));
+  for (const b of document.querySelectorAll('[data-fallback-source]')) {
+    b.setAttribute('aria-pressed',String(selected.has(b.dataset.fallbackSource)));
+    b.disabled = !activePeople().length;
+  }
+  $('fallbackHint').textContent = selected.size > 1 ? 'Mixed preferences · choose to apply to selected people' : 'When no service is shown · for selected people';
+}
+for (const b of document.querySelectorAll('[data-fallback-source]')) b.onclick = () => {
+  for (const person of activePeople()) fallbackSources.set(person,b.dataset.fallbackSource);
+  try { localStorage.setItem('fallbackSources',JSON.stringify(Object.fromEntries(fallbackSources))); } catch {}
+  updateFallbackControls(); load(true);
+};
 async function loadFallbackLinks() {
   try {
     const response = await fetch('fallback-links.json', { cache: 'no-cache' });
@@ -430,17 +446,18 @@ function linkButtons(links, mediaId, watchers) {
     : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have" ${attrs(l)}>${label(l)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked).sort((a, b) => Number(serviceKey(b.label) === preferred) - Number(serviceKey(a.label) === preferred));
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
-  const rei = people.some(p => p.toLowerCase() === 'rei');
-  const others = !people.length || people.some(p => p.toLowerCase() !== 'rei');
+  const torrent = people.some(p => fallbackChoice(p) === 'torrent');
+  const streaming = !people.length || people.some(p => fallbackChoice(p) === 'aniworld');
   const source = fallbackLinks.byAnilist[mediaId] || {};
   const title = links.title || source.title || 'anime';
   const alternatives = [];
-  if (rei && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
+  if (torrent && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
     : { label: 'Nyaa search', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
-  if (others && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
+  if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
     : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
+  if (streaming && !shown.length) alternatives.push({ label: 'AnimeParadise search', url: 'https://www.animeparadise.moe/search?q=' + encodeURIComponent(title) });
   return shown.map(button).join('') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
 }
 
@@ -551,6 +568,7 @@ function assignWatchTimes(day) {
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 function render(items, start, plans) {
   const restore = preserveListPosition();
+  updateFallbackControls();
   const fallback = fallbackWeeks.has(start.getTime());
   // Shows any selected person watches (solo: one person, group: the toggled ones); nobody = nothing.
   const people = activePeople();
@@ -1628,6 +1646,7 @@ function dueAt(released, slot, show) {
 }
 
 async function loadCatchup(strict = false, refresh = false) {
+  updateFallbackControls();
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
   const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
@@ -2234,7 +2253,7 @@ document.addEventListener('click', event => {
 
 // Explicit allowlist excludes account sessions, access keys and cached personal lists.
 const BACKUP_KEYS = ['mode', 'soloPerson', 'people', 'view', 'anilistUser', 'theme', 'time', 'sort', 'accent',
-  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'resumeServices',
+  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'resumeServices', 'fallbackSources',
   'planUnavailable', 'planStarts', 'planStart', 'planBusy', 'planMoves', 'planFixed', 'planBreaks', 'planUntil', 'planView'];
 function settingsBackup() {
   const settings = {};
@@ -2258,6 +2277,10 @@ function readSettingsBackup(text) {
     const services = JSON.parse(settings.resumeServices);
     if (!services || Array.isArray(services) || typeof services !== 'object' || Object.entries(services).some(([id, name]) => !/^\d+$/.test(id) || typeof name !== 'string' || name.length > 200))
       throw new Error('Invalid saved services.');
+  }
+  if (settings.fallbackSources) {
+    const sources=JSON.parse(settings.fallbackSources);
+    if (!sources || typeof sources!=='object' || Array.isArray(sources) || Object.values(sources).some(v=>!['aniworld','torrent'].includes(v))) throw new Error('Invalid fallback source preferences.');
   }
   for (const key of ['people', 'planUnavailable', 'planStarts', 'planBusy', 'planFixed', 'planBreaks', 'planUntil'])
     if (settings[key]) {
