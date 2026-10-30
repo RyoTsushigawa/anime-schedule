@@ -57,6 +57,11 @@
             <label class="toggle" title="The Drop button next to each ✓ (when connected to AniList)"><input type="checkbox" id="dropButtons">Drop buttons</label>
           </div>
         </section>
+        <section>
+          <div class="menu-label">Fallback links</div>
+          <div class="segmented" role="group" aria-label="Fallback link preference"><button data-fallback-source="aniworld">AniWorld</button><button data-fallback-source="torrent">Torrents</button></div>
+          <p id="fallbackHint" class="sync-hint">When no service is shown · for selected people</p>
+        </section>
         <section class="week-only">
           <div class="menu-label">Time</div>
           <div class="segmented" role="group" aria-label="Time shown">
@@ -225,8 +230,8 @@
     <section><h3>Watch, then tick ✓</h3><p>Service buttons open the show. Connect an account to use ✓, Drop and scores. Ticking an episode sets your progress up to that episode, including earlier ones. Use <b>Undo</b> or Ctrl/⌘+Z for mistakes.</p></section>
     <section><h3>Catch up your way</h3><p><b>Single episodes</b> keeps each show’s episodes together in order. <b>Mark all as watched</b> first lets you exclude shows with their ✓; press again to save.</p></section>
     <section><h3>Connect your lists</h3><p>The account icon connects AniList or MyAnimeList. With both connected, select the matching account and enable <b>Sync both lists</b> to mirror new changes made here. Existing lists are not copied.</p></section>
-    <section><h3>Make it yours</h3><p>Settings controls links, viewers, time and colour. <b>More options</b> contains refresh, backups and shortcuts. The planner and ranker are below the schedule.</p></section>
-    <section><h3>Move a show</h3><p>With editing access, use <b>Edit schedule</b>. Drag a show’s ⇄ onto a day or slot, then save the destination. Dropping on another show shares its time slot. Click ⇄ to enter a destination instead. Saved moves are shared with everyone.</p></section>
+    <section><h3>Make it yours</h3><p>Settings controls links, viewers, time and colour. <b>Fallback links</b> chooses AniWorld or torrents for the selected people when no service is shown. <b>More options</b> contains refresh, backups and shortcuts. The planner and ranker are below the schedule.</p></section>
+    <section><h3>Move a show</h3><p>With editing access, use <b>Edit schedule</b>. Drag a show card onto a day or slot, then save the destination. On phones, hold the card briefly before dragging. Dropping on another show shares its time slot. Click ⇄ to enter a destination instead. Saved moves are shared with everyone.</p></section>
   </div>
   <div class="dlg-row"><button id="helpShortcuts" class="pill">Shortcuts</button><button id="helpTour" class="pill primary">Show me around</button><button id="helpClose" class="pill">Close</button></div>
 </dialog>
