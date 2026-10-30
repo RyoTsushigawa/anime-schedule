@@ -5,7 +5,7 @@ const QUERY = `query ($page: Int, $from: Int, $to: Int) {
     airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) {
       airingAt episode
       media {
-        id isAdult siteUrl
+        id idMal isAdult siteUrl
         title { romaji english }
         synonyms
         coverImage { medium }
@@ -28,6 +28,9 @@ try {
   const saved = JSON.parse(localStorage.getItem('people'));
   if (Array.isArray(saved)) { selectedPeople.clear(); saved.filter(p => typeof p === 'string').forEach(p => selectedPeople.add(p)); }
 } catch {}
+const malLoginCode = new URLSearchParams(location.hash.slice(1)).get('mal_login');
+if (malLoginCode) history.replaceState(null, '', location.pathname + location.search);
+const listService = () => auth?.provider === 'mal' ? 'MyAnimeList' : 'AniList';
 const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
 // Optional AniList login (implicit grant, client 54702): lets ✓ write watched episodes to the
 // viewer's AniList. Several accounts can be kept in one browser (a shared PC), one of them active;
@@ -41,6 +44,7 @@ try {
   if (single && !accounts.length) accounts = [single];
   localStorage.removeItem('anilistAuth');
 } catch {}
+try { accounts.push(...(JSON.parse(localStorage.getItem('malAccounts')) || []).filter(a => a.provider === 'mal')); } catch {}
 {
   // Back from AniList's login page: the token arrives in the address (#access_token=…).
   const params = new URLSearchParams(location.hash.slice(1));
@@ -52,7 +56,7 @@ try {
     let back = null;
     try { back = sessionStorage.getItem('anilistReturn'); sessionStorage.removeItem('anilistReturn'); } catch {}
     if (back && back.startsWith(location.origin + '/')) {
-      try { localStorage.setItem('anilistAccounts', JSON.stringify(accounts)); } catch {}
+      try { localStorage.setItem('anilistAccounts', JSON.stringify(accounts.filter(a => a.provider !== 'mal'))); } catch {}
       location.replace(back);
     }
   }
@@ -60,16 +64,35 @@ try {
 accounts = accounts.filter(a => !a.expires || a.expires > Date.now());
 if (!auth) {
   let active = null;
-  try { active = localStorage.getItem('anilistActive'); } catch {}
-  auth = accounts.find(a => a.name === active) || accounts[0] || null;
+  let provider = 'anilist';
+  try { provider = localStorage.getItem('listProvider') || 'anilist'; active = localStorage.getItem(provider === 'mal' ? 'malActive' : 'anilistActive'); } catch {}
+  auth = accounts.find(a => a.name === active && (a.provider || 'anilist') === provider) || accounts[0] || null;
 }
 function saveAccounts() {
   try {
-    localStorage.setItem('anilistAccounts', JSON.stringify(accounts));
-    localStorage.setItem('anilistActive', auth?.name || '');
+    localStorage.setItem('anilistAccounts', JSON.stringify(accounts.filter(a => a.provider !== 'mal')));
+    localStorage.setItem('malAccounts', JSON.stringify(accounts.filter(a => a.provider === 'mal')));
+    localStorage.setItem('listProvider', auth?.provider || 'anilist');
+    if (auth) localStorage.setItem(auth.provider === 'mal' ? 'malActive' : 'anilistActive', auth.name || '');
   } catch {}
 }
 saveAccounts();
+const accountKey = account => `${account?.provider || 'anilist'}:${account?.name || ''}`;
+let syncPairs = {};
+try { syncPairs = JSON.parse(localStorage.getItem('listSyncPairs')) || {}; } catch {}
+function syncTargetFor(account) {
+  const pair = syncPairs[accountKey(account)];
+  return pair?.enabled ? accounts.find(a => accountKey(a) === pair.target && (a.provider || 'anilist') !== (account?.provider || 'anilist')) : null;
+}
+function updateSyncControls() {
+  const candidates = auth ? accounts.filter(a => (a.provider || 'anilist') !== (auth.provider || 'anilist')) : [];
+  $('listSyncSection').hidden = !candidates.length;
+  const pair = syncPairs[accountKey(auth)];
+  $('syncTarget').replaceChildren(new Option('Choose an account', ''), ...candidates.map(a => new Option(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name}`, accountKey(a))));
+  $('syncTarget').value = pair?.target || '';
+  $('syncBoth').checked = !!syncTargetFor(auth);
+  $('syncBoth').disabled = !$('syncTarget').value;
+}
 const myProgress = new Map(); // media id → episodes watched, for the logged-in viewer
 let accountLoading = false;
 
@@ -88,7 +111,7 @@ async function loadFallbackLinks() {
     const response = await fetch('fallback-links.json', { cache: 'no-cache' });
     if (!response.ok) return;
     const data = await response.json();
-    if (data?.byAnilist && typeof data.byAnilist === 'object') fallbackLinks = data;
+    if (data?.byAnilist && typeof data.byAnilist === 'object') { fallbackLinks = data; MAL.seed(data); }
   } catch {} // A show-specific search remains usable if the index update is unavailable.
 }
 let tabs = []; // Guckplan tabs, newest first
@@ -167,7 +190,7 @@ async function liveChartWeek(start) {
       if (!Number.isInteger(airing.episode) || airing.episode < 1 || !Number.isFinite(at) || at * 1000 < start || at * 1000 >= end || seen.has(airing.episode)) continue;
       seen.add(airing.episode);
       items.push({ airingAt: at, episode: airing.episode, media: {
-        id: Number(id), isAdult: false, title: { romaji: status.titles[0], english: status.titles[1] || status.titles[0] },
+        id: Number(id), idMal: fallbackLinks.byAnilist[id]?.malId, isAdult: false, title: { romaji: status.titles[0], english: status.titles[1] || status.titles[0] },
         synonyms: status.titles, siteUrl: status.url || `https://anilist.co/anime/${id}`,
         coverImage: { medium: '' }, externalLinks: [],
       } });
@@ -575,6 +598,7 @@ function render(items, start, plans) {
     for (const s of showsOf(sheet)) best.set(s, Math.max(0, ...items.map(it => score(s, it.media))));
   for (const it of items) {
     const m = it.media;
+    MAL.rememberMedia(m);
     if (m.isAdult) continue;
     // When it comes out on our service (LiveChart's offset to Japanese TV), else AniList's TV time.
     const when = new Date((it.airingAt + (streamsDe?.release?.[m.id]?.offset || 0)) * 1000);
@@ -789,6 +813,11 @@ const LIST_QUERY = `query ($user: String) {
 }`;
 const LIST_CACHE_MS = 10 * 60 * 1000;
 async function anilistList(user) {
+  if (auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
+    const result = await MAL.list(auth);
+    setNote('list:' + user.toLowerCase(), result.stale ? `MyAnimeList didn't answer: list as saved ${savedAt(result.stale)}.` : null);
+    return result.entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status));
+  }
   const key = 'list:' + user.toLowerCase();
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
@@ -808,6 +837,7 @@ async function anilistList(user) {
 // ---------- Writing to AniList (when connected) ----------
 
 async function anilistAsMe(query, variables = {}) {
+  if (auth?.provider === 'mal') throw new Error('This action requires an AniList account.');
   try {
     return await anilist(query, variables, auth.token);
   } catch (e) {
@@ -819,21 +849,28 @@ async function anilistAsMe(query, variables = {}) {
 // Log out the active account (also when AniList says its login expired); the next saved one, if
 // any, becomes active.
 function disconnect() {
+  if (pendingChanges.size || bulkSaving || undoing) { notice('Please wait for the current list change to finish.'); return; }
+  if (auth?.provider === 'mal') MAL.logout(auth).catch(() => {});
   accounts = accounts.filter(a => a !== auth);
   useAccount(accounts[0] || null);
 }
 
 // Make an account the active one: ✓ and Catch-up then use its list.
 function useAccount(account) {
+  if (pendingChanges.size || bulkSaving || undoing) { notice('Please wait for the current list change to finish.'); return; }
   auth = account;
   myProgress.clear();
+  knownEntries.clear(); notOnList.clear(); toScore = []; planShowsCache.time = 0; selecting = false;
   saveAccounts();
   if (auth?.name) {
     $('anilistUser').value = auth.name;
     try { localStorage.setItem('anilistUser', auth.name); } catch {}
   }
   updateConnect();
-  if (auth) loadMe().catch(e => console.warn('AniList account not loaded:', e)).then(() => load(true));
+  if (auth) {
+    accountLoading = true; syncSavingButtons();
+    loadMe().catch(e => notice(e.message)).finally(() => { accountLoading = false; syncSavingButtons(); load(true); });
+  }
   else load(true);
 }
 
@@ -863,7 +900,10 @@ function updateConnect() {
   button.classList.toggle('empty', !auth);
   if (auth) button.replaceChildren(avatarOf(auth));
   else button.innerHTML = PERSON_ICON;
-  button.title = auth?.name ? `AniList: ${auth.name}` : 'AniList';
+  button.title = auth?.name ? `${listService()}: ${auth.name}` : 'List accounts';
+  button.setAttribute('aria-label', 'List accounts');
+  $('anilistUser').readOnly = auth?.provider === 'mal';
+  $('anilistUser').placeholder = auth?.provider === 'mal' ? 'MyAnimeList account' : 'AniList name';
   // A pill: optionally the account's picture or initial, then the text.
   const item = (text, onclick, { account = null, muted = false, current = false } = {}) => {
     const b = document.createElement('button');
@@ -879,10 +919,12 @@ function updateConnect() {
     div.append(...pills);
     return div;
   };
-  $('accountSection').replaceChildren(...(!auth ? [item('+ Connect AniList', connect, { muted: true })] : [
-    ...accounts.map(a => item(a.name || 'AniList', () => a !== auth && useAccount(a), { account: a, current: a === auth })),
-    row(item('+ Add', connect, { muted: true }), item('Log out', disconnect, { muted: true })),
-  ]));
+  $('accountSection').replaceChildren(
+    ...accounts.map(a => item(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name || 'Account'}`, () => a !== auth && useAccount(a), { account: a, current: a === auth })),
+    item('+ Connect AniList', connect, { muted: true }), item('+ Connect MyAnimeList', MAL.connect, { muted: true }),
+    ...(auth ? [row(item('Log out', disconnect, { muted: true }))] : []),
+  );
+  updateSyncControls();
 }
 
 // ⚙ and the AniList button open and close their menus; a click anywhere else closes them.
@@ -978,7 +1020,7 @@ $('who').onchange = () => {
 // lookups) and load everything fresh, in place: same view, week, people and settings, and the row
 // at the top of the screen stays there. What's on screen stays until the new data is in; if
 // anything fails, the copies from before come back and a short notice says so.
-const FRESH_KEYS = /^(week:|sheet:|list:|rewatch:|next:|tabs$)/;
+const FRESH_KEYS = /^(week:|sheet:|list:|malList:|rewatch:|next:|tabs$)/;
 let refreshing = false;
 // The first row under the header (by its titles and day), to find it again after redrawing
 function scrollAnchor() {
@@ -1037,6 +1079,7 @@ $('refreshData').onclick = async () => {
     setNote('streams', null);
     await loadMoves();
     await loadFallbackLinks();
+    if (auth?.provider === 'mal') MAL.invalidate(auth);
     if (auth) await loadMe().catch(() => {}); // ticks from elsewhere (AniList itself, the phone)
     tabs = await guckplanTabs();
     setNote('tabs', null);
@@ -1061,25 +1104,42 @@ $('refreshData').onclick = async () => {
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
   if (!auth) return;
+  const loadedFor = auth;
+  if (auth.provider === 'mal') {
+    const account = auth;
+    const me = await MAL.profile(account);
+    if (auth !== account) return;
+    account.name = me.name; account.scoreFormat = 'POINT_10';
+    saveAccounts(); $('anilistUser').value = account.name; updateConnect();
+    const { entries } = await MAL.list(account);
+    if (auth !== account) return;
+    for (const e of entries) { myProgress.set(e.media.id, e.progress); knownEntries.set(e.media.id, { progress:e.progress, status:e.status, score:e.score }); }
+    await loadToScore();
+    return;
+  }
   // The account's picture for the AniList button (accounts saved before it was asked get it once).
   if (auth.name && auth.avatar === undefined) {
     auth.avatar = (await anilistAsMe('{ Viewer { avatar { medium } } }')).Viewer.avatar?.medium || '';
+    if (auth !== loadedFor) return;
     saveAccounts();
     updateConnect();
   }
   if (!auth.name) {
     const { Viewer } = await anilistAsMe('{ Viewer { name avatar { medium } } }');
+    if (auth !== loadedFor) return;
     auth.name = Viewer.name;
     auth.avatar = Viewer.avatar?.medium || '';
     // Logged in again with an account that was already saved: keep the new login only.
-    accounts = accounts.filter(a => a === auth || a.name !== auth.name);
+    accounts = accounts.filter(a => a === auth || a.provider === 'mal' || a.name !== auth.name);
     saveAccounts();
     // A new login: Catch-up shows their own list.
     $('anilistUser').value = auth.name;
     try { localStorage.setItem('anilistUser', auth.name); } catch {}
     updateConnect();
   }
-  for (const { progress, status, media } of await anilistList(auth.name)) {
+  const ownEntries = await anilistList(auth.name);
+  if (auth !== loadedFor) return;
+  for (const { progress, status, media } of ownEntries) {
     myProgress.set(media.id, progress);
     knownEntries.set(media.id, { progress, status });
   }
@@ -1087,6 +1147,7 @@ async function loadMe() {
   try {
     const dropped = await anilist(`query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status: DROPPED) {
       lists { entries { progress status media { id } } } } }`, { user: auth.name });
+    if (auth !== loadedFor) return;
     for (const { progress, status, media } of dropped.MediaListCollection.lists.flatMap(l => l.entries))
       if (!knownEntries.has(media.id)) knownEntries.set(media.id, { progress, status });
   } catch {}
@@ -1106,11 +1167,23 @@ const TO_SCORE_DAYS = 60;
 let toScore = [];
 async function loadToScore() {
   if (!auth?.name) return;
+  const loadedFor = auth;
   try {
+    if (auth.provider === 'mal') {
+      const { entries } = await MAL.list(auth);
+      if (auth !== loadedFor) return;
+      for (const e of entries.filter(e => e.status === 'COMPLETED')) knownEntries.set(e.media.id, { progress:e.progress, status:e.status, score:e.score });
+      const since = Date.now() - TO_SCORE_DAYS * 86400000;
+      toScore = entries.filter(e => e.status === 'COMPLETED' && !e.score && e.completedAt?.year)
+        .map(e => ({ media:e.media, completed:new Date(e.completedAt.year,e.completedAt.month-1,e.completedAt.day) }))
+        .filter(e => e.completed >= since).sort((a,b)=>b.completed-a.completed);
+      return;
+    }
     const done = await anilist(`query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status: COMPLETED) {
       lists { entries { progress status score completedAt { year month day }
         media { id siteUrl synonyms title { romaji english } coverImage { medium } } } } } }`, { user: auth.name });
     const entries = done.MediaListCollection.lists.flatMap(l => l.entries);
+    if (auth !== loadedFor) return;
     for (const { progress, status, score, media } of entries)
       if (!knownEntries.has(media.id) || knownEntries.get(media.id).status === 'COMPLETED') knownEntries.set(media.id, { progress, status, score });
     const since = Date.now() - TO_SCORE_DAYS * 86400000;
@@ -1136,8 +1209,29 @@ const notOnList = new Set();    // media ids known not to be on the list
 // The entry as AniList has it right now (asked every time: it may have changed elsewhere since
 // the page loaded its copy of the list)
 async function entryNow(mediaId) {
-  const entry = (await anilistAsMe('query ($id: Int) { Media(id: $id) { mediaListEntry { progress status score } } }', { id: mediaId })).Media.mediaListEntry;
+  return entryForAccount(auth, mediaId);
+}
+async function entryForAccount(account, mediaId) {
+  const entry = account.provider === 'mal' ? await MAL.entry(account, mediaId)
+    : (await anilist('query ($id: Int) { Media(id: $id) { mediaListEntry { progress status score } } }', { id: mediaId }, account.token)).Media.mediaListEntry;
   return entry ? { onList: true, progress: entry.progress, status: entry.status, score: entry.score } : { onList: false };
+}
+const saveForAccount = async (account, mediaId, vars, autoComplete = false) => account.provider === 'mal'
+  ? MAL.save(account, mediaId, vars, autoComplete)
+  : (await anilist(SAVE_PROGRESS, { mediaId, ...vars }, account.token, { retries:0 })).SaveMediaListEntry;
+function invalidateAccount(account) {
+  if (account.provider === 'mal') MAL.invalidate(account);
+  else try { localStorage.removeItem('list:' + account.name.toLowerCase()); } catch {}
+}
+async function convertSyncScore(score, source, target) {
+  if (!score) return 0;
+  if (!target.scoreFormat && target.provider !== 'mal') {
+    target.scoreFormat = (await anilist('{ Viewer { mediaListOptions { scoreFormat } } }', {}, target.token)).Viewer.mediaListOptions.scoreFormat;
+    saveAccounts();
+  }
+  const max = a => a.provider === 'mal' ? 10 : ({POINT_100:100,POINT_10_DECIMAL:10,POINT_10:10,POINT_5:5,POINT_3:3}[a.scoreFormat] || 10);
+  const value = score / max(source) * max(target);
+  return target.provider !== 'mal' && target.scoreFormat === 'POINT_10_DECIMAL' ? Math.max(.1,Math.round(value*10)/10) : Math.max(1,Math.round(value));
 }
 const entryBefore = entryNow;
 
@@ -1155,7 +1249,7 @@ function syncSavingButtons() {
     b.disabled = saving || bulkSaving || accountLoading;
     if (saving) {
       if (!b.hasAttribute('data-idle-title')) b.dataset.idleTitle = b.title;
-      b.title = 'Saving to AniList…';
+      b.title = `Saving to ${listService()}…`;
     } else if (b.hasAttribute('data-idle-title')) {
       b.title = b.dataset.idleTitle;
       delete b.dataset.idleTitle;
@@ -1167,20 +1261,41 @@ function syncSavingButtons() {
     const button = $(id);
     if (button) button.disabled = accountLoading || bulkSaving || pendingChanges.size > 0;
   }
+  $('syncTarget').disabled = bulkSaving || pendingChanges.size > 0;
+  $('syncBoth').disabled = bulkSaving || pendingChanges.size > 0 || !$('syncTarget').value;
 }
 async function change(mediaId, vars) {
   if (pendingChanges.has(mediaId)) throw new Error('This show is still saving.');
   pendingChanges.add(mediaId);
   syncSavingButtons();
   try {
+  const sourceAccount = auth, targetAccount = syncTargetFor(auth);
   const before = await entryBefore(mediaId);
   const status = vars.status || (vars.progress !== undefined && !ON_WATCHING_LIST.includes(before.status) ? 'CURRENT' : undefined);
-  const saved = (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars, status })).SaveMediaListEntry;
+  const saved = auth?.provider === 'mal' ? await MAL.save(auth, mediaId, { ...vars, status }, true)
+    : (await anilistAsMe(SAVE_PROGRESS, { mediaId, ...vars, status })).SaveMediaListEntry;
   knownEntries.set(mediaId, { progress: saved.progress, status: saved.status, score: saved.score });
   notOnList.delete(mediaId);
   myProgress.set(mediaId, saved.progress);
   listChanged(mediaId, saved.progress, !!status);
-  return { mediaId, before, after: { progress: saved.progress, status: saved.status, score: saved.score }, entryId: saved.id };
+  const record = { mediaId, before, after: { progress: saved.progress, status: saved.status, score: saved.score }, entryId: saved.id, account:sourceAccount };
+  if (targetAccount) {
+    try {
+      const targetId = targetAccount.provider === 'mal' ? mediaId : await MAL.anilistId(mediaId);
+      const targetBefore = await entryForAccount(targetAccount, targetId);
+      const synced = { ...vars };
+      if (vars.score !== undefined) synced.score = await convertSyncScore(vars.score, sourceAccount, targetAccount);
+      if (vars.progress !== undefined && !vars.status && !ON_WATCHING_LIST.includes(targetBefore.status)) synced.status = 'CURRENT';
+      if (vars.progress !== undefined && vars.progress > (before.progress || 0) && targetBefore.progress > vars.progress) {
+        record.syncMessage = `${targetAccount.name} is already further ahead; its progress was kept.`;
+      } else {
+        const second = await saveForAccount(targetAccount, targetId, synced, true);
+        invalidateAccount(targetAccount);
+        record.linked = [{mediaId:targetId,before:targetBefore,after:{progress:second.progress,status:second.status,score:second.score},entryId:second.id,account:targetAccount}];
+      }
+    } catch (error) { record.syncMessage = `Sync incomplete for ${targetAccount.name}: ${error.message}`; }
+  }
+  return record;
   } finally {
     pendingChanges.delete(mediaId);
     syncSavingButtons();
@@ -1190,6 +1305,7 @@ async function change(mediaId, vars) {
 // Keep the saved Watching list in step, so Catch-up shows changes right away; a status change
 // means the list itself changed, so it's fetched again.
 function listChanged(mediaId, progress, statusChanged) {
+  if (auth?.provider === 'mal') { MAL.invalidate(auth); planShowsCache.time = 0; return; }
   try {
     const key = 'list:' + auth.name.toLowerCase();
     const list = JSON.parse(localStorage.getItem(key));
@@ -1210,7 +1326,10 @@ const UNDO_MS = 10 * 60 * 1000;
 const undoSteps = [];
 function remember(records, text) {
   if (!records.length || !auth) return;
-  undoSteps.push({ records, time: Date.now(), token: auth.token, name: auth.name || 'the other account' });
+  const messages = [...new Set(records.map(r => r.syncMessage).filter(Boolean))];
+  const flattened = records.flatMap(r => [r, ...(r.linked || [])]);
+  undoSteps.push({ records:flattened, time: Date.now(), token: auth.token, name: auth.name || 'the other account' });
+  if (messages.length) text += ' · ' + messages.join(' · ');
   notice(text, true);
 }
 let undoing = false;
@@ -1226,22 +1345,23 @@ async function undo() {
   const left = [...last.records]; // newest change first comes off the end
   let done = 0, elsewhere = 0, failed = null;
   while (left.length) {
-    const { mediaId, before, after, entryId } = left.at(-1);
+    const { mediaId, before, after, entryId, account:originalAccount } = left.at(-1);
     try {
-      const now = await entryNow(mediaId);
+      const account = originalAccount ? accounts.find(a => accountKey(a) === accountKey(originalAccount)) : auth;
+      if (!account) throw new Error(`Connect ${originalAccount.name} to undo its change.`);
+      const now = await entryForAccount(account, mediaId);
       if (!now.onList || now.progress !== after.progress || now.status !== after.status || now.score !== after.score) elsewhere++;
       else {
         if (before.onList) {
-          await anilistAsMe(SAVE_PROGRESS, { mediaId, progress: before.progress, status: before.status, score: before.score });
-          knownEntries.set(mediaId, { progress: before.progress, status: before.status, score: before.score });
-          myProgress.set(mediaId, before.progress);
+          await saveForAccount(account, mediaId, {progress:before.progress,status:before.status,score:before.score});
+          if (account === auth) { knownEntries.set(mediaId, { progress: before.progress, status: before.status, score: before.score }); myProgress.set(mediaId, before.progress); }
         } else {
-          await anilistAsMe('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: entryId });
-          knownEntries.delete(mediaId);
-          notOnList.add(mediaId);
-          myProgress.delete(mediaId);
+          if (account.provider === 'mal') await MAL.remove(account, entryId);
+          else await anilist('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: entryId }, account.token);
+          if (account === auth) { knownEntries.delete(mediaId); notOnList.add(mediaId); myProgress.delete(mediaId); }
         }
-        listChanged(mediaId, before.progress || 0, true);
+        invalidateAccount(account);
+        if (account === auth) listChanged(mediaId, before.progress || 0, true);
         done++;
       }
     } catch (err) { failed = err; break; }
@@ -1281,7 +1401,7 @@ $('noticeUndo').onclick = () => undo();
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'show';
 const watchButton = (mediaId, episode, add = false) => !auth ? '' :
   `<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
-    title="Episode ${episode} watched (AniList)">✓</button>`;
+    title="Episode ${episode} watched (${listService()})">✓</button>`;
 
 // ✓ sets the AniList progress to that episode; clicking a ticked one undoes it (back to what it
 // was before this visit's tick, else one episode back).
@@ -1321,7 +1441,7 @@ const showScore = score => scoreFormat() === 'POINT_5' ? '★'.repeat(score)
   : scoreFormat() === 'POINT_3' ? SMILEYS[score - 1] || score : String(score);
 const scoreButton = mediaId => {
   const score = knownEntries.get(mediaId)?.score;
-  return `<button class="score${score ? ' scored' : ''}" data-score-media="${mediaId}" title="${score ? 'Change the score' : 'Score it'} on AniList">${score ? esc(showScore(score)) : '★ Score'}</button>`;
+  return `<button class="score${score ? ' scored' : ''}" data-score-media="${mediaId}" title="${score ? 'Change the score' : 'Score it'} on ${listService()}">${score ? esc(showScore(score)) : '★ Score'}</button>`;
 };
 let scoring = null; // { mediaId, title }
 function openScore(mediaId, title) {
@@ -1331,6 +1451,7 @@ function openScore(mediaId, title) {
   const format = scoreFormat();
   const current = knownEntries.get(mediaId)?.score || 0;
   $('scoreName').textContent = title;
+  $('scoreService').textContent = `Completed. Your score on ${listService()}:`;
   $('scoreMsg').textContent = '';
   $('scoreClear').hidden = !current;
   $('scoreSave').hidden = !['POINT_100', 'POINT_10_DECIMAL'].includes(format); // buttons save by themselves
@@ -1387,7 +1508,7 @@ $('scoreClear').onclick = () => saveScore(0);
 const dropButton = mediaId => knownEntries.get(mediaId)?.status === 'DROPPED'
   ? '<span class="drop dropped" title="Dropped on AniList">Dropped</span>'
   : knownEntries.get(mediaId)?.status === 'COMPLETED' ? scoreButton(mediaId)
-  : `<button class="drop" data-media="${mediaId}" title="Set to Dropped on AniList">Drop</button>`;
+  : `<button class="drop" data-media="${mediaId}" title="Set to Dropped on ${listService()}">Drop</button>`;
 $('list').addEventListener('click', async e => {
   const b = e.target.closest('.drop');
   if (!b || !auth || b.disabled) return;
@@ -1489,7 +1610,7 @@ async function loadCatchup(strict = false, refresh = false) {
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
   const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
-  $('tabName').textContent = user ? `${name} · ${user} on AniList` : name;
+  $('tabName').textContent = user ? `${name} · ${user} on ${listService()}` : name;
   if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name in the AniList menu.</div>'; return; }
   if (!document.querySelector('#list .row')) $('list').innerHTML = '<div class="status">Loading…</div>';
   await ready;
@@ -1652,14 +1773,18 @@ async function missingPlanShows(plan, entries) {
     if (id && !listed.has(Number(id))) ids.push(Number(id));
   }
   if (!ids.length) return [];
-  const key = ids.join() + (auth ? ':' + auth.name : '');
+  const key = ids.join() + (auth ? ':' + (auth.provider || 'anilist') + ':' + auth.name : '');
   if (planShowsCache.key !== key || Date.now() - planShowsCache.time > LIST_CACHE_MS) {
     const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) {
       id status episodes siteUrl synonyms title { romaji english } coverImage { medium }
       externalLinks { site url } nextAiringEpisode { episode airingAt } ${auth ? 'mediaListEntry { progress status }' : ''}
     } } }`;
     try {
-      const data = auth ? await anilistAsMe(query, { ids }) : await anilist(query, { ids });
+      let data;
+      if (auth?.provider === 'mal') {
+        data = await anilist(query.replace('mediaListEntry { progress status }', 'idMal'), { ids });
+        for (const m of data.Page.media) { MAL.rememberMedia(m); m.mediaListEntry = await MAL.entry(auth, m.id); }
+      } else data = auth ? await anilistAsMe(query, { ids }) : await anilist(query, { ids });
       planShowsCache = { key, time: Date.now(), media: data.Page.media };
       setNote('catchup:missing', null);
     } catch {
@@ -1907,8 +2032,15 @@ const ready = Promise.all([
     }),
 ]);
 // An AniList outage must not hold the independent schedule sources hostage.
-accountLoading = !!auth;
-const accountLoad = loadMe().catch(e => console.warn('AniList account not loaded:', e))
+accountLoading = !!auth || !!malLoginCode;
+const accountLoad = (async () => {
+  if (malLoginCode) {
+    const account = await MAL.exchange(malLoginCode);
+    accounts = accounts.filter(a => a.provider !== 'mal' || a.name !== account.name);
+    accounts.push(account); auth = account; saveAccounts(); updateConnect();
+  }
+  await loadMe();
+})().catch(e => { console.warn('List account not loaded:', e); if (malLoginCode) notice(e.message); })
   .finally(() => { accountLoading = false; syncSavingButtons(); });
 ready.then(() => accountLoad.then(() => load(true)));
 updateConnect();
@@ -2177,3 +2309,27 @@ document.addEventListener('keydown', event => {
   event.preventDefault();
   action();
 });
+
+// Pair explicitly chosen accounts. Enabling a pair works from either side and never copies a list.
+function storeSyncPairs() {
+  try { localStorage.setItem('listSyncPairs', JSON.stringify(syncPairs)); } catch { notice('Sync preference could not be saved in this browser.'); }
+  updateSyncControls();
+}
+$('syncTarget').onchange = () => {
+  if (!auth || pendingChanges.size || bulkSaving || undoing) { updateSyncControls(); return; }
+  const key = accountKey(auth), old = syncPairs[key];
+  if (old?.target && syncPairs[old.target]?.target === key) syncPairs[old.target].enabled = false;
+  syncPairs[key] = { target:$('syncTarget').value, enabled:false };
+  storeSyncPairs();
+};
+$('syncBoth').onchange = () => {
+  if (!auth || pendingChanges.size || bulkSaving || undoing) { updateSyncControls(); return; }
+  const key = accountKey(auth), target = $('syncTarget').value;
+  const partner = accounts.find(a => accountKey(a) === target && (a.provider || 'anilist') !== (auth.provider || 'anilist'));
+  if (!partner) { updateSyncControls(); return; }
+  const enabled = $('syncBoth').checked;
+  for (const [id, pair] of Object.entries(syncPairs)) if ([key,target].includes(id) || [key,target].includes(pair.target)) pair.enabled = false;
+  syncPairs[key] = {target,enabled}; syncPairs[target] = {target:key,enabled};
+  storeSyncPairs();
+  notice(enabled ? `Changes made here will also update ${partner.name}. Existing list entries were not changed.` : 'List syncing is off.');
+};
