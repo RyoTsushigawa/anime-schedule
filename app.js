@@ -608,6 +608,9 @@ function render(items, start, plans) {
   const whoChips = who => showWho && who?.length
     ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span>` : '';
   const found = new Set();
+  // Logged in and Solo: shows you dropped on AniList are gone from your week. In Group they stay,
+  // with "Dropped" in place of the Drop button, since the others may still watch them.
+  const droppedByMe = id => !!auth && mode === 'solo' && knownEntries.get(Number(id))?.status === 'DROPPED';
   const today = new Date().toDateString();
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -645,6 +648,7 @@ function render(items, start, plans) {
     const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag, slot.time).toDateString());
     if (!day) continue;
     found.add(show);
+    if (droppedByMe(m.id)) continue;
     // One entry per show and week; several episodes (batch drops, double episodes) are merged.
     const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
     if (existing) existing.episodes.push(it.episode);
@@ -668,6 +672,7 @@ function render(items, start, plans) {
     // The same show listed twice in the sheet, already on the schedule through its other row.
     if ([...found].some(f => titleMatches([f.romaji, f.english], [show.romaji, show.english]))) continue;
     const [alId, status] = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches([show.romaji, show.english], s.titles)) || [];
+    if (droppedByMe(alId)) continue; // no break notice for a show you dropped either
     let upcoming = status?.next;
     if (finishedBy(airingFacts.get(alId) || status?.airingStatus, weekEnd)) continue;
     if (fallback) {
@@ -713,6 +718,7 @@ function render(items, start, plans) {
       continue;
     }
     const media = !status && rewatchFor(show);
+    if (media && media !== 'failed' && droppedByMe(media.id)) continue;
     if (media === 'failed') unknown.push({ show, why: busy() });
     else if (media && media.status === 'FINISHED') {
       if (finishedThisSeason(media, start)) continue; // A season ending is not an automatic rewatch.
@@ -1550,7 +1556,7 @@ $('scoreClear').onclick = () => saveScore(0);
 
 // "Drop" in Catch-up: sets the show to Dropped on AniList, so it leaves Catch-up (and doesn't come
 // back as a forgotten Guckplan show). The first click only asks.
-// Already dropped (e.g. from the Week view, where dropped shows stay as long as the Guckplan lists
+// Already dropped (in the Week view only Group still shows those, as long as the Guckplan lists
 // them): a quiet "Dropped" in its place; Ctrl+Z / Undo brings it back.
 // Completed: ★ to score it in Drop's place (the score once given).
 const dropButton = mediaId => knownEntries.get(mediaId)?.status === 'DROPPED'
