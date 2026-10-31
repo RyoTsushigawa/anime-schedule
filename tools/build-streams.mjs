@@ -135,9 +135,20 @@ async function seasonCards(season) {
 }
 
 const SEASONS_OUT = fileURLToPath(new URL('../seasons.json', import.meta.url));
+// A season LiveChart now lists with less than half the shows of last time (empty during its
+// maintenance, a changed page) keeps last time's list, as streams-de.json does.
 async function writeSeasons(bySeason) {
-  await writeFile(SEASONS_OUT, JSON.stringify({ generated: new Date().toISOString(),
-    seasons: Object.fromEntries(Object.entries(bySeason).map(([season, cards]) => [season, cards.map(c => c.list)])) }) + '\n');
+  let old = {};
+  try { old = JSON.parse(await readFile(SEASONS_OUT, 'utf8')).seasons || {}; } catch {}
+  const seasons = {};
+  for (const [season, cards] of Object.entries(bySeason)) {
+    const before = old[season]?.length || 0;
+    if (cards.length * 2 < before) {
+      console.log(`WARNING: ${season} has only ${cards.length} LiveChart entries (last time ${before}); kept the old list.`);
+      seasons[season] = old[season];
+    } else seasons[season] = cards.map(c => c.list);
+  }
+  await writeFile(SEASONS_OUT, JSON.stringify({ generated: new Date().toISOString(), seasons }) + '\n');
   console.log(`Wrote ${Object.keys(bySeason).join(', ')} to seasons.json`);
 }
 
