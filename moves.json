@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-30T19:09:30.941Z",
+ "updated": "2026-11-01T13:57:35.532Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -27,6 +27,13 @@
    "title": "A Certain Dark Side's Item",
    "tag": "Fr.",
    "time": "22:00",
+   "week": "2026-10-26"
+  },
+  {
+   "show": "darksummonertodekiteiru",
+   "title": "I'm Dating a Dark Summoner",
+   "tag": "So.",
+   "time": "20:00",
    "week": "2026-10-26"
   }
  ]
