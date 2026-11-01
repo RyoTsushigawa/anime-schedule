@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-01T13:58:18.603Z",
+ "updated": "2026-11-01T13:58:27.332Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -30,17 +30,17 @@
    "week": "2026-10-26"
   },
   {
-   "show": "darksummonertodekiteiru",
-   "title": "I'm Dating a Dark Summoner",
-   "tag": "So.",
-   "time": "20:30",
-   "week": "2026-10-26"
-  },
-  {
    "show": "aoashiseason2",
    "title": "Ao Ashi Season 2",
    "tag": "So.",
    "time": "20:45",
+   "week": "2026-10-26"
+  },
+  {
+   "show": "darksummonertodekiteiru",
+   "title": "I'm Dating a Dark Summoner",
+   "tag": "So.",
+   "time": "20:00",
    "week": "2026-10-26"
   }
  ]
