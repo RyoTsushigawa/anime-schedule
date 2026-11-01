@@ -394,6 +394,7 @@ async function lookUpRewatches() {
 }
 
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
+const sourceSearchTitle = title => String(title || '').replace(/^(Even the Student Council Has (?:Its )?Holes)!$/i, '$1');
 function streamLinks(media, wo, searchTitle) {
   const links = [];
   links.title = searchTitle || media.title?.english || media.title?.romaji || '';
@@ -418,7 +419,7 @@ function streamLinks(media, wo, searchTitle) {
   // The sheet says where it streams but AniList has no link: fall back to that service's search.
   const service = SERVICES.find(s => s.wo === wo);
   if (service?.search && !links.some(l => l.first))
-    links.unshift({ url: service.search + encodeURIComponent(searchTitle), label: service.label + ' 🔍', color: service.color, main: !!service.main, first: true });
+    links.unshift({ url: service.search + encodeURIComponent(sourceSearchTitle(searchTitle)), label: service.label + ' 🔍', color: service.color, main: !!service.main, first: true });
   return links.sort((a, b) => b.first - a.first);
 }
 
@@ -458,7 +459,7 @@ function linkButtons(links, mediaId, watchers) {
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
   const streaming = !people.length || people.some(p => fallbackChoice(p) === 'aniworld');
   const source = fallbackLinks.byAnilist[mediaId] || {};
-  const title = links.title || source.title || 'anime';
+  const title = sourceSearchTitle(links.title || source.title || 'anime');
   const alternatives = [];
   if (torrent && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
