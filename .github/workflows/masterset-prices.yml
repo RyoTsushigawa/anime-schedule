@@ -1,0 +1,40 @@
+# Every morning: new prices from Cardmarket's public price guide. Runs on GitHub, so no PC or Claude is needed.
+name: Masterset prices
+
+on:
+  schedule:
+    - cron: '30 5 * * *'   # 05:30 UTC = 06:30 in Germany (07:30 in summer)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: masterset
+    env:
+      CARDTRADER_TOKEN: ${{ secrets.CARDTRADER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node refresh-prices.mjs
+      # Seller stock for the auto-grouper. Skipped until the token secret exists; a failure here keeps the prices.
+      - if: env.CARDTRADER_TOKEN != ''
+        continue-on-error: true
+        run: node fetch-offers.mjs
+      - name: Save the new prices
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add prices.json $(ls offers.json 2>/dev/null)
+          git diff --cached --quiet && exit 0
+          git commit -m "Daily masterset prices"
+          # the schedule's own jobs may have pushed meanwhile; put this commit on top
+          git pull --rebase origin main
+          git push

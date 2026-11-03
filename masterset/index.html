@@ -1,0 +1,406 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>Piplup Line Masterset</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a collector's binder. Summary ledger on top, then sleeves of cards, with orders as a second view. */
+:root{
+  --ice:#eaf2f8;--sleeve:#ffffff;--deep:#12314f;--ink:#14293d;--muted:#58708a;--line:#c9d9e6;
+  --tide:#1f6fb2;--crown:#b98a10;--crown-soft:#f7ecc9;--good:#1c7a55;--good-soft:#dcf3e8;--warn:#a65a10;--warn-soft:#fbead6;
+  --band:#12314f;--band-fg:#eef6fc;--band-muted:#a9c4da;
+  --display:"Bricolage Grotesque",Georgia,serif;--body:"Figtree",system-ui,sans-serif;--data:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ice:#0c1a28;--sleeve:#13263a;--deep:#d5e7f6;--ink:#e3eef7;--muted:#93acc3;--line:#274259;
+  --tide:#6db6ee;--crown:#e6bd4f;--crown-soft:#3a2f10;--good:#5fd0a2;--good-soft:#123428;--warn:#efae6c;--warn-soft:#3a2710;
+  --band:#0a2238;--band-fg:#eef6fc;--band-muted:#9db8cf;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ice:#0c1a28;--sleeve:#13263a;--deep:#d5e7f6;--ink:#e3eef7;--muted:#93acc3;--line:#274259;
+  --tide:#6db6ee;--crown:#e6bd4f;--crown-soft:#3a2f10;--good:#5fd0a2;--good-soft:#123428;--warn:#efae6c;--warn-soft:#3a2710;
+  --band:#0a2238;--band-fg:#eef6fc;--band-muted:#9db8cf;color-scheme:dark}
+body{background:var(--ice);color:var(--ink);font:400 15px/1.45 var(--body)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{background:var(--band);color:var(--band-fg);padding-block:22px 18px}
+h1{font:800 clamp(28px,5vw,42px)/1.05 var(--display);margin:0;text-wrap:balance}
+.sub{color:var(--band-muted);margin:6px 0 18px;max-width:68ch}
+.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px}
+.ledger div{min-width:0}
+.ledger b{display:block;font:500 clamp(20px,3vw,26px)/1.15 var(--data);font-variant-numeric:tabular-nums}
+.ledger span{color:var(--band-muted);font-size:13px}
+.bar{height:6px;background:rgba(255,255,255,.18);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:#e6bd4f}
+nav{display:flex;gap:6px;padding-block:14px 4px;flex-wrap:wrap;align-items:center}
+button,select,input{font:inherit;color:inherit}
+.tab{background:none;border:0;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--deep);color:var(--ice)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-block:8px 14px}
+.chip{border:1px solid var(--line);background:var(--sleeve);padding:5px 12px;border-radius:99px;cursor:pointer;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--tide);border-color:var(--tide);color:var(--sleeve)}
+input,select{background:var(--sleeve);border:1px solid var(--line);border-radius:6px;padding:6px 9px;min-width:0}
+:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+.grow{flex:1 1 180px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;padding-bottom:40px}
+@media (max-width:420px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;background:var(--sleeve);border:1px solid var(--line);border-radius:8px;padding:10px}
+.card.own{border-color:var(--good);background:linear-gradient(0deg,var(--good-soft),var(--good-soft))}
+.card img,.noimg{width:96px;height:134px;border-radius:5px;object-fit:cover;background:var(--line)}
+.noimg{display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--muted);padding:6px}
+.card.own img{opacity:.75}
+h2{font:600 17px/1.2 var(--display);margin:0}
+.meta{color:var(--muted);font-size:13px;margin:2px 0 6px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--crown-soft);color:var(--crown);margin-left:4px;vertical-align:1px}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.price{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;font-family:var(--data);font-variant-numeric:tabular-nums}
+.price b{font-size:18px;font-weight:500}
+.price small{font-family:var(--body);color:var(--muted);font-size:12px}
+.up{color:var(--warn)}.down{color:var(--good)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px}
+.row input[type=text]{flex:1 1 110px;width:110px}
+.row input[type=number]{width:78px}
+.own-toggle{display:inline-flex;gap:5px;align-items:center;font-weight:600;font-size:13px;cursor:pointer}
+a{color:var(--tide)}
+.links{display:flex;gap:10px;font-size:13px;flex-wrap:wrap}
+.langs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 6px}
+.lang{font:500 12px var(--data);font-variant-numeric:tabular-nums;padding:1px 6px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
+.lang.on{border-color:var(--tide);color:var(--tide)}
+details{margin-top:6px;font-size:13px}
+summary{cursor:pointer;color:var(--muted)}
+details li{margin-top:3px}
+details ul{list-style:none;margin:4px 0 0;padding:0}
+.best{font-weight:600}
+.num{font-family:var(--data);font-variant-numeric:tabular-nums}
+.panel{background:var(--sleeve);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}
+.panel h3{font:600 18px/1.2 var(--display);margin:0 0 8px;overflow-wrap:anywhere}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+td.r,th.r{text-align:right;font-family:var(--data);font-variant-numeric:tabular-nums}
+tfoot td{font-weight:600;border-bottom:0}
+.note{color:var(--muted);font-size:13px;max-width:72ch}
+.saving{color:var(--good);font-weight:600}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.settings label{display:grid;gap:4px;font-size:14px;font-weight:500}
+.primary{background:var(--tide);color:var(--sleeve);border:0;border-radius:6px;padding:7px 14px;font-weight:600;cursor:pointer}
+#copied{color:var(--good);font-size:13px;margin-left:8px}
+textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(--line);border-radius:6px;padding:8px;font:13px var(--data);color:inherit}
+</style>
+
+<header>
+  <div class="wrap">
+    <h1>Piplup Line Masterset</h1>
+    <p class="sub">Every Piplup and Empoleon artwork once, plus Piplup cameos. Reprints with the same art count as one card, and you buy the cheapest print.</p>
+    <div class="ledger" id="ledger"></div>
+  </div>
+</header>
+<div class="wrap">
+  <nav role="tablist">
+    <button class="tab" role="tab" id="tab-cards" aria-selected="true">Cards</button>
+    <button class="tab" role="tab" id="tab-orders" aria-selected="false">Orders</button>
+    <button class="tab" role="tab" id="tab-ship" aria-selected="false">Shipping to Germany</button>
+    <button class="tab" role="tab" id="tab-backup" aria-selected="false">Backup</button>
+    <span class="note" id="fresh" style="margin-left:auto"></span>
+  </nav>
+  <main id="view-cards">
+    <div class="tools">
+      <span id="fam"></span>
+      <input id="q" class="grow" type="search" placeholder="Search name or set" aria-label="Search name or set">
+      <select id="lang" aria-label="Language to buy">
+        <option value="">Any language (cheapest)</option>
+        <option value="International">International (EN, DE, FR…)</option>
+        <option value="Japanese">Japanese</option>
+        <option value="Chinese">Chinese</option>
+      </select>
+      <select id="sort" aria-label="Sort cards">
+        <option value="name">Sort by name</option>
+        <option value="asc">Cheapest first</option>
+        <option value="desc">Most expensive first</option>
+      </select>
+      <label class="own-toggle"><input id="hide" type="checkbox"> Hide owned</label>
+    </div>
+    <div class="grid" id="grid"><p class="note">Loading cards…</p></div>
+  </main>
+  <main id="view-orders" hidden></main>
+  <main id="view-ship" hidden></main>
+  <main id="view-backup" hidden>
+    <section class="panel"><h3>Back up your progress</h3>
+      <p class="note">Owned cards, sellers and shipping rates are saved on this device. Copy a backup to keep them safe or to move them to another device or browser.</p>
+      <p><button class="primary" id="backup-copy">Copy backup</button><span id="backup-msg" style="margin-left:8px" class="note"></span></p>
+      <h3 style="margin-top:14px">Restore a backup</h3>
+      <p class="note">Paste a backup below. Restoring replaces the progress on this device.</p>
+      <textarea id="backup-text" aria-label="Backup text"></textarea>
+      <p><button class="primary" id="backup-restore">Restore</button></p>
+    </section>
+  </main>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const eur=v=>v==null||!isFinite(v)?'–':'€'+v.toFixed(2);
+let cards=[],prices={},guideDate='';
+let state={owned:{},pick:{},vendors:{},ship:{letter:1.5,tracked:4.5,threshold:25}};
+let ui={fam:'All',q:'',sort:'name',hide:false};
+let dbDoc=null,saveTimer=null;
+
+const LS='piplup-masterset';
+function loadLocal(){try{const s=localStorage.getItem(LS);if(s)Object.assign(state,JSON.parse(s))}catch{}}
+function save(){
+  try{localStorage.setItem(LS,JSON.stringify(state))}catch{}
+  if(!dbDoc)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>dbDoc.set(JSON.parse(JSON.stringify(state))).catch(e=>{$('fresh').textContent='Could not save to your account: '+(e.message||e.code)}),600);
+}
+
+const printsOf=c=>c.prints.map(p=>({...p,...(p.pid&&prices[p.pid]||{})}));
+function bestIn(c,lang){return printsOf(c).filter(p=>p.low!=null&&(!lang||p.region===lang)).sort((a,b)=>a.low-b.low)[0]||null}
+// The chosen language wins; a card with no priced print in it falls back to its cheapest print.
+function best(c){return (state.lang&&bestIn(c,state.lang))||bestIn(c)}
+const LANGS=[['International','Intl'],['Japanese','JP'],['Chinese','CN'],['Korean','KR'],['Indonesian','ID']];
+function langRow(c){
+  const b=best(c);
+  return LANGS.filter(([r])=>c.prints.some(p=>p.region===r)).map(([r,s])=>{
+    const x=bestIn(c,r);
+    return `<span class="lang${b&&x&&x.pid===b.pid?' on':''}" title="${r}">${s} ${x?eur(x.low):'no price'}</span>`}).join('');
+}
+function pickOf(id){return state.pick[id]||{}}
+// Priced means safe to add to a total. Cards flagged verify have a listing nobody has confirmed yet.
+function priceOf(c){const p=pickOf(c.id);if(p.price!=null&&p.price!=='')return +p.price;const b=best(c);return b&&!c.verify?b.low:null}
+function shipFor(sub){return sub>=state.ship.threshold?state.ship.tracked:state.ship.letter}
+// Direct card page when known, else the set's page, else Cardmarket's list of every version of that Pokémon.
+function cmLink(c,p){
+  if(p&&(p.url||p.setUrl))return p.url||p.setUrl;
+  if(c.family==='Cameo')return null;
+  return 'https://www.cardmarket.com/en/Pokemon/Species/'+c.family;
+}
+// Cardmarket's language ids, for opening a card page already filtered to one language.
+const CM_LANG={EN:1,FR:2,DE:3,ES:4,IT:5,PT:8,JP:7,'中文':11};
+function langLinks(p){
+  if(!p||!p.url)return '';
+  const set=p.region==='International'?['EN','DE','FR','ES','IT','PT']:p.region==='Japanese'?['JP']:p.region==='Chinese'?['中文']:[];
+  return set.length>1?`<div class="links">Only in: ${set.map(l=>`<a href="${p.url}?language=${CM_LANG[l]}" target="_blank" rel="noopener">${l}</a>`).join('')}</div>`:'';
+}
+function ebLink(c,p){const lang=p&&p.region!=='International'?p.region.toLowerCase()+' ':'';return 'https://www.ebay.de/sch/i.html?_nkw='+encodeURIComponent('pokemon '+lang+c.name+' '+(p?p.num:''))}
+
+function totals(){
+  const open=cards.filter(c=>!state.owned[c.id]);
+  const groups={};let loose=0,looseShip=0,looseN=0,unpriced=0;
+  for(const c of open){
+    const v=(pickOf(c.id).vendor||'').trim(),pr=priceOf(c);
+    if(pr==null){unpriced++;continue}
+    if(v){(groups[v]??=[]).push(c)}else{loose+=pr;looseShip+=shipFor(pr);looseN++}
+  }
+  let items=loose,ship=looseShip;
+  const orders=Object.entries(groups).map(([v,list])=>{
+    const sub=list.reduce((s,c)=>s+priceOf(c),0);
+    const own=state.vendors[v]?.ship;
+    const sh=own!=null&&own!==''?+own:shipFor(sub);
+    const alone=list.reduce((s,c)=>s+shipFor(priceOf(c)),0);
+    items+=sub;ship+=sh;
+    return{v,list,sub,sh,saved:alone-sh};
+  }).sort((a,b)=>b.list.length-a.list.length);
+  const trend=open.reduce((s,c)=>{const b=best(c);return s+(b&&!c.verify&&b.trend?b.trend:0)},0);
+  return{open,orders,loose,looseShip,looseN,unpriced,items,ship,trend};
+}
+
+function renderLedger(){
+  const t=totals(),own=cards.length-t.open.length;
+  $('ledger').innerHTML=`
+   <div><b>${own} / ${cards.length}</b><span>cards owned</span><div class="bar"><i style="width:${cards.length?own/cards.length*100:0}%"></i></div></div>
+   <div><b>${eur(t.items)}</b><span>lowest listed prices left</span></div>
+   <div><b>${eur(t.ship)}</b><span>estimated shipping to Germany</span></div>
+   <div><b>${eur(t.items+t.ship)}</b><span>estimated total to finish</span></div>
+   <div><b>${t.unpriced}</b><span>cards with no confirmed price</span></div>
+   ${state.lang?`<div><b>${t.open.filter(c=>best(c)&&!bestIn(c,state.lang)).length}</b><span>open cards with no ${esc(state.lang)} price, using cheapest other print</span></div>`:''}`;
+}
+
+function renderFam(){
+  $('fam').innerHTML=['All','Piplup','Empoleon','Cameo'].map(f=>`<button class="chip" aria-pressed="${ui.fam===f}" data-fam="${f}">${f}</button>`).join(' ');
+}
+
+function cardHtml(c){
+  const own=!!state.owned[c.id],b=best(c),p=pickOf(c.id),all=printsOf(c);
+  const delta=b&&b.prevLow!=null&&b.prevLow!==b.low?`<span class="${b.low>b.prevLow?'up':'down'}">${b.low>b.prevLow?'▲':'▼'} ${eur(Math.abs(b.low-b.prevLow))}</span>`:'';
+  const pr=priceOf(c);
+  const priceBlock=c.verify&&b?`<div class="price"><b>${eur(b.low)}</b><small>listing not confirmed, left out of totals</small></div>`
+   :b?`<div class="price"><b>${eur(b.low)}</b>${delta}<small>lowest</small> <span>${eur(b.trend)}</span><small>trend</small></div><div class="meta">About ${eur(b.low+shipFor(b.low))} delivered on its own</div>`
+   :`<div class="price"><small>No Cardmarket price. Prize or very rare card, watch auctions.</small></div>`;
+  return `<article class="card${own?' own':''}" data-id="${c.id}">
+    ${c.img?`<img src="thumbs/${c.id}.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134">`:`<div class="noimg">No image yet</div>`}
+    <div>
+      <h2>${esc(c.name)}${c.family==='Cameo'?'<span class="tag">Cameo</span>':''}${c.verify?'<span class="tag warn">Check listing</span>':''}</h2>
+      <div class="meta">${b?`Buy: ${esc(b.region)} · ${esc(b.set)} ${esc(b.num)}`:`${esc(all[0].set)} ${esc(all[0].num)}`}${c.note?' · '+esc(c.note):''}</div>
+      ${priceBlock}
+      ${state.lang&&b&&!bestIn(c,state.lang)?`<div class="meta"><span class="tag warn" style="margin-left:0">No ${esc(state.lang)} price</span> Showing the cheapest other print</div>`:''}
+      <div class="langs">${langRow(c)}</div>
+      <div class="links">${cmLink(c,b)?`<a href="${cmLink(c,b)}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:''}<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">eBay.de search</a></div>
+      ${langLinks(b)}
+      <div class="row">
+        <label class="own-toggle"><input type="checkbox" data-act="own" ${own?'checked':''}> Owned</label>
+        <input type="text" list="vendors" data-act="vendor" placeholder="Seller" aria-label="Seller for ${esc(c.name)}" value="${esc(p.vendor||'')}">
+        <input type="number" min="0" step="0.01" data-act="price" placeholder="${pr!=null?pr.toFixed(2):'€'}" aria-label="Price from that seller" value="${p.price??''}">
+      </div>
+      <details><summary>${all.length} print${all.length>1?'s':''} with this art</summary><ul>
+        ${all.map(x=>`<li class="${b&&x.pid===b.pid?'best':''}">${esc(x.region)} · ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">${esc(x.set)} ${esc(x.num)}</a>`:`${esc(x.set)} ${esc(x.num)}`} <span class="num">${x.low!=null?eur(x.low):'no price'}</span></li>`).join('')}
+      </ul></details>
+    </div></article>`;
+}
+
+function renderCards(){
+  const q=ui.q.toLowerCase();
+  let list=cards.filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!q||(c.name+' '+c.prints.map(p=>p.set+' '+p.num).join(' ')).toLowerCase().includes(q)));
+  const val=c=>best(c)?.low??null;
+  if(ui.sort!=='name')list=[...list].sort((a,b)=>{const x=val(a),y=val(b);if(x==null)return 1;if(y==null)return -1;return ui.sort==='asc'?x-y:y-x});
+  $('grid').innerHTML=(list.map(cardHtml).join('')||'<p class="note">No cards match. Clear the search or show owned cards.</p>')+
+    `<datalist id="vendors">${Object.keys(allVendors()).map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
+}
+function allVendors(){const o={};for(const k in state.pick){const v=(state.pick[k].vendor||'').trim();if(v)o[v]=1}return o}
+
+// Auto-grouper. Picks one offer per open card so that card prices plus each seller's single
+// shipping charge are as low as it can find: start with every card at its best solo price, then
+// keep trying to pull cards over to a seller while the total falls.
+const EU=new Set(['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE']);
+const COND=['Near Mint','Slightly Played','Moderately Played','Played','Poor'];
+const shipAuto=(v,sub)=>{const s=offerData.shipping?.[v];if(!s)return shipFor(sub);return s.freeFrom!=null&&sub>=s.freeFrom?0:s.cost};
+function planOrders(items,shipOf){
+  const total=a=>{const sub={};let s=0;for(const it of items){const o=a[it.id];s+=o.price;sub[o.seller]=(sub[o.seller]||0)+o.price}
+    for(const v in sub)s+=shipOf(v,sub[v]);return s};
+  const a={};
+  for(const it of items)a[it.id]=it.offers.reduce((x,y)=>y.price+shipOf(y.seller,y.price)<x.price+shipOf(x.seller,x.price)?y:x);
+  const sellers=[...new Set(items.flatMap(it=>it.offers.map(o=>o.seller)))];
+  const cheapestAt=(it,v)=>{let m=null;for(const o of it.offers)if(o.seller===v&&(!m||o.price<m.price))m=o;return m};
+  let cur=total(a);
+  for(let pass=0,moved=true;moved&&pass<20;pass++){
+    moved=false;
+    for(const v of sellers){
+      // Pull everything this seller stocks, then send back whatever was cheaper where it came from.
+      const old={...a};
+      for(const it of items){const o=cheapestAt(it,v);if(o)a[it.id]=o}
+      for(const it of items){const was=a[it.id];if(was===old[it.id])continue;const t0=total(a);a[it.id]=old[it.id];if(total(a)>t0)a[it.id]=was}
+      const t=total(a);
+      if(t<cur-1e-9){cur=t;moved=true}else Object.assign(a,old);
+    }
+  }
+  return a;
+}
+let offerData=null;
+function autoInputs(){
+  const f=state.auto||{},lang=f.lang||'',minC=COND.indexOf(f.cond||'Moderately Played');
+  const items=[],missing=[];
+  for(const c of totals().open){
+    const list=(offerData.cards[c.id]||[]).filter(o=>(!lang||o.lang===lang)&&COND.indexOf(o.cond)<=minC&&(!(f.eu??true)||EU.has(o.country)));
+    if(list.length)items.push({id:c.id,offers:list});else missing.push(c);
+  }
+  return{items,missing};
+}
+function renderAuto(){
+  if(!offerData)return `<section class="panel"><h3>Auto-group</h3><p class="note">Waiting for seller stock. Once a CardTrader token is connected, this builds the cheapest set of orders for the cards you do not own, using each seller's real shipping to Germany.</p></section>`;
+  const f=state.auto||{},{items,missing}=autoInputs();
+  const shipOf=shipAuto;
+  const a=planOrders(items,shipOf);
+  const by={};for(const it of items){const o=a[it.id];(by[o.seller]??=[]).push({card:cards.find(c=>c.id===it.id),o})}
+  const orders=Object.entries(by).map(([v,l])=>{const sub=l.reduce((s,x)=>s+x.o.price,0);return{v,l,sub,sh:shipOf(v,sub)}}).sort((x,y)=>y.l.length-x.l.length);
+  const sum=orders.reduce((s,o)=>s+o.sub+o.sh,0),ships=orders.reduce((s,o)=>s+o.sh,0);
+  const sel=(id,opts,val)=>`<select id="${id}" aria-label="${id}">${opts.map(([v,l])=>`<option value="${v}"${v===val?' selected':''}>${l}</option>`).join('')}</select>`;
+  return `<section class="panel" id="auto"><h3>Auto-group</h3>
+   <p class="note">Cheapest orders found for your ${items.length} open cards with stock: <b>${eur(sum)}</b> across ${orders.length} seller${orders.length===1?"":"s"}, including ${eur(ships)} shipping. Seller stock from ${new Date(offerData.generated).toLocaleDateString('de-DE')}.</p>
+   <div class="tools">
+    ${sel('a-lang',[['','Any language'],...[...new Set(Object.values(offerData.cards).flat().map(o=>o.lang).filter(Boolean))].sort().map(l=>[l,l.toUpperCase()])],f.lang||'')}
+    ${sel('a-cond',COND.map(x=>[x,x+' or better']),f.cond||'Moderately Played')}
+    <label class="own-toggle"><input id="a-eu" type="checkbox" ${(f.eu??true)?'checked':''}> EU sellers only (no customs)</label>
+    <button class="primary" id="a-apply">Use this plan</button>
+   </div>
+   ${orders.map(o=>`<details><summary><b>${esc(o.v)}</b> · ${o.l.length} card${o.l.length>1?'s':''} · <span class="num">${eur(o.sub+o.sh)}</span> with <span class="num">${eur(o.sh)}</span> shipping</summary><ul>
+     ${o.l.map(x=>`<li>${x.o.link?`<a href="${esc(x.o.link)}" target="_blank" rel="noopener">${esc(x.card.name)}</a>`:esc(x.card.name)} · ${esc(x.o.label||'')} · ${esc(x.o.lang)} · ${esc(x.o.cond)} <span class="num">${eur(x.o.price)}</span></li>`).join('')}</ul></details>`).join('')}
+   ${missing.length?`<p class="note" style="margin-top:8px">${missing.length} open cards have no matching offer: ${missing.map(c=>esc(c.name)).join(', ')}.</p>`:''}
+  </section>`;
+}
+
+function renderOrders(){
+  const t=totals();
+  const rows=t.orders.map(o=>`<section class="panel"><h3>${esc(o.v)}</h3><div class="scroll"><table>
+    <thead><tr><th>Card</th><th>Print</th><th class="r">Price</th></tr></thead><tbody>
+    ${o.list.map(c=>{const b=best(c);return `<tr><td>${esc(c.name)}</td><td>${b?esc(b.set+' '+b.num):'–'}</td><td class="r">${eur(priceOf(c))}</td></tr>`}).join('')}
+    </tbody><tfoot><tr><td colspan="2">Cards</td><td class="r">${eur(o.sub)}</td></tr>
+    <tr><td colspan="2"><label>Shipping <input type="number" min="0" step="0.01" data-vendor="${esc(o.v)}" value="${state.vendors[o.v]?.ship??''}" placeholder="${o.sh.toFixed(2)}" style="width:80px" aria-label="Shipping from ${esc(o.v)}"></label></td><td class="r">${eur(o.sh)}</td></tr>
+    <tr><td colspan="2">Order total ${o.saved>0?`<span class="saving">saves ${eur(o.saved)} shipping</span>`:''}</td><td class="r">${eur(o.sub+o.sh)}</td></tr></tfoot></table></div></section>`).join('');
+  const wants=t.open.map(c=>{const b=best(c);return `${c.name} | ${b?b.set+' '+b.num+' ('+b.region+')':c.prints[0].set+' '+c.prints[0].num} | ${b?eur(b.low):'no price'}`}).join('\n');
+  $('view-orders').innerHTML=`${renderAuto()}
+   <section class="panel"><h3>Group by hand</h3><p class="note">Type a seller's name on any card. Cards with the same seller become one order here, with one shipping charge. Enter that seller's real shipping once you see it at checkout.</p>
+   <p class="note">Cardmarket's Shopping Wizard can search sellers for you. Add your open cards to a Wants list there and it finds cheap combinations with shipping to Germany included. Then copy the result back here.</p></section>
+   ${rows||'<section class="panel"><p class="note">No orders yet. Add a seller on the Cards tab to start one.</p></section>'}
+   <section class="panel"><h3>Not assigned to a seller</h3><p class="note">${t.looseN} cards, ${eur(t.loose)} at lowest prices, plus about ${eur(t.looseShip)} if each one ships separately. That shipping is the amount grouping can reduce.</p>
+   <p class="note">${t.unpriced} more cards have no confirmed price and are not counted.</p></section>
+   <section class="panel"><h3>Shopping list</h3><p class="note">All ${t.open.length} open cards with the cheapest print of each.</p>
+   <textarea id="wants" readonly aria-label="Shopping list">${esc(wants)}</textarea>
+   <p><button class="primary" id="copy">Copy list</button><span id="copied"></span></p></section>`;
+}
+
+function renderShip(){
+  const s=state.ship;
+  $('view-ship').innerHTML=`<section class="panel"><h3>Shipping estimates</h3>
+   <div class="settings">
+    <label>Letter, no tracking (€)<input id="s-letter" type="number" step="0.05" min="0" value="${s.letter}"></label>
+    <label>Tracked shipping (€)<input id="s-tracked" type="number" step="0.05" min="0" value="${s.tracked}"></label>
+    <label>Use tracking from an order value of (€)<input id="s-threshold" type="number" step="1" min="0" value="${s.threshold}"></label>
+   </div>
+   <p class="note">These are my starting estimates, and sellers set their own rates. Cardmarket has quoted Einwurf Einschreiben from €3.35 within Germany. Every card total on this page updates when you change them.</p></section>
+   <section class="panel"><h3>Buying from abroad</h3>
+   <p class="note"><b>Inside the EU:</b> no customs. Since January 2026 Cardmarket has removed tracked international letters, so tracked orders from other countries usually go as small parcels and cost more. Enter the real rate on the order.</p>
+   <p class="note" style="margin-top:8px"><b>Outside the EU (Japan, UK, US):</b> expect 19% import VAT and customs handling on top. An EU flat duty of €3 per item type on low-value parcels began on 1 July 2026, and sources differ on how it reaches private buyers. Add these costs to the order's shipping field.</p></section>`;
+}
+
+function renderAll(){$('lang').value=state.lang||'';renderLedger();renderFam();renderCards();renderOrders();renderShip();
+  $('fresh').textContent=guideDate?'Prices from Cardmarket, '+new Date(guideDate).toLocaleDateString('de-DE'):'';}
+
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-fam]');if(f){ui.fam=f.dataset.fam;renderFam();renderCards();return}
+  const t=e.target.closest('.tab');if(t){for(const n of ['cards','orders','ship','backup']){$('tab-'+n).setAttribute('aria-selected',t.id==='tab-'+n);$('view-'+n).hidden=t.id!=='tab-'+n}return}
+  if(e.target.id==='a-apply'){
+    const {items}=autoInputs(),a=planOrders(items,shipAuto);
+    for(const it of items){state.pick[it.id]={vendor:a[it.id].seller,price:a[it.id].price};const sh=offerData.shipping?.[a[it.id].seller]?.cost;if(sh!=null)state.vendors[a[it.id].seller]={ship:sh}}
+    save();renderLedger();renderCards();renderOrders();return}
+  if(e.target.id==='backup-copy'){const text=JSON.stringify(state);navigator.clipboard.writeText(text).then(()=>{$('backup-msg').textContent='Backup copied'}).catch(()=>{$('backup-text').value=text;$('backup-text').select();$('backup-msg').textContent='Press Ctrl+C to copy the selected text'})}
+  if(e.target.id==='backup-restore'){
+    try{
+      const d=JSON.parse($('backup-text').value);
+      if(!d||typeof d.owned!=='object'||typeof d.pick!=='object')throw 0;
+      state={...state,...d};save();renderAll();$('backup-text').value='';
+      $('backup-msg').textContent=`Restored ${Object.keys(state.owned).length} owned cards`;
+    }catch{$('backup-msg').textContent='That is not a tracker backup. Copy it again and paste the whole text.'}
+  }
+  if(e.target.id==='copy'){const a=$('wants');navigator.clipboard.writeText(a.value).then(()=>{$('copied').textContent='Copied'}).catch(()=>{a.select();$('copied').textContent='Press Ctrl+C to copy'})}
+});
+document.addEventListener('change',e=>{
+  const el=e.target,cardEl=el.closest?.('.card');
+  if(cardEl&&el.dataset.act){const id=cardEl.dataset.id;
+    if(el.dataset.act==='own'){if(el.checked)state.owned[id]=true;else delete state.owned[id]}
+    else{const p=state.pick[id]||{};if(el.dataset.act==='vendor')p.vendor=el.value.trim();else p.price=el.value===''?null:+el.value;state.pick[id]=p}
+    save();renderLedger();renderCards();renderOrders();return}
+  if(el.dataset.vendor!==undefined){const v=el.dataset.vendor;state.vendors[v]={ship:el.value===''?null:+el.value};save();renderLedger();renderOrders();return}
+  if(el.id&&el.id.startsWith('s-')){state.ship[el.id.slice(2)]=+el.value||0;save();renderLedger();renderCards();renderOrders();return}
+  if(el.id==='a-lang'||el.id==='a-cond'||el.id==='a-eu'){const f=state.auto||(state.auto={});
+    if(el.id==='a-lang')f.lang=el.value;if(el.id==='a-cond')f.cond=el.value;if(el.id==='a-eu')f.eu=el.checked;
+    save();renderOrders();return}
+  if(el.id==='lang'){state.lang=el.value;save();renderLedger();renderCards();renderOrders();return}
+  if(el.id==='sort'){ui.sort=el.value;renderCards()}
+  if(el.id==='hide'){ui.hide=el.checked;renderCards()}
+});
+$('q').addEventListener('input',e=>{ui.q=e.target.value;renderCards()});
+
+(async()=>{
+  loadLocal();
+  try{
+    const [c,p]=await Promise.all([fetch('cards.json').then(r=>r.json()),fetch('prices.json').then(r=>r.json())]);
+    cards=c;prices=p.prices;guideDate=p.guideDate;
+    // Seller stock is optional: without it the page runs on the price guide alone.
+    try{const r=await fetch('offers.json');if(r.ok)offerData=await r.json()}catch{}
+  }catch(e){$('grid').innerHTML='<p class="note">The card data did not load. Reload the page to try again.</p>';return}
+  renderAll();
+  try{
+    const db=window.claude?await window.claude.use('db'):null;
+    if(db){dbDoc=db.doc('tracker/state');const s=await dbDoc.get();if(s.exists){const d=s.data();state={...state,...JSON.parse(JSON.stringify(d))};renderAll()}}
+  }catch(e){$('fresh').textContent='Your progress is saved in this browser only, because the account store did not answer.'}
+})();
+</script>
+
+</body></html>
