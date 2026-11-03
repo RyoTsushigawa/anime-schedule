@@ -114,6 +114,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
         <option value="name">Sort by name</option>
         <option value="asc">Cheapest first</option>
         <option value="desc">Most expensive first</option>
+        <option value="cond">Best condition on offer</option>
       </select>
       <label class="own-toggle"><input id="hide" type="checkbox"> Hide owned</label>
       <label class="own-toggle"><input id="x-cameo" type="checkbox"> <span id="x-cameo-label">Leave out cameos</span></label>
@@ -239,6 +240,7 @@ function cardHtml(c){
       <div class="langs">${langRow(c)}</div>
       <div class="links">${cmLink(c,b)?`<a href="${cmLink(c,b)}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:''}<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">eBay.de search</a></div>
       ${langLinks(b)}
+      ${condRow(c)}
       <div class="row">
         <label class="own-toggle"><input type="checkbox" data-act="own" ${own?'checked':''}> Owned</label>
         <input type="text" list="vendors" data-act="vendor" placeholder="Seller" aria-label="Seller for ${esc(c.name)}" value="${esc(p.vendor||'')}">
@@ -254,7 +256,11 @@ function renderCards(){
   const q=ui.q.toLowerCase();
   let list=inSet().filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!q||(c.name+' '+c.prints.map(p=>p.set+' '+p.num).join(' ')).toLowerCase().includes(q)));
   const val=c=>best(c)?.low??null;
-  if(ui.sort!=='name')list=[...list].sort((a,b)=>{const x=val(a),y=val(b);if(x==null)return 1;if(y==null)return -1;return ui.sort==='asc'?x-y:y-x});
+  if(ui.sort==='cond'){
+    // Near Mint offers first, cheapest within each condition; cards with no offers last.
+    const rank=c=>{const o=byCondition(c)[0];return o?[COND.indexOf(o.cond),o.price]:[9,0]};
+    list=[...list].sort((a,b)=>{const x=rank(a),y=rank(b);return x[0]-y[0]||x[1]-y[1]});
+  }else if(ui.sort!=='name')list=[...list].sort((a,b)=>{const x=val(a),y=val(b);if(x==null)return 1;if(y==null)return -1;return ui.sort==='asc'?x-y:y-x});
   $('grid').innerHTML=(list.map(cardHtml).join('')||'<p class="note">No cards match. Clear the search or show owned cards.</p>')+
     `<datalist id="vendors">${Object.keys(allVendors()).map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
 }
@@ -288,11 +294,21 @@ function planOrders(items,shipOf){
   return a;
 }
 let offerData=null;
+function offersFor(c){const f=state.auto||{};
+  return (offerData?.cards[c.id]||[]).filter(o=>(!f.lang||o.lang===f.lang)&&(!(f.eu??true)||EU.has(o.country)))}
+// Cheapest offer in each condition, best condition first.
+function byCondition(c){return COND.map(name=>offersFor(c).filter(o=>o.cond===name).sort((a,b)=>a.price-b.price)[0]).filter(Boolean)}
+const COND_SHORT={'Near Mint':'NM','Slightly Played':'SP','Moderately Played':'MP','Played':'PL','Poor':'PO'};
+function condRow(c){
+  if(!offerData)return '';
+  const list=byCondition(c);
+  return `<div class="links">CardTrader: ${list.length?list.map(o=>`<a href="${esc(o.link)}" target="_blank" rel="noopener" title="${esc(o.cond)} from ${esc(o.seller)}">${COND_SHORT[o.cond]} ${eur(o.price)}</a>`).join(''):'no offers match'}</div>`;
+}
 function autoInputs(){
-  const f=state.auto||{},lang=f.lang||'',minC=COND.indexOf(f.cond||'Moderately Played');
+  const f=state.auto||{},minC=COND.indexOf(f.cond||'Moderately Played');
   const items=[],missing=[];
   for(const c of totals().open){
-    const list=(offerData.cards[c.id]||[]).filter(o=>(!lang||o.lang===lang)&&COND.indexOf(o.cond)<=minC&&(!(f.eu??true)||EU.has(o.country)));
+    const list=offersFor(c).filter(o=>COND.indexOf(o.cond)<=minC);
     if(list.length)items.push({id:c.id,offers:list});else missing.push(c);
   }
   return{items,missing};
@@ -389,7 +405,7 @@ document.addEventListener('change',e=>{
   if(el.id&&el.id.startsWith('s-')){state.ship[el.id.slice(2)]=+el.value||0;save();renderLedger();renderCards();renderOrders();return}
   if(el.id==='a-lang'||el.id==='a-cond'||el.id==='a-eu'){const f=state.auto||(state.auto={});
     if(el.id==='a-lang')f.lang=el.value;if(el.id==='a-cond')f.cond=el.value;if(el.id==='a-eu')f.eu=el.checked;
-    save();renderOrders();return}
+    save();renderCards();renderOrders();return}
   if(el.id==='lang'){state.lang=el.value;save();renderLedger();renderCards();renderOrders();return}
   if(el.id==='sort'){ui.sort=el.value;renderCards()}
   if(el.id==='hide'){ui.hide=el.checked;renderCards()}
