@@ -23,8 +23,8 @@ body{background:var(--ice);color:var(--ink);font:400 15px/1.45 var(--body)}
 header{background:var(--band);color:var(--band-fg);padding-block:22px 18px}
 h1{font:800 clamp(28px,5vw,42px)/1.05 var(--display);margin:0;text-wrap:balance}
 .sub{color:var(--band-muted);margin:6px 0 18px;max-width:68ch}
-.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px}
-.ledger div{min-width:0}
+.ledger{display:flex;flex-wrap:wrap;gap:12px 40px}
+.ledger div{min-width:150px}
 .ledger b{display:block;font:500 clamp(20px,3vw,26px)/1.15 var(--data);font-variant-numeric:tabular-nums}
 .ledger span{color:var(--band-muted);font-size:13px}
 .bar{height:6px;background:rgba(255,255,255,.18);border-radius:3px;margin-top:6px;overflow:hidden}
@@ -39,10 +39,32 @@ button,select,input{font:inherit;color:inherit}
 input,select{background:var(--sleeve);border:1px solid var(--line);border-radius:6px;padding:6px 9px;min-width:0}
 :focus-visible{outline:2px solid var(--tide);outline-offset:2px}
 .grow{flex:1 1 180px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;padding-bottom:40px}
+.fams{display:flex;gap:6px;flex-wrap:wrap;padding-top:8px}
+.filters{position:relative;margin:0;font-size:14px}
+.filters summary{list-style:none;cursor:pointer;color:inherit;font-weight:600;background:var(--sleeve);border:1px solid var(--line);border-radius:6px;padding:6px 12px}
+.filters summary::-webkit-details-marker{display:none}
+.filters[data-on="true"] summary{border-color:var(--tide);color:var(--tide)}
+.pop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;display:grid;gap:10px;width:min(290px,calc(100vw - 32px));padding:12px;background:var(--sleeve);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.pop label:first-child{display:grid;gap:4px;font-size:13px;font-weight:600}
+@media (max-width:600px){
+  .tools{position:relative}
+  .filters{position:static}
+  .pop{left:0;right:0;width:auto;top:100%}
+  .ledger{gap:10px 24px}
+  .ledger div{min-width:130px}
+  .tab{padding:8px 9px}
+  #fresh{margin-left:0!important;width:100%}
+}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding-bottom:40px;align-items:start}
 @media (max-width:420px){.grid{grid-template-columns:minmax(0,1fr)}}
 .card{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;background:var(--sleeve);border:1px solid var(--line);border-radius:8px;padding:10px}
 .card.own{border-color:var(--good);background:linear-gradient(0deg,var(--good-soft),var(--good-soft))}
+.card>.more{grid-column:1/-1;margin:0}
+.more summary{font-size:13px}
+.more>div{display:grid;gap:10px;padding-top:8px}
+.more h4{margin:0 0 3px;font:600 12px var(--body);color:var(--muted)}
+.foot{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.foot a{font-size:13px;font-weight:600}
 .card img,.noimg{width:96px;height:134px;border-radius:5px;object-fit:cover;background:var(--line)}
 .noimg{display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--muted);padding:6px}
 .card.own img{opacity:.75}
@@ -92,7 +114,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
 <header>
   <div class="wrap">
     <h1>Masterset Tracker</h1>
-    <p class="sub">Every artwork once. Reprints with the same art count as one card, and you buy the cheapest print. Add any Pokémon or card on the Add tab.</p>
+    <p class="sub">Every artwork once, at its cheapest print.</p>
     <div class="ledger" id="ledger"></div>
   </div>
 </header>
@@ -100,30 +122,35 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
   <nav role="tablist">
     <button class="tab" role="tab" id="tab-cards" aria-selected="true">Cards</button>
     <button class="tab" role="tab" id="tab-orders" aria-selected="false">Orders</button>
-    <button class="tab" role="tab" id="tab-ship" aria-selected="false">Shipping to Germany</button>
+    <button class="tab" role="tab" id="tab-ship" aria-selected="false">Shipping</button>
     <button class="tab" role="tab" id="tab-add" aria-selected="false">Add</button>
     <button class="tab" role="tab" id="tab-backup" aria-selected="false">Backup</button>
     <span class="note" id="fresh" style="margin-left:auto"></span>
   </nav>
   <main id="view-cards">
+    <div id="fam" class="fams"></div>
     <div class="tools">
-      <span id="fam"></span>
       <input id="q" class="grow" type="search" placeholder="Search name or set" aria-label="Search name or set">
-      <select id="lang" aria-label="Language to buy">
-        <option value="">Any language (cheapest)</option>
-        <option value="International">International (EN, DE, FR…)</option>
-        <option value="Japanese">Japanese</option>
-        <option value="Chinese">Chinese</option>
-      </select>
       <select id="sort" aria-label="Sort cards">
         <option value="name">Sort by name</option>
         <option value="asc">Cheapest first</option>
         <option value="desc">Most expensive first</option>
         <option value="cond">Best condition on offer</option>
       </select>
-      <label class="own-toggle"><input id="hide" type="checkbox"> Hide owned</label>
-      <label class="own-toggle"><input id="x-cameo" type="checkbox"> <span id="x-cameo-label">Leave out cameos</span></label>
-      <label class="own-toggle"><input id="x-noprice" type="checkbox"> <span id="x-noprice-label">Leave out cards with no price</span></label>
+      <details class="filters"><summary id="filter-label">Filters</summary>
+        <div class="pop">
+          <label>Language to buy
+            <select id="lang">
+              <option value="">Any (cheapest)</option>
+              <option value="International">International (EN, DE, FR…)</option>
+              <option value="Japanese">Japanese</option>
+              <option value="Chinese">Chinese</option>
+            </select></label>
+          <label class="own-toggle"><input id="hide" type="checkbox"> Hide owned</label>
+          <label class="own-toggle"><input id="x-cameo" type="checkbox"> <span id="x-cameo-label">Leave out cameos</span></label>
+          <label class="own-toggle"><input id="x-noprice" type="checkbox"> <span id="x-noprice-label">Leave out cards with no price</span></label>
+        </div>
+      </details>
     </div>
     <div class="grid" id="grid"><p class="note">Loading cards…</p></div>
   </main>
@@ -131,7 +158,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
   <main id="view-ship" hidden></main>
   <main id="view-add" hidden>
     <section class="panel"><h3>Add a Pokémon or card</h3>
-      <p class="note">Type a name in English, such as Turtwig or Empoleon V. Prints with the same art are grouped automatically where images exist. The card database is less complete than the Piplup list: English is good, Asian prints are patchy, and most of those have no image to compare, so untick any that repeat a card.</p>
+      <p class="note">Type an English name, such as Turtwig. Same-art prints are grouped where images exist. Asian prints are patchy, so untick any that repeat a card.</p>
       <form id="add-form" class="tools">
         <input id="add-q" class="grow" type="search" placeholder="Pokémon or card name" aria-label="Pokémon or card name">
         <label class="own-toggle"><input id="add-all" type="checkbox" checked> Also search other languages</label>
@@ -144,7 +171,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
   </main>
   <main id="view-backup" hidden>
     <section class="panel"><h3>Back up your progress</h3>
-      <p class="note">Owned cards, sellers and shipping rates are saved on this device. Copy a backup to keep them safe or to move them to another device or browser.</p>
+      <p class="note">Your progress is saved on this device. Copy a backup to keep it safe or move it elsewhere.</p>
       <p><button class="primary" id="backup-copy">Copy backup</button><span id="backup-msg" style="margin-left:8px" class="note"></span></p>
       <h3 style="margin-top:14px">Restore a backup</h3>
       <p class="note">Paste a backup below. Restoring replaces the progress on this device.</p>
@@ -160,7 +187,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const eur=v=>v==null||!isFinite(v)?'–':'€'+v.toFixed(2);
 let baseCards=[],cards=[],prices={},guideDate='';
 let state={owned:{},pick:{},vendors:{},ship:{letter:1.5,tracked:4.5,threshold:25}};
-let ui={fam:'All',q:'',sort:'name',hide:false};
+let ui={fam:'All',q:'',sort:'name',hide:false,open:new Set()};
 let dbDoc=null,saveTimer=null;
 
 const LS='piplup-masterset';
@@ -233,11 +260,8 @@ function renderLedger(){
   const t=totals(),n=inSet().length,own=n-t.open.length;
   $('ledger').innerHTML=`
    <div><b>${own} / ${n}</b><span>cards owned</span><div class="bar"><i style="width:${n?own/n*100:0}%"></i></div></div>
-   <div><b>${eur(t.items)}</b><span>lowest listed prices left</span></div>
-   <div><b>${eur(t.ship)}</b><span>estimated shipping to Germany</span></div>
-   <div><b>${eur(t.items+t.ship)}</b><span>estimated total to finish</span></div>
-   <div><b>${t.unpriced}</b><span>cards with no confirmed price</span></div>
-   ${state.lang?`<div><b>${t.open.filter(c=>best(c)&&!bestIn(c,state.lang)).length}</b><span>open cards with no ${esc(state.lang)} price, using cheapest other print</span></div>`:''}`;
+   <div><b>${eur(t.items+t.ship)}</b><span>left to spend, ${eur(t.ship)} of it shipping</span></div>
+   ${t.unpriced?`<div><b>${t.unpriced}</b><span>cards with no price, not counted</span></div>`:''}`;
 }
 
 function renderFam(){
@@ -249,33 +273,40 @@ function renderFam(){
 function cardHtml(c){
   const own=!!state.owned[c.id],b=best(c),p=pickOf(c.id),all=printsOf(c);
   const delta=b&&b.prevLow!=null&&b.prevLow!==b.low?`<span class="${b.low>b.prevLow?'up':'down'}">${b.low>b.prevLow?'▲':'▼'} ${eur(Math.abs(b.low-b.prevLow))}</span>`:'';
-  const pr=priceOf(c);
-  const priceBlock=c.verify&&b?`<div class="price"><b>${eur(b.low)}</b><small>listing not confirmed, left out of totals</small></div>`
-   :b?`<div class="price"><b>${eur(b.low)}</b>${delta}<small>lowest</small> <span>${eur(b.trend)}</span><small>trend</small></div><div class="meta">About ${eur(b.low+shipFor(b.low))} delivered on its own</div>`
+  const pr=priceOf(c),buy=cmLink(c,b);
+  const priceBlock=c.verify&&b?`<div class="price"><b>${eur(b.low)}</b><small>unconfirmed, not in totals</small></div>`
+   :b?`<div class="price"><b>${eur(b.low)}</b>${delta}<small>about ${eur(b.low+shipFor(b.low))} delivered</small></div>`
    :`<div class="price"><small>No Cardmarket price. Prize or very rare card, watch auctions.</small></div>`;
   return `<article class="card${own?' own':''}" data-id="${c.id}">
     ${c.imgUrl?`<img src="${esc(c.imgUrl)}/low.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134" onerror="this.style.visibility='hidden'">`:c.img?`<img src="thumbs/${c.id}.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134">`:`<div class="noimg">No image yet</div>`}
     <div>
       <h2>${esc(c.name)}${c.family==='Cameo'?'<span class="tag">Cameo</span>':''}${c.verify?'<span class="tag warn">Check listing</span>':''}</h2>
-      <div class="meta">${b?`Buy: ${esc(b.region)} · ${esc(b.set)} ${esc(b.num)}`:`${esc(all[0].set)} ${esc(all[0].num)}`}${c.note?' · '+esc(c.note):''}</div>
+      <div class="meta">${b?`${esc(b.set)} ${esc(b.num)} · ${esc(b.region)}`:`${esc(all[0].set)} ${esc(all[0].num)}`}${state.lang&&b&&!bestIn(c,state.lang)?`<span class="tag warn">No ${esc(state.lang)} price</span>`:''}</div>
       ${priceBlock}
-      ${state.lang&&b&&!bestIn(c,state.lang)?`<div class="meta"><span class="tag warn" style="margin-left:0">No ${esc(state.lang)} price</span> Showing the cheapest other print</div>`:''}
-      <div class="langs">${langRow(c)}</div>
-      <div class="links">${cmLink(c,b)?`<a href="${cmLink(c,b)}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:''}${c.added&&b&&b.url&&speciesLink(c)?`<a href="${speciesLink(c)}" target="_blank" rel="noopener">All versions</a>`:''}<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">eBay.de search</a>${c.added?`<button class="linkish" data-remove="${esc(c.id)}">Remove card</button>`:''}</div>
-      ${langLinks(b)}
-      ${condRow(c)}
-      <div class="row">
+      <div class="foot">
         <label class="own-toggle"><input type="checkbox" data-act="own" ${own?'checked':''}> Owned</label>
+        ${buy?`<a href="${buy}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:`<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">Search eBay.de</a>`}
+      </div>
+    </div>
+    <details class="more" data-more="${c.id}" ${ui.open.has(c.id)?'open':''}><summary>Details${p.vendor?' · '+esc(p.vendor):''}</summary><div>
+      ${c.note?`<p class="note" style="margin:0">${esc(c.note)}</p>`:''}
+      <div><h4>Lowest price by language${b?` · trend ${eur(b.trend)}`:''}</h4><div class="langs" style="margin:0">${langRow(c)}</div></div>
+      ${offerData?`<div><h4>CardTrader by condition</h4>${condRow(c)}</div>`:''}
+      <div class="row" style="margin:0">
         <input type="text" list="vendors" data-act="vendor" placeholder="Seller" aria-label="Seller for ${esc(c.name)}" value="${esc(p.vendor||'')}">
         <input type="number" min="0" step="0.01" data-act="price" placeholder="${pr!=null?pr.toFixed(2):'€'}" aria-label="Price from that seller" value="${p.price??''}">
       </div>
-      <details><summary>${all.length} print${all.length>1?'s':''} with this art</summary><ul>
+      <div><h4>${all.length} print${all.length>1?'s':''} with this art</h4><ul style="list-style:none;margin:0;padding:0">
         ${all.map(x=>`<li class="${b&&x.pid===b.pid?'best':''}">${esc(x.region)} · ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">${esc(x.set)} ${esc(x.num)}</a>`:`${esc(x.set)} ${esc(x.num)}`} <span class="num">${x.low!=null?eur(x.low):'no price'}</span></li>`).join('')}
-      </ul></details>
-    </div></article>`;
+      </ul></div>
+      ${langLinks(b)}
+      <div class="links">${buy?`<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">Search eBay.de</a>`:''}${c.added&&b&&b.url&&speciesLink(c)?`<a href="${speciesLink(c)}" target="_blank" rel="noopener">All versions</a>`:''}${c.added?`<button class="linkish" data-remove="${esc(c.id)}">Remove card</button>`:''}</div>
+    </div></details></article>`;
 }
 
 function renderCards(){
+  const x=state.exclude||{},on=[state.lang,ui.hide,x.cameo,x.noPrice].filter(Boolean).length;
+  $('filter-label').textContent=on?`Filters (${on})`:'Filters';$('filter-label').parentElement.dataset.on=on>0;
   const q=ui.q.toLowerCase();
   let list=inSet().filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!q||(c.name+' '+c.prints.map(p=>p.set+' '+p.num).join(' ')).toLowerCase().includes(q)));
   const val=c=>best(c)?.low??null;
@@ -325,7 +356,7 @@ const COND_SHORT={'Near Mint':'NM','Slightly Played':'SP','Moderately Played':'M
 function condRow(c){
   if(!offerData)return '';
   const list=byCondition(c);
-  return `<div class="links">CardTrader: ${list.length?list.map(o=>`<a href="${esc(o.link)}" target="_blank" rel="noopener" title="${esc(o.cond)} from ${esc(o.seller)}">${COND_SHORT[o.cond]} ${eur(o.price)}</a>`).join(''):'no offers match'}</div>`;
+  return `<div class="links">${list.length?list.map(o=>`<a href="${esc(o.link)}" target="_blank" rel="noopener" title="${esc(o.cond)} from ${esc(o.seller)}">${COND_SHORT[o.cond]} ${eur(o.price)}</a>`).join(''):'no offers match'}</div>`;
 }
 function autoInputs(){
   const f=state.auto||{},minC=COND.indexOf(f.cond||'Moderately Played');
@@ -337,7 +368,7 @@ function autoInputs(){
   return{items,missing};
 }
 function renderAuto(){
-  if(!offerData)return `<section class="panel"><h3>Auto-group</h3><p class="note">Waiting for seller stock. Once a CardTrader token is connected, this builds the cheapest set of orders for the cards you do not own, using each seller's real shipping to Germany.</p></section>`;
+  if(!offerData)return `<section class="panel"><h3>Auto-group</h3><p class="note">Seller stock has not loaded here. The Orders plan runs on the live site.</p></section>`;
   const f=state.auto||{},{items,missing}=autoInputs();
   const shipOf=shipAuto;
   const a=planOrders(items,shipOf);
@@ -346,7 +377,7 @@ function renderAuto(){
   const sum=orders.reduce((s,o)=>s+o.sub+o.sh,0),ships=orders.reduce((s,o)=>s+o.sh,0);
   const sel=(id,opts,val)=>`<select id="${id}" aria-label="${id}">${opts.map(([v,l])=>`<option value="${v}"${v===val?' selected':''}>${l}</option>`).join('')}</select>`;
   return `<section class="panel" id="auto"><h3>Auto-group</h3>
-   <p class="note">Cheapest orders found for your ${items.length} open cards with stock: <b>${eur(sum)}</b> across ${orders.length} seller${orders.length===1?"":"s"}, including ${eur(ships)} shipping. Seller stock from ${new Date(offerData.generated).toLocaleDateString('de-DE')}.</p>
+   <p class="note"><b>${eur(sum)}</b> for ${items.length} cards from ${orders.length} seller${orders.length===1?"":"s"}, ${eur(ships)} of it shipping. Stock from ${new Date(offerData.generated).toLocaleDateString('de-DE')}.</p>
    <div class="tools">
     ${sel('a-lang',[['','Any language'],...[...new Set(Object.values(offerData.cards).flat().map(o=>o.lang).filter(Boolean))].sort().map(l=>[l,l.toUpperCase()])],f.lang||'')}
     ${sel('a-cond',COND.map(x=>[x,x+' or better']),f.cond||'Moderately Played')}
@@ -355,7 +386,7 @@ function renderAuto(){
    </div>
    ${orders.map(o=>`<details><summary><b>${esc(o.v)}</b> · ${o.l.length} card${o.l.length>1?'s':''} · <span class="num">${eur(o.sub+o.sh)}</span> with <span class="num">${eur(o.sh)}</span> shipping</summary><ul>
      ${o.l.map(x=>`<li>${x.o.link?`<a href="${esc(x.o.link)}" target="_blank" rel="noopener">${esc(x.card.name)}</a>`:esc(x.card.name)} · ${esc(x.o.label||best(x.card)?.set||'')} · ${esc(x.o.lang)} · ${esc(x.o.cond)} <span class="num">${eur(x.o.price)}</span></li>`).join('')}</ul></details>`).join('')}
-   ${missing.length?`<p class="note" style="margin-top:8px">${missing.length} open cards have no matching offer: ${missing.map(c=>esc(c.name)).join(', ')}.</p>`:''}
+   ${missing.length?`<p class="note" style="margin-top:8px">${missing.length} cards have no matching offer.</p>`:''}
   </section>`;
 }
 
@@ -369,14 +400,13 @@ function renderOrders(){
     <tr><td colspan="2">Order total ${o.saved>0?`<span class="saving">saves ${eur(o.saved)} shipping</span>`:''}</td><td class="r">${eur(o.sub+o.sh)}</td></tr></tfoot></table></div></section>`).join('');
   const wants=t.open.map(c=>{const b=best(c);return `${c.name} | ${b?b.set+' '+b.num+' ('+b.region+')':c.prints[0].set+' '+c.prints[0].num} | ${b?eur(b.low):'no price'}`}).join('\n');
   $('view-orders').innerHTML=`${renderAuto()}
-   <section class="panel"><h3>Group by hand</h3><p class="note">Type a seller's name on any card. Cards with the same seller become one order here, with one shipping charge. Enter that seller's real shipping once you see it at checkout.</p>
-   <p class="note">Cardmarket's Shopping Wizard can search sellers for you. Add your open cards to a Wants list there and it finds cheap combinations with shipping to Germany included. Then copy the result back here.</p></section>
-   ${rows||'<section class="panel"><p class="note">No orders yet. Add a seller on the Cards tab to start one.</p></section>'}
-   <section class="panel"><h3>Not assigned to a seller</h3><p class="note">${t.looseN} cards, ${eur(t.loose)} at lowest prices, plus about ${eur(t.looseShip)} if each one ships separately. That shipping is the amount grouping can reduce.</p>
-   <p class="note">${t.unpriced} more cards have no confirmed price and are not counted.</p></section>
-   <section class="panel"><h3>Shopping list</h3><p class="note">All ${t.open.length} open cards with the cheapest print of each.</p>
-   <textarea id="wants" readonly aria-label="Shopping list">${esc(wants)}</textarea>
-   <p><button class="primary" id="copy">Copy list</button><span id="copied"></span></p></section>`;
+   ${rows}
+   <section class="panel"><details style="margin:0"><summary><b>Group by hand</b></summary>
+     <p class="note">Type a seller's name under Details on any card. Cards with the same seller become one order, with one shipping charge. ${t.looseN} cards are not assigned yet: ${eur(t.loose)} plus about ${eur(t.looseShip)} shipping if each ships alone.</p>
+     <p class="note">Cardmarket's Shopping Wizard can also find cheap combinations from a Wants list.</p></details></section>
+   <section class="panel"><details style="margin:0"><summary><b>Shopping list</b> · ${t.open.length} open cards</summary>
+     <textarea id="wants" readonly aria-label="Shopping list" style="margin-top:8px">${esc(wants)}</textarea>
+     <p><button class="primary" id="copy">Copy list</button><span id="copied"></span></p></details></section>`;
 }
 
 function renderShip(){
@@ -496,7 +526,7 @@ function renderLists(){
       <td><label class="own-toggle"><input type="checkbox" data-count="${esc(f)}" ${x.fam?.[f]?'':'checked'}> Include</label></td>
       <td>${added.length?`${waiting?`<a href="${esc(watchLink(f))}" target="_blank" rel="noopener">Add to seller check</a> · `:''}<button class="linkish" data-drop="${esc(f)}">${ui.dropping===f?'Click again to remove':'Remove added cards'}</button>`:''}</td></tr>`}).join('')}
     </tbody></table></div>
-    <p class="note" style="margin-top:8px">Turning a list off takes it out of the cards, totals and orders. Cameos have their own switch on the Cards tab. Added cards show CardTrader sellers once "Add to seller check" has been committed on GitHub and the next daily run has finished.</p>`;
+    <p class="note" style="margin-top:8px">Lists that are off leave the cards, totals and orders. Added cards get sellers after you commit "Add to seller check" on GitHub and the next daily run finishes.</p>`;
 }
 function dropCards(ids){
   state.added=(state.added||[]).filter(c=>!ids.includes(c.id));
@@ -521,7 +551,9 @@ function renderAll(){cards=[...baseCards,...(state.added||[])];$('lang').value=s
   renderLedger();renderFam();renderCards();renderOrders();renderShip();renderLists();renderFound();
   $('fresh').textContent=guideDate?'Prices from Cardmarket, '+new Date(guideDate).toLocaleDateString('de-DE'):'';}
 
+document.addEventListener('toggle',e=>{const id=e.target.dataset?.more;if(id){if(e.target.open)ui.open.add(id);else ui.open.delete(id)}},true);
 document.addEventListener('click',e=>{
+  const box=document.querySelector('.filters');if(box.open&&!box.contains(e.target))box.open=false;
   const f=e.target.closest('[data-fam]');if(f){ui.fam=f.dataset.fam;renderFam();renderCards();return}
   const t=e.target.closest('.tab');if(t){for(const n of ['cards','orders','ship','add','backup']){$('tab-'+n).setAttribute('aria-selected',t.id==='tab-'+n);$('view-'+n).hidden=t.id!=='tab-'+n}return}
   const rm=e.target.closest('[data-remove]');if(rm){dropCards([rm.dataset.remove]);return}
