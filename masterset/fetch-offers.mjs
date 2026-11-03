@@ -23,6 +23,12 @@ const list=x=>Array.isArray(x)?x:x.array||[];
 const cards=JSON.parse(fs.readFileSync(path.join(here,'cards.json'),'utf8'));
 const byPid=new Map();
 for(const c of cards)for(const p of c.prints)if(p.pid)byPid.set(Number(p.pid),{card:c,print:p});
+// Cards added on the page reach this job as files in watch/, each a list of [cardId, [cardmarketIds]].
+const watchDir=path.join(here,'watch');
+if(fs.existsSync(watchDir))for(const f of fs.readdirSync(watchDir).filter(x=>x.endsWith('.json'))){
+ let list=[];try{list=JSON.parse(fs.readFileSync(path.join(watchDir,f),'utf8'))}catch{console.log('skipped unreadable',f);continue}
+ for(const [id,pids] of list)for(const pid of pids)if(!byPid.has(Number(pid)))byPid.set(Number(pid),{card:{id},print:null});
+}
 
 // Step 1: find CardTrader's id for each print, through the Cardmarket ids it stores on blueprints.
 const game=list(await api('/games')).find(g=>/pok/i.test(g.name)&&!/japan/i.test(g.name));
@@ -44,7 +50,7 @@ await paced(blueprints,125,async b=>{
   const props=o.properties_hash||{};
   (offers[b.card.id]??=[]).push({seller:o.user.username,country:o.user.country_code,price:o.price.cents/100,
    lang:props.pokemon_language||'',cond:props.condition||'',hub:!!o.user.can_sell_via_hub,
-   label:`${b.print.set} ${b.print.num}`,link:'https://www.cardtrader.com/cards/'+b.id});
+   label:b.print?`${b.print.set} ${b.print.num}`:'',link:'https://www.cardtrader.com/cards/'+b.id});
   sellers.add(o.user.username);
  }
 });

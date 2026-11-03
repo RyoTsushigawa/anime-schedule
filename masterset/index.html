@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
-<title>Piplup Line Masterset</title>
+<title>Masterset Tracker</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
@@ -82,13 +82,17 @@ tfoot td{font-weight:600;border-bottom:0}
 .settings label{display:grid;gap:4px;font-size:14px;font-weight:500}
 .primary{background:var(--tide);color:var(--sleeve);border:0;border-radius:6px;padding:7px 14px;font-weight:600;cursor:pointer}
 #copied{color:var(--good);font-size:13px;margin-left:8px}
+.found{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-top:12px}
+.found label{display:grid;grid-template-columns:auto 56px minmax(0,1fr);gap:8px;align-items:start;padding:8px;border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:13px}
+.found img,.found .noimg{width:56px;height:78px;border-radius:3px;object-fit:cover;background:var(--line);font-size:10px;padding:2px}
+.linkish{background:none;border:0;padding:0;color:var(--tide);text-decoration:underline;cursor:pointer;font-size:13px}
 textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(--line);border-radius:6px;padding:8px;font:13px var(--data);color:inherit}
 </style>
 
 <header>
   <div class="wrap">
-    <h1>Piplup Line Masterset</h1>
-    <p class="sub">Every Piplup and Empoleon artwork once, plus Piplup cameos. Reprints with the same art count as one card, and you buy the cheapest print.</p>
+    <h1>Masterset Tracker</h1>
+    <p class="sub">Every artwork once. Reprints with the same art count as one card, and you buy the cheapest print. Add any Pokémon or card on the Add tab.</p>
     <div class="ledger" id="ledger"></div>
   </div>
 </header>
@@ -97,6 +101,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
     <button class="tab" role="tab" id="tab-cards" aria-selected="true">Cards</button>
     <button class="tab" role="tab" id="tab-orders" aria-selected="false">Orders</button>
     <button class="tab" role="tab" id="tab-ship" aria-selected="false">Shipping to Germany</button>
+    <button class="tab" role="tab" id="tab-add" aria-selected="false">Add</button>
     <button class="tab" role="tab" id="tab-backup" aria-selected="false">Backup</button>
     <span class="note" id="fresh" style="margin-left:auto"></span>
   </nav>
@@ -124,6 +129,19 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
   </main>
   <main id="view-orders" hidden></main>
   <main id="view-ship" hidden></main>
+  <main id="view-add" hidden>
+    <section class="panel"><h3>Add a Pokémon or card</h3>
+      <p class="note">Type a name in English, such as Turtwig or Empoleon V. Prints with the same art are grouped automatically where images exist. The card database is less complete than the Piplup list: English is good, Asian prints are patchy, and most of those have no image to compare, so untick any that repeat a card.</p>
+      <form id="add-form" class="tools">
+        <input id="add-q" class="grow" type="search" placeholder="Pokémon or card name" aria-label="Pokémon or card name">
+        <label class="own-toggle"><input id="add-all" type="checkbox" checked> Also search other languages</label>
+        <button class="primary" type="submit">Search</button>
+      </form>
+      <p class="note" id="add-status" role="status"></p>
+      <div id="add-results"></div>
+    </section>
+    <section class="panel"><h3>Your lists</h3><div id="add-lists"></div></section>
+  </main>
   <main id="view-backup" hidden>
     <section class="panel"><h3>Back up your progress</h3>
       <p class="note">Owned cards, sellers and shipping rates are saved on this device. Copy a backup to keep them safe or to move them to another device or browser.</p>
@@ -140,7 +158,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const eur=v=>v==null||!isFinite(v)?'–':'€'+v.toFixed(2);
-let cards=[],prices={},guideDate='';
+let baseCards=[],cards=[],prices={},guideDate='';
 let state={owned:{},pick:{},vendors:{},ship:{letter:1.5,tracked:4.5,threshold:25}};
 let ui={fam:'All',q:'',sort:'name',hide:false};
 let dbDoc=null,saveTimer=null;
@@ -158,7 +176,7 @@ const printsOf=c=>c.prints.map(p=>({...p,...(p.pid&&prices[p.pid]||{})}));
 function bestIn(c,lang){return printsOf(c).filter(p=>p.low!=null&&(!lang||p.region===lang)).sort((a,b)=>a.low-b.low)[0]||null}
 // The chosen language wins; a card with no priced print in it falls back to its cheapest print.
 function best(c){return (state.lang&&bestIn(c,state.lang))||bestIn(c)}
-const LANGS=[['International','Intl'],['Japanese','JP'],['Chinese','CN'],['Korean','KR'],['Indonesian','ID']];
+const LANGS=[['International','Intl'],['Japanese','JP'],['Chinese','CN'],['Korean','KR'],['Indonesian','ID'],['Thai','TH']];
 function langRow(c){
   const b=best(c);
   return LANGS.filter(([r])=>c.prints.some(p=>p.region===r)).map(([r,s])=>{
@@ -173,12 +191,14 @@ function shipFor(sub){return sub>=state.ship.threshold?state.ship.tracked:state.
 function cmLink(c,p){
   if(p&&(p.url||p.setUrl))return p.url||p.setUrl;
   if(c.family==='Cameo')return null;
+  if(c.added)return speciesLink(c);
   return 'https://www.cardmarket.com/en/Pokemon/Species/'+c.family;
 }
+function speciesLink(c){return c.species?'https://www.cardmarket.com/en/Pokemon/Species/'+encodeURIComponent(c.species):null}
 // Cardmarket's language ids, for opening a card page already filtered to one language.
 const CM_LANG={EN:1,FR:2,DE:3,ES:4,IT:5,PT:8,JP:7,'中文':11};
 function langLinks(p){
-  if(!p||!p.url)return '';
+  if(!p||!p.url||!p.url.includes('cardmarket.com'))return '';
   const set=p.region==='International'?['EN','DE','FR','ES','IT','PT']:p.region==='Japanese'?['JP']:p.region==='Chinese'?['中文']:[];
   return set.length>1?`<div class="links">Only in: ${set.map(l=>`<a href="${p.url}?language=${CM_LANG[l]}" target="_blank" rel="noopener">${l}</a>`).join('')}</div>`:'';
 }
@@ -186,7 +206,8 @@ function ebLink(c,p){const lang=p&&p.region!=='International'?p.region.toLowerCa
 
 // The cards being collected: leaving some out removes them from the list, the counts, the totals and the auto-grouper.
 const isCameo=c=>c.family==='Cameo',noPrice=c=>priceOf(c)==null;
-function inSet(){const x=state.exclude||{};return cards.filter(c=>!(x.cameo&&isCameo(c))&&!(x.noPrice&&noPrice(c)))}
+function inSet(){const x=state.exclude||{};return cards.filter(c=>!(x.cameo&&isCameo(c))&&!(x.noPrice&&noPrice(c))&&!x.fam?.[c.family])}
+const families=()=>[...new Set(cards.map(c=>c.family))];
 function totals(){
   const open=inSet().filter(c=>!state.owned[c.id]);
   const groups={};let loose=0,looseShip=0,looseN=0,unpriced=0;
@@ -220,7 +241,9 @@ function renderLedger(){
 }
 
 function renderFam(){
-  $('fam').innerHTML=['All','Piplup','Empoleon','Cameo'].filter(f=>f!=='Cameo'||!state.exclude?.cameo).map(f=>`<button class="chip" aria-pressed="${ui.fam===f}" data-fam="${f}">${f}</button>`).join(' ');
+  const x=state.exclude||{},shown=families().filter(f=>!(f==='Cameo'&&x.cameo)&&!x.fam?.[f]);
+  if(ui.fam!=='All'&&!shown.includes(ui.fam))ui.fam='All';
+  $('fam').innerHTML=['All',...shown].map(f=>`<button class="chip" aria-pressed="${ui.fam===f}" data-fam="${esc(f)}">${esc(f)}</button>`).join(' ');
 }
 
 function cardHtml(c){
@@ -231,14 +254,14 @@ function cardHtml(c){
    :b?`<div class="price"><b>${eur(b.low)}</b>${delta}<small>lowest</small> <span>${eur(b.trend)}</span><small>trend</small></div><div class="meta">About ${eur(b.low+shipFor(b.low))} delivered on its own</div>`
    :`<div class="price"><small>No Cardmarket price. Prize or very rare card, watch auctions.</small></div>`;
   return `<article class="card${own?' own':''}" data-id="${c.id}">
-    ${c.img?`<img src="thumbs/${c.id}.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134">`:`<div class="noimg">No image yet</div>`}
+    ${c.imgUrl?`<img src="${esc(c.imgUrl)}/low.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134" onerror="this.style.visibility='hidden'">`:c.img?`<img src="thumbs/${c.id}.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134">`:`<div class="noimg">No image yet</div>`}
     <div>
       <h2>${esc(c.name)}${c.family==='Cameo'?'<span class="tag">Cameo</span>':''}${c.verify?'<span class="tag warn">Check listing</span>':''}</h2>
       <div class="meta">${b?`Buy: ${esc(b.region)} · ${esc(b.set)} ${esc(b.num)}`:`${esc(all[0].set)} ${esc(all[0].num)}`}${c.note?' · '+esc(c.note):''}</div>
       ${priceBlock}
       ${state.lang&&b&&!bestIn(c,state.lang)?`<div class="meta"><span class="tag warn" style="margin-left:0">No ${esc(state.lang)} price</span> Showing the cheapest other print</div>`:''}
       <div class="langs">${langRow(c)}</div>
-      <div class="links">${cmLink(c,b)?`<a href="${cmLink(c,b)}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:''}<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">eBay.de search</a></div>
+      <div class="links">${cmLink(c,b)?`<a href="${cmLink(c,b)}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:''}${c.added&&b&&b.url&&speciesLink(c)?`<a href="${speciesLink(c)}" target="_blank" rel="noopener">All versions</a>`:''}<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">eBay.de search</a>${c.added?`<button class="linkish" data-remove="${esc(c.id)}">Remove card</button>`:''}</div>
       ${langLinks(b)}
       ${condRow(c)}
       <div class="row">
@@ -331,7 +354,7 @@ function renderAuto(){
     <button class="primary" id="a-apply">Use this plan</button>
    </div>
    ${orders.map(o=>`<details><summary><b>${esc(o.v)}</b> · ${o.l.length} card${o.l.length>1?'s':''} · <span class="num">${eur(o.sub+o.sh)}</span> with <span class="num">${eur(o.sh)}</span> shipping</summary><ul>
-     ${o.l.map(x=>`<li>${x.o.link?`<a href="${esc(x.o.link)}" target="_blank" rel="noopener">${esc(x.card.name)}</a>`:esc(x.card.name)} · ${esc(x.o.label||'')} · ${esc(x.o.lang)} · ${esc(x.o.cond)} <span class="num">${eur(x.o.price)}</span></li>`).join('')}</ul></details>`).join('')}
+     ${o.l.map(x=>`<li>${x.o.link?`<a href="${esc(x.o.link)}" target="_blank" rel="noopener">${esc(x.card.name)}</a>`:esc(x.card.name)} · ${esc(x.o.label||best(x.card)?.set||'')} · ${esc(x.o.lang)} · ${esc(x.o.cond)} <span class="num">${eur(x.o.price)}</span></li>`).join('')}</ul></details>`).join('')}
    ${missing.length?`<p class="note" style="margin-top:8px">${missing.length} open cards have no matching offer: ${missing.map(c=>esc(c.name)).join(', ')}.</p>`:''}
   </section>`;
 }
@@ -370,16 +393,149 @@ function renderShip(){
    <p class="note" style="margin-top:8px"><b>Outside the EU (Japan, UK, US):</b> expect 19% import VAT and customs handling on top. An EU flat duty of €3 per item type on low-value parcels began on 1 July 2026, and sources differ on how it reaches private buyers. Add these costs to the order's shipping field.</p></section>`;
 }
 
-function renderAll(){$('lang').value=state.lang||'';
+// Adding cards. TCGdex is the only open card database a browser can read directly. Prices come from
+// its Cardmarket figures and are refreshed once a day when the page opens.
+const TCG='https://api.tcgdex.net/v2/';
+const REGION={en:'International',ja:'Japanese','zh-tw':'Chinese','zh-cn':'Chinese',ko:'Korean',id:'Indonesian',th:'Thai'};
+const getJson=async u=>{const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json()};
+async function pool(list,n,fn){let i=0;await Promise.all(Array.from({length:n},async()=>{while(i<list.length){const k=i++;await fn(list[k],k)}}))}
+// English ids that the pokemontcg.io redirect can turn into the card's own Cardmarket page.
+function directLink(id,lang){
+  const m=lang==='en'&&id.match(/^(base|gym|neo|ecard|ex|dp|pl|hgss|bw|xy|sm|swsh|sv)0*(\d+)(\.5)?-0*(\d+)$/);
+  return m?`https://prices.pokemontcg.io/cardmarket/${m[1]}${m[2]}${m[3]?'pt5':''}-${m[4]}`:null;
+}
+function toPrint(d,lang){
+  const pm=d.pricing?.cardmarket||{};
+  return{region:REGION[lang],set:d.set?.name||'',num:d.localId,pid:pm.idProduct||null,low:pm.low??pm['low-holo']??null,trend:pm.trend??pm['trend-holo']??null,
+    url:directLink(d.id,lang),tid:d.id,tlang:lang};
+}
+async function artOf(img){
+  const pic=new Image();pic.crossOrigin='anonymous';
+  await new Promise((ok,no)=>{pic.onload=ok;pic.onerror=no;pic.src=img+'/low.webp'});
+  const W=72,H=44,cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const g=cv.getContext('2d',{willReadFrequently:true}),w=pic.naturalWidth,h=pic.naturalHeight;
+  g.drawImage(pic,w*.1,h*.1,w*.8,h*.38,0,0,W,H);
+  const px=g.getImageData(0,0,W,H).data,out=new Float32Array(W*H);
+  for(let i=0;i<out.length;i++)out[i]=px[i*4]*.3+px[i*4+1]*.59+px[i*4+2]*.11;
+  return out;
+}
+function artScore(A,B){
+  const W=72,H=44,pad=4,corr=(dx,dy)=>{let sa=0,sb=0,saa=0,sbb=0,sab=0,n=0;
+    for(let y=pad;y<H-pad;y++)for(let x=pad;x<W-pad;x++){const p=A[y*W+x],q=B[(y+dy)*W+x+dx];sa+=p;sb+=q;saa+=p*p;sbb+=q*q;sab+=p*q;n++}
+    const d=Math.sqrt((saa-sa*sa/n)*(sbb-sb*sb/n));return d?(sab-sa*sb/n)/d:0};
+  let best=corr(0,0);if(best<.4)return best;
+  for(let dy=-pad;dy<=pad;dy+=2)for(let dx=-pad;dx<=pad;dx+=2)best=Math.max(best,corr(dx,dy));
+  return best;
+}
+async function searchCards(q,allLangs,status){
+  const hits=(await getJson(TCG+'en/cards?name='+encodeURIComponent(q))).filter(c=>!/^(A\d|P-A|B\d)/.test(c.id));
+  const found=[],add=async(list,lang)=>{await pool(list.slice(0,300),8,async c=>{const d=await getJson(TCG+lang+'/cards/'+encodeURIComponent(c.id)).catch(()=>null);if(d)found.push({d,lang});status(`Reading card details: ${found.length}`)})};
+  await add(hits,'en');
+  const dex=new Set(found.flatMap(x=>x.d.dexId||[]));
+  // A tag team also names its partner, so only the Pokémon named most often counts.
+  const count={};for(const x of found)if((x.d.dexId||[]).length===1)count[x.d.dexId[0]]=(count[x.d.dexId[0]]||0)+1;
+  const main=Number(Object.entries(count).sort((a,b)=>b[1]-a[1])[0]?.[0]);
+  if(allLangs&&main)for(const lang of Object.keys(REGION).filter(l=>l!=='en')){
+    const list=await getJson(TCG+lang+'/cards?dexId=eq:'+main).catch(()=>[]);
+    if(list.length)await add(list,lang);
+  }
+  status('Comparing artwork…');
+  await pool(found.filter(x=>x.d.image),8,async x=>{x.art=await artOf(x.d.image).catch(()=>null)});
+  await new Promise(r=>setTimeout(r));
+  const par=found.map((_,i)=>i),root=i=>par[i]===i?i:par[i]=root(par[i]);
+  const dexOf=x=>x.d.dexId||[],same=(a,b)=>dexOf(a).some(n=>dexOf(b).includes(n))||a.d.name.split(' ')[0]===b.d.name.split(' ')[0];
+  for(let i=0;i<found.length;i++)for(let j=i+1;j<found.length;j++){
+    const a=found[i],b=found[j];
+    // TCGdex sometimes gives different cards one Cardmarket id, so the images decide whenever both exist.
+    const pa=a.d.pricing?.cardmarket?.idProduct,pb=b.d.pricing?.cardmarket?.idProduct;
+    if(a.art&&b.art?same(a,b)&&artScore(a.art,b.art)>=.8:pa&&pa===pb)par[root(i)]=root(j);
+  }
+  const groups={};found.forEach((x,i)=>(groups[root(i)]??=[]).push(x));
+  const order=Object.keys(REGION);
+  const known=new Set(cards.flatMap(c=>c.prints.map(p=>p.pid)).filter(Boolean));
+  const species=q.trim().split(/\s+/)[0];
+  // An id shared by separate artworks means its price may belong to the other card.
+  const idOwners={};for(const [k,g] of Object.entries(groups))for(const x of g){const id=x.d.pricing?.cardmarket?.idProduct;if(id)(idOwners[id]??=new Set()).add(k)}
+  return Object.values(groups).map(g=>{
+    g.sort((a,b)=>order.indexOf(a.lang)-order.indexOf(b.lang));
+    const prints=g.map(x=>toPrint(x.d,x.lang));
+    return{id:'x'+g[0].lang+'-'+g[0].d.id,name:g[0].d.name,imgUrl:g.find(x=>x.d.image)?.d.image||null,prints,
+      unchecked:!g.some(x=>x.art),verify:prints.some(p=>p.pid&&idOwners[p.pid]?.size>1)||undefined,
+      species:dexOf(g[0]).length?species[0].toUpperCase()+species.slice(1).toLowerCase():null,
+      have:prints.some(p=>p.pid&&known.has(p.pid))||cards.some(c=>c.id==='x'+g[0].lang+'-'+g[0].d.id)};
+  }).sort((a,b)=>a.have-b.have||a.name.localeCompare(b.name));
+}
+function renderFound(){
+  const f=ui.found;if(!f){$('add-results').innerHTML='';return}
+  const n=f.filter(g=>ui.picked.has(g.id)).length;
+  $('add-results').innerHTML=`<div class="tools">
+     <label class="own-toggle">Add to list <input id="add-list" type="text" list="add-names" value="${esc(ui.listName||'')}" aria-label="List name"></label>
+     <datalist id="add-names">${families().map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+     <button class="primary" id="add-go" ${n?'':'disabled'}>Add ${n} card${n===1?'':'s'}</button>
+     <button class="linkish" id="add-select" data-on="1">Select all</button> <button class="linkish" id="add-select-none">Select none</button>
+   </div>
+   <div class="found">${f.map(g=>{const low=Math.min(...g.prints.map(p=>p.low??Infinity));return `<label>
+     <input type="checkbox" data-found="${esc(g.id)}" ${ui.picked.has(g.id)?'checked':''}>
+     ${g.imgUrl?`<img src="${esc(g.imgUrl)}/low.webp" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:'<div class="noimg">No image</div>'}
+     <span><b>${esc(g.name)}</b><br>${esc(g.prints[0].set)} ${esc(g.prints[0].num)}${g.prints.length>1?` +${g.prints.length-1} more`:''}<br>
+     ${[...new Set(g.prints.map(p=>LANGS.find(l=>l[0]===p.region)?.[1]))].join(', ')} · <span class="num">${isFinite(low)?eur(low):'no price'}</span>
+     ${g.have?'<br><span class="tag" style="margin-left:0">Already in a list</span>':''}${g.unchecked?'<br><span class="tag warn" style="margin-left:0">May repeat a card</span>':''}${g.verify?'<br><span class="tag warn" style="margin-left:0">Price unsure</span>':''}</span></label>`}).join('')}</div>`;
+}
+// The daily seller job cannot read this browser, so a list joins it through one file in the site's repo.
+function watchLink(fam){
+  const list=(state.added||[]).filter(c=>c.family===fam).map(c=>[c.id,c.prints.map(p=>p.pid).filter(Boolean)]).filter(x=>x[1].length);
+  const name=fam.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-'+Date.now().toString(36);
+  return 'https://github.com/RyoTsushigawa/anime-schedule/new/main?filename='+encodeURIComponent('masterset/watch/'+name+'.json')+'&value='+encodeURIComponent(JSON.stringify(list));
+}
+function renderLists(){
+  const x=state.exclude||{};
+  $('add-lists').innerHTML=`<div class="scroll"><table><thead><tr><th>List</th><th class="r">Cards</th><th>Count it</th><th></th></tr></thead><tbody>
+    ${families().filter(f=>f!=='Cameo').map(f=>{const list=cards.filter(c=>c.family===f),added=list.filter(c=>c.added);
+      const waiting=added.filter(c=>!offerData?.cards[c.id]).length;
+      return `<tr><td>${esc(f)}</td><td class="r">${list.length}</td>
+      <td><label class="own-toggle"><input type="checkbox" data-count="${esc(f)}" ${x.fam?.[f]?'':'checked'}> Include</label></td>
+      <td>${added.length?`${waiting?`<a href="${esc(watchLink(f))}" target="_blank" rel="noopener">Add to seller check</a> · `:''}<button class="linkish" data-drop="${esc(f)}">${ui.dropping===f?'Click again to remove':'Remove added cards'}</button>`:''}</td></tr>`}).join('')}
+    </tbody></table></div>
+    <p class="note" style="margin-top:8px">Turning a list off takes it out of the cards, totals and orders. Cameos have their own switch on the Cards tab. Added cards show CardTrader sellers once "Add to seller check" has been committed on GitHub and the next daily run has finished.</p>`;
+}
+function dropCards(ids){
+  state.added=(state.added||[]).filter(c=>!ids.includes(c.id));
+  for(const id of ids){delete state.owned[id];delete state.pick[id]}
+  save();renderAll();
+}
+async function refreshAdded(){
+  const today=new Date().toISOString().slice(0,10);
+  if(!state.added?.length||state.addedPriced===today)return;
+  let changed=0;
+  await pool(state.added.flatMap(c=>c.prints.filter(p=>p.tid)),6,async p=>{
+    const d=await getJson(TCG+p.tlang+'/cards/'+encodeURIComponent(p.tid)).catch(()=>null);if(!d)return;
+    const n=toPrint(d,p.tlang);if(n.low!==p.low)p.prevLow=p.low;
+    p.low=n.low;p.trend=n.trend;p.pid=n.pid;changed++});
+  if(changed){state.addedPriced=today;save();renderAll()}
+}
+
+function renderAll(){cards=[...baseCards,...(state.added||[])];$('lang').value=state.lang||'';
   $('x-cameo').checked=!!state.exclude?.cameo;$('x-noprice').checked=!!state.exclude?.noPrice;
   $('x-cameo-label').textContent=`Leave out cameos (${cards.filter(isCameo).length})`;
   $('x-noprice-label').textContent=`Leave out cards with no price (${cards.filter(noPrice).length})`;
-  renderLedger();renderFam();renderCards();renderOrders();renderShip();
+  renderLedger();renderFam();renderCards();renderOrders();renderShip();renderLists();renderFound();
   $('fresh').textContent=guideDate?'Prices from Cardmarket, '+new Date(guideDate).toLocaleDateString('de-DE'):'';}
 
 document.addEventListener('click',e=>{
   const f=e.target.closest('[data-fam]');if(f){ui.fam=f.dataset.fam;renderFam();renderCards();return}
-  const t=e.target.closest('.tab');if(t){for(const n of ['cards','orders','ship','backup']){$('tab-'+n).setAttribute('aria-selected',t.id==='tab-'+n);$('view-'+n).hidden=t.id!=='tab-'+n}return}
+  const t=e.target.closest('.tab');if(t){for(const n of ['cards','orders','ship','add','backup']){$('tab-'+n).setAttribute('aria-selected',t.id==='tab-'+n);$('view-'+n).hidden=t.id!=='tab-'+n}return}
+  const rm=e.target.closest('[data-remove]');if(rm){dropCards([rm.dataset.remove]);return}
+  const dr=e.target.closest('[data-drop]');if(dr){const fam=dr.dataset.drop;
+    if(ui.dropping===fam){ui.dropping=null;dropCards((state.added||[]).filter(c=>c.family===fam).map(c=>c.id))}else{ui.dropping=fam;renderLists()}return}
+  if(e.target.id==='add-select'){ui.picked=new Set(ui.found.filter(g=>!g.have).map(g=>g.id));renderFound();return}
+  if(e.target.id==='add-select-none'){ui.picked=new Set();renderFound();return}
+  if(e.target.id==='add-go'){
+    const fam=($('add-list').value||ui.listName||'Added').trim();
+    const add=ui.found.filter(g=>ui.picked.has(g.id)).map(({have,unchecked,...g})=>({...g,family:fam,added:true}));
+    state.added=[...(state.added||[]),...add];
+    state.addedPriced=new Date().toISOString().slice(0,10);
+    ui.found=null;$('add-status').textContent=`Added ${add.length} card${add.length===1?'':'s'} to ${fam}.`;
+    save();renderAll();return}
   if(e.target.id==='a-apply'){
     const {items}=autoInputs(),a=planOrders(items,shipAuto);
     for(const it of items){state.pick[it.id]={vendor:a[it.id].seller,price:a[it.id].price};const sh=offerData.shipping?.[a[it.id].seller]?.cost;if(sh!=null)state.vendors[a[it.id].seller]={ship:sh}}
@@ -403,6 +559,9 @@ document.addEventListener('change',e=>{
     save();renderLedger();renderCards();renderOrders();return}
   if(el.dataset.vendor!==undefined){const v=el.dataset.vendor;state.vendors[v]={ship:el.value===''?null:+el.value};save();renderLedger();renderOrders();return}
   if(el.id&&el.id.startsWith('s-')){state.ship[el.id.slice(2)]=+el.value||0;save();renderLedger();renderCards();renderOrders();return}
+  if(el.dataset.found!==undefined){if(el.checked)ui.picked.add(el.dataset.found);else ui.picked.delete(el.dataset.found);renderFound();return}
+  if(el.id==='add-list'){ui.listName=el.value;return}
+  if(el.dataset.count!==undefined){const x=state.exclude||(state.exclude={});(x.fam??={})[el.dataset.count]=!el.checked;save();renderAll();return}
   if(el.id==='a-lang'||el.id==='a-cond'||el.id==='a-eu'){const f=state.auto||(state.auto={});
     if(el.id==='a-lang')f.lang=el.value;if(el.id==='a-cond')f.cond=el.value;if(el.id==='a-eu')f.eu=el.checked;
     save();renderCards();renderOrders();return}
@@ -414,19 +573,34 @@ document.addEventListener('change',e=>{
     save();renderAll()}
 });
 $('q').addEventListener('input',e=>{ui.q=e.target.value;renderCards()});
+$('add-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const q=$('add-q').value.trim(),status=m=>{$('add-status').textContent=m};
+  if(!q)return;
+  ui.found=null;renderFound();status('Searching…');
+  try{
+    const groups=await searchCards(q,$('add-all').checked,status);
+    ui.found=groups;ui.picked=new Set(groups.filter(g=>!g.have).map(g=>g.id));
+    ui.listName=q[0].toUpperCase()+q.slice(1);
+    const prints=groups.reduce((s,g)=>s+g.prints.length,0);
+    status(groups.length?`Found ${groups.length} artworks from ${prints} prints. Untick anything you don't want.`:'Nothing found under that name. Check the English spelling.');
+    renderFound();
+  }catch{status('The card database could not be reached from this page. Try again, or use the site at ryotsushigawa.github.io/anime-schedule/masterset/.')}
+});
 
 (async()=>{
   loadLocal();
   try{
     const [c,p]=await Promise.all([fetch('cards.json').then(r=>r.json()),fetch('prices.json').then(r=>r.json())]);
-    cards=c;prices=p.prices;guideDate=p.guideDate;
+    baseCards=c;prices=p.prices;guideDate=p.guideDate;
     // Seller stock is optional: without it the page runs on the price guide alone.
     try{const r=await fetch('offers.json');if(r.ok)offerData=await r.json()}catch{}
   }catch(e){$('grid').innerHTML='<p class="note">The card data did not load. Reload the page to try again.</p>';return}
   renderAll();
+  refreshAdded();
   try{
     const db=window.claude?await window.claude.use('db'):null;
-    if(db){dbDoc=db.doc('tracker/state');const s=await dbDoc.get();if(s.exists){const d=s.data();state={...state,...JSON.parse(JSON.stringify(d))};renderAll()}}
+    if(db){dbDoc=db.doc('tracker/state');const s=await dbDoc.get();if(s.exists){const d=s.data();state={...state,...JSON.parse(JSON.stringify(d))};renderAll();refreshAdded()}}
   }catch(e){$('fresh').textContent='Your progress is saved in this browser only, because the account store did not answer.'}
 })();
 </script>
