@@ -116,6 +116,8 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
         <option value="desc">Most expensive first</option>
       </select>
       <label class="own-toggle"><input id="hide" type="checkbox"> Hide owned</label>
+      <label class="own-toggle"><input id="x-cameo" type="checkbox"> <span id="x-cameo-label">Leave out cameos</span></label>
+      <label class="own-toggle"><input id="x-noprice" type="checkbox"> <span id="x-noprice-label">Leave out cards with no price</span></label>
     </div>
     <div class="grid" id="grid"><p class="note">Loading cards…</p></div>
   </main>
@@ -181,8 +183,11 @@ function langLinks(p){
 }
 function ebLink(c,p){const lang=p&&p.region!=='International'?p.region.toLowerCase()+' ':'';return 'https://www.ebay.de/sch/i.html?_nkw='+encodeURIComponent('pokemon '+lang+c.name+' '+(p?p.num:''))}
 
+// The cards being collected: leaving some out removes them from the list, the counts, the totals and the auto-grouper.
+const isCameo=c=>c.family==='Cameo',noPrice=c=>priceOf(c)==null;
+function inSet(){const x=state.exclude||{};return cards.filter(c=>!(x.cameo&&isCameo(c))&&!(x.noPrice&&noPrice(c)))}
 function totals(){
-  const open=cards.filter(c=>!state.owned[c.id]);
+  const open=inSet().filter(c=>!state.owned[c.id]);
   const groups={};let loose=0,looseShip=0,looseN=0,unpriced=0;
   for(const c of open){
     const v=(pickOf(c.id).vendor||'').trim(),pr=priceOf(c);
@@ -203,9 +208,9 @@ function totals(){
 }
 
 function renderLedger(){
-  const t=totals(),own=cards.length-t.open.length;
+  const t=totals(),n=inSet().length,own=n-t.open.length;
   $('ledger').innerHTML=`
-   <div><b>${own} / ${cards.length}</b><span>cards owned</span><div class="bar"><i style="width:${cards.length?own/cards.length*100:0}%"></i></div></div>
+   <div><b>${own} / ${n}</b><span>cards owned</span><div class="bar"><i style="width:${n?own/n*100:0}%"></i></div></div>
    <div><b>${eur(t.items)}</b><span>lowest listed prices left</span></div>
    <div><b>${eur(t.ship)}</b><span>estimated shipping to Germany</span></div>
    <div><b>${eur(t.items+t.ship)}</b><span>estimated total to finish</span></div>
@@ -214,7 +219,7 @@ function renderLedger(){
 }
 
 function renderFam(){
-  $('fam').innerHTML=['All','Piplup','Empoleon','Cameo'].map(f=>`<button class="chip" aria-pressed="${ui.fam===f}" data-fam="${f}">${f}</button>`).join(' ');
+  $('fam').innerHTML=['All','Piplup','Empoleon','Cameo'].filter(f=>f!=='Cameo'||!state.exclude?.cameo).map(f=>`<button class="chip" aria-pressed="${ui.fam===f}" data-fam="${f}">${f}</button>`).join(' ');
 }
 
 function cardHtml(c){
@@ -247,7 +252,7 @@ function cardHtml(c){
 
 function renderCards(){
   const q=ui.q.toLowerCase();
-  let list=cards.filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!q||(c.name+' '+c.prints.map(p=>p.set+' '+p.num).join(' ')).toLowerCase().includes(q)));
+  let list=inSet().filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!q||(c.name+' '+c.prints.map(p=>p.set+' '+p.num).join(' ')).toLowerCase().includes(q)));
   const val=c=>best(c)?.low??null;
   if(ui.sort!=='name')list=[...list].sort((a,b)=>{const x=val(a),y=val(b);if(x==null)return 1;if(y==null)return -1;return ui.sort==='asc'?x-y:y-x});
   $('grid').innerHTML=(list.map(cardHtml).join('')||'<p class="note">No cards match. Clear the search or show owned cards.</p>')+
@@ -349,7 +354,11 @@ function renderShip(){
    <p class="note" style="margin-top:8px"><b>Outside the EU (Japan, UK, US):</b> expect 19% import VAT and customs handling on top. An EU flat duty of €3 per item type on low-value parcels began on 1 July 2026, and sources differ on how it reaches private buyers. Add these costs to the order's shipping field.</p></section>`;
 }
 
-function renderAll(){$('lang').value=state.lang||'';renderLedger();renderFam();renderCards();renderOrders();renderShip();
+function renderAll(){$('lang').value=state.lang||'';
+  $('x-cameo').checked=!!state.exclude?.cameo;$('x-noprice').checked=!!state.exclude?.noPrice;
+  $('x-cameo-label').textContent=`Leave out cameos (${cards.filter(isCameo).length})`;
+  $('x-noprice-label').textContent=`Leave out cards with no price (${cards.filter(noPrice).length})`;
+  renderLedger();renderFam();renderCards();renderOrders();renderShip();
   $('fresh').textContent=guideDate?'Prices from Cardmarket, '+new Date(guideDate).toLocaleDateString('de-DE'):'';}
 
 document.addEventListener('click',e=>{
@@ -384,6 +393,9 @@ document.addEventListener('change',e=>{
   if(el.id==='lang'){state.lang=el.value;save();renderLedger();renderCards();renderOrders();return}
   if(el.id==='sort'){ui.sort=el.value;renderCards()}
   if(el.id==='hide'){ui.hide=el.checked;renderCards()}
+  if(el.id==='x-cameo'||el.id==='x-noprice'){const x=state.exclude||(state.exclude={});
+    if(el.id==='x-cameo'){x.cameo=el.checked;if(el.checked&&ui.fam==='Cameo')ui.fam='All'}else x.noPrice=el.checked;
+    save();renderAll()}
 });
 $('q').addEventListener('input',e=>{ui.q=e.target.value;renderCards()});
 
