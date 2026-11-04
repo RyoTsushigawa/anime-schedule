@@ -225,6 +225,23 @@ async function liveChartWeek(start) {
   setNote('week:' + start.getTime(), `${unreachable('AniList')}: using LiveChart (${savedAt(Date.parse(streamsDe.statusUpdated || streamsDe.generated))}) and the Guckplan. Unconfirmed episode numbers are left out.`);
   return items;
 }
+// Once a week is on screen, the ones the arrows lead to get ready in the background, so they open
+// at once. It needs the week after, and the one before last (each week also shows last week's).
+// Not while AniList is already failing: nothing here may add to that, and a failure stays silent.
+let readiedWeek = null;
+function readyNeighbours(start) {
+  if (readiedWeek === start.getTime() || navigator.onLine === false || fallbackWeeks.has(start.getTime())) return;
+  readiedWeek = start.getTime();
+  const whenIdle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1000);
+  whenIdle(() => {
+    for (const by of [7, -14]) {
+      const week = new Date(start);
+      week.setDate(week.getDate() + by);
+      fetchWeek(week).catch(() => {});
+      for (const tab of activeTabs(tabs, week)) sheetFor(tab).catch(() => {});
+    }
+  });
+}
 function fetchWeek(start) {
   const key = start.getTime();
   if (!cache.has(key)) cache.set(key, downloadWeek(start).catch(e => { cache.delete(key); throw e; }));
@@ -2059,6 +2076,7 @@ async function load(refresh = false, strict = false) {
     // at today, with the days before it a scroll up.
     if (!refresh) scrollToStart();
     updateCatchupCount();
+    readyNeighbours(start);
   } catch (e) {
     if (strict) throw e;
     if (refresh && document.querySelector('#list .row')) {
@@ -2482,7 +2500,7 @@ document.addEventListener('click', event => {
 
 // Explicit allowlist excludes account sessions, access keys and cached personal lists.
 const BACKUP_KEYS = ['mode', 'soloPerson', 'people', 'view', 'anilistUser', 'theme', 'time', 'sort', 'accent',
-  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'noFrills', 'resumeServices', 'fallbackSources',
+  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'markOnOpen', 'noFrills', 'resumeServices', 'fallbackSources',
   'planUnavailable', 'planStarts', 'planStart', 'planBusy', 'planMoves', 'planFixed', 'planBreaks', 'planUntil', 'planView'];
 function settingsBackup() {
   const settings = {};
@@ -2587,9 +2605,15 @@ function keyRows() {
 }
 function selectRow(row) {
   row.tabIndex = -1;
-  // Only while selected, or a later mouse click would select it without showing it. (Switching to
-  // another window also blurs it, but it's still the active element and comes back selected.)
-  row.addEventListener('blur', () => { if (document.activeElement !== row) row.removeAttribute('tabindex'); }, { once: true });
+  row.classList.add('selected-row');
+  // Focusable only while selected, or a later mouse click would select it without showing it.
+  // Switching to another window also blurs it, but it's still the active element: it stays selected.
+  row.onblur = () => {
+    if (document.activeElement === row) return;
+    row.onblur = null;
+    row.removeAttribute('tabindex');
+    row.classList.remove('selected-row');
+  };
   row.focus({ preventScroll: true });
 }
 function stepRow(by) {
@@ -2606,6 +2630,16 @@ function stepRow(by) {
   if (box.top < clear) scrollTo(0, scrollY + box.top - clear);
   else if (box.bottom > innerHeight - 8) scrollTo(0, scrollY + box.bottom - innerHeight + 8);
 }
+// Back from a stream, its row is still selected: W marks the episode, J and K go on from there.
+// With "Mark on open" the episode is marked right away, unless it isn't out yet.
+try { $('markOnOpen').checked = localStorage.getItem('markOnOpen') === '1'; } catch {}
+$('markOnOpen').onchange = () => { try { localStorage.setItem('markOnOpen', $('markOnOpen').checked ? '1' : '0'); } catch {} };
+document.addEventListener('click', event => {
+  const row = event.target.closest?.('#list .row .links a')?.closest('.row');
+  if (!row || !keyRows().includes(row)) return;
+  selectRow(row);
+  if ($('markOnOpen').checked && !(Number(row.dataset.at) > Date.now())) row.querySelector('.watch:not(.done):not(:disabled):not([data-select])')?.click();
+});
 document.addEventListener('keydown', event => {
   if (event.defaultPrevented || (event.repeat && !/^[jk]$/i.test(event.key)) || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
   if (event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
