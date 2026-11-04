@@ -572,7 +572,11 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 
 /* The time on the cover, at every width: a small bubble at its foot, so the rest of the picture keeps
    its colour. White on it stays readable on any cover, even a white one (about 6:1, the small line 5:1). */
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; border-radius: 8px; background: rgba(0, 0, 0, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 0 6px 2px rgba(0, 0, 0, .25); }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; }
+/* The dark, blurred bubble fades out towards its edges instead of ending in a line; it is solid behind the text */
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time::before { content: ''; position: absolute; inset: -4px; z-index: -1; background: rgba(0, 0, 0, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  --fade-x: linear-gradient(to right, transparent, #000 6px, #000 calc(100% - 6px), transparent); --fade-y: linear-gradient(to bottom, transparent, #000 6px, #000 calc(100% - 6px), transparent);
+  -webkit-mask-image: var(--fade-x), var(--fade-y); mask-image: var(--fade-x), var(--fade-y); -webkit-mask-composite: source-in; mask-composite: intersect; }
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time .out { display: none; }
 @media (min-width: 561px) {
   :root:not(.no-frills) .row:not(.compact) > img { width: 60px; height: 84px; }
@@ -584,5 +588,5 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   :root:not(.no-frills) .row:not(.compact):not(:has(> img)) > .time { width: 60px; text-align: center; }
 }
 @media (max-width: 560px) {
-  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { justify-self: center; align-self: end; width: max-content; min-height: 0; margin-bottom: 4px; padding: 2px 4px; font-size: 12px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { position: relative; justify-self: center; align-self: end; width: max-content; min-height: 0; margin-bottom: 4px; padding: 2px 4px; font-size: 12px; }
 }
