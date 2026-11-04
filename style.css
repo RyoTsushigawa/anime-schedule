@@ -412,9 +412,9 @@ details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1
   background: color-mix(in srgb, #e5484d 10%, transparent); }
 details.warning summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 6px 0 0; padding-left: 20px; }
-/* The week's breaks and unplaced shows, one line each, always open */
+/* The week's breaks and unplaced shows, one line each; folded up when there are more than three */
 .alerts { color: var(--text); margin: 0 0 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--card); font-size: 13px; display: grid; gap: 4px; }
+  background: var(--card); font-size: 13px; display: grid; gap: 6px; }
 .alerts b { font-weight: 600; }
 .alerts a { color: inherit; text-decoration: underline dotted; }
 .alerts .why { color: var(--muted); }
@@ -439,6 +439,16 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .row:not(.compact) > .drop, .row:not(.compact) > .score { grid-column: 3; grid-row: 2; }
   .row:not(.compact) > .watch { grid-column: 4; grid-row: 2; }
   .row:not(.compact) > .move { grid-column: 5; grid-row: 2; }
+  /* Without list buttons (logged out) a single service fits beside the episode line: one line less */
+  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 1fr; row-gap: 2px; }
+  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info { display: contents; }
+  /* The text sets the height, with the cover filling it; the row keeps a cover's minimum */
+  :root:not(.no-frills) .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) { min-height: 96px; }
+  :root:not(.no-frills) .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > img, :root:not(.no-frills) .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child):has(> img) > .time { min-height: 0; }
+  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > img { contain: size; }
+  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info > .title { grid-column: 2 / -1; grid-row: 1; }
+  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info > .ep { grid-column: 2; grid-row: 2; margin: 0; min-width: 0; }
+  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .links { grid-column: 3; grid-row: 2; align-self: end; }
   /* The time sits on the cover, so the left edge still reads as a timetable */
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; z-index: 1; width: 56px; min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; }
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px;
