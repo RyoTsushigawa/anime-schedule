@@ -2075,16 +2075,30 @@ $('list').addEventListener('click', e => {
 // week that way, and pressed again show the whole week; the one in use is highlighted.
 let range = 'rest';
 // From the day strip: to that day, showing the whole week first if the day is hidden right now.
+// To a day in the week: the list fades, moves there while it can't be seen, and comes back with a small
+// slide in that direction. Scrolling there would rush past every cover, and a past day first has to be drawn.
+let dayJump = 0;
 async function jumpToDay(iso) {
+  const jump = ++dayJump;
+  const list = $('list');
+  const calm = document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const out = calm ? null : list.animate?.([{ opacity: 1 }, { opacity: 0 }], { duration: 70, easing: 'ease-in', fill: 'forwards' });
+  await out?.finished.catch(() => {});
   const find = () => document.querySelector(`#list .day[data-date="${iso}"]`);
   if (!find()) { setRange('week'); await load(true); }
+  if (jump !== dayJump) { out?.cancel(); return; } // another day was pressed meanwhile
   const day = find();
-  if (!day) return;
-  const top = day.getBoundingClientRect().top + scrollY;
-  // A phone's header slides away when going down, so nothing has to stay clear of it then.
-  const clear = innerWidth <= 560 && top > scrollY ? 0 : document.querySelector('header').offsetHeight;
-  const calm = document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  window.scrollTo({ top: Math.max(0, top - clear), behavior: calm ? 'auto' : 'smooth' });
+  let slide = 0;
+  if (day) {
+    const top = day.getBoundingClientRect().top + scrollY;
+    // A phone's header slides away when going down, so nothing has to stay clear of it then.
+    const clear = innerWidth <= 560 && top > scrollY ? 0 : document.querySelector('header').offsetHeight;
+    const target = Math.max(0, top - clear);
+    slide = Math.sign(target - scrollY) * 10;
+    window.scrollTo(0, target);
+  }
+  out?.cancel();
+  if (!calm) list.animate?.([{ opacity: 0, transform: `translateY(${slide}px)` }, { opacity: 1, transform: 'none' }], { duration: 140, easing: 'ease-out' });
 }
 function setRange(next) {
   range = next;
