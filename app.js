@@ -488,17 +488,14 @@ function watchDay(aired, tag, time) {
 // Our services as buttons; anything else only with the "Other services" toggle, outlined.
 // The piracy label only when no button is left: none of our services, or (with the toggle on)
 // no service at all.
-let resumeServices = {};
-try { resumeServices = JSON.parse(localStorage.getItem('resumeServices')) || {}; } catch {}
+// Resume links are gone: nothing keeps these two old settings any more.
+try { localStorage.removeItem('resumeWatching'); localStorage.removeItem('resumeServices'); } catch {}
 const serviceKey = label => label.replace(/ 🔍$/, '');
 function linkButtons(links, mediaId, watchers) {
-  const preferred = $('resumeWatching').checked ? resumeServices[mediaId] : null;
-  const attrs = l => Number(mediaId) > 0 ? `data-stream-show="${Number(mediaId)}" data-stream-service="${esc(serviceKey(l.label))}"` : '';
-  const label = l => esc(l.label) + (serviceKey(l.label) === preferred ? ' · Resume' : '');
   const button = l => l.main
-    ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" ${attrs(l)}>${label(l)}</a>`
-    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have" ${attrs(l)}>${label(l)}</a>`;
-  const shown = links.filter(l => l.main || $('others').checked).sort((a, b) => Number(serviceKey(b.label) === preferred) - Number(serviceKey(a.label) === preferred));
+    ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`
+    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${esc(l.label)}</a>`;
+  const shown = links.filter(l => l.main || $('others').checked);
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
   const streaming = !people.length || people.some(p => fallbackChoice(p) === 'aniworld');
@@ -2480,27 +2477,9 @@ $('noFrills').onchange = () => {
   document.documentElement.classList.toggle('no-frills', $('noFrills').checked);
   load(true); // the time column is measured again without the covers
 };
-try { $('resumeWatching').checked = localStorage.getItem('resumeWatching') === '1'; } catch {}
-$('resumeWatching').onchange = () => {
-  try { localStorage.setItem('resumeWatching', $('resumeWatching').checked ? '1' : '0'); } catch {}
-  load(true);
-};
-document.addEventListener('click', event => {
-  const link = event.target.closest('a[data-stream-show]');
-  if (!link || !$('resumeWatching').checked) return;
-  const id = link.dataset.streamShow, service = link.dataset.streamService;
-  resumeServices[id] = service;
-  try { localStorage.setItem('resumeServices', JSON.stringify(resumeServices)); } catch {}
-  document.querySelectorAll('a[data-stream-show]').forEach(button => {
-    if (button.dataset.streamShow !== id) return;
-    button.textContent = button.textContent.replace(/ · Resume$/, '') + (button.dataset.streamService === service ? ' · Resume' : '');
-    if (button.dataset.streamService === service) button.parentElement.prepend(button);
-  });
-});
-
 // Explicit allowlist excludes account sessions, access keys and cached personal lists.
 const BACKUP_KEYS = ['mode', 'soloPerson', 'people', 'view', 'anilistUser', 'theme', 'time', 'sort', 'accent',
-  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'markOnOpen', 'noFrills', 'resumeServices', 'fallbackSources',
+  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'markOnOpen', 'noFrills', 'fallbackSources',
   'planUnavailable', 'planStarts', 'planStart', 'planBusy', 'planMoves', 'planFixed', 'planBreaks', 'planUntil', 'planView'];
 function settingsBackup() {
   const settings = {};
@@ -2519,11 +2498,6 @@ function readSettingsBackup(text) {
   for (const key of BACKUP_KEYS) if (Object.hasOwn(data.settings, key)) {
     if (typeof data.settings[key] !== 'string' || data.settings[key].length > 200000) throw new Error('Invalid setting: ' + key);
     settings[key] = data.settings[key];
-  }
-  if (settings.resumeServices) {
-    const services = JSON.parse(settings.resumeServices);
-    if (!services || Array.isArray(services) || typeof services !== 'object' || Object.entries(services).some(([id, name]) => !/^\d+$/.test(id) || typeof name !== 'string' || name.length > 200))
-      throw new Error('Invalid saved services.');
   }
   if (settings.fallbackSources) {
     const sources=JSON.parse(settings.fallbackSources);
