@@ -282,6 +282,21 @@ header.away ~ main .day h2 { top: 0; }
 /* Premiere / Final next to the episode number */
 .ep-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 99px; font-size: 11px; font-weight: 600; line-height: 16px;
   background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+/* How far through the show: a thin line along the row's bottom edge */
+.progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.progress i { display: block; height: 100%; background: color-mix(in srgb, var(--accent) 75%, transparent); border-radius: 0 2px 2px 0; }
+.row.aired .progress i { opacity: .45; }
+/* The week at a glance, above the days */
+.daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0 0 16px; }
+.daystrip button { display: grid; justify-items: center; align-content: start; gap: 1px; min-height: 62px; padding: 7px 0 6px; border-radius: 12px; font-size: 11px; color: var(--muted); box-shadow: var(--raise); }
+.daystrip b { font-size: 17px; font-weight: 700; line-height: 1.2; color: var(--text); font-variant-numeric: tabular-nums; }
+.daystrip i { display: flex; justify-content: center; gap: 2px; height: 5px; margin-top: 3px; }
+.daystrip s { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+.daystrip .past { opacity: .5; }
+.daystrip .today { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.daystrip .today b { color: inherit; }
+.daystrip .today s { background: var(--accent-text); }
+body.searching .daystrip { display: none; }
 /* After the last day: on to another week */
 .pager { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .pager button { border-radius: 99px; font-size: 13px; color: var(--muted); padding: 7px 14px; }
@@ -419,10 +434,10 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .row:not(.compact) > .watch { grid-column: 4; grid-row: 2; }
   .row:not(.compact) > .move { grid-column: 5; grid-row: 2; }
   /* The time sits on the cover, so the left edge still reads as a timetable */
-  .row:not(.compact):has(> img) > .time { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; z-index: 1; width: 56px; min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; }
-  .row:not(.compact):has(> img) > .time, .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px;
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; z-index: 1; width: 56px; min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px;
     background: linear-gradient(transparent calc(100% - 50px), rgba(0, 0, 0, .85) calc(100% - 22px)); }
-  .row:not(.compact):has(> img) > .time .time-day, .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 10px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 10px; }
   .row.compact img { width: 36px; height: 50px; }
   .catchup-single > img, .catchup-show .show-head > img { width: 44px; height: 62px; }
   /* People get their own line instead of wrapping around "Episode 5" */
@@ -446,6 +461,19 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+/* ⚙ No frills: the same page without decoration. Words, times and buttons only. */
+.no-frills .row img, .no-frills .logo, .no-frills .status.happy img, .no-frills .daystrip, .no-frills .progress, .no-frills .row::before { display: none; }
+.no-frills header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.no-frills .row, .no-frills .shared, .no-frills .cr:not(.none), .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice, .no-frills #update { box-shadow: none; }
+.no-frills *, .no-frills ::before, .no-frills ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+.no-frills button:active, .no-frills .cr:active, .no-frills .toggle:active { transform: none; }
+.no-frills .day.is-today h2::before { padding: 0; background: none; color: inherit; font-weight: 600; }
+.no-frills .skeleton i { background: var(--card); }
+@media (max-width: 560px) {
+  .no-frills .row:not(.compact):not(:has(> .time)) > .info { grid-column: 1 / -1; }
+  .no-frills .row:not(.compact):not(:has(> .time)) > .links { grid-column: 1 / 3; }
 }
 
 /* ---------- Watch plan generator (planner.html) ---------- */
