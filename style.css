@@ -412,9 +412,9 @@ details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1
   background: color-mix(in srgb, #e5484d 10%, transparent); }
 details.warning summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 6px 0 0; padding-left: 20px; }
-/* The week's breaks and unplaced shows, one line each; folded up when there are more than three */
+/* The week's breaks and unplaced shows, one line each, folded up until opened */
 .alerts { color: var(--text); margin: 0 0 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--card); font-size: 13px; display: grid; gap: 6px; }
+  background: var(--card); font-size: 13px; display: grid; gap: 4px; }
 .alerts b { font-weight: 600; }
 .alerts a { color: inherit; text-decoration: underline dotted; }
 .alerts .why { color: var(--muted); }
