@@ -826,7 +826,7 @@ function render(items, start, plans) {
   }
   for (const d of days) assignWatchTimes(d);
 
-  // Opened, or "Full week" pressed off: the week starts with today, the days already past are left
+  // Opened, or the "Week" button pressed off: the week starts with today, the days already past are left
   // out; "Today": today only. With the arrows it's always the whole week, and while searching too
   // (so a show that aired earlier this week is found).
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
@@ -2079,7 +2079,7 @@ $('list').addEventListener('click', e => {
 });
 
 // Which days of the week show: 'rest' (today to Sunday, how the page opens), 'today' (today only)
-// or 'week' (all of it; the arrows always show whole weeks). The strip picks single days, "Full week"
+// or 'week' (all of it; the arrows always show whole weeks). The strip picks single days, the "Week" button
 // is the whole week, and pressed again it's this week from today on, wherever the arrows have gone.
 let range = 'rest';
 // From the day strip: to that day, showing the whole week first if the day is hidden right now.
