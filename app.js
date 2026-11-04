@@ -318,6 +318,33 @@ function finishedThisSeason(media, start) {
   const since = new Date(start); since.setMonth(since.getMonth() - 3);
   return (dateOf(media.endDate) || dateOf(media.startDate) || 0) >= since.getTime();
 }
+// Covers for rows without an episode this week (a break, or AniList not answering), so every row has
+// the same shape: from any airing seen, kept in this browser, else asked from AniList once.
+const covers = (() => { try { return new Map(Object.entries(JSON.parse(localStorage.getItem('covers')) || {})); } catch { return new Map(); } })();
+const coversTried = new Set(), pendingCovers = new Set();
+function keepCovers() { try { localStorage.setItem('covers', JSON.stringify(Object.fromEntries(covers))); } catch {} }
+function rememberCover(m) {
+  const url = m?.coverImage?.medium;
+  if (!url || covers.get(String(m.id)) === url) return;
+  covers.set(String(m.id), url);
+  keepCovers();
+}
+function coverFor(id) {
+  if (!(Number(id) > 0)) return '';
+  const url = covers.get(String(id));
+  if (!url && !coversTried.has(String(id))) pendingCovers.add(String(id));
+  return url || '';
+}
+async function lookUpCovers() {
+  const ids = [...pendingCovers];
+  pendingCovers.clear();
+  ids.forEach(id => coversTried.add(id));
+  try {
+    for (let i = 0; i < ids.length; i += 50)
+      for (const m of (await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id coverImage { medium } } } }',
+        { ids: ids.slice(i, i + 50).map(Number) }, undefined, { retries: 0, timeout: 8000 })).Page.media) rememberCover(m);
+  } catch {} // Not important enough to report: the row just has no cover this visit.
+}
 function nextFromAniList(id) {
   if (!aniNext.has(id)) {
     try {
@@ -696,6 +723,7 @@ function render(items, start, plans) {
     }
     const slot = show && chosen.get(sheet).get(show);
     if (!slot) continue;
+    rememberCover(m);
     const links = streamLinks(m, show.wo, m.title.english || m.title.romaji);
     const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag, slot.time).toDateString());
     if (!day) continue;
@@ -734,10 +762,10 @@ function render(items, start, plans) {
       if (upcoming?.at * 1000 >= weekEnd && note) {
         const why = { note: note || null, news: status.news || [] };
         const when = new Date(upcoming.at * 1000);
-        day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode, ...why });
+        day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode, cover: coverFor(alId), ...why });
         breaks.push({ show, when, episode: upcoming.episode, ...why });
       } else {
-        const m = { id: Number(alId) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [] };
+        const m = { id: Number(alId) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [], coverImage: { medium: coverFor(alId) } };
         day.rows.push({ fallback: true, show, slot, when: day.date, m, links: streamLinks(m, show.wo, show.english || show.romaji), who: [...whoBySheet.values()].find(w => w.has(show))?.get(show) });
       }
       found.add(show);
@@ -764,7 +792,7 @@ function render(items, start, plans) {
       // coverage"), else its newest break headline
       const note = (status.notes || []).find(n => n.at * 1000 >= days[0].date.getTime() - 86400000 && n.at * 1000 < weekEnd);
       const why = { note: note || null, news: status.news || [] };
-      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode, ...why });
+      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode, cover: coverFor(alId), ...why });
       breaks.push({ show, when: next, episode: upcoming.episode, ...why });
       found.add(show);
       continue;
@@ -780,7 +808,7 @@ function render(items, start, plans) {
     } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
       const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
       const why = { note: null, news: [] };
-      day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode, ...why });
+      day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode, cover: media.coverImage?.medium, ...why });
       breaks.push({ show, when, episode: media.nextAiringEpisode.episode, ...why });
       found.add(show);
     } else unknown.push({ show, why: media === undefined ? 'Checking airing status…'
@@ -802,9 +830,10 @@ function render(items, start, plans) {
     const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
     // The reason: the newest LiveChart headline about the break (linked to the article), or a
     // note that none was announced.
-    const pause = ({ show, slot, when, episode, note, news, watchAt }) => `
+    const pause = ({ show, slot, when, episode, note, news, watchAt, cover }) => `
       <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
+        ${cover ? `<img src="${safeUrl(cover)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
           <div class="ep">No episode this week · ${episode ? `episode ${episode} ` : ''}${episode ? 'on' : 'back'} ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
@@ -827,6 +856,7 @@ function render(items, start, plans) {
     const row = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
     const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
+      ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
       <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Episode not confirmed${whoChips(who)}</div></div>
       <div class="links">${linkButtons(links, m.id, who)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
@@ -1120,11 +1150,12 @@ for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]
   };
 }
 function syncMoveEditor() {
-  $('editSchedule').hidden = $('moveToggle').hidden;
+  $('editSchedule').hidden = $('editScheduleMenu').hidden = $('moveToggle').hidden;
   const on = $('moveButtons').checked;
-  $('editSchedule').textContent = on ? 'Done editing' : 'Edit schedule';
+  $('editSchedule').innerHTML = on ? 'Done<span class="title-long"> editing</span>' : 'Edit<span class="title-long"> schedule</span>';
   $('editSchedule').setAttribute('aria-pressed', String(on));
 }
+$('editScheduleMenu').onclick = () => { showSettings(false); $('editSchedule').click(); };
 $('editSchedule').onclick = () => {
   $('moveButtons').checked = !$('moveButtons').checked;
   $('moveButtons').dispatchEvent(new Event('change'));
@@ -1964,7 +1995,7 @@ async function load(refresh = false, strict = false) {
   // The year only when it isn't this one, or the week spans New Year ("Dec 28, 2026 – Jan 3, 2027")
   const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
-  $('week').textContent = `${fmt(start)} – ${fmt(end)}`;
+  $('week').textContent = $('weekSub').textContent = `${fmt(start)} – ${fmt(end)}`;
   if (!cache.has(start.getTime()) && !strict && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
   // Last week too: an episode airing after its watch day is watched the following week.
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
@@ -2007,6 +2038,7 @@ async function load(refresh = false, strict = false) {
     // Rewatches seen for the first time: look them up, then show them.
     if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
     if (pendingNext.size) lookUpNext().then(() => load(true));
+    if (pendingCovers.size) lookUpCovers().then(() => load(true));
     // A new week starts at the top (with "Today", that's today itself); this week as a whole starts
     // at today, with the days before it a scroll up.
     if (!refresh) scrollToStart();
@@ -2048,7 +2080,8 @@ $('prev').onclick = () => { weekOffset--; setRange('week'); enter = { x: -14 }; 
 $('next').onclick = () => { weekOffset++; setRange('week'); enter = { x: 14 }; load(); };
 for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
   $(id).onclick = () => {
-    setRange(weekOffset === 0 && range === value ? 'week' : value);
+    // Phones only have "Today": pressed again it's back to from today on. Elsewhere, the whole week.
+    setRange(weekOffset === 0 && range === value ? (innerWidth <= 560 ? 'rest' : 'week') : value);
     weekOffset = 0;
     enter = { y: 4 };
     load();
