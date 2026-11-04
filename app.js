@@ -614,9 +614,6 @@ function episodeTags(episodes, total) {
 }
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
-// A thin line along the bottom of a row: how far through the show. Only when the total is known.
-const progressBar = (done, total) => total > 1 && done > 0
-  ? `<div class="progress" aria-hidden="true"><i style="width:${Math.min(100, Math.round(done / total * 100))}%"></i></div>` : '';
 function playEnter() {
   const move = enter;
   enter = null;
@@ -843,7 +840,7 @@ function render(items, start, plans) {
         : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : releaseCell;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
-      <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>${progressBar(Math.max(...episodes), m.episodes)}
+      <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time">${timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
@@ -865,12 +862,12 @@ function render(items, start, plans) {
     const isToday = date.toDateString() === today;
     return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}><span>${heading}</span></h2>${body}</section>`;
   }).join('');
-  // Above the days: the whole week at a glance, a dot per show; pressing a day goes there.
+  // Above the days: one slim line with the week; pressing a day goes there. Days without a show step back.
   const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
   html = `<nav class="daystrip" aria-label="Go to a day">${days.map(({ date, rows }) => {
     const long = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-    const state = date.toDateString() === today ? ' class="today"' : date < nowDay ? ' class="past"' : '';
-    return `<button data-jump="${isoDay(date)}"${state} aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}"><span>${esc(date.toLocaleDateString(undefined, { weekday: 'short' }))}</span><b>${date.getDate()}</b><i>${'<s></s>'.repeat(Math.min(rows.length, 6))}</i></button>`;
+    const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free'].filter(Boolean).join(' ');
+    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}">${esc(date.toLocaleDateString(undefined, { weekday: 'short' }))} <b>${date.getDate()}</b></button>`;
   }).join('')}</nav>` + html;
   // At the end of the week: on to the next one without scrolling back up to the arrows.
   html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
@@ -1841,7 +1838,7 @@ async function loadCatchup(strict = false, refresh = false) {
   const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
-    <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>${progressBar(first - 1, m.episodes)}
+    <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
         <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Episode ${first}`}${note(missing)}</div>
@@ -1855,7 +1852,7 @@ async function loadCatchup(strict = false, refresh = false) {
     const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
     if (eps.length === 1) return grouped({m,first,out,missing,links});
     return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
-      <div class="row show-head" ${artStyle(m)}>${progressBar(first - 1, m.episodes)}
+      <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div></div>
         ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
@@ -1869,7 +1866,7 @@ async function loadCatchup(strict = false, refresh = false) {
   };
   // At your own pace: one row per show with the next episode and its ✓ (that episode only).
   const paced = ({ m, first, out, progress, links }) => `
-    <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>${progressBar(progress, m.episodes)}
+    <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <div class="time">Ep ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
