@@ -5,12 +5,11 @@ with buttons for the legal streaming services in Germany.
 
 The planner and ranker links live below the schedule. Owners enter/leave moving mode with
 “Edit schedule” above the week; editing access is managed from the footer. Settings contains
-display choices, with refresh/backup/shortcuts under “More options”. Catch-up stream links
+display choices, with Other services under “More options”. Catch-up stream links
 default on unless explicitly disabled. Single open episodes use one compact card, while
 multiple episodes stay grouped chronologically with ✓ at the far right.
 
-The small **?** next to the title opens a quick guide and optional read-only site tour.
-The tour highlights visible controls without switching views or changing any list data.
+The small **?** next to the title opens the guide, with the keyboard shortcuts at its end.
 MAL avatars are refreshed from the connected profile, with an initial if unavailable.
 In **Edit schedule**, drag the whole show card onto a day to append a 30-minute slot,
 or onto another show to share its planned slot. Dropping only prefills the move dialog:
@@ -18,8 +17,7 @@ the owner confirms before anything is saved for everyone. Escape cancels a drag.
 the handle still opens the original typed destination controls.
 On phones, hold a non-interactive part of a card for 300 ms before dragging; normal swipes
 still scroll. Buttons and service links remain clickable. Settings → Fallback links chooses
-AniWorld or torrents for the selected people, remembered in this browser and included in
-settings backups. Defaults remain torrents for Rei and AniWorld for others. Mixed group
+AniWorld or torrents for the selected people, remembered in this browser. Defaults remain torrents for Rei and AniWorld for others. Mixed group
 preferences can show both alternatives. Available service buttons always take priority.
 
 **MyAnimeList accounts:** open the account menu → Connect MyAnimeList. The Cloudflare helper
@@ -46,8 +44,8 @@ The ranker's separate AniList writes are not included in this schedule-specific 
   next-episode date alone does not mean finished. Recent season finishes are not treated as rewatches.
 
 Keyboard: **← / →** changes weeks in Week view; **T** shows today; **1 / 2 / 3** opens
-Week / Catch-up / Non-seasonal; **/** focuses search; **?** opens the shortcut guide (also in
-Settings). Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser modifiers.
+Week / Catch-up / Non-seasonal; **/** focuses search; **?** opens the guide at its shortcuts.
+Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser modifiers.
 **Ctrl/Cmd+Z** still undoes the latest AniList change outside text fields and dialogs.
 
 - **The Guckplan** comes live from the group's Google Sheet (tabs named `Guckplan <Winter|Frühling|Sommer|Herbst> <Year>`).
