@@ -2087,6 +2087,17 @@ function pickDay(iso) {
   enter = { y: 4 };
   load();
 }
+// One day shown: the day after or before it, on into the next or previous week.
+function stepDay(by) {
+  const [y, m, d] = (range === 'today' ? isoDay(new Date()) : pickedDay).split('-').map(Number);
+  const next = new Date(y, m - 1, d + by);
+  if (next < weekStart(weekOffset)) weekOffset--;
+  else if (next >= weekStart(weekOffset + 1)) weekOffset++;
+  if (weekOffset === 0 && isoDay(next) === isoDay(new Date())) setRange('today');
+  else { setRange('day'); pickedDay = isoDay(next); }
+  enter = { x: by * 14 };
+  load();
+}
 function setRange(next) {
   range = next;
   if (next !== 'day') pickedDay = null;
@@ -2124,7 +2135,9 @@ $('list').addEventListener('click', e => {
     if (!from) return;
     const t = e.changedTouches[0], dx = t.clientX - from.x, dy = t.clientY - from.y, quick = Date.now() - from.at < 700;
     from = null;
-    if (quick && Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) $(dx < 0 ? 'next' : 'prev').click();
+    if (!quick || Math.abs(dx) <= 70 || Math.abs(dx) <= 2 * Math.abs(dy)) return;
+    if ((range === 'day' || range === 'today') && !searching()) stepDay(dx < 0 ? 1 : -1);
+    else $(dx < 0 ? 'next' : 'prev').click();
   }, { passive: true });
 }
 try { localStorage.removeItem('todayFirst'); } catch {}
@@ -2304,13 +2317,19 @@ load();
 // Home screen app: the service worker keeps the page fresh online and available offline.
 // An installed app can stay open for days without reloading: whenever it's brought back, the browser
 // looks for a new version, and once that has taken over, a bar offers to reload into it.
+// A new version is ready: a dot on ⚙ and a line in its menu. The next visit has it either way.
+function showUpdate() {
+  $('settingsButton').classList.add('has-update');
+  $('settingsButton').setAttribute('aria-label', 'Settings: a new version is ready');
+  $('updateSection').hidden = false;
+}
+$('updateReload').onclick = () => location.reload();
 if ('serviceWorker' in navigator) {
   const hadWorker = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js').then(reg => {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
   }).catch(e => console.warn('No offline copy:', e));
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) $('update').hidden = false; });
-  $('updateReload').onclick = () => location.reload();
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) showUpdate(); });
 }
 
 function setMode(next) {
