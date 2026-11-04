@@ -5,7 +5,7 @@ const QUERY = `query ($page: Int, $from: Int, $to: Int) {
     airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) {
       airingAt episode
       media {
-        id idMal isAdult siteUrl
+        id idMal isAdult siteUrl episodes
         title { romaji english }
         synonyms
         coverImage { medium }
@@ -549,8 +549,34 @@ function tick() {
   const now = Date.now();
   for (const r of document.querySelectorAll('.row[data-fade-at]'))
     r.classList.toggle('aired', now >= Number(r.dataset.fadeAt));
+  if (document.visibilityState !== 'hidden' && new Date().toDateString() !== shownDay) freshen();
 }
 setInterval(tick, 30000);
+
+// An open tab or home screen app can stay open for days: past midnight it moves on to the new day,
+// and coming back after a while it asks for fresh data. Always in place, keeping the scroll position;
+// not in the middle of something (a dialog, a two-step Drop or Mark all, dragging a show).
+const COME_BACK_MS = 30 * 60000;
+let shownDay = new Date().toDateString();
+let hiddenAt = 0;
+async function freshen(fetchAgain = false) {
+  if (document.querySelector('dialog[open], #markAll.sure, .drop[data-sure], .move-dragging')) return;
+  shownDay = new Date().toDateString();
+  if (fetchAgain) {
+    const start = weekStart(weekOffset), lastWeek = new Date(start);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    cache.delete(start.getTime()); cache.delete(lastWeek.getTime());
+    sheets.clear();
+    if (auth) await loadMe().catch(() => {}); // ticks made elsewhere, like on the phone
+  }
+  load(true);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+  const away = hiddenAt && Date.now() - hiddenAt >= COME_BACK_MS;
+  if (away || new Date().toDateString() !== shownDay) freshen(away);
+  hiddenAt = 0;
+});
 
 // Watch time for each show of a day, then the day sorted by it: the sheet's "Uhrzeit" where
 // there is one; the rest fill the free evening slots (19:00, then every 30 minutes) in release
@@ -579,6 +605,13 @@ function assignWatchTimes(day) {
 const LOADING_HTML = '<div class="status loading">Loading…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>';
 // A short slide or fade when the list changes because you went somewhere (never on a refresh).
 var enter = null;
+// The first and last episode stand out; the total is only known once AniList has it (a one-episode
+// special is neither).
+function episodeTags(episodes, total) {
+  const tag = text => `<span class="ep-tag">${text}</span>`;
+  if (total === 1) return '';
+  return (Math.min(...episodes) === 1 ? tag('Premiere') : '') + (total && Math.max(...episodes) === total ? tag('Final') : '');
+}
 function playEnter() {
   const move = enter;
   enter = null;
@@ -807,8 +840,8 @@ function render(items, start, plans) {
         <div class="time">${timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
-          <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
+          <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
+          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -822,8 +855,11 @@ function render(items, start, plans) {
     const body = groups.length
       ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
       : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
-    return `<section class="day${date.toDateString() === today ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2>${heading}</h2>${body}</section>`;
+    const isToday = date.toDateString() === today;
+    return `<section class="day${isToday ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}>${heading}</h2>${body}</section>`;
   }).join('');
+  // At the end of the week: on to the next one without scrolling back up to the arrows.
+  html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
 
   // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
   const age = streamsDe?.generated && Math.floor((Date.now() - Date.parse(streamsDe.generated)) / 86400000);
@@ -1994,7 +2030,11 @@ for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
     enter = { y: 4 };
     load();
   };
-$('list').addEventListener('click', e => { if (e.target.closest('[data-rest-of-week]')) $('fromToday').click(); });
+$('list').addEventListener('click', e => {
+  if (e.target.closest('[data-rest-of-week]')) $('fromToday').click();
+  const pager = e.target.closest('[data-week]');
+  if (pager) $(pager.dataset.week).click();
+});
 // Phones: swipe sideways over the week to change it. Not from the screen's edges (the phone's own
 // back gesture) and not while editing (a card is being dragged then).
 {
