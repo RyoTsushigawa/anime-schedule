@@ -612,12 +612,15 @@ function episodeTags(episodes, total) {
   if (total === 1) return '';
   return (Math.min(...episodes) === 1 ? tag('Premiere') : '') + (total && Math.max(...episodes) === total ? tag('Final') : '');
 }
+// A row's cover again, as a faint wash of its colors behind the row.
+const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
 function playEnter() {
   const move = enter;
   enter = null;
   if (!move || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   $('list').animate?.([{ opacity: 0, transform: `translate(${move.x || 0}px, ${move.y || 0}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
 }
+window.ResizeObserver && new ResizeObserver(() => document.documentElement.style.setProperty('--head', document.querySelector('header').offsetHeight + 'px')).observe(document.querySelector('header'));
 function scrollToStart() {
   const today = range === 'week' && weekOffset === 0 && !searching() && document.querySelector('#list .day.is-today');
   const top = today ? today.getBoundingClientRect().top + window.scrollY - document.querySelector('header').offsetHeight - 10 : 0;
@@ -793,7 +796,8 @@ function render(items, start, plans) {
   const ordered = searching() || todayIndex < 0 || range === 'week' ? days
     : range === 'today' ? [days[todayIndex]] : days.slice(todayIndex);
   let html = ordered.map(({ date, rows }) => {
-    const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+    const heading = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'short' }).formatToParts(date)
+      .map(p => p.type === 'weekday' ? `<b>${esc(p.value)}</b>` : esc(p.value)).join('');
     // Rows without a ✓ keep its place, so every row's buttons line up.
     const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
     // The reason: the newest LiveChart headline about the break (linked to the article), or a
@@ -810,7 +814,7 @@ function render(items, start, plans) {
         ${checkSpace}${moveButton(show, slot)}
       </div>`;
     const rewatch = ({ m, links, watchAt, who, show, slot }) => `
-      <div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
+      <div class="row" ${artStyle(m)} data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
         <div class="time">Rewatch</div>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">
@@ -836,7 +840,7 @@ function render(items, start, plans) {
         : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : releaseCell;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
-      <div class="row" data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
+      <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time">${timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
@@ -856,7 +860,7 @@ function render(items, start, plans) {
       ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
       : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
     const isToday = date.toDateString() === today;
-    return `<section class="day${isToday ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}>${heading}</h2>${body}</section>`;
+    return `<section class="day${isToday ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}><span>${heading}</span></h2>${body}</section>`;
   }).join('');
   // At the end of the week: on to the next one without scrolling back up to the arrows.
   html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
@@ -1827,7 +1831,7 @@ async function loadCatchup(strict = false, refresh = false) {
   const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
-    <div class="row catchup-single" ${searchKey(...mediaTitles(m))}>
+    <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
         <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Episode ${first}`}${note(missing)}</div>
@@ -1841,7 +1845,7 @@ async function loadCatchup(strict = false, refresh = false) {
     const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
     if (eps.length === 1) return grouped({m,first,out,missing,links});
     return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
-      <div class="row show-head">
+      <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div></div>
         ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
@@ -1855,7 +1859,7 @@ async function loadCatchup(strict = false, refresh = false) {
   };
   // At your own pace: one row per show with the next episode and its ✓ (that episode only).
   const paced = ({ m, first, out, progress, links }) => `
-    <div class="row" ${searchKey(...mediaTitles(m))}>
+    <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <div class="time">Ep ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
@@ -1875,7 +1879,7 @@ async function loadCatchup(strict = false, refresh = false) {
       : selecting ? `<div class="catchup-bar"><span class="hint">Click a ✓ to leave that show out</span>
           <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
       : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
-    $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status">All caught up.</div>';
+    $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status happy"><img src="icon-192.png" alt="">All caught up.</div>';
     // Your own list: shows finished lately that have no score yet, each with ★ to score it
     const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
     if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Finished · not scored yet</h2>${unscored.map(({ media: m, completed }) => `
