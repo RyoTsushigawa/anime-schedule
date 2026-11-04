@@ -36,7 +36,7 @@
   $('helpTour').onclick = () => {
     guide.close(); savedScroll = scrollY; step = 0;
     steps = [
-      {target:$('viewWeek').parentElement,title:'Three ways to use the schedule',text:'Week is the group plan. Catch-up finds missed seasonals. Non-seasonal is for older shows you are watching at your own pace.'},
+      {target:$('viewWeek').parentElement,title:'Three ways to use the site',text:'Schedule is the group plan. Catch-up finds missed seasonals. Non-seasonal is for older shows you are watching at your own pace.'},
       {target:mode === 'group' ? $('groupButton') : $('soloPerson'),title:'Whose plan?',text:'Solo selects one person. Group combines selected people. If nobody is selected, the schedule is empty.'},
       {target:document.querySelector('.weeknav'),title:'Choose when',text:'The arrows change weeks. The Week button beside them shows all seven days; otherwise the list starts from today. Search still checks the whole week.'},
       {target:document.querySelector('#list .row') || $('list'),title:'Open a show, then tick it',text:'Service buttons open the show. With an account connected, ✓ sets progress up to that episode. Undo at the bottom, or Ctrl/⌘+Z, reverses a mistake.'},
