@@ -2466,10 +2466,6 @@ function openHelp(atShortcuts = false) {
 $('helpButton').onclick = () => openHelp();
 $('helpClose').onclick = () => $('helpDialog').close();
 $('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
-// More options stays open or closed the way it was last left.
-const moreOptions = document.querySelector('.menu-extra');
-try { moreOptions.open = localStorage.getItem('moreOptions') === '1'; } catch {}
-moreOptions.addEventListener('toggle', () => { try { localStorage.setItem('moreOptions', moreOptions.open ? '1' : '0'); } catch {} });
 for (const [id, key, hint] of [
   ['prev', 'ArrowLeft', 'Previous week (←)'], ['next', 'ArrowRight', 'Next week (→)'],
   ['viewWeek', '1', 'Schedule (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
