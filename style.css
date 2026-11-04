@@ -570,17 +570,19 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .plan-views button { flex: 1; }
 }
 
-/* The time on the cover, at every width: white on a dark band that always reaches past the text,
-   so it stays readable on any cover, even a white one (about 13:1, the weekday about 10:1). */
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time { --band: 28px; background: linear-gradient(transparent calc(100% - var(--band) - 16px), rgba(0, 0, 0, .82) calc(100% - var(--band))); }
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(.time-day:not(.same), small) { --band: 42px; }
-/* On a cover the band stays small, so the picture keeps its colour: the release fits one short line */
+/* The time on the cover, at every width: a small bubble at its foot, so the rest of the picture keeps
+   its colour. White on it stays readable on any cover, even a white one (about 6:1, the small line 5:1). */
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; border-radius: 8px; background: rgba(0, 0, 0, .62); }
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time .out { display: none; }
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time small { white-space: nowrap; }
 @media (min-width: 561px) {
   :root:not(.no-frills) .row:not(.compact) > img { width: 60px; height: 84px; }
-  :root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; width: 60px; height: 84px; margin-right: -74px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; color: #fff; font-size: 14px; line-height: 1.15; text-align: center; padding: 14px 2px 5px; border-radius: 7px; }
+  /* Taken out of the row and centred on the cover's foot (the cover is centred in the row, 84px high) */
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time { position: absolute; left: 38px; top: 50%; transform: translate(-50%, calc(42px - 100% - 4px)); font-size: 13px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(small) { padding: 2px 3px; }
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 11px; }
   /* A row without a cover keeps its time in the same column */
   :root:not(.no-frills) .row:not(.compact):not(:has(> img)) > .time { width: 60px; text-align: center; }
+}
+@media (max-width: 560px) {
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { justify-self: center; align-self: end; width: max-content; min-height: 0; margin-bottom: 4px; padding: 2px 4px; font-size: 12px; }
 }
