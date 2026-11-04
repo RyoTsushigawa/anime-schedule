@@ -2509,6 +2509,14 @@ function stepRow(by) {
 }
 // Back from a stream, its row is still selected: W marks the episode, J and K go on from there.
 // With "Mark on open" the episode is marked right away, unless it isn't out yet.
+// Stream buttons in their service's color (the default), or all as plain outlines.
+const applyServiceColors = () => document.documentElement.classList.toggle('plain-services', !$('serviceColors').checked);
+try { $('serviceColors').checked = localStorage.getItem('serviceColors') !== '0'; } catch { $('serviceColors').checked = true; }
+applyServiceColors();
+$('serviceColors').onchange = () => {
+  try { localStorage.setItem('serviceColors', $('serviceColors').checked ? '1' : '0'); } catch {}
+  applyServiceColors();
+};
 try { $('markOnOpen').checked = localStorage.getItem('markOnOpen') === '1'; } catch {}
 $('markOnOpen').onchange = () => { try { localStorage.setItem('markOnOpen', $('markOnOpen').checked ? '1' : '0'); } catch {} };
 document.addEventListener('click', event => {
