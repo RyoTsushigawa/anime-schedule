@@ -913,9 +913,7 @@ function render(items, start, plans) {
       '<span class="why">no reason announced on LiveChart</span>')} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
     ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'No episode confirmed for this week; airing status unknown')}</span></div>`),
   ];
-  // A few are simply listed; more than that folds up, so the week still starts near the top.
-  if (lines.length && lines.length <= 3) html = `<div id="airingWarnings" class="alerts">${lines.join('')}</div>` + html;
-  else if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary>Schedule notices <span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
+  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary>Schedule notices <span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
   // Above everything: data that's old or missing (this week's and last week's airings count here)
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
