@@ -1146,12 +1146,16 @@ function setChoice(name, value) {
   try { localStorage.setItem(name, value); } catch {}
   if (name === 'accent') applyAccent();
 }
-// The accent color ("person": the Solo person's Guckplan color, orange until it's known), today's
-// header tinted with it, and black or white text on it, whichever reads better.
+// The accent color ("person": the Solo person's Guckplan color; until that's known the color of the last
+// visit, so it doesn't flash orange first, see early.js), today's header tinted with it, and black or
+// white text on it, whichever reads better.
 function applyAccent() {
   const root = document.documentElement.style;
   const hex = c => /^#[0-9a-f]{6}$/i.test(c || '') ? c : null;
-  const c = (choices.accent === 'person' ? hex(personColor.get(soloPerson)) : hex(choices.accent)) || '#f47521';
+  const known = choices.accent === 'person' ? hex(personColor.get(soloPerson)) : hex(choices.accent);
+  let last = null;
+  try { if (known) localStorage.setItem('accentNow', known); else last = hex(localStorage.getItem('accentNow')); } catch {}
+  const c = known || last || '#f47521';
   const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
   root.setProperty('--accent', c);
   root.setProperty('--accent-text', 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#111' : '#fff');
