@@ -891,7 +891,7 @@ function render(items, start, plans) {
       const releaseCell = `<span class="time-day${when.toDateString() === date.toDateString() ? ' same' : ''}">${weekday}</span> ${hm(when)}`;
       const watch = hm(new Date(watchAt));
       return choices.time === 'watch' ? watch
-        : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : releaseCell;
+        : choices.time === 'both' ? `${watch}<small><span class="out">out </span>${release}</small>` : releaseCell;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
       <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
