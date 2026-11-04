@@ -1,7 +1,9 @@
-// Service worker for the home screen app. The page's own files are fetched fresh from GitHub every
-// time (so a new version shows right away, without Ctrl+F5) and kept as a copy for when there's no
-// internet. AniList, Google and LiveChart requests aren't touched: the page keeps its own copies.
-const CACHE = 'schedule-v76';
+// Service worker for the home screen app. The page itself opens from the saved copy, so it appears right
+// away, and is refreshed in the background for the next visit. A published version with a new CACHE name
+// is fetched as a whole and offers "Reload" (app.js). Data files still come fresh, with the saved copy
+// standing in when the network is slow or down. AniList, Google and LiveChart requests aren't touched:
+// the page keeps its own copies.
+const CACHE = 'schedule-v77';
 const FILES = ['./', 'index.html', 'style.css', 'common.js', 'mal.js', 'app.js', 'help.js', 'drag-moves.js', 'planner.html', 'planner.js', 'xlsx.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', event => {
@@ -18,19 +20,31 @@ self.addEventListener('activate', event => {
     .then(() => self.clients.claim()));
 });
 
+const SLOW_NETWORK_MS = 1500;
+const isPageFile = (request, url) => request.mode === 'navigate' || /\.(html|css|js|webmanifest|png)$/.test(url.pathname);
+
 self.addEventListener('fetch', event => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
-  event.respondWith(
-    fetch(request, { cache: 'no-cache' })
-      .then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(request, copy));
-        }
-        return response;
-      })
-      .catch(() => caches.match(request, { ignoreSearch: true })
-        .then(cached => cached || (request.mode === 'navigate' ? caches.match('./') : Response.error())))
-  );
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== location.origin) return;
+  // Saved without the query, so "?v=2" can't leave an older copy behind and nothing from a login link is kept
+  const key = url.origin + url.pathname;
+  const fresh = () => fetch(request, { cache: 'no-cache' }).then(async response => {
+    if (response.ok && !response.redirected) await (await caches.open(CACHE)).put(key, response.clone());
+    return response;
+  });
+  const saved = caches.open(CACHE).then(cache => cache.match(key)); // asked first, so this visit gets the older copy
+  const network = fresh();
+  event.waitUntil(network.catch(() => {})); // finishes saving even after the page has its answer
+  event.respondWith(saved.then(cached => {
+    if (isPageFile(request, url)) {
+      if (cached) return cached;
+      return network.catch(async () => (request.mode === 'navigate' && await (await caches.open(CACHE)).match(new URL('./', location).href)) || Response.error());
+    }
+    if (!cached) return network.catch(() => Response.error());
+    return Promise.race([
+      network.catch(() => cached),
+      new Promise(resolve => setTimeout(() => resolve(cached), SLOW_NETWORK_MS)),
+    ]);
+  }));
 });
