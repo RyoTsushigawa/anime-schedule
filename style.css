@@ -370,11 +370,10 @@ kbd { display: inline-block; min-width: 23px; padding: 2px 5px; border: 1px soli
 .dlg .pill.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .drop[data-sure] { color: #e5484d; border-color: #e5484d; }
 .drop.dropped { display: inline-grid; place-items: center; border: 1px dashed var(--line); color: var(--muted); font-size: 11px; }
-#update { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 11; width: max-content; display: flex; gap: 12px; align-items: center;
-  max-width: calc(100vw - 32px); padding: 10px 10px 10px 16px; border-radius: 12px; background: var(--card); color: var(--text);
-  border: 1px solid var(--accent); box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; }
-#update[hidden] { display: none; }
-#updateReload { flex: none; border-color: var(--accent); color: var(--accent); font-weight: 600; padding: 5px 12px; }
+/* A new version is ready: a dot on the settings button, the rest in its menu */
+#settingsButton { position: relative; }
+#settingsButton.has-update::after { content: ''; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+#updateReload { width: 100%; border-color: var(--accent); color: var(--accent); font-weight: 600; }
 /* Data shown from an older copy or missing (offline, a source not answering): above the schedule */
 .datanote { color: var(--text); font-size: 13px; margin: 0 0 14px; padding: 8px 12px; border-radius: 10px; display: grid; gap: 4px;
   border: 1px solid #d9a400; background: color-mix(in srgb, #d9a400 12%, transparent); }
@@ -407,7 +406,7 @@ button, select, .toggle, .cr { transition: background-color .12s ease, border-co
 button:not(:disabled):active, .cr:active, .toggle:active { transform: scale(.97); }
 .popover:not([hidden]) { animation: rise .13s ease-out; }
 .dlg[open] { animation: rise .16s ease-out; }
-#notice:not([hidden]), #update:not([hidden]) { animation: toast .18s ease-out; }
+#notice:not([hidden]) { animation: toast .18s ease-out; }
 @keyframes rise { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @keyframes toast { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
 @media (hover: hover) { .round:hover { color: var(--text); } .cr:hover { filter: brightness(1.08); } }
@@ -417,17 +416,16 @@ details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1
 details.warning summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 6px 0 0; padding-left: 20px; }
 /* The week's breaks and unplaced shows, one line each, folded up until opened */
-.alerts { color: var(--text); margin: 0 0 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--card); font-size: 13px; display: grid; gap: 4px; }
+.alerts { color: var(--text); margin: 0 0 8px; padding: 0 2px; font-size: 13px; display: grid; gap: 4px; }
 .alerts b { font-weight: 600; }
 .alerts a { color: inherit; text-decoration: underline dotted; }
 .alerts .why { color: var(--muted); }
-.alerts summary { cursor: pointer; font-weight: 600; padding: 2px 0; list-style: none; display: flex; align-items: center; }
+.alerts summary { cursor: pointer; width: max-content; max-width: 100%; color: var(--muted); font-size: 12px; font-weight: 500; padding: 2px 0; list-style: none; display: flex; align-items: center; }
 .alerts summary::-webkit-details-marker { display: none; }
-.alerts summary::after { content: ''; width: 7px; height: 7px; margin: -3px 4px 0 auto; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s ease; }
+.alerts summary::after { content: ''; width: 7px; height: 7px; margin: -3px 2px 0 8px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s ease; }
 .alerts[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
 .alerts .notice-count { font-size: 12px; font-weight: 500; margin-left: 8px; white-space: nowrap; color: var(--muted); }
-.alerts-body { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.alerts-body { display: grid; gap: 6px; margin: 4px 0 6px; }
 /* Buttons on one line, so rows keep their height when "Other services" adds some */
 @media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
 @media (max-width: 560px) {
@@ -443,16 +441,16 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .row:not(.compact) > .drop, .row:not(.compact) > .score { grid-column: 3; grid-row: 2; }
   .row:not(.compact) > .watch { grid-column: 4; grid-row: 2; }
   .row:not(.compact) > .move { grid-column: 5; grid-row: 2; }
-  /* Without list buttons (logged out) a single service fits beside the episode line: one line less */
-  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 1fr; row-gap: 2px; }
-  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info { display: contents; }
+  /* Without list buttons (logged out, or someone else's list) a single service fits beside the episode line: one line less */
+  .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 1fr; row-gap: 2px; }
+  .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info { display: contents; }
   /* The text sets the height, with the cover filling it; the row keeps a cover's minimum */
-  :root:not(.no-frills) .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) { min-height: 96px; }
-  :root:not(.no-frills) .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > img, :root:not(.no-frills) .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child):has(> img) > .time { min-height: 0; }
-  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > img { contain: size; }
-  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info > .title { grid-column: 2 / -1; grid-row: 1; }
-  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info > .ep { grid-column: 2; grid-row: 2; margin: 0; min-width: 0; }
-  .day .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .links { grid-column: 3; grid-row: 2; align-self: end; }
+  :root:not(.no-frills) .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) { min-height: 96px; }
+  :root:not(.no-frills) .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > img, :root:not(.no-frills) .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child):has(> img) > .time { min-height: 0; }
+  .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > img { contain: size; }
+  .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info > .title { grid-column: 2 / -1; grid-row: 1; }
+  .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .info > .ep { grid-column: 2; grid-row: 2; margin: 0; min-width: 0; }
+  .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .links { grid-column: 3; grid-row: 2; align-self: end; }
   /* The time sits on the cover, so the left edge still reads as a timetable */
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; z-index: 1; width: 56px; min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; }
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px;
@@ -495,7 +493,7 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 /* ⚙ No frills: the same page without decoration. Words, times and buttons only. */
 .no-frills .row img, .no-frills .logo, .no-frills .status.happy img, .no-frills .daystrip, .no-frills .row::before { display: none; }
 .no-frills header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
-.no-frills .row, .no-frills .shared, .no-frills .cr:not(.none), .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice, .no-frills #update { box-shadow: none; }
+.no-frills .row, .no-frills .shared, .no-frills .cr:not(.none), .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice { box-shadow: none; }
 .no-frills *, .no-frills ::before, .no-frills ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 .no-frills button:active, .no-frills .cr:active, .no-frills .toggle:active { transform: none; }
 .no-frills .day.is-today h2::before { padding: 0; background: none; color: inherit; font-weight: 600; }
