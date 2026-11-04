@@ -686,8 +686,9 @@ function render(items, start, plans) {
     return [s, merged];
   }));
   const showWho = $('who').checked;
-  const whoChips = who => showWho && who?.length
-    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Show everyone: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : '';
+  const others = who => mode === 'solo' ? who?.filter(p => !activePeople().includes(p)) : who;
+  const whoChips = all => { const who = others(all); return showWho && who?.length
+    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Show everyone: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
   const found = new Set();
   // Logged in and Solo: shows you dropped on AniList are gone from your week. In Group they stay,
   // with "Dropped" in place of the Drop button, since the others may still watch them.
@@ -825,7 +826,7 @@ function render(items, start, plans) {
   }
   for (const d of days) assignWatchTimes(d);
 
-  // Opened or "From today" pressed: the week starts with today, the days already past are left
+  // Opened, or "Full week" pressed off: the week starts with today, the days already past are left
   // out; "Today": today only. With the arrows it's always the whole week, and while searching too
   // (so a show that aired earlier this week is found).
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
@@ -884,7 +885,7 @@ function render(items, start, plans) {
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${episodes.length > 1 ? `Ep ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Ep ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -1887,7 +1888,7 @@ async function loadCatchup(strict = false, refresh = false) {
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Episode ${first}`}${note(missing)}</div>
+        <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Ep ${first}`}${note(missing)}</div>
       </div>
       ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
@@ -2078,8 +2079,8 @@ $('list').addEventListener('click', e => {
 });
 
 // Which days of the week show: 'rest' (today to Sunday, how the page opens), 'today' (today only)
-// or 'week' (all of it; the arrows always show whole weeks). "Today" and "From today" go to this
-// week that way, and pressed again show the whole week; the one in use is highlighted.
+// or 'week' (all of it; the arrows always show whole weeks). The strip picks single days, "Full week"
+// is the whole week, and pressed again it's this week from today on, wherever the arrows have gone.
 let range = 'rest';
 // From the day strip: to that day, showing the whole week first if the day is hidden right now.
 // A day in the strip: only that day is shown. Pressed again, the list goes back to the days around it.
@@ -2106,22 +2107,19 @@ function stepDay(by) {
 function setRange(next) {
   range = next;
   if (next !== 'day') pickedDay = null;
-  $('thisWeek').setAttribute('aria-pressed', range === 'today');
-  $('fromToday').setAttribute('aria-pressed', range === 'rest');
+  $('fullWeek').setAttribute('aria-pressed', range === 'week');
 }
 setRange('rest');
 $('prev').onclick = () => { weekOffset--; setRange('week'); enter = { x: -14 }; load(); };
 $('next').onclick = () => { weekOffset++; setRange('week'); enter = { x: 14 }; load(); };
-for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
-  $(id).onclick = () => {
-    // Phones only have "Today": pressed again it's back to from today on. Elsewhere, the whole week.
-    setRange(weekOffset === 0 && range === value ? (innerWidth <= 560 ? 'rest' : 'week') : value);
-    weekOffset = 0;
-    enter = { y: 4 };
-    load();
-  };
+$('fullWeek').onclick = () => {
+  if (range === 'week') { weekOffset = 0; setRange('rest'); }
+  else setRange('week');
+  enter = { y: 4 };
+  load();
+};
 $('list').addEventListener('click', e => {
-  if (e.target.closest('[data-rest-of-week]')) $('fromToday').click();
+  if (e.target.closest('[data-rest-of-week]')) { setRange('rest'); enter = { y: 4 }; load(); }
   const jump = e.target.closest('[data-jump]');
   if (jump) pickDay(jump.dataset.jump);
   const pager = e.target.closest('[data-week]');
