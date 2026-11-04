@@ -572,7 +572,7 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 
 /* The time on the cover, at every width: a small bubble at its foot, so the rest of the picture keeps
    its colour. White on it stays readable on any cover, even a white one (about 6:1, the small line 5:1). */
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; border-radius: 8px; background: rgba(0, 0, 0, .62); }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; border-radius: 8px; background: rgba(0, 0, 0, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 0 6px 2px rgba(0, 0, 0, .25); }
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time .out { display: none; }
 @media (min-width: 561px) {
   :root:not(.no-frills) .row:not(.compact) > img { width: 60px; height: 84px; }
