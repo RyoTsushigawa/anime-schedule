@@ -2573,7 +2573,7 @@ $('keyboardDialog').addEventListener('close', () => {
 });
 for (const [id, key, hint] of [
   ['prev', 'ArrowLeft', 'Previous week (←)'], ['next', 'ArrowRight', 'Next week (→)'],
-  ['viewWeek', '1', 'Week (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
+  ['viewWeek', '1', 'Schedule (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
   ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Group (G)'],
   ['searchButton', '/', 'Search shows (/)'], ['keyboardHelp', 'Shift+/', 'Keyboard shortcuts (?)'],
 ]) {
