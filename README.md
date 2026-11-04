@@ -5,7 +5,7 @@ with buttons for the legal streaming services in Germany.
 
 The planner and ranker links live below the schedule. Owners enter/leave moving mode with
 “Edit schedule” above the week; editing access is managed from the footer. Settings contains
-display choices, with Other services under “More options”. Catch-up stream links
+display choices. Catch-up stream links
 default on unless explicitly disabled. Single open episodes use one compact card, while
 multiple episodes stay grouped chronologically with ✓ at the far right.
 
