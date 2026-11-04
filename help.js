@@ -38,7 +38,7 @@
     steps = [
       {target:$('viewWeek').parentElement,title:'Three ways to use the schedule',text:'Week is the group plan. Catch-up finds missed seasonals. Non-seasonal is for older shows you are watching at your own pace.'},
       {target:mode === 'group' ? $('groupButton') : $('soloPerson'),title:'Whose plan?',text:'Solo selects one person. Group combines selected people. If nobody is selected, the schedule is empty.'},
-      {target:document.querySelector('.weeknav'),title:'Choose when',text:'The arrows change weeks. Today shows just today; otherwise the list starts from today. Search still checks the whole week.'},
+      {target:document.querySelector('.weeknav'),title:'Choose when',text:'The arrows change weeks. Full week shows all seven days; otherwise the list starts from today. Search still checks the whole week.'},
       {target:document.querySelector('#list .row') || $('list'),title:'Open a show, then tick it',text:'Service buttons open the show. With an account connected, ✓ sets progress up to that episode. Undo at the bottom, or Ctrl/⌘+Z, reverses a mistake.'},
       {target:$('accountButton'),title:'Your lists live here',text:'Connect AniList or MyAnimeList here. Once both are connected, choose a matching account and enable Sync both lists for new actions made in this schedule.'},
       {target:$('settingsButton'),title:'Display preferences',text:'Change links, viewers, time and colour here. More options holds refresh, backup and keyboard shortcuts.'},
