@@ -614,10 +614,13 @@ function episodeTags(episodes, total) {
 }
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
+// A thin line along the bottom of a row: how far through the show. Only when the total is known.
+const progressBar = (done, total) => total > 1 && done > 0
+  ? `<div class="progress" aria-hidden="true"><i style="width:${Math.min(100, Math.round(done / total * 100))}%"></i></div>` : '';
 function playEnter() {
   const move = enter;
   enter = null;
-  if (!move || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!move || document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   $('list').animate?.([{ opacity: 0, transform: `translate(${move.x || 0}px, ${move.y || 0}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
 }
 window.ResizeObserver && new ResizeObserver(() => document.documentElement.style.setProperty('--head', document.querySelector('header').offsetHeight + 'px')).observe(document.querySelector('header'));
@@ -840,7 +843,7 @@ function render(items, start, plans) {
         : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : releaseCell;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
-      <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
+      <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>${progressBar(Math.max(...episodes), m.episodes)}
         <div class="time">${timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
@@ -860,8 +863,15 @@ function render(items, start, plans) {
       ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
       : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
     const isToday = date.toDateString() === today;
-    return `<section class="day${isToday ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}><span>${heading}</span></h2>${body}</section>`;
+    return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}><span>${heading}</span></h2>${body}</section>`;
   }).join('');
+  // Above the days: the whole week at a glance, a dot per show; pressing a day goes there.
+  const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
+  html = `<nav class="daystrip" aria-label="Go to a day">${days.map(({ date, rows }) => {
+    const long = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+    const state = date.toDateString() === today ? ' class="today"' : date < nowDay ? ' class="past"' : '';
+    return `<button data-jump="${isoDay(date)}"${state} aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}"><span>${esc(date.toLocaleDateString(undefined, { weekday: 'short' }))}</span><b>${date.getDate()}</b><i>${'<s></s>'.repeat(Math.min(rows.length, 6))}</i></button>`;
+  }).join('')}</nav>` + html;
   // At the end of the week: on to the next one without scrolling back up to the arrows.
   html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
 
@@ -1831,7 +1841,7 @@ async function loadCatchup(strict = false, refresh = false) {
   const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
-    <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
+    <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>${progressBar(first - 1, m.episodes)}
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
         <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Episode ${first}`}${note(missing)}</div>
@@ -1845,7 +1855,7 @@ async function loadCatchup(strict = false, refresh = false) {
     const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
     if (eps.length === 1) return grouped({m,first,out,missing,links});
     return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
-      <div class="row show-head" ${artStyle(m)}>
+      <div class="row show-head" ${artStyle(m)}>${progressBar(first - 1, m.episodes)}
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div></div>
         ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
@@ -1859,7 +1869,7 @@ async function loadCatchup(strict = false, refresh = false) {
   };
   // At your own pace: one row per show with the next episode and its ✓ (that episode only).
   const paced = ({ m, first, out, progress, links }) => `
-    <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
+    <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>${progressBar(progress, m.episodes)}
       <div class="time">Ep ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
@@ -2019,6 +2029,18 @@ $('list').addEventListener('click', e => { if (e.target.closest('.retry')) load(
 // or 'week' (all of it; the arrows always show whole weeks). "Today" and "From today" go to this
 // week that way, and pressed again show the whole week; the one in use is highlighted.
 let range = 'rest';
+// From the day strip: to that day, showing the whole week first if the day is hidden right now.
+async function jumpToDay(iso) {
+  const find = () => document.querySelector(`#list .day[data-date="${iso}"]`);
+  if (!find()) { setRange('week'); await load(true); }
+  const day = find();
+  if (!day) return;
+  const top = day.getBoundingClientRect().top + scrollY;
+  // A phone's header slides away when going down, so nothing has to stay clear of it then.
+  const clear = innerWidth <= 560 && top > scrollY ? 0 : document.querySelector('header').offsetHeight;
+  const calm = document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: Math.max(0, top - clear), behavior: calm ? 'auto' : 'smooth' });
+}
 function setRange(next) {
   range = next;
   $('thisWeek').setAttribute('aria-pressed', range === 'today');
@@ -2036,6 +2058,8 @@ for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
   };
 $('list').addEventListener('click', e => {
   if (e.target.closest('[data-rest-of-week]')) $('fromToday').click();
+  const jump = e.target.closest('[data-jump]');
+  if (jump) jumpToDay(jump.dataset.jump);
   const pager = e.target.closest('[data-week]');
   if (pager) $(pager.dataset.week).click();
 });
@@ -2362,6 +2386,12 @@ function fillPeople(people) {
 }
 
 // Last used service per show; refreshed URLs still come from the current stream data.
+$('noFrills').checked = document.documentElement.classList.contains('no-frills');
+$('noFrills').onchange = () => {
+  try { localStorage.setItem('noFrills', $('noFrills').checked ? '1' : '0'); } catch {}
+  document.documentElement.classList.toggle('no-frills', $('noFrills').checked);
+  load(true); // the time column is measured again without the covers
+};
 try { $('resumeWatching').checked = localStorage.getItem('resumeWatching') === '1'; } catch {}
 $('resumeWatching').onchange = () => {
   try { localStorage.setItem('resumeWatching', $('resumeWatching').checked ? '1' : '0'); } catch {}
@@ -2382,7 +2412,7 @@ document.addEventListener('click', event => {
 
 // Explicit allowlist excludes account sessions, access keys and cached personal lists.
 const BACKUP_KEYS = ['mode', 'soloPerson', 'people', 'view', 'anilistUser', 'theme', 'time', 'sort', 'accent',
-  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'resumeServices', 'fallbackSources',
+  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'resumeWatching', 'noFrills', 'resumeServices', 'fallbackSources',
   'planUnavailable', 'planStarts', 'planStart', 'planBusy', 'planMoves', 'planFixed', 'planBreaks', 'planUntil', 'planView'];
 function settingsBackup() {
   const settings = {};
