@@ -829,7 +829,8 @@ function render(items, start, plans) {
   // out; "Today": today only. With the arrows it's always the whole week, and while searching too
   // (so a show that aired earlier this week is found).
   const todayIndex = days.findIndex(d => d.date.toDateString() === today);
-  const ordered = searching() || todayIndex < 0 || range === 'week' ? days
+  const picked = range === 'day' && !searching() && days.find(d => isoDay(d.date) === pickedDay);
+  const ordered = picked ? [picked] : searching() || todayIndex < 0 || range === 'week' ? days
     : range === 'today' ? [days[todayIndex]] : days.slice(todayIndex);
   let html = ordered.map(({ date, rows }) => {
     const heading = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'short' }).formatToParts(date)
@@ -902,10 +903,11 @@ function render(items, start, plans) {
   }).join('');
   // Above the days: one slim line with the week; pressing a day goes there. Days without a show step back.
   const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
-  html = `<nav class="daystrip" aria-label="Go to a day">${days.map(({ date, rows }) => {
+  html = `<nav class="daystrip" aria-label="Show one day">${days.map(({ date, rows }) => {
     const long = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-    const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free'].filter(Boolean).join(' ');
-    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}">${esc(date.toLocaleDateString(undefined, { weekday: 'short' }))} <b>${date.getDate()}</b></button>`;
+    const alone = !searching() && (range === 'day' ? isoDay(date) === pickedDay : range === 'today' && date.toDateString() === today);
+    const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free', alone ? 'picked' : ''].filter(Boolean).join(' ');
+    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}">${esc(date.toLocaleDateString(undefined, { weekday: 'short' }))} <b>${date.getDate()}</b></button>`;
   }).join('')}</nav>` + html;
   // At the end of the week: on to the next one without scrolling back up to the arrows.
   html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
@@ -2075,33 +2077,19 @@ $('list').addEventListener('click', e => {
 // week that way, and pressed again show the whole week; the one in use is highlighted.
 let range = 'rest';
 // From the day strip: to that day, showing the whole week first if the day is hidden right now.
-// To a day in the week: the list fades, moves there while it can't be seen, and comes back with a small
-// slide in that direction. Scrolling there would rush past every cover, and a past day first has to be drawn.
-let dayJump = 0;
-async function jumpToDay(iso) {
-  const jump = ++dayJump;
-  const list = $('list');
-  const calm = document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const out = calm ? null : list.animate?.([{ opacity: 1 }, { opacity: 0 }], { duration: 70, easing: 'ease-in', fill: 'forwards' });
-  await out?.finished.catch(() => {});
-  const find = () => document.querySelector(`#list .day[data-date="${iso}"]`);
-  if (!find()) { setRange('week'); await load(true); }
-  if (jump !== dayJump) { out?.cancel(); return; } // another day was pressed meanwhile
-  const day = find();
-  let slide = 0;
-  if (day) {
-    const top = day.getBoundingClientRect().top + scrollY;
-    // A phone's header slides away when going down, so nothing has to stay clear of it then.
-    const clear = innerWidth <= 560 && top > scrollY ? 0 : document.querySelector('header').offsetHeight;
-    const target = Math.max(0, top - clear);
-    slide = Math.sign(target - scrollY) * 10;
-    window.scrollTo(0, target);
-  }
-  out?.cancel();
-  if (!calm) list.animate?.([{ opacity: 0, transform: `translateY(${slide}px)` }, { opacity: 1, transform: 'none' }], { duration: 140, easing: 'ease-out' });
+// A day in the strip: only that day is shown. Pressed again, the list goes back to the days around it.
+let pickedDay = null;
+function pickDay(iso) {
+  const isToday = weekOffset === 0 && iso === isoDay(new Date());
+  if (isToday ? range === 'today' : range === 'day' && pickedDay === iso) setRange(weekOffset === 0 ? 'rest' : 'week');
+  else if (isToday) setRange('today');
+  else { setRange('day'); pickedDay = iso; }
+  enter = { y: 4 };
+  load();
 }
 function setRange(next) {
   range = next;
+  if (next !== 'day') pickedDay = null;
   $('thisWeek').setAttribute('aria-pressed', range === 'today');
   $('fromToday').setAttribute('aria-pressed', range === 'rest');
 }
@@ -2119,7 +2107,7 @@ for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
 $('list').addEventListener('click', e => {
   if (e.target.closest('[data-rest-of-week]')) $('fromToday').click();
   const jump = e.target.closest('[data-jump]');
-  if (jump) jumpToDay(jump.dataset.jump);
+  if (jump) pickDay(jump.dataset.jump);
   const pager = e.target.closest('[data-week]');
   if (pager) $(pager.dataset.week).click();
 });
