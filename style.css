@@ -301,6 +301,9 @@ header.away ~ main .day h2 { top: 0; }
 .daystrip b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .daystrip .past, .daystrip .free { opacity: .55; }
 .daystrip .today { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+/* The day shown alone; today then only keeps its colour */
+.daystrip .picked { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+.daystrip:has(.picked) .today:not(.picked) { background: transparent; }
 @media (hover: hover) { .daystrip button:hover { color: var(--text); opacity: 1; } }
 @media (pointer: coarse) { .daystrip button { min-height: 30px; } }
 body.searching .daystrip { display: none; }
