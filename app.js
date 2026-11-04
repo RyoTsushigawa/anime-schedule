@@ -614,6 +614,27 @@ function episodeTags(episodes, total) {
 }
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
+// Under the episode line, one piece per episode: accent = watched, grey = out but not watched yet,
+// empty = still to come. Only with a known total, and never when the numbering runs past it.
+const lineLabel = (seen, out, total) => `${seen ? `${seen} watched · ` : ''}${out} of ${total} out`;
+const linePercent = (n, total) => Math.round(n / total * 1000) / 10;
+function progressLine(mediaId, watched, out, total) {
+  if (!(total > 1) || out > total) return '';
+  const seen = Math.min(Math.max(watched || 0, 0), total), released = Math.max(out, seen);
+  if (!released) return '';
+  const label = lineLabel(seen, released, total);
+  return `<div class="ep-line${total > 30 ? ' solid' : ''}" style="--n:${total}" data-media="${mediaId}" data-out="${out}" data-total="${total}" role="img" aria-label="${label}" title="${label}"><i class="out" style="width:${linePercent(released, total)}%"></i><i class="seen" style="width:${linePercent(seen, total)}%"></i></div>`;
+}
+// After a ✓: the line follows without redrawing the list.
+function paintWatched(mediaId) {
+  for (const line of document.querySelectorAll(`.ep-line[data-media="${mediaId}"]`)) {
+    const total = Number(line.dataset.total), seen = Math.min(myProgress.get(mediaId) || 0, total), released = Math.max(Number(line.dataset.out), seen);
+    line.querySelector('.out').style.width = linePercent(released, total) + '%';
+    line.querySelector('.seen').style.width = linePercent(seen, total) + '%';
+    line.title = lineLabel(seen, released, total);
+    line.setAttribute('aria-label', line.title);
+  }
+}
 function playEnter() {
   const move = enter;
   enter = null;
@@ -846,6 +867,7 @@ function render(items, start, plans) {
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          ${progressLine(m.id, auth ? myProgress.get(m.id) : 0, when.getTime() > Date.now() ? Math.min(...episodes) - 1 : Math.max(...episodes), m.episodes)}
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -1399,6 +1421,7 @@ async function change(mediaId, vars) {
   knownEntries.set(mediaId, { progress: saved.progress, status: saved.status, score: saved.score });
   notOnList.delete(mediaId);
   myProgress.set(mediaId, saved.progress);
+  paintWatched(mediaId);
   listChanged(mediaId, saved.progress, !!status);
   const record = { mediaId, before, after: { progress: saved.progress, status: saved.status, score: saved.score }, entryId: saved.id, account:sourceAccount };
   if (targetAccount) {
@@ -1842,6 +1865,7 @@ async function loadCatchup(strict = false, refresh = false) {
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
         <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Episode ${first}`}${note(missing)}</div>
+        ${progressLine(m.id, first - 1, out, m.episodes)}
       </div>
       ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
@@ -1854,7 +1878,7 @@ async function loadCatchup(strict = false, refresh = false) {
     return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div></div>
+        <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div>${progressLine(m.id, first - 1, out, m.episodes)}</div>
         ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
         ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
@@ -1871,6 +1895,7 @@ async function loadCatchup(strict = false, refresh = false) {
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
         <div class="ep">${progress} of ${m.episodes || out} watched</div>
+        ${progressLine(m.id, progress, out, m.episodes)}
       </div>
       ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
       ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) : ''}
