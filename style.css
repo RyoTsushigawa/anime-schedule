@@ -299,11 +299,11 @@ header.away ~ main .day h2 { top: 0; }
 .daystrip button { padding: 3px 0; border: 0; border-radius: 99px; background: transparent; font-size: 12px; line-height: 18px; white-space: nowrap; color: var(--muted); }
 .daystrip b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .daystrip .past, .daystrip .free { opacity: .55; }
-.daystrip .today { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
-/* The day shown alone; today then only keeps its colour */
-.daystrip .picked { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
-.daystrip:has(.picked) .today:not(.picked) { background: transparent; }
-@media (hover: hover) { .daystrip button:hover { color: var(--text); opacity: 1; } }
+/* Today is always ringed, whichever day is open; the open day is filled, like a pressed button */
+.daystrip .today { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1.5px var(--accent); color: color-mix(in srgb, var(--accent) 70%, var(--text)); }
+/* The day shown alone */
+.daystrip .picked { opacity: 1; font-weight: 600; background: var(--accent); color: var(--accent-text); }
+@media (hover: hover) { .daystrip button:not(.picked):hover { color: var(--text); opacity: 1; } }
 @media (pointer: coarse) { .daystrip button { min-height: 30px; } }
 body.searching .daystrip { display: none; }
 /* After the last day: on to another week */
