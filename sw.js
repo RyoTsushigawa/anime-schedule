@@ -3,7 +3,7 @@
 // is fetched as a whole and offers "Reload" (app.js). Data files still come fresh, with the saved copy
 // standing in when the network is slow or down. AniList, Google and LiveChart requests aren't touched:
 // the page keeps its own copies.
-const CACHE = 'schedule-v90';
+const CACHE = 'schedule-v91';
 const FILES = ['./', 'index.html', 'style.css', 'common.js', 'mal.js', 'app.js', 'help.js', 'drag-moves.js', 'planner.html', 'planner.js', 'xlsx.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', event => {
