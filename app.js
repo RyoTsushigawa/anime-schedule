@@ -576,6 +576,21 @@ function assignWatchTimes(day) {
 
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
+const LOADING_HTML = '<div class="status loading">Loading…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>';
+// A short slide or fade when the list changes because you went somewhere (never on a refresh).
+var enter = null;
+function playEnter() {
+  const move = enter;
+  enter = null;
+  if (!move || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  $('list').animate?.([{ opacity: 0, transform: `translate(${move.x || 0}px, ${move.y || 0}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
+}
+function scrollToStart() {
+  const today = range === 'week' && weekOffset === 0 && !searching() && document.querySelector('#list .day.is-today');
+  const top = today ? today.getBoundingClientRect().top + window.scrollY - document.querySelector('header').offsetHeight - 10 : 0;
+  window.scrollTo(0, Math.max(0, top));
+}
+
 function render(items, start, plans) {
   const restore = preserveListPosition();
   updateFallbackControls();
@@ -747,7 +762,7 @@ function render(items, start, plans) {
   let html = ordered.map(({ date, rows }) => {
     const heading = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
     // Rows without a ✓ keep its place, so every row's buttons line up.
-    const checkSpace = auth ? '<div class="watch-space"></div><div class="drop-space"></div>' : '';
+    const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
     // The reason: the newest LiveChart headline about the break (linked to the article), or a
     // note that none was announced.
     const pause = ({ show, slot, when, episode, note, news, watchAt }) => `
@@ -780,10 +795,12 @@ function render(items, start, plans) {
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
     const hm = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const timeCell = (when, watchAt) => {
-      const release = `${when.toLocaleDateString(undefined, { weekday: 'short' })} ${hm(when)}`;
+      const weekday = when.toLocaleDateString(undefined, { weekday: 'short' });
+      const release = `${weekday} ${hm(when)}`;
+      const releaseCell = `<span class="time-day${when.toDateString() === date.toDateString() ? ' same' : ''}">${weekday}</span> ${hm(when)}`;
       const watch = hm(new Date(watchAt));
       return choices.time === 'watch' ? watch
-        : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : release;
+        : choices.time === 'both' ? `${watch}<small>out ${release}</small>` : releaseCell;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
       <div class="row" data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
@@ -794,7 +811,7 @@ function render(items, start, plans) {
           <div class="ep">${episodes.length > 1 ? `Episodes ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Episode ${it.episode}`}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
-        ${watchButton(m.id, Math.max(...episodes))}${auth ? dropButton(m.id) : ''}${moveButton(show, slot)}
+        ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
       </div>`;
     // Shows sharing a watch slot (e.g. one watched instead of the other) go into one card.
     const groups = [];
@@ -804,14 +821,14 @@ function render(items, start, plans) {
     }
     const body = groups.length
       ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
-      : '<div class="ep" style="padding:0 10px">Nothing airing</div>';
+      : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
     return `<section class="day${date.toDateString() === today ? ' is-today' : ''}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2>${heading}</h2>${body}</section>`;
   }).join('');
 
   // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
   const age = streamsDe?.generated && Math.floor((Date.now() - Date.parse(streamsDe.generated)) / 86400000);
   if (age >= 14) html = `<div class="notice">Stream links were last updated ${age} days ago; the weekly refresh may have stopped.</div>` + html;
-  // At the very top, in red, one line per show: breaks with the reason (the newest LiveChart
+  // At the very top, one line per show: breaks with the reason (the newest LiveChart
   // headline about it, linked) and when it's back, then plan shows that couldn't be placed.
   const dayName = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const lines = [
@@ -832,6 +849,7 @@ function render(items, start, plans) {
   applySearch();
   syncSavingButtons();
   restore();
+  playEnter();
 }
 
 // ---------- Catch-up ----------
@@ -998,7 +1016,9 @@ function setTheme(choice) {
   theme = choice === 'light' || choice === 'dark' ? choice : 'auto';
   if (theme === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = theme;
-  document.documentElement.toggleAttribute('data-dark', theme === 'dark' || (theme === 'auto' && systemDark.matches));
+  const dark = theme === 'dark' || (theme === 'auto' && systemDark.matches);
+  document.documentElement.toggleAttribute('data-dark', dark);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#121216' : '#f6f6f8');
   try { localStorage.setItem('theme', theme); } catch {}
 }
 try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
@@ -1661,40 +1681,8 @@ function dueAt(released, slot, show) {
   return Math.max(released, day.getTime() / 1000);
 }
 
-async function loadCatchup(strict = false, refresh = false) {
-  updateFallbackControls();
-  const user = $('anilistUser').value.trim();
-  const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
-  const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
-  $('tabName').textContent = user ? `${name} · ${user} on ${listService()}` : name;
-  if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name in the AniList menu.</div>'; return; }
-  if (!document.querySelector('#list .row')) $('list').innerHTML = '<div class="status">Loading…</div>';
-  await ready;
-  let entries;
-  try {
-    entries = await anilistList(user);
-  } catch (e) {
-    if (strict) throw new Error(`AniList: ${e.message}`);
-    if (refresh && view === shown && document.querySelector('#list .row')) {
-      notice(`Couldn't refresh ${name}: ${e.message}. Still showing the previous data.`);
-      return;
-    }
-    if (view === shown) $('list').innerHTML = failed(navigator.onLine === false
-      ? `You're offline, and ${user}'s AniList list isn't saved in this browser yet.` : `Couldn't load ${user}'s AniList list (${e.message}).`);
-    return;
-  }
-  if (view !== shown) return;
-  // This season's Guckplan, for each show's "Wo" (that service's button first).
-  let plan = null;
-  try {
-    plan = await sheetFor(tabFor(tabs, new Date()));
-    setNote('catchup:plan', null);
-  } catch (e) {
-    setNote('catchup:plan', `${unreachable('Google Sheets')}: without the Guckplan, watch slots and planned shows missing from the list are left out.`);
-  }
-  // Plus the Solo person's Guckplan shows that aren't on the AniList Watching list (forgotten).
-  const planShows = await missingPlanShows(plan, entries);
-  if (view !== shown) return;
+// What's open on a list: the seasonal shows (rows, for Catch-up) and the older ones (ownPace).
+function catchupRows(entries, planShows, plan) {
   const now = Date.now() / 1000;
   const week = 7 * 86400;
   const mySlots = plan && soloPerson ? [...picks(plan, soloPerson)] : [];
@@ -1724,6 +1712,66 @@ async function loadCatchup(strict = false, refresh = false) {
     const row = { m, first, out, since, missing, progress, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
     (missing || show || recent(m) ? rows : ownPace).push(row);
   }
+  return { rows, ownPace };
+}
+
+// The number on the Catch-up button: episodes waiting. Worked out from the same saved copies as the
+// view itself; if something can't be read the number simply stays away.
+function showCatchupCount(rows) {
+  const count = rows.reduce((sum, r) => sum + r.out - r.first + 1, 0);
+  $('catchupCount').textContent = count || '';
+  $('catchupCount').hidden = !count;
+  $('catchupCount').title = count ? `${count} ${count === 1 ? 'episode' : 'episodes'} to catch up` : '';
+}
+let countingCatchup = false;
+async function updateCatchupCount() {
+  const user = $('anilistUser').value.trim();
+  if (!user || countingCatchup) return;
+  countingCatchup = true;
+  try {
+    const entries = await anilistList(user);
+    const plan = await sheetFor(tabFor(tabs, new Date()));
+    const { rows } = catchupRows(entries, await missingPlanShows(plan, entries), plan);
+    if ($('anilistUser').value.trim() === user) showCatchupCount(rows);
+  } catch {} finally { countingCatchup = false; }
+}
+
+async function loadCatchup(strict = false, refresh = false) {
+  updateFallbackControls();
+  const user = $('anilistUser').value.trim();
+  const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
+  const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
+  $('tabName').textContent = user ? `${name} · ${user} on ${listService()}` : name;
+  if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name in the AniList menu.</div>'; return; }
+  if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
+  await ready;
+  let entries;
+  try {
+    entries = await anilistList(user);
+  } catch (e) {
+    if (strict) throw new Error(`AniList: ${e.message}`);
+    if (refresh && view === shown && document.querySelector('#list .row')) {
+      notice(`Couldn't refresh ${name}: ${e.message}. Still showing the previous data.`);
+      return;
+    }
+    if (view === shown) $('list').innerHTML = failed(navigator.onLine === false
+      ? `You're offline, and ${user}'s AniList list isn't saved in this browser yet.` : `Couldn't load ${user}'s AniList list (${e.message}).`);
+    return;
+  }
+  if (view !== shown) return;
+  // This season's Guckplan, for each show's "Wo" (that service's button first).
+  let plan = null;
+  try {
+    plan = await sheetFor(tabFor(tabs, new Date()));
+    setNote('catchup:plan', null);
+  } catch (e) {
+    setNote('catchup:plan', `${unreachable('Google Sheets')}: without the Guckplan, watch slots and planned shows missing from the list are left out.`);
+  }
+  // Plus the Solo person's Guckplan shows that aren't on the AniList Watching list (forgotten).
+  const planShows = await missingPlanShows(plan, entries);
+  if (view !== shown) return;
+  const { rows, ownPace } = catchupRows(entries, planShows, plan);
+  showCatchupCount(rows);
   // ⚙ Sort: longest waiting first, most episodes behind first, or by title.
   const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
   rows.sort(choices.sort === 'az' ? byTitle
@@ -1778,7 +1826,7 @@ async function loadCatchup(strict = false, refresh = false) {
         <div class="ep">${progress} of ${m.episodes || out} watched</div>
       </div>
       ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
-      ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) + dropButton(m.id) : ''}
+      ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) : ''}
     </div>`;
   if (!mine || shown === 'pace') selecting = false;
   const restore = preserveListPosition();
@@ -1814,6 +1862,7 @@ async function loadCatchup(strict = false, refresh = false) {
   applySearch();
   syncSavingButtons();
   restore();
+  playEnter();
 }
 
 // The Solo person's Guckplan shows (this season, known to the weekly LiveChart data) that aren't
@@ -1869,7 +1918,7 @@ async function load(refresh = false, strict = false) {
   const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
   $('week').textContent = `${fmt(start)} – ${fmt(end)}`;
-  if (!cache.has(start.getTime()) && !strict && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = '<div class="status">Loading…</div>';
+  if (!cache.has(start.getTime()) && !strict && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
   // Last week too: an episode airing after its watch day is watched the following week.
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   // Start AniList right away; it runs while the sheet loads.
@@ -1911,8 +1960,10 @@ async function load(refresh = false, strict = false) {
     // Rewatches seen for the first time: look them up, then show them.
     if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
     if (pendingNext.size) lookUpNext().then(() => load(true));
-    // A new week starts at the top (with "Today", that's today itself).
-    if (!refresh) window.scrollTo(0, 0);
+    // A new week starts at the top (with "Today", that's today itself); this week as a whole starts
+    // at today, with the days before it a scroll up.
+    if (!refresh) scrollToStart();
+    updateCatchupCount();
   } catch (e) {
     if (strict) throw e;
     if (refresh && document.querySelector('#list .row')) {
@@ -1934,14 +1985,32 @@ function setRange(next) {
   $('fromToday').setAttribute('aria-pressed', range === 'rest');
 }
 setRange('rest');
-$('prev').onclick = () => { weekOffset--; setRange('week'); load(); };
-$('next').onclick = () => { weekOffset++; setRange('week'); load(); };
+$('prev').onclick = () => { weekOffset--; setRange('week'); enter = { x: -14 }; load(); };
+$('next').onclick = () => { weekOffset++; setRange('week'); enter = { x: 14 }; load(); };
 for (const [id, value] of [['thisWeek', 'today'], ['fromToday', 'rest']])
   $(id).onclick = () => {
     setRange(weekOffset === 0 && range === value ? 'week' : value);
     weekOffset = 0;
+    enter = { y: 4 };
     load();
   };
+$('list').addEventListener('click', e => { if (e.target.closest('[data-rest-of-week]')) $('fromToday').click(); });
+// Phones: swipe sideways over the week to change it. Not from the screen's edges (the phone's own
+// back gesture) and not while editing (a card is being dragged then).
+{
+  let from = null;
+  $('list').addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    from = e.touches.length === 1 && view === 'week' && document.body.classList.contains('no-move')
+      && t.clientX > 24 && t.clientX < innerWidth - 24 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+  }, { passive: true });
+  $('list').addEventListener('touchend', e => {
+    if (!from) return;
+    const t = e.changedTouches[0], dx = t.clientX - from.x, dy = t.clientY - from.y, quick = Date.now() - from.at < 700;
+    from = null;
+    if (quick && Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) $(dx < 0 ? 'next' : 'prev').click();
+  }, { passive: true });
+}
 try { localStorage.removeItem('todayFirst'); } catch {}
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
@@ -2151,9 +2220,9 @@ function setView(next) {
   try { localStorage.setItem('view', view); } catch {}
 }
 setView(view);
-$('viewWeek').onclick = () => { setView('week'); load(); };
-$('viewCatchup').onclick = () => { setView('catchup'); load(); };
-$('viewPace').onclick = () => { setView('pace'); load(); };
+$('viewWeek').onclick = () => { setView('week'); enter = { y: 4 }; load(); };
+$('viewCatchup').onclick = () => { setView('catchup'); enter = { y: 4 }; load(); };
+$('viewPace').onclick = () => { setView('pace'); enter = { y: 4 }; load(); };
 try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') !== '0'; } catch { $('catchupLinks').checked = true; }
 $('catchupLinks').onchange = () => {
   try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
