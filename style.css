@@ -335,11 +335,6 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .help-sections h3 { font-size: 13px; margin: 0 0 3px; }
 .help-sections p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .quick-guide > .dlg-row { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 12px 16px; background: var(--card); border-top: 1px solid var(--line); }
-.tour-panel { position: fixed; margin: 0; width: min(360px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
-.tour-panel::backdrop { background: rgba(0,0,0,.18); }
-.tour-panel h2 { margin-top: 6px; }
-.tour-panel p { font-size: 13px; line-height: 1.5; }
-.tour-highlight { outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 .move { touch-action: none; cursor: grab; }
 .move-card { cursor: grab; }
 .move-card:active { cursor: grabbing; }
@@ -350,7 +345,8 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .row.drop-slot { border-color: var(--accent); background: var(--today); outline: 2px solid var(--accent); outline-offset: -1px; }
 .drag-hint { position: fixed; z-index: 9; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
   max-width: calc(100vw - 24px); width: max-content; padding: 9px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--accent); color: var(--text); font-size: 13px; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
-.keyboard-guide { margin: 0 0 16px; display: grid; gap: 12px; font-size: 13px; }
+@media (hover: none) { #helpKeys { display: none; } } /* no keyboard to use them with */
+.keyboard-guide { margin: 6px 0 0; display: grid; gap: 12px; font-size: 13px; }
 .keyboard-guide > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: center; }
 .keyboard-guide dd { margin: 0; }
 kbd { display: inline-block; min-width: 23px; padding: 2px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--bg); font: 12px/1.4 system-ui, sans-serif; text-align: center; }
@@ -448,8 +444,8 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .links { grid-column: 3; grid-row: 2; align-self: end; }
   /* The time sits on the cover, so the left edge still reads as a timetable */
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; z-index: 1; width: 56px; min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; }
-  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px; }
-  :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 10px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { font-size: 10px; }
   .row.compact img { width: 36px; height: 50px; }
   .catchup-single > img, .catchup-show .show-head > img { width: 44px; height: 62px; }
   /* People get their own line instead of wrapping around "Episode 5" */
@@ -574,21 +570,21 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 
 /* The time on the cover, at every width: a small bubble at its foot, so the rest of the picture keeps
    its colour. White on it stays readable on any cover, even a white one (about 6:1, the small line 5:1). */
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; }
-/* Behind the time the picture is blurred and grayed, close around the text, melting away with no edge.
-   The layer never reaches past the cover, so nothing spills onto the row. The text's own glow keeps it
-   readable where the layer has faded, even on a white cover. */
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time { --cover: 60px; text-shadow: 0 0 2px rgba(0, 0, 0, .95), 0 0 5px rgba(0, 0, 0, .85), 0 1px 1px rgba(0, 0, 0, .8); }
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time::before { content: ''; position: absolute; left: max(-8px, calc(50% - var(--cover) / 2)); right: max(-8px, calc(50% - var(--cover) / 2)); top: -8px; bottom: -4px; z-index: -1; background: rgba(62, 62, 70, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  --melt: radial-gradient(ellipse farthest-side at 50% 50%, #000 55%, rgba(0, 0, 0, .6) 76%, rgba(0, 0, 0, .15) 92%, transparent 100%);
-  -webkit-mask-image: var(--melt); mask-image: var(--melt); }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; line-height: 1.15; text-align: center; padding: 2px 5px; }
+/* Behind the time a small see-through gray box that hugs the text, with soft edges and no blur, so the
+   picture stays visible. It never reaches past the cover. On a white cover the text is about 4.8:1. */
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time { --cover: 60px; }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: #e8e8e8; }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time::before { content: ''; position: absolute; left: max(-3px, calc(50% - var(--cover) / 2)); right: max(-3px, calc(50% - var(--cover) / 2)); top: -3px; bottom: -2px; z-index: -1; background: rgba(40, 40, 44, .72);
+  --fade-x: linear-gradient(to right, transparent, #000 4px, #000 calc(100% - 4px), transparent); --fade-y: linear-gradient(to bottom, transparent, #000 4px, #000 calc(100% - 4px), transparent);
+  -webkit-mask-image: var(--fade-x), var(--fade-y); mask-image: var(--fade-x), var(--fade-y); -webkit-mask-composite: source-in; mask-composite: intersect; }
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time .out { display: none; }
 @media (min-width: 561px) {
   :root:not(.no-frills) .row:not(.compact) > img { width: 60px; height: 84px; }
   /* Taken out of the row and centred on the cover's foot (the cover is centred in the row, 84px high) */
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time { position: absolute; left: 38px; top: 50%; transform: translate(-50%, calc(42px - 100% - 4px)); font-size: 13px; }
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(small) { padding: 2px 3px; }
-  :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 11px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { font-size: 11px; }
   /* A row without a cover keeps its time in the same column */
   :root:not(.no-frills) .row:not(.compact):not(:has(> img)) > .time { width: 60px; text-align: center; }
 }
