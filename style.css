@@ -282,20 +282,14 @@ header.away ~ main .day h2 { top: 0; }
 /* Premiere / Final next to the episode number */
 .ep-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 99px; font-size: 11px; font-weight: 600; line-height: 16px;
   background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
-/* How far through the show: a thin line along the row's bottom edge */
-.progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none; background: color-mix(in srgb, var(--text) 7%, transparent); }
-.progress i { display: block; height: 100%; background: color-mix(in srgb, var(--accent) 75%, transparent); border-radius: 0 2px 2px 0; }
-.row.aired .progress i { opacity: .45; }
-/* The week at a glance, above the days */
-.daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0 0 16px; }
-.daystrip button { display: grid; justify-items: center; align-content: start; gap: 1px; min-height: 62px; padding: 7px 0 6px; border-radius: 12px; font-size: 11px; color: var(--muted); box-shadow: var(--raise); }
-.daystrip b { font-size: 17px; font-weight: 700; line-height: 1.2; color: var(--text); font-variant-numeric: tabular-nums; }
-.daystrip i { display: flex; justify-content: center; gap: 2px; height: 5px; margin-top: 3px; }
-.daystrip s { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
-.daystrip .past { opacity: .5; }
-.daystrip .today { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.daystrip .today b { color: inherit; }
-.daystrip .today s { background: var(--accent-text); }
+/* The week on one slim line above the days: plain text, today tinted like the other soft switches */
+.daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; margin: 0 0 6px; }
+.daystrip button { padding: 3px 0; border: 0; border-radius: 99px; background: transparent; font-size: 12px; line-height: 18px; white-space: nowrap; color: var(--muted); }
+.daystrip b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.daystrip .past, .daystrip .free { opacity: .55; }
+.daystrip .today { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+@media (hover: hover) { .daystrip button:hover { color: var(--text); opacity: 1; } }
+@media (pointer: coarse) { .daystrip button { min-height: 30px; } }
 body.searching .daystrip { display: none; }
 /* After the last day: on to another week */
 .pager { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
@@ -464,7 +458,7 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 }
 
 /* ⚙ No frills: the same page without decoration. Words, times and buttons only. */
-.no-frills .row img, .no-frills .logo, .no-frills .status.happy img, .no-frills .daystrip, .no-frills .progress, .no-frills .row::before { display: none; }
+.no-frills .row img, .no-frills .logo, .no-frills .status.happy img, .no-frills .daystrip, .no-frills .row::before { display: none; }
 .no-frills header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .no-frills .row, .no-frills .shared, .no-frills .cr:not(.none), .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice, .no-frills #update { box-shadow: none; }
 .no-frills *, .no-frills ::before, .no-frills ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
