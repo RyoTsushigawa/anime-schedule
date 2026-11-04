@@ -264,6 +264,7 @@ header.away ~ main .day h2 { top: 0; }
 .row.aired .time, .row.aired .title, .row.pause .time, .row.pause .title { color: var(--muted); }
 .row.aired img, .row.pause img { opacity: .7; }
 /* Its stream button steps back too, in plain colors, and comes back under the mouse or keyboard */
+:root.plain-services .cr { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.aired:not(:hover) .cr:not(:focus-visible) { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.pause { border-style: dashed; padding: 10px 8px; }
 .row.pause .time { font-weight: 500; }
