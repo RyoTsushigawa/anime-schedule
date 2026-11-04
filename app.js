@@ -645,7 +645,7 @@ function playEnter() {
   const move = enter;
   enter = null;
   if (!move || document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  $('list').animate?.([{ opacity: 0, transform: `translate(${move.x || 0}px, ${move.y || 0}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
+  $('list').animate?.([{ opacity: 0, transform: `translate(${move.x || 0}px, ${move.y || 0}px)` }, { opacity: 1, transform: 'none' }], { duration: 110, easing: 'ease-out' });
 }
 window.ResizeObserver && new ResizeObserver(() => document.documentElement.style.setProperty('--head', document.querySelector('header').offsetHeight + 'px')).observe(document.querySelector('header'));
 function scrollToStart() {
@@ -654,6 +654,8 @@ function scrollToStart() {
   window.scrollTo(0, Math.max(0, top));
 }
 
+// Sheet show → AniList id → title score. Stays valid across redraws; a reloaded sheet has new show objects.
+const showScores = new WeakMap();
 function render(items, start, plans) {
   const restore = preserveListPosition();
   updateFallbackControls();
@@ -685,7 +687,7 @@ function render(items, start, plans) {
   }));
   const showWho = $('who').checked;
   const whoChips = who => showWho && who?.length
-    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span>` : '';
+    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Show everyone: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : '';
   const found = new Set();
   // Logged in and Solo: shows you dropped on AniList are gone from your week. In Group they stay,
   // with "Dropped" in place of the Drop button, since the others may still watch them.
@@ -699,7 +701,13 @@ function render(items, start, plans) {
   }
   // A sheet show only links to its best-matching AniList entries, so spin-off mini anime
   // ("… Mini Anime" synonyms) don't tag along with the main show.
-  const score = (s, m) => titleScore([s.romaji, s.english], mediaTitles(m));
+  const score = (s, m) => {
+    let known = showScores.get(s);
+    if (!known) showScores.set(s, known = new Map());
+    let value = known.get(m.id);
+    if (value === undefined) known.set(m.id, value = titleScore([s.romaji, s.english], mediaTitles(m)));
+    return value;
+  };
   const best = new Map();
   // A tab's shows, plus catalog entries someone named that have no Guckplan row of their own.
   const showsOf = sheet => sheet ? [...sheet.shows, ...[...chosen.get(sheet).keys()].filter(s => !sheet.shows.includes(s))] : [];
@@ -2053,6 +2061,14 @@ async function load(refresh = false, strict = false) {
   }
 }
 $('list').addEventListener('click', e => { if (e.target.closest('.retry')) load(); });
+// Phones show two people and "+3"; pressing it lists everyone, pressing again folds them back.
+$('list').addEventListener('click', e => {
+  const more = e.target.closest('.who-more');
+  if (!more) return;
+  const open = more.parentElement.classList.toggle('open');
+  more.setAttribute('aria-expanded', open);
+  more.textContent = open ? '–' : more.dataset.more;
+});
 
 // Which days of the week show: 'rest' (today to Sunday, how the page opens), 'today' (today only)
 // or 'week' (all of it; the arrows always show whole weeks). "Today" and "From today" go to this
