@@ -573,8 +573,10 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 /* The time on the cover, at every width: white on a dark band that always reaches past the text,
    so it stays readable on any cover, even a white one (about 13:1, the weekday about 10:1). */
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time { --band: 28px; background: linear-gradient(transparent calc(100% - var(--band) - 16px), rgba(0, 0, 0, .82) calc(100% - var(--band))); }
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(.time-day:not(.same)) { --band: 42px; }
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(small) { background: rgba(0, 0, 0, .72); }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(.time-day:not(.same), small) { --band: 42px; }
+/* On a cover the band stays small, so the picture keeps its colour: the release fits one short line */
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time .out { display: none; }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time small { white-space: nowrap; }
 @media (min-width: 561px) {
   :root:not(.no-frills) .row:not(.compact) > img { width: 60px; height: 84px; }
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; width: 60px; height: 84px; margin-right: -74px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; color: #fff; font-size: 14px; line-height: 1.15; text-align: center; padding: 14px 2px 5px; border-radius: 7px; }
