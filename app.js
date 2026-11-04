@@ -1211,6 +1211,7 @@ function preserveListPosition() {
   const focused = document.activeElement;
   const focusMedia = focused?.closest('#list button[data-media]') ? { media: focused.dataset.media, ep: focused.dataset.ep,
     kind: ['watch', 'drop', 'score', 'move'].find(c => focused.classList.contains(c)) } : null;
+  const focusedRow = focused?.matches?.('#list .row') ? keyRows().indexOf(focused) : -1;
   const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.id || d.querySelector('summary')?.textContent));
   return () => {
     for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(d.id || d.querySelector('summary')?.textContent);
@@ -1218,6 +1219,10 @@ function preserveListPosition() {
       const next = [...document.querySelectorAll('#list button[data-media]')].find(b => !b.disabled && b.dataset.media === focusMedia.media
         && b.dataset.ep === focusMedia.ep && b.classList.contains(focusMedia.kind));
       next?.focus({ preventScroll: true });
+    }
+    if (focusedRow >= 0 && !focused.isConnected && !document.querySelector('dialog[open]')) {
+      const rows = keyRows();
+      if (rows.length) selectRow(rows[Math.min(focusedRow, rows.length - 1)]);
     }
     restoreAnchor(anchor);
   };
@@ -2571,20 +2576,61 @@ $('keyboardDialog').addEventListener('close', () => {
 for (const [id, key, hint] of [
   ['prev', 'ArrowLeft', 'Previous week (←)'], ['next', 'ArrowRight', 'Next week (→)'],
   ['viewWeek', '1', 'Week (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
+  ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Group (G)'],
   ['searchButton', '/', 'Search shows (/)'], ['keyboardHelp', 'Shift+/', 'Keyboard shortcuts (?)'],
 ]) {
   $(id).setAttribute('aria-keyshortcuts', key);
   $(id).title = hint;
 }
+// J and K go through the shows: the selected one is the row that has the focus, so it wears the
+// usual focus ring. Pauses have nothing to act on, and a per-episode head only heads its episodes.
+function keyRows() {
+  return [...document.querySelectorAll('#list .row:not(.pause):not(.show-head)')].filter(r => !r.closest('.hidden-by-search, details:not([open])'));
+}
+function selectRow(row) {
+  row.tabIndex = -1;
+  // Only while selected, or a later mouse click would select it without showing it. (Switching to
+  // another window also blurs it, but it's still the active element and comes back selected.)
+  row.addEventListener('blur', () => { if (document.activeElement !== row) row.removeAttribute('tabindex'); }, { once: true });
+  row.focus({ preventScroll: true });
+}
+function stepRow(by) {
+  const rows = keyRows();
+  const at = rows.indexOf(document.activeElement?.closest?.('#list .row'));
+  const headerBottom = document.querySelector('header').getBoundingClientRect().bottom;
+  // Nothing selected yet: start from what's on screen, not from the top of the list
+  const row = at < 0 ? rows.find(r => r.getBoundingClientRect().top >= headerBottom) || rows[0]
+    : rows[Math.min(rows.length - 1, Math.max(0, at + by))];
+  if (!row) return;
+  selectRow(row);
+  const box = row.getBoundingClientRect();
+  const clear = headerBottom + (row.closest('.day')?.querySelector('h2')?.offsetHeight || 0) + 8;
+  if (box.top < clear) scrollTo(0, scrollY + box.top - clear);
+  else if (box.bottom > innerHeight - 8) scrollTo(0, scrollY + box.bottom - innerHeight + 8);
+}
 document.addEventListener('keydown', event => {
-  if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.defaultPrevented || (event.repeat && !/^[jk]$/i.test(event.key)) || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
   if (event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
   if (document.body.classList.contains('dnd-moving') || document.querySelector('dialog[open], .popover:not([hidden])')) return;
   const key = event.key.toLowerCase();
   if (event.shiftKey && key !== '?') return;
   let action;
-  if (key === 'arrowleft' && view === 'week') action = () => $('prev').click();
-  else if (key === 'arrowright' && view === 'week') action = () => $('next').click();
+  const selected = event.target.matches?.('#list .row') ? event.target : null;
+  const oneDay = (range === 'day' || range === 'today') && !searching();
+  if (key === 'arrowleft' && view === 'week') action = () => oneDay ? stepDay(-1) : $('prev').click();
+  else if (key === 'arrowright' && view === 'week') action = () => oneDay ? stepDay(1) : $('next').click();
+  else if (key === 'g' && view === 'week') action = () => $(mode === 'solo' ? 'modeGroup' : 'modeSolo').click();
+  else if (key === 'j') action = () => stepRow(1);
+  else if (key === 'k') action = () => stepRow(-1);
+  else if (key === 'escape' && selected) action = () => selected.blur();
+  else if (key === 'enter' && selected) {
+    const link = selected.querySelector('.links a') || selected.closest('.catchup-show')?.querySelector('.links a');
+    if (link) action = () => link.click();
+  } else if (key === 'w' && selected) {
+    // Only ever marks: a ticked one stays ticked, so a second press can't take it back
+    const tick = selected.querySelector('.watch:not(.done):not(:disabled):not([data-select])');
+    if (tick) action = () => tick.click();
+  }
   else if (key === '/') action = () => openSearch(true);
   else if (key === '?') action = openKeyboardHelp;
   else if (key === 't') action = () => { setView('week'); weekOffset = 0; setRange('today'); load(); };
