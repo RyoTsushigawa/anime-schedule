@@ -27,7 +27,7 @@
   <!-- Row 1: title left, 🔍 and ⚙ top right. Row 2: view and person left; week right. -->
   <div class="bar">
     <img class="logo" src="icon-192.png" alt="" width="36" height="36"><div class="brand">
-      <div class="brand-title"><h1><span class="title-long">Simulcast </span>Schedule</h1><button id="helpButton" class="help-icon" aria-label="How to use this site" aria-haspopup="dialog" title="Quick guide and site tour">?</button></div>
+      <div class="brand-title"><h1><span class="title-long">Simulcast </span>Schedule</h1><button id="helpButton" class="help-icon" aria-label="Guide and keyboard shortcuts" aria-haspopup="dialog">?</button></div>
       <div id="tabName">Guckplan</div>
       <div id="weekSub" class="week-sub"></div>
     </div>
@@ -94,11 +94,6 @@
           <details class="menu-extra"><summary>More options</summary>
           <div class="pills settings-options">
             <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
-            <button id="refreshData" title="Forget the saved copies and load everything fresh">Refresh data</button>
-            <button id="keyboardHelp">Shortcuts</button>
-            <button id="backupSettings" title="Back up settings; excludes logins and keys">Back up</button>
-            <button id="restoreSettings" title="Restore settings from a backup">Restore</button>
-            <input id="settingsFile" type="file" accept=".json,application/json" hidden>
           </div>
           </details>
         </section>
@@ -211,25 +206,6 @@
 </dialog>
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
 
-<dialog id="restoreDialog" class="dlg" aria-labelledby="restoreTitle"><h2 id="restoreTitle">Restore settings?</h2><p>This replaces your preferences, planner settings and saved service choices.</p><p class="muted">Your AniList login and shared schedule stay as they are.</p><div class="dlg-row"><button id="cancelRestore" class="pill">Cancel</button><button id="confirmRestore" class="pill primary">Restore and reload</button></div></dialog>
-<dialog id="keyboardDialog" class="dlg" aria-labelledby="keyboardTitle">
-  <h2 id="keyboardTitle">Keyboard shortcuts</h2>
-  <dl class="keyboard-guide">
-    <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next week, or day when one day is shown</dd></div>
-    <div><dt><kbd>T</kbd></dt><dd>Show today</dd></div>
-    <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Schedule / Catch-up / Non-seasonal</dd></div>
-    <div><dt><kbd>G</kbd></dt><dd>Solo / Group</dd></div>
-    <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous show</dd></div>
-    <div><dt><kbd>Enter</kbd></dt><dd>Open the selected show's stream</dd></div>
-    <div><dt><kbd>W</kbd></dt><dd>Mark the selected show's episode watched</dd></div>
-    <div><dt><kbd>/</kbd></dt><dd>Search shows</dd></div>
-    <div><dt><kbd>Esc</kbd></dt><dd>Close search or menu, or deselect the show</dd></div>
-    <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Undo your last list change</dd></div>
-    <div><dt><kbd>?</kbd></dt><dd>Show this guide</dd></div>
-  </dl>
-  <p class="muted">Navigation shortcuts pause while typing, using a menu, or filling in a dialog.</p>
-  <div class="dlg-row"><button id="keyboardClose" class="pill">Close</button></div>
-</dialog>
 <dialog id="helpDialog" class="dlg quick-guide" aria-labelledby="helpTitle">
   <h2 id="helpTitle">A quick guide</h2>
   <div class="help-sections">
@@ -238,20 +214,30 @@
     <section><h3>Watch, then tick ✓</h3><p>Service buttons open the show. Connect an account to use ✓, Drop and scores. Ticking an episode sets your progress up to that episode, including earlier ones. Use <b>Undo</b> or Ctrl/⌘+Z for mistakes.</p></section>
     <section><h3>Catch up your way</h3><p><b>Single episodes</b> keeps each show’s episodes together in order. <b>Mark all as watched</b> first lets you exclude shows with their ✓; press again to save.</p></section>
     <section><h3>Connect your lists</h3><p>The account icon connects AniList or MyAnimeList. With both connected, select the matching account and enable <b>Sync both lists</b> to mirror new changes made here. Existing lists are not copied.</p></section>
-    <section><h3>Make it yours</h3><p>Settings controls links, viewers, time and colour, and <b>Simplified view</b> switches to a plain look. <b>Fallback links</b> chooses AniWorld or torrents for the selected people when no service is shown. <b>More options</b> contains refresh, backups and shortcuts. The planner and ranker are below the schedule.</p></section>
+    <section><h3>Make it yours</h3><p>Settings controls links, viewers, time and colour, and <b>Simplified view</b> switches to a plain look. <b>Fallback links</b> chooses AniWorld or torrents for the selected people when no service is shown. <b>Other services</b>, under More options, also lists services you don’t have. The planner and ranker are below the schedule.</p></section>
     <section><h3>Move a show</h3><p>With editing access, use <b>Edit schedule</b>. Drag a show card onto a day or slot, then save the destination. On phones, hold the card briefly before dragging. Dropping on another show shares its time slot. Click ⇄ to enter a destination instead. Saved moves are shared with everyone.</p></section>
+    <section id="helpKeys"><h3>Keyboard shortcuts</h3>
+      <dl class="keyboard-guide">
+        <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next week, or day when one day is shown</dd></div>
+        <div><dt><kbd>T</kbd></dt><dd>Show today</dd></div>
+        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Schedule / Catch-up / Non-seasonal</dd></div>
+        <div><dt><kbd>G</kbd></dt><dd>Solo / Group</dd></div>
+        <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous show</dd></div>
+        <div><dt><kbd>Enter</kbd></dt><dd>Open the selected show's stream</dd></div>
+        <div><dt><kbd>W</kbd></dt><dd>Mark the selected show's episode watched</dd></div>
+        <div><dt><kbd>/</kbd></dt><dd>Search shows</dd></div>
+        <div><dt><kbd>Esc</kbd></dt><dd>Close search or menu, or deselect the show</dd></div>
+        <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Undo your last list change</dd></div>
+        <div><dt><kbd>?</kbd></dt><dd>Show this guide</dd></div>
+      </dl>
+    </section>
   </div>
-  <div class="dlg-row"><button id="helpShortcuts" class="pill">Shortcuts</button><button id="helpTour" class="pill primary">Show me around</button><button id="helpClose" class="pill">Close</button></div>
-</dialog>
-<dialog id="tourDialog" class="dlg tour-panel" aria-labelledby="tourTitle" aria-describedby="tourText">
-  <div id="tourProgress" class="muted"></div><h2 id="tourTitle"></h2><p id="tourText"></p>
-  <div class="dlg-row"><button id="tourStop" class="pill">Exit tour</button><button id="tourBack" class="pill">Back</button><button id="tourNext" class="pill primary">Next</button></div>
+  <div class="dlg-row"><button id="helpClose" class="pill">Close</button></div>
 </dialog>
 <div id="dragHint" class="drag-hint" role="status" hidden></div>
 <script src="common.js"></script>
 <script src="mal.js"></script>
 <script src="app.js"></script>
-<script src="help.js"></script>
 <script src="drag-moves.js"></script>
 </body>
 </html>
