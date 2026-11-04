@@ -225,8 +225,18 @@ function resolveName(sheet, value) {
 
 // ---------- Title matching ----------
 
-const norm = s => String(s || '').normalize('NFKD').toLowerCase()
-  .replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1').replace(/[^a-z0-9]/g, '');
+// Remembered per text: a redraw compares thousands of title pairs, and the same few hundred titles come up.
+const normalized = new Map();
+const norm = s => {
+  const text = String(s || '');
+  let out = normalized.get(text);
+  if (out === undefined) {
+    out = text.normalize('NFKD').toLowerCase()
+      .replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1').replace(/[^a-z0-9]/g, '');
+    normalized.set(text, out);
+  }
+  return out;
+};
 
 // 2 = same title, 1 = one title starts with the other (e.g. "Season 2" spelled differently), 0 = no match.
 function titleScore(a, b) {
