@@ -97,11 +97,12 @@ body.pace .seasonal-only { display: none; }
 .menu-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; }
 /* Options as pills: outlined = off, filled = on (on/off toggles and the active account alike) */
 .pills { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 8px; }
-.menu .pills > button, .menu .pills > a, .menu .toggle { min-height: 32px; line-height: 1.3; text-align: center; }
+/* One kind of button in every menu, toggles and actions alike; a toggle that's on is filled */
+.menu .pills > button, .menu .pills > a, .menu .pill-row > button, .menu .toggle { min-width: 0; min-height: 38px; padding: 5px 6px; font-size: 12px; line-height: 1.2; text-align: center; }
 .pills .pill-row { display: flex; gap: 6px; }
 /* Segmented choices and color dots inside a menu: full width, evenly spread */
 .menu .segmented { display: flex; margin: 4px 8px 8px; }
-.menu .segmented button { flex: 1; padding: 4px 6px; font-size: 12px; }
+.menu .segmented button { flex: 1; min-height: 30px; padding: 4px 6px; font-size: 12px; }
 .swatches { display: flex; justify-content: space-between; padding: 4px 10px 10px; }
 .swatches button { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid var(--card); background: var(--swatch);
   box-shadow: 0 0 0 1px var(--line); }
@@ -160,16 +161,9 @@ img.avatar { object-fit: cover; }
 .sync-hint { font-size: 11px; color: var(--muted); margin: 0; padding: 0 10px 10px; }
 /* Compact menus: state controls remain pills; actions are quiet, aligned rows. */
 #settingsMenu .settings-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-#settingsMenu .settings-options .toggle { min-width: 0; min-height: 38px; padding: 5px 6px; font-size: 12px; line-height: 1.2; }
+#editScheduleMenu, .menu-extra .toggle { grid-column: 1 / -1; }
 .menu .menu-label { padding-top: 6px; }
 .menu section + section { margin-top: 4px; padding-top: 4px; }
-.menu .pills > a, .menu .pills > button:not(.account-choice), .menu .pill-row > button {
-  border-radius: 8px; background: transparent; border-color: transparent; justify-content: flex-start; text-align: left;
-}
-.menu .pill-row > button { justify-content: center; text-align: center; border-color: var(--line); min-width: 0; }
-@media (hover: hover) {
-  .menu .pills > a:hover, .menu .pills > button:not(.account-choice):hover, .menu .pill-row > button:hover { background: var(--bg); border-color: var(--line); }
-}
 #accountMenu { width: 240px; }
 #accountSection { gap: 7px; }
 #accountSection .account-choice { display: flex; justify-content: flex-start; gap: 8px; padding: 8px 10px; min-width: 0; min-height: 38px; }
@@ -198,7 +192,7 @@ img.avatar { object-fit: cover; }
 .catchup-show .row.compact .time { width: auto; color: var(--muted); font-size: 13px; font-weight: 500; }
 .catchup-bar { margin-bottom: 12px; }
 @media (pointer: coarse) {
-  #settingsMenu .settings-options .toggle, #accountSection .account-choice { min-height: 44px; }
+  .menu .pills > button, .menu .pills > a, .menu .pill-row > button, .menu .toggle, #accountSection .account-choice { min-height: 44px; }
   #listSyncSection .field select { min-height: 40px; font-size: 16px; }
 }
 .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
@@ -452,8 +446,7 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .row:not(.compact):not(:has(> .watch, > .drop, > .score, > .move)):has(> .links > :only-child) > .links { grid-column: 3; grid-row: 2; align-self: end; }
   /* The time sits on the cover, so the left edge still reads as a timetable */
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; z-index: 1; width: 56px; min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; }
-  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px;
-    background: linear-gradient(transparent calc(100% - 50px), rgba(0, 0, 0, .85) calc(100% - 22px)); }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time, :root:not(.no-frills) .row.aired:not(.compact):has(> img) > .time { color: #fff; font-size: 13px; line-height: 1.15; text-align: center; padding: 14px 2px 4px; border-radius: 6px; }
   :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 10px; }
   .row.compact img { width: 36px; height: 50px; }
   .catchup-single > img, .catchup-show .show-head > img { width: 44px; height: 62px; }
@@ -575,4 +568,17 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   .plan-actions { flex-wrap: wrap; }
   .plan-views { width: 100%; }
   .plan-views button { flex: 1; }
+}
+
+/* The time on the cover, at every width: white on a dark band that always reaches past the text,
+   so it stays readable on any cover, even a white one (about 13:1, the weekday about 10:1). */
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time { --band: 28px; background: linear-gradient(transparent calc(100% - var(--band) - 16px), rgba(0, 0, 0, .82) calc(100% - var(--band))); }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(.time-day:not(.same)) { --band: 42px; }
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time:has(small) { background: rgba(0, 0, 0, .72); }
+@media (min-width: 561px) {
+  :root:not(.no-frills) .row:not(.compact) > img { width: 60px; height: 84px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; width: 60px; height: 84px; margin-right: -74px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; white-space: normal; color: #fff; font-size: 14px; line-height: 1.15; text-align: center; padding: 14px 2px 5px; border-radius: 7px; }
+  :root:not(.no-frills) .row:not(.compact):has(> img) > .time .time-day, :root:not(.no-frills) .row:not(.compact):has(> img) > .time small { color: rgba(255, 255, 255, .85); font-size: 11px; }
+  /* A row without a cover keeps its time in the same column */
+  :root:not(.no-frills) .row:not(.compact):not(:has(> img)) > .time { width: 60px; text-align: center; }
 }
