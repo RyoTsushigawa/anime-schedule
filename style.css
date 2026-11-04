@@ -265,7 +265,9 @@ header.away ~ main .day h2 { top: 0; }
    cover; the text itself stays fully readable. */
 .row.aired, .row.pause { background: transparent; box-shadow: none; }
 .row.aired .time, .row.aired .title, .row.pause .time, .row.pause .title { color: var(--muted); }
-.row.aired img, .row.pause img { opacity: .5; }
+.row.aired img, .row.pause img { opacity: .7; }
+/* Its stream button steps back too, in plain colors, and comes back under the mouse or keyboard */
+.row.aired:not(:hover) .cr:not(:focus-visible) { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.pause { border-style: dashed; padding: 10px 8px; }
 .row.pause .time { font-weight: 500; }
 .row.pause .reason { font-style: italic; }
@@ -573,12 +575,12 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 /* The time on the cover, at every width: a small bubble at its foot, so the rest of the picture keeps
    its colour. White on it stays readable on any cover, even a white one (about 6:1, the small line 5:1). */
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time { z-index: 1; box-sizing: border-box; width: max-content; min-height: 0; display: block; white-space: nowrap; color: #fff; line-height: 1.15; text-align: center; padding: 2px 5px; }
-/* Behind the time the picture is blurred and darkened, and that melts away into the cover with no edge.
-   The layer is as wide as the cover and stops at its foot, so nothing spills onto the row. The text's
-   own glow keeps it readable where the layer has faded, even on a white cover. */
+/* Behind the time the picture is blurred and grayed, close around the text, melting away with no edge.
+   The layer never reaches past the cover, so nothing spills onto the row. The text's own glow keeps it
+   readable where the layer has faded, even on a white cover. */
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time { --cover: 60px; text-shadow: 0 0 2px rgba(0, 0, 0, .95), 0 0 5px rgba(0, 0, 0, .85), 0 1px 1px rgba(0, 0, 0, .8); }
-:root:not(.no-frills) .row:not(.compact):has(> img) > .time::before { content: ''; position: absolute; left: calc(50% - var(--cover) / 2); width: var(--cover); top: -14px; bottom: -4px; z-index: -1; border-radius: 0 0 7px 7px; background: rgba(0, 0, 0, .66); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  --melt: radial-gradient(ellipse farthest-side at 50% 62%, #000 50%, rgba(0, 0, 0, .55) 75%, rgba(0, 0, 0, .15) 92%, transparent 100%);
+:root:not(.no-frills) .row:not(.compact):has(> img) > .time::before { content: ''; position: absolute; left: max(-8px, calc(50% - var(--cover) / 2)); right: max(-8px, calc(50% - var(--cover) / 2)); top: -8px; bottom: -4px; z-index: -1; background: rgba(62, 62, 70, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  --melt: radial-gradient(ellipse farthest-side at 50% 50%, #000 55%, rgba(0, 0, 0, .6) 76%, rgba(0, 0, 0, .15) 92%, transparent 100%);
   -webkit-mask-image: var(--melt); mask-image: var(--melt); }
 :root:not(.no-frills) .row:not(.compact):has(> img) > .time .out { display: none; }
 @media (min-width: 561px) {
