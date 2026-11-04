@@ -240,7 +240,28 @@ function readyNeighbours(start) {
       fetchWeek(week).catch(() => {});
       for (const tab of activeTabs(tabs, week)) sheetFor(tab).catch(() => {});
     }
+    for (const by of [7, -7]) {
+      const week = new Date(start);
+      week.setDate(week.getDate() + by);
+      readyCovers(week).catch(() => {});
+    }
   });
+}
+// The covers of that week's shows in the selected people's plan, so a flipped week looks finished at
+// once. Only those: the whole week's airings would be a hundred pictures nobody sees.
+const readiedCovers = new Set();
+async function readyCovers(week) {
+  if (navigator.connection?.saveData) return;
+  const [items, sheets] = await Promise.all([fetchWeek(week), Promise.all(activeTabs(tabs, week).map(sheetFor))]);
+  const people = activePeople();
+  const shows = sheets.flatMap(sheet => people.flatMap(p => [...picks(sheet, p)].map(([show]) => show)));
+  for (const { media: m } of items) {
+    const url = m.coverImage?.medium;
+    if (!url || m.isAdult || readiedCovers.has(url)) continue;
+    if (!shows.some(s => titleMatches([s.romaji, s.english], mediaTitles(m)))) continue;
+    readiedCovers.add(url);
+    new Image().src = safeUrl(url);
+  }
 }
 function fetchWeek(start) {
   const key = start.getTime();
@@ -577,7 +598,7 @@ $('search').addEventListener('keydown', e => {
   addEventListener('scroll', () => {
     const y = scrollY;
     const keep = innerWidth > 560 || y <= 4 || document.body.classList.contains('searching')
-      || document.body.classList.contains('touring') || document.querySelector('header .popover:not([hidden])') || header.contains(document.activeElement);
+      || document.querySelector('header .popover:not([hidden])') || header.contains(document.activeElement);
     if (keep || y < lastY - 4) header.classList.remove('away');
     else if (y > lastY + 4) header.classList.add('away');
     if (Math.abs(y - lastY) > 4) lastY = y;
@@ -1197,12 +1218,6 @@ $('who').onchange = () => {
   load(true);
 };
 
-// Refresh data: forget the saved copies (weeks, sheet, AniList lists, rewatch and next-episode
-// lookups) and load everything fresh, in place: same view, week, people and settings, and the row
-// at the top of the screen stays there. What's on screen stays until the new data is in; if
-// anything fails, the copies from before come back and a short notice says so.
-const FRESH_KEYS = /^(week:|sheet:|list:|malList:|rewatch:|next:|tabs$)/;
-let refreshing = false;
 // The first row under the header (by its titles and day), to find it again after redrawing
 function scrollAnchor() {
   const below = document.querySelector('header').getBoundingClientRect().bottom;
@@ -1246,46 +1261,6 @@ function preserveListPosition() {
     restoreAnchor(anchor);
   };
 }
-$('refreshData').onclick = async () => {
-  if (refreshing) return;
-  refreshing = true;
-  $('refreshData').disabled = true;
-  $('settingsMenu').hidden = true;
-  $('settingsButton').setAttribute('aria-expanded', 'false');
-  // Everything that's about to be replaced, to put back if the refresh fails
-  const kept = {};
-  try { for (const k of Object.keys(localStorage)) if (FRESH_KEYS.test(k)) { kept[k] = localStorage.getItem(k); localStorage.removeItem(k); } } catch {}
-  const memory = { weeks: new Map(cache), sheetsCopy: new Map(sheets), rewatch: new Map(rewatchMedia), next: new Map(aniNext), facts: new Map(airingFacts), streams: streamsDe, moved: moves, tabList: tabs, plans: { ...planShowsCache } };
-  cache.clear(); sheets.clear(); rewatchMedia.clear(); aniNext.clear(); airingFacts.clear(); planShowsCache.time = 0;
-  notice('Refreshing…');
-  try {
-    const res = await fetch('streams-de.json', { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`stream data: ${res.status}`);
-    streamsDe = await res.json();
-    setNote('streams', null);
-    await loadMoves();
-    await loadFallbackLinks();
-    if (auth?.provider === 'mal') MAL.invalidate(auth);
-    if (auth) await loadMe().catch(() => {}); // ticks from elsewhere (AniList itself, the phone)
-    tabs = await guckplanTabs();
-    setNote('tabs', null);
-    try { localStorage.setItem('tabs', JSON.stringify(tabs)); } catch {}
-    await load(true, true);
-    notice('Data refreshed');
-  } catch (e) {
-    try { for (const [k, v] of Object.entries(kept)) localStorage.setItem(k, v); } catch {}
-    cache.clear(); for (const [k, v] of memory.weeks) cache.set(k, v);
-    sheets.clear(); for (const [k, v] of memory.sheetsCopy) sheets.set(k, v);
-    for (const [k, v] of memory.rewatch) rewatchMedia.set(k, v);
-    for (const [k, v] of memory.next) aniNext.set(k, v);
-    for (const [k, v] of memory.facts) airingFacts.set(k, v);
-    streamsDe = memory.streams; moves = memory.moved; tabs = memory.tabList; planShowsCache = memory.plans;
-    await load(true).catch(() => {});
-    notice(`Couldn't refresh (${e.message}); still showing the data from before.`);
-  }
-  $('refreshData').disabled = false;
-  refreshing = false;
-};
 
 // Who's logged in and how far they are in each show (their Watching/Rewatching list).
 async function loadMe() {
@@ -1848,7 +1823,7 @@ async function updateCatchupCount() {
   } catch {} finally { countingCatchup = false; }
 }
 
-async function loadCatchup(strict = false, refresh = false) {
+async function loadCatchup(refresh = false) {
   updateFallbackControls();
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
@@ -1861,7 +1836,6 @@ async function loadCatchup(strict = false, refresh = false) {
   try {
     entries = await anilistList(user);
   } catch (e) {
-    if (strict) throw new Error(`AniList: ${e.message}`);
     if (refresh && view === shown && document.querySelector('#list .row')) {
       notice(`Couldn't refresh ${name}: ${e.message}. Still showing the previous data.`);
       return;
@@ -2020,17 +1994,15 @@ async function missingPlanShows(plan, entries) {
 }
 
 // refresh: re-render after newer sheet data arrived, without jumping to today.
-// strict (Refresh data): no "Loading…" over what's on screen, and a failure is thrown to the caller
-// instead of replacing the schedule with an error.
-async function load(refresh = false, strict = false) {
-  if (listView()) return loadCatchup(strict, refresh);
+async function load(refresh = false) {
+  if (listView()) return loadCatchup(refresh);
   const start = weekStart(weekOffset);
   const end = new Date(start); end.setDate(end.getDate() + 6);
   // The year only when it isn't this one, or the week spans New Year ("Dec 28, 2026 – Jan 3, 2027")
   const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
   const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
   $('week').textContent = $('weekSub').textContent = `${fmt(start)} – ${fmt(end)}`;
-  if (!cache.has(start.getTime()) && !strict && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
+  if (!cache.has(start.getTime()) && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
   // Last week too: an episode airing after its watch day is watched the following week.
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   // Start AniList right away; it runs while the sheet loads.
@@ -2052,7 +2024,6 @@ async function load(refresh = false, strict = false) {
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
   if (view !== 'week') return; // switched to Catch-up meanwhile
   if (!weekTabs.some(t => plans.has(t.gid))) {
-    if (strict) throw new Error(`Guckplan: ${problems.join('; ') || 'not readable'}`);
     if (refresh && document.querySelector('#list .row')) {
       notice("Couldn't refresh the Guckplan. Still showing the previous data.");
       return;
@@ -2079,7 +2050,6 @@ async function load(refresh = false, strict = false) {
     updateCatchupCount();
     readyNeighbours(start);
   } catch (e) {
-    if (strict) throw e;
     if (refresh && document.querySelector('#list .row')) {
       notice(`Couldn't refresh the schedule: ${e.message}. Still showing the previous data.`);
       return;
@@ -2481,97 +2451,30 @@ $('noFrills').onchange = () => {
   document.documentElement.classList.toggle('no-frills', $('noFrills').checked);
   load(true); // the time column is measured again without the covers
 };
-// Explicit allowlist excludes account sessions, access keys and cached personal lists.
-const BACKUP_KEYS = ['mode', 'soloPerson', 'people', 'view', 'anilistUser', 'theme', 'time', 'sort', 'accent',
-  'others', 'who', 'dropButtons', 'moveButtons', 'catchupLinks', 'singleEpisodes', 'markOnOpen', 'noFrills', 'fallbackSources',
-  'planUnavailable', 'planStarts', 'planStart', 'planBusy', 'planMoves', 'planFixed', 'planBreaks', 'planUntil', 'planView'];
-function settingsBackup() {
-  const settings = {};
-  for (const key of BACKUP_KEYS) {
-    const value = localStorage.getItem(key);
-    if (value !== null) settings[key] = value;
-  }
-  return { app: 'anime-schedule', version: 1, saved: new Date().toISOString(), settings };
-}
-function readSettingsBackup(text) {
-  if (text.length > 1000000) throw new Error('This backup is too large.');
-  const data = JSON.parse(text);
-  if (data?.app !== 'anime-schedule' || data.version !== 1 || !data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings))
-    throw new Error('Choose an Anime Schedule settings backup.');
-  const settings = {};
-  for (const key of BACKUP_KEYS) if (Object.hasOwn(data.settings, key)) {
-    if (typeof data.settings[key] !== 'string' || data.settings[key].length > 200000) throw new Error('Invalid setting: ' + key);
-    settings[key] = data.settings[key];
-  }
-  if (settings.fallbackSources) {
-    const sources=JSON.parse(settings.fallbackSources);
-    if (!sources || typeof sources!=='object' || Array.isArray(sources) || Object.values(sources).some(v=>!['aniworld','torrent'].includes(v))) throw new Error('Invalid fallback source preferences.');
-  }
-  for (const key of ['people', 'planUnavailable', 'planStarts', 'planBusy', 'planFixed', 'planBreaks', 'planUntil'])
-    if (settings[key]) {
-      const value = JSON.parse(settings[key]);
-      if (!value || typeof value !== 'object') throw new Error('Invalid setting: ' + key);
-      if (['people', 'planBusy', 'planFixed'].includes(key) && !Array.isArray(value)) throw new Error('Invalid setting: ' + key);
-    }
-  for (const key of ['time', 'sort', 'accent']) if (settings[key] && !CHOICE_OK[key](settings[key])) throw new Error('Invalid setting: ' + key);
-  return settings;
-}
-$('backupSettings').onclick = () => {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(settingsBackup(), null, 2)], { type: 'application/json' }));
-  const link = document.createElement('a');
-  link.href = url; link.download = 'anime-schedule-settings-' + new Date().toISOString().slice(0, 10) + '.json';
-  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-};
-$('restoreSettings').onclick = () => $('settingsFile').click();
-let pendingSettings;
-$('settingsFile').onchange = async event => {
-  const file = event.target.files[0];
-  if (!file) return;
-  try {
-    if (file.size > 1000000) throw new Error('This backup is too large.');
-    pendingSettings = readSettingsBackup(await file.text());
-    $('restoreDialog').showModal();
-  } catch (error) { notice('Could not restore: ' + error.message); }
-  event.target.value = '';
-};
-$('confirmRestore').onclick = () => {
-  const before = settingsBackup().settings;
-  try {
-    for (const key of BACKUP_KEYS) {
-      if (Object.hasOwn(pendingSettings, key)) localStorage.setItem(key, pendingSettings[key]);
-      else localStorage.removeItem(key);
-    }
-  } catch {
-    for (const key of BACKUP_KEYS) {
-      if (Object.hasOwn(before, key)) localStorage.setItem(key, before[key]);
-      else localStorage.removeItem(key);
-    }
-    notice('Could not save settings; your previous settings were kept.'); return;
-  }
-  location.reload();
-};
-$('cancelRestore').onclick = () => $('restoreDialog').close();
-
 // Read-only navigation shortcuts: never hijack typing, native controls, dialogs or browser keys.
-let keyboardReturnFocus = null;
-function openKeyboardHelp() {
-  keyboardReturnFocus = document.activeElement;
+// The one help screen: the guide, with the shortcuts at its end. The ? key opens right at those.
+let helpReturnFocus = null;
+function openHelp(atShortcuts = false) {
+  helpReturnFocus = atShortcuts ? document.activeElement : $('helpButton');
   showSettings(false);
   showMenu('accountMenu', 'accountButton', false);
   showPeople(false);
-  $('keyboardDialog').showModal();
+  $('helpDialog').showModal();
+  $('helpDialog').scrollTop = 0;
+  if (atShortcuts) $('helpKeys').scrollIntoView?.({ block: 'start' });
 }
-$('keyboardHelp').onclick = openKeyboardHelp;
-$('keyboardClose').onclick = () => $('keyboardDialog').close();
-$('keyboardDialog').addEventListener('close', () => {
-  const target = keyboardReturnFocus?.closest('#settingsMenu') ? $('settingsButton') : keyboardReturnFocus;
-  target?.focus({ preventScroll: true });
-});
+$('helpButton').onclick = () => openHelp();
+$('helpClose').onclick = () => $('helpDialog').close();
+$('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
+// More options stays open or closed the way it was last left.
+const moreOptions = document.querySelector('.menu-extra');
+try { moreOptions.open = localStorage.getItem('moreOptions') === '1'; } catch {}
+moreOptions.addEventListener('toggle', () => { try { localStorage.setItem('moreOptions', moreOptions.open ? '1' : '0'); } catch {} });
 for (const [id, key, hint] of [
   ['prev', 'ArrowLeft', 'Previous week (←)'], ['next', 'ArrowRight', 'Next week (→)'],
   ['viewWeek', '1', 'Schedule (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
   ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Group (G)'],
-  ['searchButton', '/', 'Search shows (/)'], ['keyboardHelp', 'Shift+/', 'Keyboard shortcuts (?)'],
+  ['searchButton', '/', 'Search shows (/)'], ['helpButton', 'Shift+/', 'Guide and shortcuts (?)'],
 ]) {
   $(id).setAttribute('aria-keyshortcuts', key);
   $(id).title = hint;
@@ -2642,7 +2545,7 @@ document.addEventListener('keydown', event => {
     if (tick) action = () => tick.click();
   }
   else if (key === '/') action = () => openSearch(true);
-  else if (key === '?') action = openKeyboardHelp;
+  else if (key === '?') action = () => openHelp(true);
   else if (key === 't') action = () => { setView('week'); weekOffset = 0; setRange('today'); load(); };
   else if (['1', '2', '3'].includes(key)) action = () => $({ 1: 'viewWeek', 2: 'viewCatchup', 3: 'viewPace' }[key]).click();
   if (!action) return;
