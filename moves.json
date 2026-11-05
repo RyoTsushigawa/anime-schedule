@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-05T19:30:48.847Z",
+ "updated": "2026-11-05T19:31:01.290Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -7,13 +7,6 @@
    "tag": "So.",
    "time": "18:45",
    "week": "2026-10-26"
-  },
-  {
-   "show": "koorinojouhekiseason2",
-   "title": "The Ramparts of Ice Season 2",
-   "tag": "Do.",
-   "time": "20:00",
-   "week": ""
   },
   {
    "show": "toaruanbunoitem",
@@ -55,6 +48,13 @@
    "title": "FX Fighter Kurumi-chan",
    "tag": "Do.",
    "time": "20:30",
+   "week": ""
+  },
+  {
+   "show": "koorinojouhekiseason2",
+   "title": "The Ramparts of Ice Season 2",
+   "tag": "Do.",
+   "time": "20:00",
    "week": ""
   }
  ]
