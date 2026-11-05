@@ -140,7 +140,7 @@ function updateFallbackControls() {
 for (const b of document.querySelectorAll('[data-fallback-source]')) b.onclick = () => {
   for (const person of activePeople()) fallbackSources.set(person,b.dataset.fallbackSource);
   try { localStorage.setItem('fallbackSources',JSON.stringify(Object.fromEntries(fallbackSources))); } catch {}
-  updateFallbackControls(); load(true);
+  updateFallbackControls(); redraw();
 };
 // Prime shows: each person keeps Prime (the default) or takes the torrent link instead.
 const primeChoices = new Map();
@@ -158,7 +158,7 @@ for (const b of document.querySelectorAll('[data-prime-choice]')) b.onclick = ()
     if (b.dataset.primeChoice === 'torrent') primeChoices.set(person, 'torrent'); else primeChoices.delete(person);
   }
   try { localStorage.setItem('primeChoices', JSON.stringify(Object.fromEntries(primeChoices))); } catch {}
-  updatePrimeControls(); load(true);
+  updatePrimeControls(); redraw();
 };
 async function loadFallbackLinks() {
   try {
@@ -765,8 +765,8 @@ function episodeTags(episodes, total) {
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
 const calmMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-// Switching the time shown redraws the week without a new fetch: rows glide to their new place and
-// the changed parts fade, instead of everything jumping at once.
+// Switches that only change what's shown redraw the week without a new fetch: rows glide to their new
+// place and the changed parts fade, instead of everything jumping at once.
 var lastWeekRender = null; // what render() last drew: [items, start, plans]
 var glideFrom = null;
 const GLIDERS = '#list .row, #list .day > h2';
@@ -779,7 +779,7 @@ function rememberPlaces() {
     const key = glideKey(el);
     if (!glideFrom.has(key)) glideFrom.set(key, []);
     const { left, top, bottom } = el.getBoundingClientRect();
-    glideFrom.get(key).push({ left, top, bottom, img: innerLeft(el, 'img'), info: innerLeft(el, '.info') });
+    glideFrom.get(key).push({ left, top, bottom, time: el.querySelector('.time')?.textContent, img: innerLeft(el, 'img'), info: innerLeft(el, '.info') });
   }
 }
 function playGlide() {
@@ -797,7 +797,8 @@ function playGlide() {
     if (!was || el.closest('.shared')) { el.animate?.([{ opacity: 0 }, { opacity: 1 }], fade); continue; }
     if (was.left !== now.left || was.top !== now.top)
       el.animate?.([{ transform: `translate(${was.left - now.left}px, ${was.top - now.top}px)` }, { transform: 'none' }], glide);
-    el.querySelector('.time')?.animate?.([{ opacity: 0 }, { opacity: 1 }], fade);
+    const time = el.querySelector('.time');
+    if (time && time.textContent !== was.time) time.animate?.([{ opacity: 0 }, { opacity: 1 }], fade);
     // The time column's width changes with its text: cover and title follow it smoothly.
     for (const [part, left] of [['img', was.img], ['.info', was.info]]) {
       const moved = left === null ? 0 : left - was.left - ((innerLeft(el, part) ?? now.left) - now.left);
@@ -809,7 +810,16 @@ function redrawWeek() {
   if (view !== 'week' || !lastWeekRender || lastWeekRender[1].getTime() !== weekStart(weekOffset).getTime()) return false;
   rememberPlaces();
   render(...lastWeekRender);
+  glideFrom = null; // nothing was drawn when nobody is selected
+  chaseLookups();
   return true;
+}
+const redraw = () => { if (!redrawWeek()) load(true); };
+// Shows a redraw brought up that still need looking up (someone else's rewatches, covers).
+function chaseLookups() {
+  if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
+  if (pendingNext.size) lookUpNext().then(() => load(true));
+  if (pendingCovers.size) lookUpCovers().then(() => load(true));
 }
 function playEnter() {
   playGlide();
@@ -1325,8 +1335,8 @@ for (const name of Object.keys(choices)) setChoice(name, choices[name]);
 for (const b of document.querySelectorAll('[data-set]'))
   b.onclick = () => {
     setChoice(b.dataset.set, b.dataset.value);
-    if (b.dataset.set === 'accent' || (b.dataset.set === 'time' && redrawWeek())) return;
-    load(true);
+    if (b.dataset.set === 'time') redraw();
+    else if (b.dataset.set !== 'accent') load(true);
   };
 
 // ⚙ Show: the Drop buttons and the ⇄ (owner only) can be hidden; both on unless switched off.
@@ -1355,7 +1365,7 @@ $('editSchedule').onclick = () => {
 try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
 $('who').onchange = () => {
   try { localStorage.setItem('who', $('who').checked ? '1' : '0'); } catch {}
-  load(true);
+  redraw();
 };
 
 // The first row under the header (by its titles and day), to find it again after redrawing
@@ -2181,9 +2191,7 @@ async function load(refresh = false) {
     if (view !== 'week') return; // switched to Catch-up meanwhile
     if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
     // Rewatches seen for the first time: look them up, then show them.
-    if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
-    if (pendingNext.size) lookUpNext().then(() => load(true));
-    if (pendingCovers.size) lookUpCovers().then(() => load(true));
+    chaseLookups();
     // A new week starts at the top (with "Today", that's today itself); this week as a whole starts
     // at today, with the days before it a scroll up.
     if (!refresh) scrollToStart();
@@ -2286,7 +2294,7 @@ try { localStorage.removeItem('todayFirst'); } catch {}
 try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
 $('others').onchange = () => {
   try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
-  load(true); // redraw in place, no jump back to today
+  redraw(); // in place, no jump back to today
 };
 
 // ---------- Moved shows ----------
@@ -2519,8 +2527,8 @@ $('anilistUser').onchange = () => {
   try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catch {}
   load();
 };
-$('modeSolo').onclick = () => { setMode('solo'); load(true); };
-$('modeGroup').onclick = () => { setMode('group'); load(true); };
+$('modeSolo').onclick = () => { setMode('solo'); redraw(); };
+$('modeGroup').onclick = () => { setMode('group'); redraw(); };
 // Group button: short summary of who's selected; opens the panel with everyone's names.
 function updateGroupButton() {
   const names = [...selectedPeople];
@@ -2547,7 +2555,7 @@ $('soloPerson').onchange = () => {
   soloPerson = $('soloPerson').value;
   colorSolo();
   try { localStorage.setItem('soloPerson', soloPerson); } catch {}
-  load(true);
+  redraw();
 };
 
 // The Solo dropdown in the chosen person's Guckplan color, and each name in the list in theirs
@@ -2586,7 +2594,7 @@ function fillPeople(people) {
       b.setAttribute('aria-pressed', selectedPeople.has(name));
       try { localStorage.setItem('people', JSON.stringify([...selectedPeople])); } catch {}
       updateGroupButton();
-      load(true);
+      redraw();
     };
     return b;
   }));
