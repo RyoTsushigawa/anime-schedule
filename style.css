@@ -31,7 +31,11 @@ header { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, va
 .logo { flex: none; width: 36px; height: 36px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
 .brand-title { display: flex; align-items: center; gap: 7px; }
 .brand-title h1 { min-width: 0; }
-.help-icon { flex: none; width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 12px; font-weight: 600; color: var(--muted); background: transparent; }
+/* ⚙'s last line: the guide (a plain row, not a pill) */
+.menu-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 7px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.menu-item:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.menu-item kbd { font: inherit; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
 h1 { font-size: 18px; margin: 0; line-height: 1.2; }
 #tabName, .week-sub { color: var(--muted); font-size: 12px; }
 .week-sub { display: none; }
@@ -154,8 +158,6 @@ img.avatar { object-fit: cover; }
 #accountButton.empty { color: var(--muted); }
 #accountButton img { width: 100%; height: 100%; object-fit: cover; }
 /* Sun in dark mode, moon in light mode */
-#themeButton .sun, :root[data-dark] #themeButton .moon { display: none; }
-:root[data-dark] #themeButton .sun { display: block; }
 .field { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; font-size: 12px; color: var(--muted); }
 .field input { width: 100%; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; }
 .field input:focus { outline: none; border-color: var(--accent); }
@@ -268,6 +270,12 @@ header.away ~ main .day h2 { top: 0; }
 /* Watched (its slot is over) and paused shows step back: no card, muted time and title, a faded
    cover; the text itself stays fully readable. */
 .row.aired, .row.pause { background: transparent; box-shadow: none; }
+/* Today's "Jetzt" line, drawn in the gap between two rows (takes no space; the label sits left of the list on wide screens) */
+.now-line { position: relative; height: 0; top: -4px; pointer-events: none; }
+.now-line::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px; border-radius: 2px; background: var(--accent); opacity: .85; }
+.now-line::after { content: ""; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.now-line span { position: absolute; right: calc(100% + 10px); top: -8px; font-size: 11px; font-weight: 600; line-height: 16px; color: var(--accent); }
+@media (max-width: 1099px) { .now-line span { display: none; } }
 .row.aired .time, .row.aired .title, .row.pause .time, .row.pause .title { color: var(--muted); }
 .row.aired img, .row.pause img { opacity: .7; }
 /* Its stream button steps back too, in plain colors, and comes back under the mouse or keyboard */
