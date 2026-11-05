@@ -31,7 +31,7 @@
     source = button; dragWeek = weekOffset;
     button.closest('.row')?.classList.add('move-dragging');
     document.body.classList.add('dnd-moving');
-    hint.textContent = 'Drop on a day to add a slot, or on a show to share its slot. Nothing saves until you confirm.';
+    hint.textContent = 'Auf einen Tag ziehen für einen neuen Slot, oder auf eine Serie, um ihren Slot zu teilen. Gespeichert wird erst nach deiner Bestätigung.';
     hint.hidden = false; return true;
   }
   function destination(element) {
@@ -53,7 +53,7 @@
     target = destination(element);
     if (!target) return;
     (target.row || target.day).classList.add(target.row ? 'drop-slot' : 'drop-day');
-    hint.textContent = `${target.tag} ${target.time || 'next free slot'}${target.parallel ? ' · parallel slot' : ''} — release to review`;
+    hint.textContent = `${target.tag} ${target.time || 'nächster freier Slot'}${target.parallel ? ' · geteilter Slot' : ''} — loslassen zum Prüfen`;
   }
   function drop() {
     const button = source, to = target;
