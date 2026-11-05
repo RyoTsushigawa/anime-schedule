@@ -948,9 +948,13 @@ function render(items, start, plans) {
   // At the end of the week: on to the next one without scrolling back up to the arrows.
   html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
 
-  // Only when the weekly refresh seems to have stopped (PC task, GitHub token, LiveChart changes).
-  const age = streamsDe?.generated && Math.floor((Date.now() - Date.parse(streamsDe.generated)) / 86400000);
-  if (age >= 14) html = `<div class="notice">Stream links were last updated ${age} days ago; the weekly refresh may have stopped.</div>` + html;
+  // Only when a refresh seems to have stopped (LiveChart changes, GitHub token, PC task). The status
+  // comes daily, from GitHub or the run from home; the stream links only weekly, from home.
+  const daysOld = time => Math.floor((Date.now() - time) / 86400000);
+  const linksAge = streamsDe?.generated ? daysOld(Date.parse(streamsDe.generated)) : 0;
+  const statusAge = streamsDe ? daysOld(Math.max(Date.parse(streamsDe.generated) || 0, Date.parse(streamsDe.statusUpdated) || 0)) : 0;
+  if (statusAge >= 3) html = `<div class="notice">LiveChart data was last updated ${statusAge} days ago, so breaks and episode dates may be off.</div>` + html;
+  else if (linksAge >= 14) html = `<div class="notice">Stream links were last updated ${linksAge} days ago; the weekly refresh may have stopped.</div>` + html;
   // At the very top, one line per show: breaks with the reason (the newest LiveChart
   // headline about it, linked) and when it's back, then plan shows that couldn't be placed.
   const dayName = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
