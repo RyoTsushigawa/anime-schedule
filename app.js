@@ -124,12 +124,31 @@ function updateFallbackControls() {
     b.setAttribute('aria-pressed',String(selected.has(b.dataset.fallbackSource)));
     b.disabled = !activePeople().length;
   }
+  updatePrimeControls();
   $('fallbackHint').textContent = selected.size > 1 ? 'Gemischte Auswahl · wählen, um es für alle gewählten Leute zu setzen' : 'Wenn kein Dienst angezeigt wird · für die gewählten Leute';
 }
 for (const b of document.querySelectorAll('[data-fallback-source]')) b.onclick = () => {
   for (const person of activePeople()) fallbackSources.set(person,b.dataset.fallbackSource);
   try { localStorage.setItem('fallbackSources',JSON.stringify(Object.fromEntries(fallbackSources))); } catch {}
   updateFallbackControls(); load(true);
+};
+// Prime shows: each person keeps Prime (the default) or takes the torrent link instead.
+const primeChoices = new Map();
+try { for (const [person, value] of Object.entries(JSON.parse(localStorage.getItem('primeChoices') || '{}'))) if (value === 'torrent') primeChoices.set(person, value); } catch {}
+const primeChoice = person => primeChoices.get(person) || 'prime';
+function updatePrimeControls() {
+  const selected = new Set(activePeople().map(primeChoice));
+  for (const b of document.querySelectorAll('[data-prime-choice]')) {
+    b.setAttribute('aria-pressed', String(selected.has(b.dataset.primeChoice)));
+    b.disabled = !activePeople().length;
+  }
+}
+for (const b of document.querySelectorAll('[data-prime-choice]')) b.onclick = () => {
+  for (const person of activePeople()) {
+    if (b.dataset.primeChoice === 'torrent') primeChoices.set(person, 'torrent'); else primeChoices.delete(person);
+  }
+  try { localStorage.setItem('primeChoices', JSON.stringify(Object.fromEntries(primeChoices))); } catch {}
+  updatePrimeControls(); load(true);
 };
 async function loadFallbackLinks() {
   try {
@@ -554,18 +573,22 @@ function linkButtons(links, mediaId, watchers) {
   const button = l => l.main
     ? `<a class="cr" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
     : `<a class="cr other" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Verfügbar, aber kein Dienst, den wir haben">${serviceIcon(l.label)}${esc(l.label)}</a>`;
-  const shown = links.filter(l => l.main || $('others').checked);
+  const listed = links.filter(l => l.main || $('others').checked);
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
+  // Prime goes once everyone here prefers the torrent link; with mixed choices both stay.
+  const isPrime = l => l.main && /^Prime\b/.test(l.label);
+  const primeSwap = listed.some(isPrime) && people.some(p => primeChoice(p) === 'torrent');
+  const shown = primeSwap && people.every(p => primeChoice(p) === 'torrent') ? listed.filter(l => !isPrime(l)) : listed;
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
   const streaming = !people.length || people.some(p => fallbackChoice(p) === 'aniworld');
   const source = fallbackLinks.byAnilist[mediaId] || {};
   const title = sourceSearchTitle(links.title || source.title || 'anime');
   const alternatives = [];
-  if (torrent && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
+  if (primeSwap || (torrent && !listed.length)) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
     : { label: 'Nyaa-Suche', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(nyaaQuery([...(links.names || [title]), source.title])) });
-  if (streaming && !shown.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
-  else if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
+  if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
+  else if (streaming && !listed.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
     : { label: 'AniWorld-Suche', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
   return shown.map(button).join('') + alternatives.map(alternativeButton).join('');
