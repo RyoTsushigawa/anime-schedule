@@ -236,6 +236,10 @@ function weekStart(offset) {
 const WEEK_CACHE_MS = 30 * 60 * 1000;
 const WEEK_KEEP_MS = 7 * 86400 * 1000;
 const fallbackWeeks = new Set();
+// Weeks a show's German release runs behind Japan (YouTube): its episode N comes out in the week
+// Japan airs episode N + lag. AniList's and LiveChart's episode numbers are Japan's.
+const lagOf = id => streamsDe?.release?.[id]?.lag || 0;
+
 async function liveChartWeek(start) {
   await ready;
   if (!Object.keys(streamsDe?.status || {}).length) return null;
@@ -901,6 +905,8 @@ function render(items, start, plans) {
     if (m.isAdult) continue;
     // When it comes out on our service (LiveChart's offset to Japanese TV), else AniList's TV time.
     const when = new Date((it.airingAt + (streamsDe?.release?.[m.id]?.offset || 0)) * 1000);
+    const episode = it.episode - lagOf(m.id);
+    if (episode < 1) continue;
     // Look the show up in the tab for the airing date first; the neighbouring tabs only
     // count for shows that tab doesn't list.
     let show, sheet;
@@ -921,8 +927,8 @@ function render(items, start, plans) {
     if (droppedByMe(m.id)) continue;
     // One entry per show and week; several episodes (batch drops, double episodes) are merged.
     const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
-    if (existing) existing.episodes.push(it.episode);
-    else day.rows.push({ it, m, links, when, slot, show, episodes: [it.episode], who: whoBySheet.get(sheet).get(show) });
+    if (existing) existing.episodes.push(episode);
+    else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show) });
   }
 
   // Shows from this week's plan without an episode, checked against LiveChart (weekly script):
@@ -952,8 +958,8 @@ function render(items, start, plans) {
       if (upcoming?.at * 1000 >= weekEnd && note) {
         const why = { note: note || null, news: status.news || [] };
         const when = new Date(upcoming.at * 1000);
-        day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode, cover: coverFor(alId), ...why });
-        breaks.push({ show, when, episode: upcoming.episode, ...why });
+        day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode - lagOf(alId), cover: coverFor(alId), ...why });
+        breaks.push({ show, when, episode: upcoming.episode - lagOf(alId), ...why });
       } else {
         const m = { id: Number(alId) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [], coverImage: { medium: coverFor(alId) } };
         day.rows.push({ fallback: true, show, slot, when: day.date, m, links: streamLinks(m, show.wo, show.english || show.romaji), who: [...whoBySheet.values()].find(w => w.has(show))?.get(show) });
@@ -982,8 +988,8 @@ function render(items, start, plans) {
       // coverage"), else its newest break headline
       const note = (status.notes || []).find(n => n.at * 1000 >= days[0].date.getTime() - 86400000 && n.at * 1000 < weekEnd);
       const why = { note: note || null, news: status.news || [] };
-      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode, cover: coverFor(alId), ...why });
-      breaks.push({ show, when: next, episode: upcoming.episode, ...why });
+      day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode - lagOf(alId), cover: coverFor(alId), ...why });
+      breaks.push({ show, when: next, episode: upcoming.episode - lagOf(alId), ...why });
       found.add(show);
       continue;
     }
@@ -998,8 +1004,8 @@ function render(items, start, plans) {
     } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
       const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
       const why = { note: null, news: [] };
-      day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode, cover: media.coverImage?.medium, ...why });
-      breaks.push({ show, when, episode: media.nextAiringEpisode.episode, ...why });
+      day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), cover: media.coverImage?.medium, ...why });
+      breaks.push({ show, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), ...why });
       found.add(show);
     } else unknown.push({ show, why: media === undefined ? 'Ausstrahlung wird geprüft…'
       : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
@@ -1065,7 +1071,7 @@ function render(items, start, plans) {
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -1940,10 +1946,11 @@ function catchupRows(entries, planShows, plan) {
     const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
     const mine = mySlots.find(([s]) => titleMatches([s.romaji, s.english], mediaTitles(m)));
     const slot = mine?.[1] || show;
-    const released = ep => next.airingAt - (next.episode - ep) * week + offset;
+    const lag = lagOf(m.id);
+    const released = ep => next.airingAt - (next.episode - lag - ep) * week + offset;
     // Out so far: everything before the next episode, minus the newest ones whose watch time
     // hasn't passed yet (you're only behind once the planned slot is over).
-    let out = next ? next.episode - 1 : m.status === 'FINISHED' ? m.episodes : 0;
+    let out = next ? next.episode - lag - 1 : m.status === 'FINISHED' ? m.episodes : 0;
     while (next && out > progress && dueAt(released(out), slot, mine?.[0] || show) > now) out--;
     if (!out || out <= progress) continue;
     const first = progress + 1;
