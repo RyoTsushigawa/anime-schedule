@@ -1184,7 +1184,7 @@ function useAccount(account) {
   if (pendingChanges.size || bulkSaving || undoing) { notice('Bitte warte, bis die aktuelle Listenänderung fertig ist.'); return; }
   auth = account;
   myProgress.clear();
-  knownEntries.clear(); notOnList.clear(); toScore = []; planShowsCache.time = 0; selecting = false;
+  knownEntries.clear(); notOnList.clear(); toScore = []; planShowsCache.time = 0; selecting = false; $('markAllStart').hidden = true;
   saveAccounts();
   if (auth?.name) {
     $('anilistUser').value = auth.name;
@@ -1569,7 +1569,7 @@ function syncSavingButtons() {
     if (saving) b.setAttribute('aria-busy', 'true');
     else b.removeAttribute('aria-busy');
   }
-  for (const id of ['markAll', 'cancelMark', 'noticeUndo']) {
+  for (const id of ['markAll', 'markAllStart', 'cancelMark', 'noticeUndo']) {
     const button = $(id);
     if (button) button.disabled = accountLoading || bulkSaving || pendingChanges.size > 0;
   }
@@ -1849,6 +1849,7 @@ $('list').addEventListener('click', async e => {
 // included ones show by show (spaced out, AniList limits requests per minute).
 let catchupTargets = [];
 let selecting = false;
+let revealMarkBar = false; // choosing just started: its bar appears above the rows, so go there
 const skipped = new Set(); // media ids left out while selecting
 const markAllLabel = () => `${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} als gesehen markieren`;
 $('list').addEventListener('click', e => {
@@ -1864,15 +1865,17 @@ $('list').addEventListener('click', e => {
   selecting = false;
   load(true);
 });
+// "Alle gesehen" beside the display switch starts choosing; the button in the list confirms.
+$('markAllStart').onclick = () => {
+  if (!auth || $('markAllStart').disabled) return;
+  selecting = true;
+  revealMarkBar = true;
+  skipped.clear();
+  load(true);
+};
 $('list').addEventListener('click', async e => {
   const b = e.target.closest('#markAll');
   if (!b || !auth || b.disabled) return;
-  if (!selecting) {
-    selecting = true;
-    skipped.clear();
-    load(true);
-    return;
-  }
   b.disabled = true;
   const targets = catchupTargets.filter(t => !skipped.has(t.mediaId));
   bulkSaving = true;
@@ -2070,10 +2073,10 @@ async function loadCatchup(refresh = false) {
     $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
       : '<div class="status">Keine älteren Serien offen auf der Watching-Liste.</div>';
   } else {
-    const top = !mine || !rows.length ? ''
-      : selecting ? `<div class="catchup-bar"><span class="hint">Klick auf ein ✓, um die Serie auszunehmen</span>
-          <button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
-      : `<div class="catchup-bar"><button id="markAll" class="pill">Alle als gesehen markieren</button></div>`;
+    $('markAllStart').hidden = !mine || !rows.length || selecting;
+    const top = !mine || !rows.length || !selecting ? ''
+      : `<div class="catchup-bar"><span class="hint">Klick auf ein ✓, um die Serie auszunehmen</span>
+          <button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`;
     $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
     // Your own list: shows finished lately that have no score yet, each with ★ to score it
     const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
@@ -2098,6 +2101,7 @@ async function loadCatchup(refresh = false) {
   syncSavingButtons();
   restore();
   resumeScroll();
+  if (revealMarkBar) { revealMarkBar = false; window.scrollTo({ top: 0 }); }
   playEnter();
 }
 
