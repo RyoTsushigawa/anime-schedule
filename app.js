@@ -521,6 +521,13 @@ const serviceIcon = label => {
   const icon = SERVICE_ICONS.find(([match]) => match.test(label))?.[1];
   return icon ? `<span class="svc-icon" style="-webkit-mask-image:url(services/${icon}.svg);mask-image:url(services/${icon}.svg)"></span>` : '';
 };
+// The sources for shows on none of our services: each site's own icon, and a color taken from it.
+const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplease/i, 'subsplease.ico', 'var(--text)'],
+  [/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)']];
+function alternativeButton(l) {
+  const [, icon, color] = ALTERNATIVE_LOOK.find(([match]) => match.test(l.label));
+  return `<a class="cr none" style="--svc:${color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}"><img class="site-icon" src="services/${icon}" alt="" width="18" height="18">${esc(l.label)}</a>`;
+}
 function linkButtons(links, mediaId, watchers) {
   const button = l => l.main
     ? `<a class="cr" style="--svc:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
@@ -539,7 +546,7 @@ function linkButtons(links, mediaId, watchers) {
   else if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
     : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
-  return shown.map(button).join('') + alternatives.map(l => `<a class="cr none" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}">${esc(l.label)}</a>`).join('');
+  return shown.map(button).join('') + alternatives.map(alternativeButton).join('');
 }
 
 // Search: hides the shows (rows, or a Catch-up show's block) whose titles don't contain what's
