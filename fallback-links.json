@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-29T21:22:39.454Z",
+ "generated": "2026-11-05T12:46:50.745Z",
  "byAnilist": {
   "21": {
    "title": "One Piece",
@@ -134,7 +134,8 @@
   },
   "171110": {
    "title": "Honzuki no Gekokujou ~Shisho ni Naru Tame ni wa Shudan wo Erandeiraremasen~ Ryushu no Youjo",
-   "malId": 57466
+   "malId": 57466,
+   "aniworld": "https://aniworld.to/anime/stream/ascendance-of-a-bookworm"
   },
   "172192": {
    "title": "Kikansha no Mahou wa Tokubetsu desu 2nd Season",
@@ -479,7 +480,7 @@
    "aniworld": "https://aniworld.to/anime/stream/the-classroom-of-a-black-cat-and-a-witch"
   },
   "197095": {
-   "title": "Kaketa Tsuki no Mercedes: Kyuuketsuki no Kizoku ni Tensei shita kedo Suteraresou nanode Dungeon wo Seiha suru",
+   "title": "Kaketa Tsuki no Mercedes",
    "malId": 62188
   },
   "197178": {
@@ -664,7 +665,7 @@
    "subsplease": "https://subsplease.org/shows/meitantei-precure"
   },
   "203116": {
-   "title": "Charisma",
+   "title": "CHARISMA",
    "malId": 63038
   },
   "203141": {
