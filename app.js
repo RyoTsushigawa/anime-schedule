@@ -682,6 +682,17 @@ function assignWatchTimes(day) {
 }
 
 
+// With release times on show, a day reads in release order. Each group is one card (shows sharing a watch
+// slot stay together, at their earliest release). Rows with no release time (breaks, rewatches, shows
+// without airing data) keep their plan order after the rest.
+function releaseOrder(groups) {
+  const releasedAt = group => Math.min(...group.map(r => r.it ? new Date(r.when).getTime() : Infinity));
+  return [...groups].sort((a, b) => {
+    const [x, y] = [releasedAt(a), releasedAt(b)];
+    return x === y ? 0 : x - y;
+  });
+}
+
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
 const LOADING_HTML = '<div class="status loading">Loading…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>';
 // A short slide or fade when the list changes because you went somewhere (never on a refresh).
@@ -949,8 +960,9 @@ function render(items, start, plans) {
       if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
       else groups.push([r]);
     }
-    const body = groups.length
-      ? groups.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
+    const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
+    const body = ordered.length
+      ? ordered.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
       : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
     const isToday = date.toDateString() === today;
     return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}><span>${heading}</span></h2>${body}</section>`;
