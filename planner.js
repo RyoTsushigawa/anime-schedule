@@ -11,7 +11,7 @@
 // "Seasonpläne" tab); a time blocked for everyone is skipped and the evening goes on after it.
 // Best plan = fewest breaks for every person (slots between their first and last show of an evening
 // where they watch nothing), then the fewest shows moved off their release day, then short evenings.
-// Its own page (planner.html), opened in a new tab from the schedule's ⚙ menu; uses common.js.
+// Its own page (planner.html), opened in a new tab from the link below the schedule; uses common.js.
 
 const PLAN_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const PLAN_DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -642,7 +642,15 @@ function bindPlannerSetup(data) {
     saveSettings();
     redrawFixed();
   };
-  $('planRun').onclick = () => generatePlan(data);
+  // The results start below the settings: go there, to see the progress and then the plan. Only for
+  // this button; the plan made when the page opens leaves the settings in view.
+  const reveal = () => $('planOut')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  $('planRun').onclick = async () => {
+    const generating = generatePlan(data);
+    reveal();
+    await generating;
+    reveal();
+  };
 }
 
 async function generatePlan(data) {
@@ -650,6 +658,7 @@ async function generatePlan(data) {
   if (!out) return;
   if (!data.shows.length) { out.innerHTML = '<div class="status">Nobody has picked any show in this tab yet.</div>'; return; }
   $('planRun').disabled = true;
+  out.style.minHeight = out.offsetHeight + 'px'; // the page keeps its length, so nothing jumps meanwhile
   out.innerHTML = '<div class="status">Trying out plans… <span id="planProgress">0%</span></div>';
   const ctx = planContext(data);
   const plan = await findPlan(ctx, f => { const el = $('planProgress'); if (el) el.textContent = Math.round(f * 100) + '%'; });
@@ -657,6 +666,7 @@ async function generatePlan(data) {
   $('planRun').disabled = false;
   planOutcome = { tab: data.tab.gid, plan };
   showPlan(data, plan);
+  out.style.minHeight = '';
 }
 
 function showPlan(data, plan) {
