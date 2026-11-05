@@ -718,10 +718,58 @@ function episodeTags(episodes, total) {
 }
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
+const calmMotion = () => document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Switching the time shown redraws the week without a new fetch: rows glide to their new place and
+// the changed parts fade, instead of everything jumping at once.
+var lastWeekRender = null; // what render() last drew: [items, start, plans]
+var glideFrom = null;
+const GLIDERS = '#list .row, #list .day > h2';
+const glideKey = el => el.matches('h2') ? 'day ' + el.parentElement.dataset.date : el.dataset.search || '';
+const innerLeft = (el, part) => el.querySelector(part)?.getBoundingClientRect().left ?? null;
+function rememberPlaces() {
+  if (calmMotion()) return;
+  glideFrom = new Map();
+  for (const el of document.querySelectorAll(GLIDERS)) {
+    const key = glideKey(el);
+    if (!glideFrom.has(key)) glideFrom.set(key, []);
+    const { left, top, bottom } = el.getBoundingClientRect();
+    glideFrom.get(key).push({ left, top, bottom, img: innerLeft(el, 'img'), info: innerLeft(el, '.info') });
+  }
+}
+function playGlide() {
+  const from = glideFrom;
+  glideFrom = null;
+  if (!from || calmMotion()) return;
+  const glide = { duration: 280, easing: 'cubic-bezier(.2, .7, .2, 1)' }, fade = { duration: 200, easing: 'ease-out' };
+  const seen = (top, bottom) => bottom > 0 && top < innerHeight;
+  for (const el of document.querySelectorAll(GLIDERS)) {
+    const now = el.getBoundingClientRect(), was = from.get(glideKey(el))?.shift();
+    if (!seen(now.top, now.bottom) && !(was && seen(was.top, was.bottom))) continue;
+    // A saved cover shows straight away, so it doesn't blink while the row moves.
+    for (const img of el.querySelectorAll('img')) { img.loading = 'eager'; img.decoding = 'sync'; }
+    // A shared card clips what moves inside it, so its rows only fade.
+    if (!was || el.closest('.shared')) { el.animate?.([{ opacity: 0 }, { opacity: 1 }], fade); continue; }
+    if (was.left !== now.left || was.top !== now.top)
+      el.animate?.([{ transform: `translate(${was.left - now.left}px, ${was.top - now.top}px)` }, { transform: 'none' }], glide);
+    el.querySelector('.time')?.animate?.([{ opacity: 0 }, { opacity: 1 }], fade);
+    // The time column's width changes with its text: cover and title follow it smoothly.
+    for (const [part, left] of [['img', was.img], ['.info', was.info]]) {
+      const moved = left === null ? 0 : left - was.left - ((innerLeft(el, part) ?? now.left) - now.left);
+      if (moved) el.querySelector(part).animate?.([{ transform: `translateX(${moved}px)` }, { transform: 'none' }], glide);
+    }
+  }
+}
+function redrawWeek() {
+  if (view !== 'week' || !lastWeekRender || lastWeekRender[1].getTime() !== weekStart(weekOffset).getTime()) return false;
+  rememberPlaces();
+  render(...lastWeekRender);
+  return true;
+}
 function playEnter() {
+  playGlide();
   const move = enter;
   enter = null;
-  if (!move || document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!move || calmMotion()) return;
   $('list').animate?.([{ opacity: 0, transform: `translate(${move.x || 0}px, ${move.y || 0}px)` }, { opacity: 1, transform: 'none' }], { duration: 110, easing: 'ease-out' });
 }
 window.ResizeObserver && new ResizeObserver(() => document.documentElement.style.setProperty('--head', document.querySelector('header').offsetHeight + 'px')).observe(document.querySelector('header'));
@@ -734,6 +782,7 @@ function scrollToStart() {
 // Sheet show → AniList id → title score. Stays valid across redraws; a reloaded sheet has new show objects.
 const showScores = new WeakMap();
 function render(items, start, plans) {
+  lastWeekRender = [items, start, plans];
   const restore = preserveListPosition();
   updateFallbackControls();
   const fallback = fallbackWeeks.has(start.getTime());
@@ -1230,7 +1279,8 @@ for (const name of Object.keys(choices)) setChoice(name, choices[name]);
 for (const b of document.querySelectorAll('[data-set]'))
   b.onclick = () => {
     setChoice(b.dataset.set, b.dataset.value);
-    if (b.dataset.set !== 'accent') load(true);
+    if (b.dataset.set === 'accent' || (b.dataset.set === 'time' && redrawWeek())) return;
+    load(true);
   };
 
 // ⚙ Show: the Drop buttons and the ⇄ (owner only) can be hidden; both on unless switched off.
