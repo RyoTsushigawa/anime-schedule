@@ -522,7 +522,7 @@ const serviceIcon = label => {
   return icon ? `<span class="svc-icon" style="-webkit-mask-image:url(services/${icon}.svg);mask-image:url(services/${icon}.svg)"></span>` : '';
 };
 // The sources for shows on none of our services: each site's own icon, and a color taken from it.
-const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplease/i, 'subsplease.ico', 'var(--text)'],
+const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplease/i, 'subsplease.png', 'var(--text)'],
   [/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)']];
 function alternativeButton(l) {
   const [, icon, color] = ALTERNATIVE_LOOK.find(([match]) => match.test(l.label));
