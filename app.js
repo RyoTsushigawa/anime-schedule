@@ -146,13 +146,13 @@ let tabs = []; // Guckplan tabs, newest first
 // ("P" in the sheet means no legal stream, so it has no service here). `main` = a service the group
 // has; everything else only shows with the "Other services" toggle.
 const SERVICES = [
-  { match: /crunchyroll/i, label: 'Crunchyroll', color: '#f47521', wo: 'C', main: true, search: 'https://www.crunchyroll.com/search?q=' },
+  { match: /crunchyroll/i, label: 'Crunchyroll', color: '#ff5e00', wo: 'C', main: true, search: 'https://www.crunchyroll.com/search?q=' },
   { match: /netflix/i, label: 'Netflix', color: '#e50914', wo: 'N', main: true, search: 'https://www.netflix.com/search?q=' },
-  { match: /amazon|prime video/i, label: 'Prime Video', color: '#1a98ff', wo: 'AM', main: true, search: 'https://www.primevideo.com/search/?phrase=' },
-  { match: /youtube/i, label: 'YouTube', color: '#ff0033', wo: 'Y', main: true },
-  { match: /disney/i, label: 'Disney+', color: '#113ccf', wo: 'D+', main: true, search: 'https://www.disneyplus.com/search?q=' },
+  { match: /amazon|prime video/i, label: 'Prime Video', color: '#0578ff', wo: 'AM', main: true, search: 'https://www.primevideo.com/search/?phrase=' },
+  { match: /youtube/i, label: 'YouTube', color: '#ff0000', wo: 'Y', main: true },
+  { match: /disney/i, label: 'Disney+', color: 'var(--disney)', wo: 'D+', main: true, search: 'https://www.disneyplus.com/search?q=' },
   { match: /hidive/i, label: 'HIDIVE', color: '#00aeef', wo: 'H' },
-  { match: /^adn$|animation digital network/i, label: 'ADN', color: '#0096d6', wo: 'ADN' },
+  { match: /^adn$|animation digital network/i, label: 'ADN', color: '#0095ff', wo: 'ADN' },
 ];
 
 // Data that couldn't be loaded fresh (offline, AniList busy, Google or the site not answering):
@@ -460,6 +460,7 @@ async function lookUpRewatches() {
 
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
 const sourceSearchTitle = title => String(title || '').replace(/^(Even the Student Council Has (?:Its )?Holes)!$/i, '$1');
+const OTHER_SERVICE_COLORS = [[/akiba/i, '#ff1a00'], [/it'?s anime/i, '#ff0000']];
 function streamLinks(media, wo, searchTitle) {
   const links = [];
   links.title = searchTitle || media.title?.english || media.title?.romaji || '';
@@ -471,7 +472,7 @@ function streamLinks(media, wo, searchTitle) {
       // Needs an add-on channel we don't have (e.g. Prime Video + aniverse): counts as another service.
       const label = (s?.label || name) + (extra ? ' + ' + extra : '');
       if (!links.some(l => l.url === url))
-        links.push({ url, label, color: s?.color || '#5b5b66', main: !!s?.main && !extra, first: !!s && s.wo === wo && !extra });
+        links.push({ url, label, color: s?.color || OTHER_SERVICE_COLORS.find(([match]) => match.test(name))?.[1] || '#5b5b66', main: !!s?.main && !extra, first: !!s && s.wo === wo && !extra });
     }
     return links.sort((a, b) => b.first - a.first);
   }
@@ -512,10 +513,18 @@ function watchDay(aired, tag, time) {
 // Resume links are gone: nothing keeps these two old settings any more.
 try { localStorage.removeItem('resumeWatching'); localStorage.removeItem('resumeServices'); } catch {}
 const serviceKey = label => label.replace(/ 🔍$/, '');
+// The services' flat icons (a copy in services/, so they don't depend on anyone else's site). One-colour shapes:
+// the button's text color fills them. It's Anime streams on YouTube, and LiveChart shows that icon for it too.
+const SERVICE_ICONS = [[/crunchyroll/i, 'crunchyroll'], [/netflix/i, 'netflix'], [/prime video|amazon/i, 'prime-video'], [/disney/i, 'disney'],
+  [/^adn$|animation digital network/i, 'adn'], [/youtube|it'?s anime/i, 'youtube'], [/akiba/i, 'akiba'], [/hidive/i, 'hidive']];
+const serviceIcon = label => {
+  const icon = SERVICE_ICONS.find(([match]) => match.test(label))?.[1];
+  return icon ? `<span class="svc-icon" style="-webkit-mask-image:url(services/${icon}.svg);mask-image:url(services/${icon}.svg)"></span>` : '';
+};
 function linkButtons(links, mediaId, watchers) {
   const button = l => l.main
-    ? `<a class="cr" style="background:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`
-    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${esc(l.label)}</a>`;
+    ? `<a class="cr" style="--svc:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
+    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${serviceIcon(l.label)}${esc(l.label)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked);
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
