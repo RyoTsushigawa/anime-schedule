@@ -764,7 +764,7 @@ function episodeTags(episodes, total) {
 }
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
-const calmMotion = () => document.documentElement.classList.contains('no-frills') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+const calmMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Switching the time shown redraws the week without a new fetch: rows glide to their new place and
 // the changed parts fade, instead of everything jumping at once.
 var lastWeekRender = null; // what render() last drew: [items, start, plans]
@@ -1076,29 +1076,29 @@ function render(items, start, plans) {
   }).join('');
   // Above the days: one slim line with the week; pressing a day goes there. Days without a show step back.
   const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
-  html = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
+  const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
     const long = `${dayName(date)}, ${germanDate(date)}`;
     const alone = !searching() && (range === 'day' ? isoDay(date) === pickedDay : range === 'today' && date.toDateString() === today);
     const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free', alone ? 'picked' : ''].filter(Boolean).join(' ');
     return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'Serie' : 'Serien'}">${esc(shortDayName(date))} <b>${date.getDate()}</b></button>`;
-  }).join('')}</nav>` + html;
-  // At the end of the week: on to the next one without scrolling back up to the arrows.
-  html += '<nav class="pager" aria-label="Woche wechseln"><button data-week="prev">‹ Vorherige Woche</button><button data-week="next">Nächste Woche ›</button></nav>';
+  }).join('')}</nav>`;
 
   // Only when a refresh seems to have stopped (LiveChart changes, GitHub token, PC task). The status
   // comes daily, from GitHub or the run from home; the stream links only weekly, from home.
   const daysOld = time => Math.floor((Date.now() - time) / 86400000);
   const linksAge = streamsDe?.generated ? daysOld(Date.parse(streamsDe.generated)) : 0;
   const statusAge = streamsDe ? daysOld(Math.max(Date.parse(streamsDe.generated) || 0, Date.parse(streamsDe.statusUpdated) || 0)) : 0;
-  if (statusAge >= 3) html = `<div class="notice">Die LiveChart-Daten wurden vor ${statusAge} Tagen zuletzt aktualisiert, Pausen und Folgentermine können also abweichen.</div>` + html;
-  else if (linksAge >= 14) html = `<div class="notice">Die Stream-Links wurden vor ${linksAge} Tagen zuletzt aktualisiert; das wöchentliche Update läuft vielleicht nicht mehr.</div>` + html;
-  // At the very top, one line per show: breaks in the same words as their row, then plan shows that
-  // couldn't be placed.
+  let staleNotice = '';
+  if (statusAge >= 3) staleNotice = `<div class="notice">Die LiveChart-Daten wurden vor ${statusAge} Tagen zuletzt aktualisiert, Pausen und Folgentermine können also abweichen.</div>`;
+  else if (linksAge >= 14) staleNotice = `<div class="notice">Die Stream-Links wurden vor ${linksAge} Tagen zuletzt aktualisiert; das wöchentliche Update läuft vielleicht nicht mehr.</div>`;
+  // Beside the day strip, one line per show when opened: breaks in the same words as their row, then
+  // plan shows that couldn't be placed.
   const lines = [
     ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Zurück am ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
     ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
   ];
-  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
+  const alerts = !lines.length ? '' : `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>`;
+  html = `${staleNotice}<div class="weekline">${alerts}${strip}</div>` + html;
   // Above everything: data that's old or missing (this week's and last week's airings count here)
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
@@ -2014,7 +2014,6 @@ async function loadCatchup(refresh = false) {
     title="Bei „Alle als gesehen markieren“ mitnehmen">✓</button>`;
   const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
   const single = singleEpisodes;
-  const showLinks = $('catchupLinks').checked;
   const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
   const grouped = ({ m, first, out, missing, links }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
@@ -2022,7 +2021,7 @@ async function loadCatchup(refresh = false) {
       <div class="info">${title(m)}
         <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}${note(missing)}</div>
       </div>
-      ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
+      <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
     </div>`;
   // A header per show (cover, title, links, Drop; while selecting its ✓ is the switch), then every
@@ -2034,7 +2033,7 @@ async function loadCatchup(refresh = false) {
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}${note(missing)}</div></div>
-        ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
+        <div class="links">${linkButtons(links, m.id)}</div>
         ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
       <div class="row compact">
@@ -2051,7 +2050,7 @@ async function loadCatchup(refresh = false) {
       <div class="info">${title(m)}
         <div class="ep">${progress} of ${m.episodes || out} watched</div>
       </div>
-      ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
+      <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) : ''}
     </div>`;
   if (!mine || shown === 'pace') selecting = false;
@@ -2264,8 +2263,6 @@ $('list').addEventListener('click', e => {
   if (e.target.closest('[data-rest-of-week]')) { setRange('rest'); enter = { y: 4 }; load(); }
   const jump = e.target.closest('[data-jump]');
   if (jump) pickDay(jump.dataset.jump);
-  const pager = e.target.closest('[data-week]');
-  if (pager) $(pager.dataset.week).click();
 });
 // Phones: swipe sideways over the week to change it. Not from the screen's edges (the phone's own
 // back gesture) and not while editing (a card is being dragged then).
@@ -2506,11 +2503,6 @@ setView(view);
 $('viewWeek').onclick = () => { setView('week'); enter = { y: 4 }; load(); };
 $('viewCatchup').onclick = () => { setView('catchup'); enter = { y: 4 }; load(); };
 $('viewPace').onclick = () => { setView('pace'); enter = { y: 4 }; load(); };
-try { $('catchupLinks').checked = localStorage.getItem('catchupLinks') !== '0'; } catch { $('catchupLinks').checked = true; }
-$('catchupLinks').onchange = () => {
-  try { localStorage.setItem('catchupLinks', $('catchupLinks').checked ? '1' : '0'); } catch {}
-  load(true);
-};
 // Catch-up layout (Per show | Single episodes), right in the controls row, saved per browser.
 let singleEpisodes = false;
 try { singleEpisodes = localStorage.getItem('singleEpisodes') === '1'; } catch {}
@@ -2601,12 +2593,6 @@ function fillPeople(people) {
 }
 
 // Last used service per show; refreshed URLs still come from the current stream data.
-$('noFrills').checked = document.documentElement.classList.contains('no-frills');
-$('noFrills').onchange = () => {
-  try { localStorage.setItem('noFrills', $('noFrills').checked ? '1' : '0'); } catch {}
-  document.documentElement.classList.toggle('no-frills', $('noFrills').checked);
-  load(true); // the time column is measured again without the covers
-};
 // Read-only navigation shortcuts: never hijack typing, native controls, dialogs or browser keys.
 // The one help screen: the guide, with the shortcuts at its end. The ? key opens right at those.
 let helpReturnFocus = null;
