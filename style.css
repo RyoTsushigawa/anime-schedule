@@ -303,6 +303,15 @@ body.searching .daystrip { display: none; }
 .weekline > .daystrip { flex: 1 1 340px; min-width: 0; margin: 0; }
 .weekline > .alerts { margin: 0; padding: 0; }
 .weekline > .alerts[open] { flex: 0 0 100%; }
+/* Phones: no room beside the strip, so the pill sits at the end of the first day's heading line. A long
+   label, or anything but a day below, keeps it on a line of its own. Opened, it stays at that height
+   and its text pushes the days down. */
+@media (max-width: 560px) {
+  .weekline:has(+ .day) { position: relative; }
+  .weekline:has(+ .day) > .alerts:not(.long):not([open]) { position: absolute; right: 0; top: calc(100% + 9px); z-index: 2; padding-left: 10px; background: var(--bg); }
+  .weekline:has(+ .day) > .alerts:not(.long)[open] { order: 1; }
+  .weekline:has(+ .day) > .alerts:not(.long)[open] summary { margin-left: auto; }
+}
 .cr { --svc: var(--accent); flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; border: 1px solid transparent; background: color-mix(in srgb, var(--svc) 8%, transparent); color: color-mix(in srgb, color-mix(in srgb, var(--svc) var(--svc-ink), #000), #fff calc(var(--text-lift, 0%) * var(--lift-on))); text-decoration: none; font-weight: 600; font-size: 13px; line-height: 1.2; padding: 6px 13px; border-radius: 99px; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 1px 3px rgba(0, 0, 0, .22); }
 .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
 .row .cr .site-icon, .row.compact .cr .site-icon { display: block; flex: none; width: 18px; height: 18px; margin-left: -3px; border-radius: 4px; object-fit: contain; background: none; box-shadow: none; }
@@ -386,6 +395,8 @@ kbd { display: inline-block; min-width: 23px; padding: 2px 5px; border: 1px soli
 /* Loading: the page's shape instead of an empty screen */
 .status.loading { padding: 4px 0 14px; font-size: 13px; }
 .skeleton { display: grid; gap: 6px; }
+/* While loading, the footer waits below the screen instead of being pushed down when the rows arrive */
+#list:has(> .skeleton) { min-height: 100vh; }
 .skeleton { gap: 8px; }
 .skeleton i { display: block; height: 88px; border-radius: 12px; border: 1px solid var(--line); animation: breathe 1.3s ease-in-out infinite alternate;
   background: linear-gradient(var(--line), var(--line)) 8px 8px / 50px 70px no-repeat, linear-gradient(var(--line), var(--line)) 72px 24px / min(46%, 280px) 12px no-repeat, linear-gradient(var(--line), var(--line)) 72px 46px / min(22%, 120px) 10px no-repeat, var(--card); }
