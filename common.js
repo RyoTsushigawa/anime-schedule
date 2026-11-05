@@ -2,7 +2,6 @@
 // (read-only), title matching, AniList requests and small helpers.
 
 // ⚙ No frills: the plain look, set before anything is drawn (also on the planner).
-try { document.documentElement.classList.toggle('no-frills', localStorage.getItem('noFrills') === '1'); } catch {}
 
 const API = 'https://graphql.anilist.co';
 // The group's Google Sheet (or another copy of it with ?sheet=<id> in the address, e.g. to try the
