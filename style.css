@@ -268,8 +268,7 @@ header.away ~ main .day h2 { top: 0; }
 .row.aired:not(:hover) .cr:not(:focus-visible) { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.pause { border-style: dashed; padding: 10px 8px; }
 .row.pause .time { font-weight: 500; }
-.row.pause .reason { font-style: italic; }
-.row.pause .reason a { color: inherit; text-decoration: underline dotted; }
+.row.pause .ep a { color: inherit; text-decoration: underline dotted; }
 .cr.news { background: transparent; color: var(--text); border: 1px solid var(--line); }
 /* Shows sharing one watch slot: one card, rows split by a thin line */
 .shared { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden; box-shadow: var(--raise); }
@@ -361,8 +360,6 @@ kbd { display: inline-block; min-width: 23px; padding: 2px 5px; border: 1px soli
 .drop.dropped { display: inline-grid; place-items: center; border: 1px dashed var(--line); color: var(--muted); font-size: 11px; }
 /* A new version is ready: a dot on the settings button, the rest in its menu */
 #settingsButton { position: relative; }
-#settingsButton.has-update::after { content: ''; position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
-#updateReload { width: 100%; border-color: var(--accent); color: var(--accent); font-weight: 600; }
 /* Data shown from an older copy or missing (offline, a source not answering): above the schedule */
 .datanote { color: var(--text); font-size: 13px; margin: 0 0 14px; padding: 8px 12px; border-radius: 10px; display: grid; gap: 4px;
   border: 1px solid #d9a400; background: color-mix(in srgb, #d9a400 12%, transparent); }
@@ -405,15 +402,15 @@ details.warning { color: #e5484d; margin: 0 0 16px; padding: 8px 12px; border: 1
 details.warning summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 6px 0 0; padding-left: 20px; }
 /* The week's breaks and unplaced shows, one line each, folded up until opened */
-.alerts { color: var(--text); margin: 0 0 8px; padding: 0 2px; font-size: 13px; display: grid; gap: 4px; }
-.alerts b { font-weight: 600; }
+.alerts { color: var(--muted); margin: 0 0 8px; padding: 0 2px; font-size: 13px; display: grid; gap: 4px; }
+.alerts b { color: var(--text); font-weight: 500; }
 .alerts a { color: inherit; text-decoration: underline dotted; }
 .alerts .why { color: var(--muted); }
 .alerts summary { cursor: pointer; width: max-content; max-width: 100%; color: var(--muted); font-size: 12px; font-weight: 500; padding: 2px 0; list-style: none; display: flex; align-items: center; }
 .alerts summary::-webkit-details-marker { display: none; }
 .alerts summary::after { content: ''; width: 7px; height: 7px; margin: -3px 2px 0 8px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s ease; }
 .alerts[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
-.alerts .notice-count { font-size: 12px; font-weight: 500; margin-left: 8px; white-space: nowrap; color: var(--muted); }
+.alerts .notice-count { font-size: 12px; font-weight: 500; white-space: nowrap; color: var(--muted); }
 .alerts-body { display: grid; gap: 6px; margin: 4px 0 6px; }
 /* Buttons on one line, so rows keep their height when "Other services" adds some */
 @media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
