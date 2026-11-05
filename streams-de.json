@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-26T18:04:43.884Z",
+ "generated": "2026-11-05T13:02:30.799Z",
  "byAnilist": {
   "152677": [
    {
@@ -421,7 +421,7 @@
    "service": "Crunchyroll"
   },
   "178868": {
-   "offset": 900,
+   "offset": 1800,
    "service": "Crunchyroll"
   },
   "179876": {
@@ -437,7 +437,7 @@
    "service": "Crunchyroll"
   },
   "185756": {
-   "offset": 900,
+   "offset": 1200,
    "service": "Crunchyroll"
   },
   "186541": {
@@ -469,11 +469,11 @@
    "service": "Crunchyroll"
   },
   "195516": {
-   "offset": 1200,
+   "offset": 1800,
    "service": "Crunchyroll"
   },
   "195571": {
-   "offset": 3600,
+   "offset": 7200,
    "service": "Crunchyroll"
   },
   "195604": {
@@ -505,7 +505,7 @@
    "service": "Crunchyroll"
   },
   "202250": {
-   "offset": 5400,
+   "offset": 2100,
    "service": "Crunchyroll"
   },
   "203473": {
@@ -513,7 +513,7 @@
    "service": "Crunchyroll"
   },
   "203490": {
-   "offset": 5400,
+   "offset": 9000,
    "service": "Crunchyroll"
   },
   "204011": {
@@ -525,8 +525,8 @@
    "service": "Crunchyroll"
   },
   "204650": {
-   "offset": 3000,
-   "service": "Crunchyroll"
+   "offset": 3600,
+   "service": "Netflix"
   },
   "205896": {
    "offset": 0,
@@ -545,7 +545,7 @@
    "service": "Crunchyroll"
   },
   "207191": {
-   "offset": 3600,
+   "offset": 0,
    "service": "Crunchyroll"
   },
   "207329": {
@@ -577,7 +577,7 @@
    "service": "Crunchyroll"
   },
   "209872": {
-   "offset": 3900,
+   "offset": 3600,
    "service": "Netflix"
   },
   "211778": {
@@ -621,16 +621,34 @@
    ],
    "url": "https://www.livechart.me/anime/11343",
    "next": {
-    "episode": 5,
-    "at": 1793799000
+    "episode": 6,
+    "at": 1794403800
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793799000
+    },
+    {
+     "episode": 6,
+     "at": 1794403800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 7
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "159042": {
    "titles": [
@@ -639,16 +657,34 @@
    ],
    "url": "https://www.livechart.me/anime/11748",
    "next": {
-    "episode": 6,
-    "at": 1793806200
+    "episode": 7,
+    "at": 1794411000
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793806200
+    },
+    {
+     "episode": 7,
+     "at": 1794411000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 1
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "160803": {
    "titles": [
@@ -657,16 +693,34 @@
    ],
    "url": "https://www.livechart.me/anime/11802",
    "next": {
-    "episode": 5,
-    "at": 1793639160
+    "episode": 6,
+    "at": 1794243600
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793639160
+    },
+    {
+     "episode": 6,
+     "at": 1794243600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 6
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "169581": {
    "titles": [
@@ -675,16 +729,34 @@
    ],
    "url": "https://www.livechart.me/anime/12344",
    "next": {
-    "episode": 6,
-    "at": 1793464200
+    "episode": 7,
+    "at": 1794069000
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793464200
+    },
+    {
+     "episode": 7,
+     "at": 1794069000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 9,
+     "day": 27
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "172192": {
    "titles": [
@@ -693,16 +765,34 @@
    ],
    "url": "https://www.livechart.me/anime/12474",
    "next": {
-    "episode": 5,
-    "at": 1793812500
+    "episode": 6,
+    "at": 1794417300
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793812500
+    },
+    {
+     "episode": 6,
+     "at": 1794417300
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 8
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "176314": {
    "titles": [
@@ -711,16 +801,34 @@
    ],
    "url": "https://www.livechart.me/anime/12611",
    "next": {
-    "episode": 5,
-    "at": 1793797200
+    "episode": 6,
+    "at": 1794402000
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793797200
+    },
+    {
+     "episode": 6,
+     "at": 1794402000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 7
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "178083": {
    "titles": [
@@ -729,16 +837,34 @@
    ],
    "url": "https://www.livechart.me/anime/12704",
    "next": {
-    "episode": 5,
-    "at": 1793377380
+    "episode": 6,
+    "at": 1793982180
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793377380
+    },
+    {
+     "episode": 6,
+     "at": 1793982180
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "178868": {
    "titles": [
@@ -747,16 +873,34 @@
    ],
    "url": "https://www.livechart.me/anime/12737",
    "next": {
-    "episode": 5,
-    "at": 1793804400
+    "episode": 6,
+    "at": 1794410100
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793804400
+    },
+    {
+     "episode": 6,
+     "at": 1794410100
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 7
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "179876": {
    "titles": [
@@ -765,16 +909,34 @@
    ],
    "url": "https://www.livechart.me/anime/12775",
    "next": {
-    "episode": 4,
-    "at": 1793729700
+    "episode": 5,
+    "at": 1794334500
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793729700
+    },
+    {
+     "episode": 5,
+     "at": 1794334500
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 14
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "180136": {
    "titles": [
@@ -796,7 +958,21 @@
      "at": 1793894400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 7,
+     "day": 3
+    },
+    "endDate": {
+     "year": 2026,
+     "month": 12,
+     "day": 25
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "180894": {
    "titles": [
@@ -805,16 +981,34 @@
    ],
    "url": "https://www.livechart.me/anime/13383",
    "next": {
-    "episode": 5,
-    "at": 1793451600
+    "episode": 6,
+    "at": 1794056400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793451600
+    },
+    {
+     "episode": 6,
+     "at": 1794056400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "185756": {
    "titles": [
@@ -823,16 +1017,34 @@
    ],
    "url": "https://www.livechart.me/anime/12991",
    "next": {
-    "episode": 6,
-    "at": 1793545200
+    "episode": 7,
+    "at": 1794150000
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793545200
+    },
+    {
+     "episode": 7,
+     "at": 1794150000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 9,
+     "day": 27
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "186541": {
    "titles": [
@@ -841,16 +1053,34 @@
    ],
    "url": "https://www.livechart.me/anime/13033",
    "next": {
-    "episode": 5,
-    "at": 1793541600
+    "episode": 6,
+    "at": 1794146400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793541600
+    },
+    {
+     "episode": 6,
+     "at": 1794146400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "186742": {
    "titles": [
@@ -859,16 +1089,34 @@
    ],
    "url": "https://www.livechart.me/anime/13043",
    "next": {
-    "episode": 4,
-    "at": 1793374200
+    "episode": 5,
+    "at": 1793979000
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793374200
+    },
+    {
+     "episode": 5,
+     "at": 1793979000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 9
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "187316": {
    "titles": [
@@ -877,16 +1125,34 @@
    ],
    "url": "https://www.livechart.me/anime/13068",
    "next": {
-    "episode": 5,
-    "at": 1793716200
+    "episode": 6,
+    "at": 1794321000
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793716200
+    },
+    {
+     "episode": 6,
+     "at": 1794321000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "187402": {
    "titles": [
@@ -895,16 +1161,34 @@
    ],
    "url": "https://www.livechart.me/anime/13073",
    "next": {
-    "episode": 6,
-    "at": 1793451600
+    "episode": 7,
+    "at": 1794056400
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793451600
+    },
+    {
+     "episode": 7,
+     "at": 1794056400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "187990": {
    "titles": [
@@ -913,16 +1197,34 @@
    ],
    "url": "https://www.livechart.me/anime/13092",
    "next": {
-    "episode": 5,
-    "at": 1793716200
+    "episode": 6,
+    "at": 1794321000
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793716200
+    },
+    {
+     "episode": 6,
+     "at": 1794321000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 6
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "189123": {
    "titles": [
@@ -941,12 +1243,20 @@
     }
    ],
    "news": [],
-   "notes": [
-    {
-     "at": 1793518200,
-     "text": "There will be no broadcast today due to sports coverage."
-    }
-   ]
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "191656": {
    "titles": [
@@ -955,16 +1265,34 @@
    ],
    "url": "https://www.livechart.me/anime/13150",
    "next": {
-    "episode": 5,
-    "at": 1793460600
+    "episode": 6,
+    "at": 1794065400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793460600
+    },
+    {
+     "episode": 6,
+     "at": 1794065400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "191788": {
    "titles": [
@@ -973,16 +1301,34 @@
    ],
    "url": "https://www.livechart.me/anime/13151",
    "next": {
-    "episode": 5,
-    "at": 1793523600
+    "episode": 6,
+    "at": 1794128400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793523600
+    },
+    {
+     "episode": 6,
+     "at": 1794128400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "195516": {
    "titles": [
@@ -991,16 +1337,34 @@
    ],
    "url": "https://www.livechart.me/anime/13226",
    "next": {
-    "episode": 5,
-    "at": 1793372400
+    "episode": 6,
+    "at": 1793977200
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793372400
+    },
+    {
+     "episode": 6,
+     "at": 1793977200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 2
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "195571": {
    "titles": [
@@ -1009,16 +1373,34 @@
    ],
    "url": "https://www.livechart.me/anime/13231",
    "next": {
-    "episode": 4,
-    "at": 1793439000
+    "episode": 5,
+    "at": 1794047400
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793439000
+    },
+    {
+     "episode": 5,
+     "at": 1794047400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 10
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "195604": {
    "titles": [
@@ -1027,16 +1409,34 @@
    ],
    "url": "https://www.livechart.me/anime/13232",
    "next": {
-    "episode": 5,
-    "at": 1793458800
+    "episode": 6,
+    "at": 1794063600
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793458800
+    },
+    {
+     "episode": 6,
+     "at": 1794063600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "198727": {
    "titles": [
@@ -1045,16 +1445,34 @@
    ],
    "url": "https://www.livechart.me/anime/13317",
    "next": {
-    "episode": 4,
-    "at": 1793723400
+    "episode": 5,
+    "at": 1794328200
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793723400
+    },
+    {
+     "episode": 5,
+     "at": 1794328200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 13
+    },
+    "endDate": {
+     "year": 2026,
+     "month": 12,
+     "day": 22
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "199007": {
    "titles": [
@@ -1063,16 +1481,40 @@
    ],
    "url": "https://www.livechart.me/anime/13327",
    "next": {
-    "episode": 5,
-    "at": 1793458800
+    "episode": 6,
+    "at": 1794668400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793458800
+    },
+    {
+     "episode": 6,
+     "at": 1794668400
     }
    ],
-   "news": []
+   "news": [],
+   "notes": [
+    {
+     "at": 1794061800,
+     "text": "There will be no episode today due to unrelated special programming."
+    }
+   ],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "199426": {
    "titles": [
@@ -1081,16 +1523,34 @@
    ],
    "url": "https://www.livechart.me/anime/13344",
    "next": {
-    "episode": 5,
-    "at": 1793546100
+    "episode": 6,
+    "at": 1794150900
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793546100
+    },
+    {
+     "episode": 6,
+     "at": 1794150900
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "199594": {
    "titles": [
@@ -1112,7 +1572,21 @@
      "at": 1793890800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 9
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "200294": {
    "titles": [
@@ -1121,16 +1595,34 @@
    ],
    "url": "https://www.livechart.me/anime/13363",
    "next": {
-    "episode": 5,
-    "at": 1793717100
+    "episode": 6,
+    "at": 1794321900
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793717100
+    },
+    {
+     "episode": 6,
+     "at": 1794321900
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 6
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "200455": {
    "titles": [
@@ -1139,16 +1631,34 @@
    ],
    "url": "https://www.livechart.me/anime/13364",
    "next": {
-    "episode": 5,
-    "at": 1793543400
+    "episode": 6,
+    "at": 1794148200
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793543400
+    },
+    {
+     "episode": 6,
+     "at": 1794148200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "202079": {
    "titles": [
@@ -1157,16 +1667,34 @@
    ],
    "url": "https://www.livechart.me/anime/13382",
    "next": {
-    "episode": 5,
-    "at": 1793541600
+    "episode": 6,
+    "at": 1794146400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793541600
+    },
+    {
+     "episode": 6,
+     "at": 1794146400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "202250": {
    "titles": [
@@ -1175,16 +1703,34 @@
    ],
    "url": "https://www.livechart.me/anime/13386",
    "next": {
-    "episode": 5,
-    "at": 1793469600
+    "episode": 6,
+    "at": 1794074400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793469600
+    },
+    {
+     "episode": 6,
+     "at": 1794074400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "203473": {
    "titles": [
@@ -1193,16 +1739,34 @@
    ],
    "url": "https://www.livechart.me/anime/13416",
    "next": {
-    "episode": 4,
-    "at": 1793466900
+    "episode": 5,
+    "at": 1794071700
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793466900
+    },
+    {
+     "episode": 5,
+     "at": 1794071700
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 10
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "203490": {
    "titles": [
@@ -1211,16 +1775,34 @@
    ],
    "url": "https://www.livechart.me/anime/13417",
    "next": {
-    "episode": 17,
-    "at": 1793377800
+    "episode": 18,
+    "at": 1793986200
    },
    "airings": [
     {
      "episode": 17,
      "at": 1793377800
+    },
+    {
+     "episode": 18,
+     "at": 1793986200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 7,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "204011": {
    "titles": [
@@ -1239,12 +1821,20 @@
     }
    ],
    "news": [],
-   "notes": [
-    {
-     "at": 1793628000,
-     "text": "Today's broadcast is a recap episode."
-    }
-   ]
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 5
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "204389": {
    "titles": [
@@ -1253,16 +1843,34 @@
    ],
    "url": "https://www.livechart.me/anime/13442",
    "next": {
-    "episode": 6,
-    "at": 1793453400
+    "episode": 7,
+    "at": 1794058200
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793453400
+    },
+    {
+     "episode": 7,
+     "at": 1794058200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 9,
+     "day": 26
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "204650": {
    "titles": [
@@ -1271,16 +1879,34 @@
    ],
    "url": "https://www.livechart.me/anime/13454",
    "next": {
-    "episode": 5,
-    "at": 1793376000
+    "episode": 6,
+    "at": 1793980800
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793376000
+    },
+    {
+     "episode": 6,
+     "at": 1793980800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 2
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "205896": {
    "titles": [
@@ -1289,16 +1915,34 @@
    ],
    "url": "https://www.livechart.me/anime/13477",
    "next": {
-    "episode": 4,
-    "at": 1793543400
+    "episode": 5,
+    "at": 1794148200
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793543400
+    },
+    {
+     "episode": 5,
+     "at": 1794148200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 11
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "205909": {
    "titles": [
@@ -1307,16 +1951,34 @@
    ],
    "url": "https://www.livechart.me/anime/13476",
    "next": {
-    "episode": 4,
-    "at": 1793376000
+    "episode": 5,
+    "at": 1793980800
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793376000
+    },
+    {
+     "episode": 5,
+     "at": 1793980800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 9
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "206401": {
    "titles": [
@@ -1325,8 +1987,8 @@
    ],
    "url": "https://www.livechart.me/anime/13490",
    "next": {
-    "episode": 6,
-    "at": 1793881800
+    "episode": 7,
+    "at": 1794486600
    },
    "airings": [
     {
@@ -1336,9 +1998,27 @@
     {
      "episode": 6,
      "at": 1793881800
+    },
+    {
+     "episode": 7,
+     "at": 1794486600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 1
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "206814": {
    "titles": [
@@ -1347,16 +2027,34 @@
    ],
    "url": "https://www.livechart.me/anime/13497",
    "next": {
-    "episode": 4,
-    "at": 1793548800
+    "episode": 5,
+    "at": 1794153600
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793548800
+    },
+    {
+     "episode": 5,
+     "at": 1794153600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 11
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "206949": {
    "titles": [
@@ -1365,16 +2063,34 @@
    ],
    "url": "https://www.livechart.me/anime/13504",
    "next": {
-    "episode": 5,
-    "at": 1793708700
+    "episode": 6,
+    "at": 1794313500
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793708700
+    },
+    {
+     "episode": 6,
+     "at": 1794313500
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 6
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "207191": {
    "titles": [
@@ -1383,16 +2099,34 @@
    ],
    "url": "https://www.livechart.me/anime/13508",
    "next": {
-    "episode": 5,
-    "at": 1793626200
+    "episode": 6,
+    "at": 1794227400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793626200
+    },
+    {
+     "episode": 6,
+     "at": 1794227400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 5
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "207329": {
    "titles": [
@@ -1401,16 +2135,34 @@
    ],
    "url": "https://www.livechart.me/anime/13514",
    "next": {
-    "episode": 5,
-    "at": 1793720160
+    "episode": 6,
+    "at": 1794324600
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793720160
+    },
+    {
+     "episode": 6,
+     "at": 1794324600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 7
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "207809": {
    "titles": [
@@ -1419,16 +2171,34 @@
    ],
    "url": "https://www.livechart.me/anime/13523",
    "next": {
-    "episode": 18,
-    "at": 1793727300
+    "episode": 19,
+    "at": 1794331800
    },
    "airings": [
     {
      "episode": 18,
      "at": 1793727300
+    },
+    {
+     "episode": 19,
+     "at": 1794331800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 7,
+     "day": 8
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "208025": {
    "titles": [
@@ -1437,16 +2207,34 @@
    ],
    "url": "https://www.livechart.me/anime/13526",
    "next": {
-    "episode": 5,
-    "at": 1793550000
+    "episode": 6,
+    "at": 1794154800
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793550000
+    },
+    {
+     "episode": 6,
+     "at": 1794154800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 5
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "209219": {
    "titles": [
@@ -1455,16 +2243,34 @@
    ],
    "url": "https://www.livechart.me/anime/13548",
    "next": {
-    "episode": 6,
-    "at": 1793624400
+    "episode": 7,
+    "at": 1794229200
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793624400
+    },
+    {
+     "episode": 7,
+     "at": 1794229200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 5
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "209463": {
    "titles": [
@@ -1473,16 +2279,34 @@
    ],
    "url": "https://www.livechart.me/anime/13557",
    "next": {
-    "episode": 5,
-    "at": 1793548800
+    "episode": 6,
+    "at": 1794153600
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793548800
+    },
+    {
+     "episode": 6,
+     "at": 1794153600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 5
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "209499": {
    "titles": [
@@ -1491,16 +2315,34 @@
    ],
    "url": "https://www.livechart.me/anime/13556",
    "next": {
-    "episode": 5,
-    "at": 1793543400
+    "episode": 6,
+    "at": 1794148200
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793543400
+    },
+    {
+     "episode": 6,
+     "at": 1794148200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "209502": {
    "titles": [
@@ -1509,16 +2351,34 @@
    ],
    "url": "https://www.livechart.me/anime/13559",
    "next": {
-    "episode": 5,
-    "at": 1793712600
+    "episode": 6,
+    "at": 1794317400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793712600
+    },
+    {
+     "episode": 6,
+     "at": 1794317400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 6
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "209562": {
    "titles": [
@@ -1527,16 +2387,34 @@
    ],
    "url": "https://www.livechart.me/anime/13562",
    "next": {
-    "episode": 5,
-    "at": 1793462400
+    "episode": 6,
+    "at": 1794067200
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793462400
+    },
+    {
+     "episode": 6,
+     "at": 1794067200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.627Z"
+   }
   },
   "209709": {
    "titles": [
@@ -1545,16 +2423,34 @@
    ],
    "url": "https://www.livechart.me/anime/13566",
    "next": {
-    "episode": 5,
-    "at": 1793431740
+    "episode": 6,
+    "at": 1794036540
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793431740
+    },
+    {
+     "episode": 6,
+     "at": 1794036540
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "209872": {
    "titles": [
@@ -1563,16 +2459,34 @@
    ],
    "url": "https://www.livechart.me/anime/13571",
    "next": {
-    "episode": 5,
-    "at": 1793466000
+    "episode": 6,
+    "at": 1794070800
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793466000
+    },
+    {
+     "episode": 6,
+     "at": 1794070800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 4
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "211778": {
    "titles": [
@@ -1581,16 +2495,34 @@
    ],
    "url": "https://www.livechart.me/anime/13623",
    "next": {
-    "episode": 5,
-    "at": 1793797200
+    "episode": 6,
+    "at": 1794402000
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793797200
+    },
+    {
+     "episode": 6,
+     "at": 1794402000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 7
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "212503": {
    "titles": [
@@ -1612,7 +2544,21 @@
      "at": 1793898000
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 9
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "212799": {
    "titles": [
@@ -1621,16 +2567,34 @@
    ],
    "url": "https://www.livechart.me/anime/13653",
    "next": {
-    "episode": 5,
-    "at": 1793458800
+    "episode": 6,
+    "at": 1794063600
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793458800
+    },
+    {
+     "episode": 6,
+     "at": 1794063600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "212888": {
    "titles": [
@@ -1639,16 +2603,34 @@
    ],
    "url": "https://www.livechart.me/anime/13655",
    "next": {
-    "episode": 6,
-    "at": 1793543400
+    "episode": 7,
+    "at": 1794148200
    },
    "airings": [
     {
      "episode": 6,
      "at": 1793543400
+    },
+    {
+     "episode": 7,
+     "at": 1794148200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 9,
+     "day": 27
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "213068": {
    "titles": [
@@ -1657,16 +2639,34 @@
    ],
    "url": "https://www.livechart.me/anime/13656",
    "next": {
-    "episode": 5,
-    "at": 1793811600
+    "episode": 6,
+    "at": 1794416400
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793811600
+    },
+    {
+     "episode": 6,
+     "at": 1794416400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 8
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "213657": {
    "titles": [
@@ -1675,16 +2675,34 @@
    ],
    "url": "https://www.livechart.me/anime/13700",
    "next": {
-    "episode": 4,
-    "at": 1793520000
+    "episode": 5,
+    "at": 1794124800
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793520000
+    },
+    {
+     "episode": 5,
+     "at": 1794124800
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 11
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "213658": {
    "titles": [
@@ -1693,16 +2711,34 @@
    ],
    "url": "https://www.livechart.me/anime/13701",
    "next": {
-    "episode": 4,
-    "at": 1793523600
+    "episode": 5,
+    "at": 1794128400
    },
    "airings": [
     {
      "episode": 4,
      "at": 1793523600
+    },
+    {
+     "episode": 5,
+     "at": 1794128400
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 11
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "213805": {
    "titles": [
@@ -1724,7 +2760,21 @@
      "at": 1793892600
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 1
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "216557": {
    "titles": [
@@ -1733,16 +2783,34 @@
    ],
    "url": "https://www.livechart.me/anime/13448",
    "next": {
-    "episode": 5,
-    "at": 1793408400
+    "episode": 6,
+    "at": 1794013200
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793408400
+    },
+    {
+     "episode": 6,
+     "at": 1794013200
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 3
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   },
   "216895": {
    "titles": [
@@ -1751,17 +2819,34 @@
    ],
    "url": "https://www.livechart.me/anime/13801",
    "next": {
-    "episode": 5,
-    "at": 1793363100
+    "episode": 6,
+    "at": 1793967900
    },
    "airings": [
     {
      "episode": 5,
      "at": 1793363100
+    },
+    {
+     "episode": 6,
+     "at": 1793967900
     }
    ],
-   "news": []
+   "news": [],
+   "airingStatus": {
+    "status": "RELEASING",
+    "startDate": {
+     "year": 2026,
+     "month": 10,
+     "day": 2
+    },
+    "endDate": {
+     "year": null,
+     "month": null,
+     "day": null
+    },
+    "checked": "2026-11-05T13:02:30.799Z"
+   }
   }
- },
- "statusUpdated": "2026-10-29T20:35:05.337Z"
+ }
 }
