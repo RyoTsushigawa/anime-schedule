@@ -303,12 +303,12 @@ body.searching .daystrip { display: none; }
 .pager { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .pager button { border-radius: 99px; font-size: 13px; color: var(--muted); padding: 7px 14px; }
 body.searching .pager { display: none; }
-.cr { --svc: var(--accent); flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; border: 1px solid transparent; background: color-mix(in srgb, var(--svc) 8%, transparent); color: var(--svc); text-decoration: none; font-weight: 600; font-size: 13px; line-height: 1.2; padding: 6px 13px; border-radius: 99px; white-space: nowrap; box-shadow: none; }
+.cr { --svc: var(--accent); flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; border: 1px solid transparent; background: color-mix(in srgb, var(--svc) 8%, transparent); color: var(--svc); text-decoration: none; font-weight: 600; font-size: 13px; line-height: 1.2; padding: 6px 13px; border-radius: 99px; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 1px 3px rgba(0, 0, 0, .22); }
 .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
+.row .cr .site-icon, .row.compact .cr .site-icon { display: block; flex: none; width: 18px; height: 18px; margin-left: -3px; border-radius: 4px; object-fit: contain; background: none; box-shadow: none; }
 .svc-icon { flex: none; width: 18px; height: 18px; margin-left: -3px; background: currentColor; -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
-@media (hover: hover) { .cr:not(.other, .none, .news):hover { background: color-mix(in srgb, var(--svc) 15%, transparent); } }
+@media (hover: hover) { .cr:not(.other, .news):hover { background: color-mix(in srgb, var(--svc) 15%, transparent); } }
 .cr.other { background: transparent; border: 1px solid; font-weight: 500; box-shadow: none; }
-.cr.none { background: #1e1e22; color: #ffffff; box-shadow: inset 0 0 0 1px #3a3a42; }
 /* ✓ = watched (written to AniList) */
 .watch { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 9px; color: var(--green); border-color: color-mix(in srgb, var(--green) 55%, transparent); background: color-mix(in srgb, var(--green) 10%, transparent); font-size: 15px; font-weight: 700; line-height: 1; }
 .watch:hover { border-color: var(--green); background: color-mix(in srgb, var(--green) 15%, var(--card)); }
@@ -481,7 +481,7 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 /* ⚙ No frills: the same page without decoration. Words, times and buttons only. */
 .no-frills .row img, .no-frills .logo, .no-frills .status.happy img, .no-frills .daystrip, .no-frills .row::before { display: none; }
 .no-frills header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
-.no-frills .row, .no-frills .shared, .no-frills .cr:not(.none), .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice { box-shadow: none; }
+.no-frills .row, .no-frills .shared, .no-frills .cr, .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice { box-shadow: none; }
 .no-frills *, .no-frills ::before, .no-frills ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 .no-frills button:active, .no-frills .cr:active, .no-frills .toggle:active { transform: none; }
 .no-frills .skeleton i { background: var(--card); }
