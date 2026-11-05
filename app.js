@@ -1107,7 +1107,7 @@ function render(items, start, plans) {
     ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Zurück am ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
     ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
   ];
-  const alerts = !lines.length ? '' : `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>`;
+  const alerts = !lines.length ? '' : `<details id="airingWarnings" class="alerts${breaks.length && unknown.length ? ' long' : ''}"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>`;
   html = `${staleNotice}<div class="weekline">${alerts}${strip}</div>` + html;
   // Above everything: data that's old or missing (this week's and last week's airings count here)
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
