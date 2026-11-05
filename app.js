@@ -680,11 +680,18 @@ $('search').addEventListener('keydown', e => {
 }
 
 // Fades rows whose watch time has passed; runs after each render and every 30 seconds, so
-// they fade while the page stays open.
+// they fade while the page stays open. Today gets a "Jetzt" line between what's past and what's
+// still to come (after the last show once all are past; none before the first).
 function tick() {
   const now = Date.now();
   for (const r of document.querySelectorAll('.row[data-fade-at]'))
     r.classList.toggle('aired', now >= Number(r.dataset.fadeAt));
+  document.querySelector('.now-line')?.remove();
+  const items = [...document.querySelectorAll('.day.is-today > .row[data-fade-at], .day.is-today > .shared:has(.row[data-fade-at])')];
+  const past = el => [...el.matches('.row') ? [el] : el.querySelectorAll('.row[data-fade-at]')].every(r => r.classList.contains('aired'));
+  const next = items.findIndex(el => !past(el));
+  if (next !== 0 && items.length)
+    (next > 0 ? items[next] : items.at(-1)).insertAdjacentHTML(next > 0 ? 'beforebegin' : 'afterend', '<div class="now-line" aria-hidden="true"><span>Jetzt</span></div>');
   if (document.visibilityState !== 'hidden' && new Date().toDateString() !== shownDay) freshen();
 }
 setInterval(tick, 30000);
@@ -1285,8 +1292,8 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#accountMenu, #accountButton')) showMenu('accountMenu', 'accountButton', false);
 });
 
-// Theme: follows the system until the sun/moon is clicked, then Light or Dark, remembered per
-// browser. data-dark marks the theme actually showing (for the icon).
+// Theme (⚙ Design): Auto follows the system, or Hell / Dunkel, remembered per browser. data-dark
+// marks the theme actually showing.
 const systemDark = matchMedia('(prefers-color-scheme: dark)');
 let theme = 'auto';
 function setTheme(choice) {
@@ -1297,11 +1304,12 @@ function setTheme(choice) {
   document.documentElement.toggleAttribute('data-dark', dark);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#121216' : '#f6f6f8');
   try { localStorage.setItem('theme', theme); } catch {}
+  for (const b of document.querySelectorAll('[data-theme-choice]')) b.setAttribute('aria-pressed', b.dataset.themeChoice === theme);
 }
 try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
 setTheme(theme);
 systemDark.addEventListener('change', () => setTheme(theme));
-$('themeButton').onclick = () => setTheme(document.documentElement.hasAttribute('data-dark') ? 'light' : 'dark');
+for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = () => setTheme(b.dataset.themeChoice);
 
 // ⚙ choices (buttons with data-set="name" data-value="…"), remembered per browser: the time shown
 // in the week, the Catch-up order and the accent color.
@@ -2615,7 +2623,7 @@ function fillPeople(people) {
 // The one help screen: the guide, with the shortcuts at its end. The ? key opens right at those.
 let helpReturnFocus = null;
 function openHelp(atShortcuts = false) {
-  helpReturnFocus = atShortcuts ? document.activeElement : $('helpButton');
+  helpReturnFocus = atShortcuts ? document.activeElement : $('settingsButton');
   showSettings(false);
   showMenu('accountMenu', 'accountButton', false);
   showPeople(false);
