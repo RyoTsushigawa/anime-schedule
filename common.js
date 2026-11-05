@@ -253,8 +253,26 @@ const mediaTitles = m => [m.title.romaji, m.title.english, ...(m.synonyms || [])
 // header browsers need, so that shows up as a network error: both (and server errors) get a few
 // retries with waits, and a "Loading…" message on the page says so meanwhile.
 const RETRY_WAITS = [4000, 12000, 30000];
+// AniList's per-minute limit (30 or 90) and what's left of it, as its replies say. A used-up minute
+// is waited out before asking again (a click meanwhile saves once it's over), and onAniListPause
+// (set by the schedule) hears until when. AniList doesn't say when its minute ends: it's taken as a
+// minute after this page's oldest request within the last minute.
+const aniLimit = { limit: 0, remaining: Infinity, sent: [], count: 0, until: 0 };
+let onAniListPause = null;
+function aniMinuteEnd() {
+  const now = Date.now();
+  aniLimit.sent = aniLimit.sent.filter(t => now - t < 60000);
+  return (aniLimit.sent[0] || now) + 60000;
+}
 async function anilist(query, variables = {}, token, options = {}) {
   for (let attempt = 0; ; attempt++) {
+    if (aniLimit.until > Date.now()) {
+      onAniListPause?.(aniLimit.until);
+      await new Promise(r => setTimeout(r, aniLimit.until - Date.now()));
+      aniLimit.remaining = Infinity;
+    }
+    aniLimit.sent.push(Date.now());
+    aniLimit.count++;
     let res = null;
     try {
       res = await fetch(API, {
@@ -264,6 +282,12 @@ async function anilist(query, variables = {}, token, options = {}) {
         body: JSON.stringify({ query, variables }),
       });
     } catch {}
+    const left = res?.headers?.get?.('x-ratelimit-remaining');
+    if (left != null && left !== '') {
+      aniLimit.remaining = Number(left);
+      aniLimit.limit = Number(res.headers.get('x-ratelimit-limit')) || aniLimit.limit;
+      if (aniLimit.remaining <= 0) aniLimit.until = aniMinuteEnd();
+    }
     if (res && res.status !== 429 && res.status < 500) {
       if (res.status === 401) throw Object.assign(new Error('AniList-Anmeldung abgelaufen, bitte neu verbinden'), { status: 401 });
       const json = await res.json().catch(() => ({}));
@@ -272,6 +296,8 @@ async function anilist(query, variables = {}, token, options = {}) {
     }
     // Offline: no point waiting for retries
     if (attempt >= (options.retries ?? RETRY_WAITS.length) || (!res && navigator.onLine === false)) throw new Error("AniList antwortet gerade nicht (es begrenzt, wie oft man fragen darf). Versuch es in einer Minute nochmal");
+    // Limited (a 429 reads as a network error) right after using up the minute: wait it out
+    if (res?.status === 429 || (!res && aniLimit.remaining <= 2)) { aniLimit.until = Math.max(aniLimit.until, aniMinuteEnd()); continue; }
     const status = document.querySelector('#list .status');
     if (status) status.textContent = 'AniList ist beschäftigt, neuer Versuch…';
     await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
