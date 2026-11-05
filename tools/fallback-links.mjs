@@ -14,9 +14,19 @@ export function parseSubsPlease(html) {
   }
   return [...shows.values()];
 }
+// AniList's long light-novel subtitles are often dropped by release groups: "Kyouran Reijou Nia Liston:
+// Byoujaku Reijou ni..." is "Kyouran Reijou Nia Liston" on SubsPlease. A short or season-like part after
+// the colon can name another season, so that stays part of the title.
+export function withoutLongSubtitle(title) {
+  const parts = String(title).match(/^(.{8,}?)\s*:\s+(.+)$/);
+  if (!parts || parts[2].trim().split(/\s+/).length < 4) return null;
+  return /\b(?:season|part|cour|final|ii|iii|iv|\d+(?:st|nd|rd|th)?)\b/i.test(parts[2]) ? null : parts[1];
+}
 export function matchSubsPlease(titles, index) {
-  const keys = new Set(titles.filter(Boolean).map(fallbackTitle));
-  const matches = index.filter(show => keys.has(fallbackTitle(show.title)));
+  const known = titles.filter(Boolean);
+  const among = list => { const keys = new Set(list.map(fallbackTitle)); return index.filter(show => keys.has(fallbackTitle(show.title))); };
+  let matches = among(known);
+  if (!matches.length) matches = among(known.map(withoutLongSubtitle).filter(Boolean));
   return matches.length === 1 ? matches[0] : null;
 }
 export function parseAniWorld(html) {
