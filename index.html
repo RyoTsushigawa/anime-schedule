@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,7 +10,7 @@
   https://*.googleusercontent.com https://sheets.googleapis.com https://api.github.com https://anime-schedule-mal.shigeruhagano.workers.dev; manifest-src 'self'; worker-src 'self';
   object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<title>Simulcast Schedule</title>
+<title>Simulcast-Plan</title>
 <!-- Home screen app -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -18,7 +18,7 @@
 <meta name="theme-color" content="#121216">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Schedule">
+<meta name="apple-mobile-web-app-title" content="Plan">
 <link rel="stylesheet" href="style.css">
 <script src="early.js"></script>
 </head>
@@ -27,68 +27,68 @@
   <!-- Row 1: title left, 🔍 and ⚙ top right. Row 2: view and person left; week right. -->
   <div class="bar">
     <img class="logo" src="icon-192.png" alt="" width="36" height="36"><div class="brand">
-      <div class="brand-title"><h1><span class="title-long">Simulcast </span>Schedule</h1><button id="helpButton" class="help-icon" aria-label="Guide and keyboard shortcuts" aria-haspopup="dialog">?</button></div>
+      <div class="brand-title"><h1><span class="title-long">Simulcast-</span>Plan</h1><button id="helpButton" class="help-icon" aria-label="Anleitung und Tastenkürzel" aria-haspopup="dialog">?</button></div>
       <div id="tabName">Guckplan</div>
       <div id="weekSub" class="week-sub"></div>
     </div>
     <div class="top-actions">
     <div id="searchBox" class="search">
-      <input id="search" class="pill" type="search" placeholder="Search shows" aria-label="Search shows" spellcheck="false">
-      <button id="searchButton" class="round" aria-label="Search shows" aria-expanded="false" aria-controls="search">
+      <input id="search" class="pill" type="search" placeholder="Serien suchen" aria-label="Serien suchen" spellcheck="false">
+      <button id="searchButton" class="round" aria-label="Serien suchen" aria-expanded="false" aria-controls="search">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
       </button>
     </div>
     <!-- Sun/moon: light or dark (follows the system until clicked) -->
-    <button id="themeButton" class="round" aria-label="Switch light/dark">
+    <button id="themeButton" class="round" aria-label="Hell/Dunkel wechseln">
       <svg class="moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
     </button>
     <!-- ⚙: everything that isn't needed all the time -->
     <div class="settings">
-      <button id="settingsButton" class="round" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+      <button id="settingsButton" class="round" aria-label="Einstellungen" aria-haspopup="true" aria-expanded="false">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <div id="settingsMenu" class="popover menu" hidden>
         <section>
-          <div class="menu-label">Show</div>
+          <div class="menu-label">Anzeigen</div>
           <div class="pills settings-options">
-            <label class="toggle" title="Opening a stream also marks that episode watched (when connected to your list). Undo stays available."><input type="checkbox" id="markOnOpen">Mark on open</label>
-            <label class="toggle catchup-only" title="Stream buttons in Catch-up"><input type="checkbox" id="catchupLinks">Stream links</label>
-            <label class="toggle week-only" title="Show who's watching each show"><input type="checkbox" id="who" aria-label="Who's watching">Viewers</label>
-            <label class="toggle" title="Also show services you don't have"><input type="checkbox" id="others">Other services</label>
-            <label class="toggle" title="Stream buttons in their service's color, or plain outlines"><input type="checkbox" id="serviceColors">Service colors</label>
-            <label class="toggle" title="The Drop button next to each ✓ (when connected to AniList)"><input type="checkbox" id="dropButtons">Drop buttons</label>
-            <label class="toggle" title="A plain look: no covers, color washes, day strip or animations"><input type="checkbox" id="noFrills">Simplified view</label>
-            <button id="editScheduleMenu" class="toggle phone-only week-only" hidden>Edit schedule</button>
+            <label class="toggle" title="Wenn du einen Stream öffnest, wird die Folge auch als gesehen markiert (wenn deine Liste verbunden ist). Rückgängig bleibt möglich."><input type="checkbox" id="markOnOpen">Beim Öffnen ✓</label>
+            <label class="toggle catchup-only" title="Stream-Buttons beim Nachholen"><input type="checkbox" id="catchupLinks">Stream-Links</label>
+            <label class="toggle week-only" title="Zeigt, wer welche Serie schaut"><input type="checkbox" id="who" aria-label="Wer schaut mit">Zuschauer</label>
+            <label class="toggle" title="Zeigt auch Dienste, die du nicht hast"><input type="checkbox" id="others">Andere Dienste</label>
+            <label class="toggle" title="Stream-Buttons in der Farbe des Dienstes oder schlicht umrandet"><input type="checkbox" id="serviceColors">Dienstfarben</label>
+            <label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Droppen</label>
+            <label class="toggle" title="Schlichter Look: keine Cover, Farbflächen, Tagesleiste oder Animationen"><input type="checkbox" id="noFrills">Einfache Ansicht</label>
+            <button id="editScheduleMenu" class="toggle phone-only week-only" hidden>Plan bearbeiten</button>
           </div>
         </section>
         <section>
-          <div class="menu-label">Fallback links</div>
-          <div class="segmented" role="group" aria-label="Fallback link preference"><button data-fallback-source="aniworld">AniWorld</button><button data-fallback-source="torrent">Torrents</button></div>
-          <p id="fallbackHint" class="sync-hint">When no service is shown · for selected people</p>
+          <div class="menu-label">Ersatz-Links</div>
+          <div class="segmented" role="group" aria-label="Ersatz-Links wählen"><button data-fallback-source="aniworld">AniWorld</button><button data-fallback-source="torrent">Torrents</button></div>
+          <p id="fallbackHint" class="sync-hint">Wenn kein Dienst angezeigt wird · für die gewählten Leute</p>
         </section>
         <section class="week-only">
-          <div class="menu-label">Time</div>
-          <div class="segmented" role="group" aria-label="Time shown">
-            <button data-set="time" data-value="release" title="When it comes out">Release</button><button data-set="time" data-value="watch" title="Your watch time from the Guckplan">Plan</button><button data-set="time" data-value="both">Both</button>
+          <div class="menu-label">Zeit</div>
+          <div class="segmented" role="group" aria-label="Angezeigte Zeit">
+            <button data-set="time" data-value="release" title="Wann die Folge erscheint">Release</button><button data-set="time" data-value="watch" title="Deine Guckzeit aus dem Guckplan">Plan</button><button data-set="time" data-value="both">Beide</button>
           </div>
         </section>
         <section class="catchup-only">
-          <div class="menu-label">Sort</div>
-          <div class="segmented" role="group" aria-label="Catch-up order">
-            <button data-set="sort" data-value="oldest" title="Longest waiting first">Oldest</button><button data-set="sort" data-value="behind" title="Most episodes behind first">Behind</button><button data-set="sort" data-value="az">A–Z</button>
+          <div class="menu-label">Sortierung</div>
+          <div class="segmented" role="group" aria-label="Reihenfolge beim Nachholen">
+            <button data-set="sort" data-value="oldest" title="Am längsten wartend zuerst">Älteste</button><button data-set="sort" data-value="behind" title="Die meisten offenen Folgen zuerst">Rückstand</button><button data-set="sort" data-value="az">A–Z</button>
           </div>
         </section>
         <section>
-          <div class="menu-label">Color</div>
-          <div class="swatches" role="group" aria-label="Accent color">
-            <button data-set="accent" data-value="person" class="person-swatch" aria-label="The chosen person's Guckplan color" title="The chosen person's Guckplan color"></button>
+          <div class="menu-label">Farbe</div>
+          <div class="swatches" role="group" aria-label="Akzentfarbe">
+            <button data-set="accent" data-value="person" class="person-swatch" aria-label="Guckplan-Farbe der gewählten Person" title="Guckplan-Farbe der gewählten Person"></button>
             <button data-set="accent" data-value="#f47521" style="--swatch:#f47521" aria-label="Orange"></button>
-            <button data-set="accent" data-value="#e5484d" style="--swatch:#e5484d" aria-label="Red"></button>
+            <button data-set="accent" data-value="#e5484d" style="--swatch:#e5484d" aria-label="Rot"></button>
             <button data-set="accent" data-value="#e0459b" style="--swatch:#e0459b" aria-label="Pink"></button>
-            <button data-set="accent" data-value="#8e5cf0" style="--swatch:#8e5cf0" aria-label="Purple"></button>
-            <button data-set="accent" data-value="#3d7fe6" style="--swatch:#3d7fe6" aria-label="Blue"></button>
-            <button data-set="accent" data-value="#159c8c" style="--swatch:#159c8c" aria-label="Teal"></button>
+            <button data-set="accent" data-value="#8e5cf0" style="--swatch:#8e5cf0" aria-label="Lila"></button>
+            <button data-set="accent" data-value="#3d7fe6" style="--swatch:#3d7fe6" aria-label="Blau"></button>
+            <button data-set="accent" data-value="#159c8c" style="--swatch:#159c8c" aria-label="Türkis"></button>
           </div>
         </section>
       </div>
@@ -98,16 +98,16 @@
       <button id="accountButton" class="round" aria-label="AniList" aria-haspopup="true" aria-expanded="false"></button>
       <div id="accountMenu" class="popover menu" hidden>
         <section>
-          <div class="menu-label">List accounts</div>
+          <div class="menu-label">Listen-Konten</div>
           <div id="accountSection" class="pills"></div>
-          <label class="field catchup-only"><span>Catch-up list of</span>
-            <input id="anilistUser" placeholder="AniList name" aria-label="AniList name" spellcheck="false"></label>
+          <label class="field catchup-only"><span>Nachholen-Liste von</span>
+            <input id="anilistUser" placeholder="AniList-Name" aria-label="AniList-Name" spellcheck="false"></label>
         </section>
         <section id="listSyncSection" hidden>
-          <div class="menu-label">List sync</div>
-          <label class="field"><span>Also update</span><select id="syncTarget" aria-label="Account to sync with"></select></label>
-          <div class="pills"><label class="toggle"><input id="syncBoth" type="checkbox">Sync both lists</label></div>
-          <p class="sync-hint">New changes only. MAL scores round to whole numbers.</p>
+          <div class="menu-label">Listen abgleichen</div>
+          <label class="field"><span>Auch aktualisieren</span><select id="syncTarget" aria-label="Konto zum Abgleichen"></select></label>
+          <div class="pills"><label class="toggle"><input id="syncBoth" type="checkbox">Beide Listen abgleichen</label></div>
+          <p class="sync-hint">Nur neue Änderungen. MAL rundet Bewertungen auf ganze Zahlen.</p>
         </section>
       </div>
     </div>
@@ -115,35 +115,35 @@
   </div>
   <div class="bar controls">
     <div class="controls-left">
-    <div class="segmented" role="group" aria-label="View">
-      <button id="viewWeek">Schedule</button><button id="viewCatchup">Catch-up<span id="catchupCount" class="count" hidden></span></button><button id="viewPace" title="Older shows you watch at your own pace">Non-seasonal</button>
+    <div class="segmented" role="group" aria-label="Ansicht">
+      <button id="viewWeek">Zeitplan</button><button id="viewCatchup">Nachholen<span id="catchupCount" class="count" hidden></span></button><button id="viewPace" title="Ältere Serien, die du in deinem eigenen Tempo schaust">Nicht saisonal</button>
     </div>
-    <div class="segmented soft week-only" role="group" aria-label="Mode">
-      <button id="modeSolo">Solo</button><button id="modeGroup">Group</button>
+    <div class="segmented soft week-only" role="group" aria-label="Modus">
+      <button id="modeSolo">Solo</button><button id="modeGroup">Gruppe</button>
     </div>
-    <div class="segmented soft catchup-only seasonal-only" role="group" aria-label="Catch-up layout">
-      <button id="perShow">Per show</button><button id="perEpisode">Single episodes</button>
+    <div class="segmented soft catchup-only seasonal-only" role="group" aria-label="Darstellung beim Nachholen">
+      <button id="perShow">Pro Serie</button><button id="perEpisode">Einzelne Folgen</button>
     </div>
     <select id="soloPerson" class="pill" aria-label="Person"></select>
     <div class="picker">
       <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
-      <div id="people" class="popover" role="group" aria-label="People" hidden></div>
+      <div id="people" class="popover" role="group" aria-label="Leute" hidden></div>
     </div>
-    <button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" hidden>Edit schedule</button>
+    <button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" hidden>Plan bearbeiten</button>
     </div>
     <div class="weeknav">
-      <button id="prev" class="icon" aria-label="Previous week">‹</button>
+      <button id="prev" class="icon" aria-label="Vorherige Woche">‹</button>
       <span id="week"></span>
-      <button id="next" class="icon" aria-label="Next week">›</button>
-      <div class="segmented soft range" role="group" aria-label="Days shown"><button id="fullWeek" title="All seven days">Week</button></div>
+      <button id="next" class="icon" aria-label="Nächste Woche">›</button>
+      <div class="segmented soft range" role="group" aria-label="Angezeigte Tage"><button id="fullWeek" title="Alle sieben Tage">Woche</button></div>
     </div>
   </div>
 </header>
-<main id="list"><div class="status loading">Loading…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></main>
-<footer class="site-tools" aria-label="Other tools">
-  <a href="planner.html" target="_blank" rel="noopener">Watch planner ↗</a>
+<main id="list"><div class="status loading">Lädt…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></main>
+<footer class="site-tools" aria-label="Weitere Tools">
+  <a href="planner.html" target="_blank" rel="noopener">Guckplan-Planer ↗</a>
   <a href="ranker/" target="_blank" rel="noopener">Higher / Lower ↗</a>
-  <button id="movesSetup" type="button" title="Manage access to shared schedule editing" hidden>Editing access</button>
+  <button id="movesSetup" type="button" title="Zugang zum gemeinsamen Bearbeiten verwalten" hidden>Bearbeitungszugang</button>
 </footer>
 <span id="moveToggle" hidden><input type="checkbox" id="moveButtons" hidden></span>
 <!-- After a ✓, Drop or "Mark all as watched": what happened, and Undo (Ctrl+Z on a keyboard) -->
@@ -153,20 +153,20 @@
     <b id="moveName"></b>
     <div class="muted" id="moveFrom"></div>
     <div class="dlg-row">
-      <select id="moveTag" aria-label="Day">
-        <option value="Mo.">Mon</option><option value="Di.">Tue</option><option value="Mi.">Wed</option><option value="Do.">Thu</option>
-        <option value="Fr.">Fri</option><option value="Sa.">Sat</option><option value="So.">Sun</option>
+      <select id="moveTag" aria-label="Tag">
+        <option value="Mo.">Mo</option><option value="Di.">Di</option><option value="Mi.">Mi</option><option value="Do.">Do</option>
+        <option value="Fr.">Fr</option><option value="Sa.">Sa</option><option value="So.">So</option>
       </select>
-      <input id="moveTime" placeholder="time, e.g. 21:00" inputmode="numeric" maxlength="5" aria-label="Time (empty = next free slot)">
+      <input id="moveTime" placeholder="Uhrzeit, z. B. 21:00" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (leer = nächster freier Slot)">
     </div>
-    <div class="segmented" role="group" aria-label="For">
-      <button type="button" id="moveWeek" aria-pressed="true">This week</button><button type="button" id="moveAlways" aria-pressed="false">From now on</button>
+    <div class="segmented" role="group" aria-label="Für">
+      <button type="button" id="moveWeek" aria-pressed="true">Diese Woche</button><button type="button" id="moveAlways" aria-pressed="false">Ab jetzt immer</button>
     </div>
     <div class="muted" id="moveMsg"></div>
     <div class="dlg-row">
-      <button type="button" id="moveSave" class="pill primary">Move</button>
-      <button type="button" id="moveReset" class="pill">Back to the Guckplan slot</button>
-      <button value="cancel" class="pill">Cancel</button>
+      <button type="button" id="moveSave" class="pill primary">Verschieben</button>
+      <button type="button" id="moveReset" class="pill">Zurück in den Guckplan-Slot</button>
+      <button value="cancel" class="pill">Abbrechen</button>
     </div>
   </form>
 </dialog>
@@ -174,59 +174,59 @@
 <dialog id="scoreDlg" class="dlg">
   <form method="dialog">
     <b id="scoreName"></b>
-    <div class="muted" id="scoreService">Completed. Your score on AniList:</div>
+    <div class="muted" id="scoreService">Abgeschlossen. Deine Bewertung auf AniList:</div>
     <div class="dlg-row" id="scoreInput"></div>
     <div class="muted" id="scoreMsg"></div>
     <div class="dlg-row">
-      <button type="button" id="scoreSave" class="pill primary">Save</button>
-      <button type="button" id="scoreClear" class="pill">Remove score</button>
-      <button value="cancel" class="pill">Later</button>
+      <button type="button" id="scoreSave" class="pill primary">Speichern</button>
+      <button type="button" id="scoreClear" class="pill">Bewertung entfernen</button>
+      <button value="cancel" class="pill">Später</button>
     </div>
   </form>
 </dialog>
 <dialog id="keyDlg" class="dlg">
   <form method="dialog">
-    <b>Moving shows</b>
-    <div class="muted">Moves are saved on the site for everyone, so this browser needs a GitHub key that may change the site's
-      files: a fine-grained token for <b>anime-schedule</b> with <b>Contents: read and write</b>. It stays in this browser only.</div>
-    <input id="keyInput" type="password" placeholder="github_pat_…" autocomplete="off" aria-label="GitHub key">
+    <b>Serien verschieben</b>
+    <div class="muted">Verschiebungen werden für alle auf der Seite gespeichert. Dieser Browser braucht deshalb einen GitHub-Schlüssel, der die
+      Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule</b> mit <b>Contents: read and write</b>. Er bleibt nur in diesem Browser.</div>
+    <input id="keyInput" type="password" placeholder="github_pat_…" autocomplete="off" aria-label="GitHub-Schlüssel">
     <div class="muted" id="keyMsg"></div>
     <div class="dlg-row">
-      <button type="button" id="keySave" class="pill primary">Save key</button>
-      <button type="button" id="keyRemove" class="pill">Remove key</button>
-      <button value="cancel" class="pill">Close</button>
+      <button type="button" id="keySave" class="pill primary">Schlüssel speichern</button>
+      <button type="button" id="keyRemove" class="pill">Schlüssel entfernen</button>
+      <button value="cancel" class="pill">Schließen</button>
     </div>
   </form>
 </dialog>
-<div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Undo</button></div>
+<div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Rückgängig</button></div>
 
 <dialog id="helpDialog" class="dlg quick-guide" aria-labelledby="helpTitle">
-  <h2 id="helpTitle">A quick guide</h2>
+  <h2 id="helpTitle">Kurzanleitung</h2>
   <div class="help-sections">
-    <section><h3>Choose your plan</h3><p><b>Solo</b> shows one person’s plan. <b>Group</b> combines the people you select. Select nobody to show nothing.</p></section>
-    <section><h3>Pick a view</h3><p><b>Schedule</b> follows the group’s watch days. <b>Catch-up</b> lists missed seasonal episodes. <b>Non-seasonal</b> keeps older shows at your own pace. On a phone, swipe left or right to change the week.</p></section>
-    <section><h3>Watch, then tick ✓</h3><p>Service buttons open the show. Connect an account to use ✓, Drop and scores. Ticking an episode sets your progress up to that episode, including earlier ones. Use <b>Undo</b> or Ctrl/⌘+Z for mistakes.</p></section>
-    <section><h3>Catch up your way</h3><p><b>Single episodes</b> keeps each show’s episodes together in order. <b>Mark all as watched</b> first lets you exclude shows with their ✓; press again to save.</p></section>
-    <section><h3>Connect your lists</h3><p>The account icon connects AniList or MyAnimeList. With both connected, select the matching account and enable <b>Sync both lists</b> to mirror new changes made here. Existing lists are not copied.</p></section>
-    <section><h3>Make it yours</h3><p>Settings controls links, viewers, time and colour, and <b>Simplified view</b> switches to a plain look. <b>Fallback links</b> chooses AniWorld or torrents for the selected people when no service is shown. <b>Other services</b> also lists services you don’t have. The planner and ranker are below the schedule.</p></section>
-    <section><h3>Move a show</h3><p>With editing access, use <b>Edit schedule</b>. Drag a show card onto a day or slot, then save the destination. On phones, hold the card briefly before dragging. Dropping on another show shares its time slot. Click ⇄ to enter a destination instead. Saved moves are shared with everyone.</p></section>
-    <section id="helpKeys"><h3>Keyboard shortcuts</h3>
+    <section><h3>Plan wählen</h3><p><b>Solo</b> zeigt den Plan einer Person. <b>Gruppe</b> kombiniert die Leute, die du auswählst. Wählst du niemanden, wird nichts angezeigt.</p></section>
+    <section><h3>Ansicht wählen</h3><p><b>Zeitplan</b> folgt den Gucktagen der Gruppe. <b>Nachholen</b> listet verpasste Folgen der Season. <b>Nicht saisonal</b> sammelt ältere Serien für dein eigenes Tempo. Am Handy wechselst du die Woche durch Wischen nach links oder rechts.</p></section>
+    <section><h3>Schauen, dann ✓ setzen</h3><p>Die Dienst-Buttons öffnen die Serie. Verbinde ein Konto, um ✓, Droppen und Bewertungen zu nutzen. Ein ✓ setzt deinen Fortschritt bis zu dieser Folge, auch für frühere Folgen. Bei Fehlern hilft <b>Rückgängig</b> oder Strg/⌘+Z.</p></section>
+    <section><h3>Nachholen, wie du willst</h3><p><b>Einzelne Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle als gesehen markieren</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
+    <section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle das passende Konto und aktiviere <b>Beide Listen abgleichen</b>, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
+    <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest, und <b>Einfache Ansicht</b> schaltet auf einen schlichten Look um. <b>Ersatz-Links</b> wählt AniWorld oder Torrents für die gewählten Leute, wenn kein Dienst angezeigt wird. <b>Andere Dienste</b> zeigt auch Dienste, die du nicht hast. Planer und Ranker findest du unter dem Zeitplan.</p></section>
+    <section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Plan bearbeiten</b>. Ziehe eine Serie auf einen Tag oder Slot und speichere das Ziel. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Ziehst du sie auf eine andere Serie, teilen sich beide den Slot. Mit ⇄ gibst du das Ziel stattdessen von Hand ein. Gespeicherte Verschiebungen gelten für alle.</p></section>
+    <section id="helpKeys"><h3>Tastenkürzel</h3>
       <dl class="keyboard-guide">
-        <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next week, or day when one day is shown</dd></div>
-        <div><dt><kbd>T</kbd></dt><dd>Show today</dd></div>
-        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Schedule / Catch-up / Non-seasonal</dd></div>
-        <div><dt><kbd>G</kbd></dt><dd>Solo / Group</dd></div>
-        <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Next / previous show</dd></div>
-        <div><dt><kbd>Enter</kbd></dt><dd>Open the selected show's stream</dd></div>
-        <div><dt><kbd>W</kbd></dt><dd>Mark the selected show's episode watched</dd></div>
-        <div><dt><kbd>/</kbd></dt><dd>Search shows</dd></div>
-        <div><dt><kbd>Esc</kbd></dt><dd>Close search or menu, or deselect the show</dd></div>
-        <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Undo your last list change</dd></div>
-        <div><dt><kbd>?</kbd></dt><dd>Show this guide</dd></div>
+        <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
+        <div><dt><kbd>T</kbd></dt><dd>Heute anzeigen</dd></div>
+        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Zeitplan / Nachholen / Nicht saisonal</dd></div>
+        <div><dt><kbd>G</kbd></dt><dd>Solo / Gruppe</dd></div>
+        <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Nächste / vorherige Serie</dd></div>
+        <div><dt><kbd>Enter</kbd></dt><dd>Stream der gewählten Serie öffnen</dd></div>
+        <div><dt><kbd>W</kbd></dt><dd>Folge der gewählten Serie als gesehen markieren</dd></div>
+        <div><dt><kbd>/</kbd></dt><dd>Serien suchen</dd></div>
+        <div><dt><kbd>Esc</kbd></dt><dd>Suche oder Menü schließen, oder Serie abwählen</dd></div>
+        <div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></dt><dd>Letzte Listenänderung rückgängig machen</dd></div>
+        <div><dt><kbd>?</kbd></dt><dd>Diese Anleitung anzeigen</dd></div>
       </dl>
     </section>
   </div>
-  <div class="dlg-row"><button id="helpClose" class="pill">Close</button></div>
+  <div class="dlg-row"><button id="helpClose" class="pill">Schließen</button></div>
 </dialog>
 <div id="dragHint" class="drag-hint" role="status" hidden></div>
 <script src="common.js"></script>
