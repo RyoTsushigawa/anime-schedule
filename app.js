@@ -125,7 +125,6 @@ function updateFallbackControls() {
     b.disabled = !activePeople().length;
   }
   updatePrimeControls();
-  $('fallbackHint').textContent = selected.size > 1 ? 'Gemischte Auswahl · wählen, um es für alle gewählten Leute zu setzen' : 'Wenn kein Dienst angezeigt wird · für die gewählten Leute';
 }
 for (const b of document.querySelectorAll('[data-fallback-source]')) b.onclick = () => {
   for (const person of activePeople()) fallbackSources.set(person,b.dataset.fallbackSource);
