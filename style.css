@@ -420,9 +420,11 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 /* Buttons on one line, so rows keep their height when "Other services" adds some */
 @media (min-width: 561px) {
   .links { flex-wrap: nowrap; max-width: none; }
-  /* One width (as wide as "Prime Video"), with icon and name centred in it */
-  .links > .cr { min-width: 126px; justify-content: center; }
-  .links > .cr .svc-icon, .row .links > .cr .site-icon { margin-left: 0; }
+  /* One width (as wide as "Prime Video"). Icons line up down the page; a shorter name sits in the
+     middle of the room after the icon, the spare room split evenly on both sides of it. */
+  .links > .cr { min-width: 126px; justify-content: flex-start; padding-right: 0; }
+  .links > .cr::after { content: ""; margin-left: auto; }
+  .links > .cr .svc-icon, .row .links > .cr .site-icon { margin-left: 0; margin-right: auto; }
 }
 @media (max-width: 560px) {
   /* With ✓ and Drop the row needs two lines, or the title gets a few letters: time and title on
