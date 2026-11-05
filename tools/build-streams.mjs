@@ -130,9 +130,11 @@ const streams = async livechartId => parseStreams(await livechart(`/anime/${live
 // From LiveChart's release schedules: `release`, how much later (in seconds) an episode comes out
 // on one of our services than on Japanese TV (a subbed simulcast with German or English subtitles
 // preferred, equally, and among those the earliest), and `next`, when the next episode is due
-// (no `next` = nothing scheduled, e.g. finished).
+// (no `next` = nothing scheduled, e.g. finished). A show with no simulcast of ours that one of its
+// German services streams weeks behind Japan (YouTube) gets that service's time and a `lag`: its
+// episode N comes out in the week Japan airs episode N + lag, `offset` after the Japanese time.
 const OUR_SERVICES = /crunchyroll|netflix|prime video|amazon|youtube|disney/i;
-async function schedules(livechartId) {
+async function schedules(livechartId, services = []) {
   const all = parseSchedules(await livechart(`/anime/${livechartId}/schedules`));
   // The original release: "Broadcast (Japan)", or "Streaming (Japan)" for web/foreign productions.
   const japan = all.find(s => /^(broadcast|streaming)\b/i.test(s.title));
@@ -141,11 +143,11 @@ async function schedules(livechartId) {
     const first = all.sort((a, b) => a.time - b.time)[0];
     return { release: null, next: first ? { episode: first.episode, at: first.time } : null };
   }
-  const release = pickRelease(all, japan);
+  const release = pickRelease(all, japan, services);
   return { release, next: { episode: japan.episode, at: japan.time + (release?.offset || 0) } };
 }
 
-function pickRelease(schedules, japan) {
+function pickRelease(schedules, japan, services = []) {
   // Both count down to their own next episode; line them up on the same episode (weekly).
   const offsetOf = s => s.time - japan.time - (s.episode - japan.episode) * 7 * 86400;
   const ours = schedules.filter(s => /simulcast/i.test(s.title) && OUR_SERVICES.test(s.service))
@@ -154,7 +156,14 @@ function pickRelease(schedules, japan) {
     .map(s => ({ ...s, offset: offsetOf(s) })).filter(s => s.offset > -86400 && s.offset < 3 * 86400)
     .sort((a, b) => a.offset - b.offset);
   const pick = ours.find(s => /subbed/i.test(s.title) && s.readable) || ours.find(s => /subbed/i.test(s.title)) || ours[0];
-  return pick ? { offset: pick.offset, service: pick.service } : null;
+  if (pick) return { offset: pick.offset, service: pick.service };
+  // No simulcast: a later release on a German service of this show, up to 12 weeks behind.
+  const later = schedules.filter(s => /^streaming\b/i.test(s.title) && OUR_SERVICES.test(s.service)
+      && services.some(n => norm(n) === norm(s.service)))
+    .map(s => { const all = offsetOf(s), lag = Math.floor((all + 86400) / (7 * 86400)); return { ...s, lag, offset: all - lag * 7 * 86400 }; })
+    .filter(s => s.lag >= 0 && s.lag <= 12 && s.offset < 3 * 86400)
+    .sort((a, b) => a.lag - b.lag || a.offset - b.offset)[0];
+  return later ? { offset: later.offset, service: later.service, ...(later.lag && { lag: later.lag }) } : null;
 }
 
 // Recent (6 weeks) LiveChart headlines about a break or delay, newest first; the page shows the
@@ -271,7 +280,7 @@ for (const t of titles) {
   if (status[card.anilist]) continue;
   // Streams and offsets depend on the region: only from home (Germany)
   byAnilist[card.anilist] = statusOnly ? [] : await streams(card.id);
-  const { release: offset, next } = await schedules(card.id);
+  const { release: offset, next } = await schedules(card.id, (statusOnly ? previous?.byAnilist?.[card.anilist] || [] : byAnilist[card.anilist]).map(s => s.name));
   if (offset && !statusOnly) release[card.anilist] = offset;
   // From outside Germany the next episode keeps the offset found from home (not a foreign service's)
   if (statusOnly && next) next.at += (previous?.release?.[card.anilist]?.offset || 0) - (offset?.offset || 0);
@@ -286,7 +295,7 @@ for (const t of titles) {
   status[card.anilist] = { titles: t, url: `https://www.livechart.me/anime/${card.id}`, next,
     airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(notes.length && { notes }) };
   console.log(`${t[1] || t[0]}: ${byAnilist[card.anilist].map(s => s.name + (s.extra ? ` (+${s.extra})` : '')).join(', ') || '(none)'}` +
-    (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min` : '') +
+    (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min${offset.lag ? `, ${offset.lag} weeks behind` : ''}` : '') +
     (next ? '' : ' · nothing scheduled') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
 }
 
