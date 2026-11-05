@@ -406,12 +406,13 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 .alerts b { color: var(--text); font-weight: 500; }
 .alerts a { color: inherit; text-decoration: underline dotted; }
 .alerts .why { color: var(--muted); }
-.alerts summary { cursor: pointer; width: max-content; max-width: 100%; color: var(--muted); font-size: 12px; font-weight: 500; padding: 2px 0; list-style: none; display: flex; align-items: center; }
+.alerts summary { cursor: pointer; width: max-content; max-width: 100%; box-sizing: border-box; min-height: 30px; color: var(--text); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px var(--accent); border-radius: 999px; font-size: 13px; font-weight: 600; padding: 4px 12px; list-style: none; display: flex; align-items: center; }
+@media (hover: hover) { .alerts summary:hover { background: color-mix(in srgb, var(--accent) 34%, transparent); } }
 .alerts summary::-webkit-details-marker { display: none; }
-.alerts summary::after { content: ''; width: 7px; height: 7px; margin: -3px 2px 0 8px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s ease; }
+.alerts summary::after { content: ''; width: 7px; height: 7px; margin: -3px 2px 0 8px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s ease; }
 .alerts[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
-.alerts .notice-count { font-size: 12px; font-weight: 500; white-space: nowrap; color: var(--muted); }
-.alerts-body { display: grid; gap: 6px; margin: 4px 0 6px; }
+.alerts .notice-count { white-space: nowrap; }
+.alerts-body { display: grid; gap: 6px; margin: 8px 0 6px; }
 /* Buttons on one line, so rows keep their height when "Other services" adds some */
 @media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
 @media (max-width: 560px) {
