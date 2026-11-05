@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-01T13:58:50.363Z",
+ "updated": "2026-11-05T19:30:48.847Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -7,13 +7,6 @@
    "tag": "So.",
    "time": "18:45",
    "week": "2026-10-26"
-  },
-  {
-   "show": "fxsenshikurumichan",
-   "title": "FX Fighter Kurumi-chan",
-   "tag": "Do.",
-   "time": "20:30",
-   "week": ""
   },
   {
    "show": "koorinojouhekiseason2",
@@ -56,6 +49,13 @@
    "tag": "So.",
    "time": "21:15",
    "week": "2026-10-26"
+  },
+  {
+   "show": "fxsenshikurumichan",
+   "title": "FX Fighter Kurumi-chan",
+   "tag": "Do.",
+   "time": "20:30",
+   "week": ""
   }
  ]
 }
