@@ -525,6 +525,7 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 .busy-note { flex: 1; min-width: 100px; }
 .busy-row .round { width: 30px; height: 30px; font-size: 12px; }
 .busy-empty { padding: 2px 0; }
+.fallback-prime { margin-top: 6px; }
 .busy-actions { margin: 8px 10px 0; justify-content: flex-start; }
 .fixed-show { flex: 1; min-width: 160px; max-width: 100%; text-overflow: ellipsis; }
 .plan-moves { margin: 0 10px; }
