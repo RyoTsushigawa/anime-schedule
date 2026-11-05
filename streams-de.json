@@ -611,6 +611,11 @@
   "216557": {
    "offset": 1800,
    "service": "Crunchyroll"
+  },
+  "216895": {
+   "offset": 23700,
+   "service": "YouTube",
+   "lag": 4
   }
  },
  "status": {
@@ -2820,16 +2825,16 @@
    "url": "https://www.livechart.me/anime/13801",
    "next": {
     "episode": 6,
-    "at": 1793967900
+    "at": 1793991600
    },
    "airings": [
     {
      "episode": 5,
-     "at": 1793363100
+     "at": 1793386800
     },
     {
      "episode": 6,
-     "at": 1793967900
+     "at": 1793991600
     }
    ],
    "news": [],
