@@ -31,6 +31,17 @@ try {
 const malLoginCode = new URLSearchParams(location.hash.slice(1)).get('mal_login');
 if (malLoginCode) history.replaceState(null, '', location.pathname + location.search);
 const listService = () => auth?.provider === 'mal' ? 'MyAnimeList' : 'AniList';
+// Which Guckplan person this browser's logged-in account belongs to, so your drops don't hide shows on
+// someone else's plan. Sheet names and account names differ, so it's remembered: the owner's account is
+// known, anyone else's is whoever was on screen the first time it mattered.
+function ownPerson() {
+  let person = null;
+  try { person = localStorage.getItem('ownPerson'); } catch {}
+  if (person || !auth?.name) return person || soloPerson;
+  person = auth.name.toLowerCase() === DEFAULT_ANILIST.toLowerCase() ? DEFAULT_PERSON : soloPerson;
+  try { localStorage.setItem('ownPerson', person); } catch {}
+  return person;
+}
 const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
 // Optional AniList login (implicit grant, client 54702): lets ✓ write watched episodes to the
 // viewer's AniList. Several accounts can be kept in one browser (a shared PC), one of them active;
@@ -851,9 +862,9 @@ function render(items, start, plans) {
   const whoChips = all => { const who = others(all); return showWho && who?.length
     ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
   const found = new Set();
-  // Logged in and Solo: shows you dropped on AniList are gone from your week. In Group they stay,
-  // with "Dropped" in place of the Drop button, since the others may still watch them.
-  const droppedByMe = id => !!auth && mode === 'solo' && knownEntries.get(Number(id))?.status === 'DROPPED';
+  // Logged in and Solo on your own plan: shows you dropped on AniList are gone from your week. In Group,
+  // or looking at someone else's plan, they stay with "Gedroppt" in place of the Drop button.
+  const droppedByMe = id => !!auth && mode === 'solo' && soloPerson === ownPerson() && knownEntries.get(Number(id))?.status === 'DROPPED';
   const today = new Date().toDateString();
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -1937,7 +1948,7 @@ function showCatchupCount(rows) {
   const count = rows.reduce((sum, r) => sum + r.out - r.first + 1, 0);
   $('catchupCount').textContent = count || '';
   $('catchupCount').hidden = !count;
-  $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} zum Aufholen` : '';
+  $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} für Catch-up` : '';
 }
 let countingCatchup = false;
 async function updateCatchupCount() {
@@ -1956,7 +1967,7 @@ async function loadCatchup(refresh = false) {
   updateFallbackControls();
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
-  const name = shown === 'pace' ? 'Nicht saisonal' : 'Aufholen';
+  const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
   $('tabName').textContent = user ? `${name} · ${user} auf ${listService()}` : name;
   if (!user) { $('list').innerHTML = '<div class="status">Gib im AniList-Menü einen AniList-Namen ein.</div>'; return; }
   if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
@@ -2613,7 +2624,7 @@ $('helpClose').onclick = () => $('helpDialog').close();
 $('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
 for (const [id, key, hint] of [
   ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
-  ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Aufholen (2)'], ['viewPace', '3', 'Nicht saisonal (3)'],
+  ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
   ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Gruppe (G)'],
   ['searchButton', '/', 'Serien suchen (/)'], ['helpButton', 'Shift+/', 'Anleitung und Kürzel (?)'],
 ]) {
@@ -2654,14 +2665,6 @@ function stepRow(by) {
 }
 // Back from a stream, its row is still selected: W marks the episode, J and K go on from there.
 // With "Mark on open" the episode is marked right away, unless it isn't out yet.
-// Stream buttons in their service's color (the default), or all as plain outlines.
-const applyServiceColors = () => document.documentElement.classList.toggle('plain-services', !$('serviceColors').checked);
-try { $('serviceColors').checked = localStorage.getItem('serviceColors') !== '0'; } catch { $('serviceColors').checked = true; }
-applyServiceColors();
-$('serviceColors').onchange = () => {
-  try { localStorage.setItem('serviceColors', $('serviceColors').checked ? '1' : '0'); } catch {}
-  applyServiceColors();
-};
 try { $('markOnOpen').checked = localStorage.getItem('markOnOpen') === '1'; } catch {}
 $('markOnOpen').onchange = () => { try { localStorage.setItem('markOnOpen', $('markOnOpen').checked ? '1' : '0'); } catch {} };
 document.addEventListener('click', event => {
