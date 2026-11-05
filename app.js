@@ -560,7 +560,6 @@ function watchDay(aired, tag, time) {
 // no service at all.
 // Resume links are gone: nothing keeps these two old settings any more.
 try { localStorage.removeItem('resumeWatching'); localStorage.removeItem('resumeServices'); } catch {}
-const serviceKey = label => label.replace(/ 🔍$/, '');
 // The services' flat icons (a copy in services/, so they don't depend on anyone else's site). One-colour shapes:
 // the button's text color fills them. It's Anime streams on YouTube, and LiveChart shows that icon for it too.
 const SERVICE_ICONS = [[/crunchyroll/i, 'crunchyroll'], [/netflix/i, 'netflix'], [/prime video|amazon|^prime$/i, 'prime-video'], [/disney/i, 'disney'],
