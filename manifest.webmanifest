@@ -1,7 +1,7 @@
 {
-  "name": "Simulcast Schedule",
-  "short_name": "Schedule",
-  "description": "The Guckplan's weekly anime schedule with German stream links.",
+  "name": "Simulcast-Plan",
+  "short_name": "Plan",
+  "description": "Der Wochenplan des Guckplans mit deutschen Stream-Links.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
