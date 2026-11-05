@@ -466,10 +466,23 @@ async function lookUpRewatches() {
 
 // Buttons for every service the show is on, with the one from the sheet's "Wo" column first.
 const sourceSearchTitle = title => String(title || '').replace(/^(Even the Student Council Has (?:Its )?Holes)!$/i, '$1');
+// Nyaa: English and romaji at once, since releases usually carry the romaji name. A long subtitle after
+// the colon is left out (releases often drop it), the rest stays exact so other seasons don't slip in.
+function nyaaQuery(titles) {
+  const short = title => {
+    const parts = String(title).match(/^(.{8,}?)\s*:\s+(.+)$/);
+    const long = parts && parts[2].trim().split(/\s+/).length >= 4 && !/\b(?:season|part|cour|final|ii|iii|iv|\d+(?:st|nd|rd|th)?)\b/i.test(parts[2]);
+    return (long ? parts[1] : String(title)).replace(/["|()]/g, ' ').replace(/\s+-\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+  const seen = new Set();
+  const list = titles.filter(Boolean).map(t => short(sourceSearchTitle(t))).filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+  return list.length > 1 ? list.map(t => `(${t})`).join('|') : list[0] || 'anime';
+}
 const OTHER_SERVICE_COLORS = [[/akiba/i, '#ff1a00'], [/it'?s anime/i, '#ff0000']];
 function streamLinks(media, wo, searchTitle) {
   const links = [];
   links.title = searchTitle || media.title?.english || media.title?.romaji || '';
+  links.names = [links.title, media.title?.english, media.title?.romaji];
   // German availability from LiveChart (tools/build-streams.mjs) wins over AniList's worldwide links.
   const de = streamsDe?.byAnilist[media.id];
   if (de?.length) {
@@ -550,7 +563,7 @@ function linkButtons(links, mediaId, watchers) {
   const alternatives = [];
   if (torrent && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
-    : { label: 'Nyaa-Suche', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
+    : { label: 'Nyaa-Suche', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(nyaaQuery([...(links.names || [title]), source.title])) });
   if (streaming && !shown.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
   else if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
