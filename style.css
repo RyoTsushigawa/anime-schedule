@@ -116,12 +116,12 @@ body.pace .seasonal-only { display: none; }
 .time-day.same { display: none; }
 .time small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
 /* People in their Guckplan colors: vibrant in the selectors at the top; on the shows kept soft
-   (a light tint of the color with a thin edge in it, names in the normal text color). */
+   (a faint tint of the color and a muted name, so the title stands out). */
 .who { margin-left: 4px; }
 .who-more { display: none; }
 .who span { --tint: var(--person, var(--accent)); display: inline-block; margin-left: 3px; padding: 0 6px; border-radius: 99px;
-  font-size: 11px; line-height: 15px; color: color-mix(in srgb, var(--text) 85%, transparent);
-  background: color-mix(in srgb, var(--tint) 20%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 50%, transparent); }
+  font-size: 11px; line-height: 15px; color: var(--muted);
+  background: color-mix(in srgb, var(--tint) 15%, transparent); border: 1px solid transparent; }
 #soloPerson[style*="--person"] { background-color: var(--person); border-color: var(--person); color: var(--person-text); font-weight: 600; }
 .chip[style*="--person"]::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
   background: var(--person); vertical-align: 1px; }
