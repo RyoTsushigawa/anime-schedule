@@ -1078,7 +1078,7 @@ function render(items, start, plans) {
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${behindTag(m.id, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -1373,6 +1373,19 @@ $('editSchedule').onclick = () => {
   $('moveButtons').checked = !$('moveButtons').checked;
   $('moveButtons').dispatchEvent(new Event('change'));
 };
+
+// ⚙ Behind (off unless switched on): how many episodes before this one you haven't watched yet,
+// for shows on your list.
+try { $('behind').checked = localStorage.getItem('behind') === '1'; } catch {}
+$('behind').onchange = () => {
+  try { localStorage.setItem('behind', $('behind').checked ? '1' : '0'); } catch {}
+  redraw();
+};
+function behindTag(mediaId, episode) {
+  if (!auth || !$('behind').checked || !myProgress.has(mediaId)) return '';
+  const n = episode - 1 - myProgress.get(mediaId);
+  return n > 0 ? `<span class="behind" title="${n === 1 ? 'Eine frühere Folge' : `${n} frühere Folgen`} noch nicht gesehen">${n} behind</span>` : '';
+}
 
 // "Who's watching": name chips of everyone watching each show; on unless switched off.
 try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
