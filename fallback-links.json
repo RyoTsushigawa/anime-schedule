@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-05T13:06:50.460Z",
+ "generated": "2026-11-05T21:30:29.157Z",
  "byAnilist": {
   "21": {
    "title": "One Piece",
@@ -125,8 +125,8 @@
   "169582": {
    "title": "Saikyou Degarashi Ouji no Anyaku Teii Arasoi: Munou wo Enjiru SS Rank Ouji wa Koui Keishousen wo Kage kara Shihai suru",
    "malId": 56736,
-   "aniworld": "https://aniworld.to/anime/stream/the-insipid-princes-furtive-grab-for-the-throne",
-   "subsplease": "https://subsplease.org/shows/saikyou-degarashi-ouji-no-anyaku-teii-arasoi"
+   "subsplease": "https://subsplease.org/shows/saikyou-degarashi-ouji-no-anyaku-teii-arasoi",
+   "aniworld": "https://aniworld.to/anime/stream/the-insipid-princes-furtive-grab-for-the-throne"
   },
   "169583": {
    "title": "Tenkou-saki no Seiso Karen na Bishoujo ga, Mukashi Danshi to Omotte Issho ni Asonda Osananajimi Datta Ken",
@@ -136,6 +136,7 @@
   "171110": {
    "title": "Honzuki no Gekokujou ~Shisho ni Naru Tame ni wa Shudan wo Erandeiraremasen~ Ryushu no Youjo",
    "malId": 57466,
+   "subsplease": "https://subsplease.org/shows/honzuki-no-gekokujou",
    "aniworld": "https://aniworld.to/anime/stream/ascendance-of-a-bookworm"
   },
   "172192": {
@@ -252,7 +253,8 @@
   },
   "185756": {
    "title": "Tensei Kizoku, Kantei Skill de Nariagaru 3rd Season",
-   "malId": 60601
+   "malId": 60601,
+   "subsplease": "https://subsplease.org/shows/tensei-kizoku-kantei-skill-de-nariagaru"
   },
   "185874": {
    "title": "BLEACH: Sennen Kessen-hen - Kashin-tan -",
@@ -329,8 +331,8 @@
   "188139": {
    "title": "Futsutsuka na Akujo dewa Gozaimasu ga: Suuguu Chouso Torikae Den",
    "malId": 61240,
-   "aniworld": "https://aniworld.to/anime/stream/though-i-am-an-inept-villainess",
-   "subsplease": "https://subsplease.org/shows/futsutsuka-na-akujo-dewa-gozaimasu-ga"
+   "subsplease": "https://subsplease.org/shows/futsutsuka-na-akujo-dewa-gozaimasu-ga",
+   "aniworld": "https://aniworld.to/anime/stream/though-i-am-an-inept-villainess"
   },
   "188388": {
    "title": "DIGIMON BEATBREAK",
@@ -362,7 +364,8 @@
   },
   "189323": {
    "title": "Shangri-La Frontier 3rd Season",
-   "malId": 61338
+   "malId": 61338,
+   "subsplease": "https://subsplease.org/shows/shangri-la-frontier"
   },
   "190054": {
    "title": "Watashi no Shiawase na Kekkon Special Episode",
@@ -624,8 +627,8 @@
   "201514": {
    "title": "Saijo no Osewa: Takane no Hanadarake na Meimonkou de, Gakuin Ichi no Ojousama (Seikatsu Nouryoku Kaimu) wo Kagenagara Osewa suru Koto ni Narimashita",
    "malId": 62876,
-   "aniworld": "https://aniworld.to/anime/stream/rich-girl-caretaker-im-secretly-the-caregiver-of-the-most-popular-girl-in-this-rich-kid-school",
-   "subsplease": "https://subsplease.org/shows/saijo-no-osewa"
+   "subsplease": "https://subsplease.org/shows/saijo-no-osewa",
+   "aniworld": "https://aniworld.to/anime/stream/rich-girl-caretaker-im-secretly-the-caregiver-of-the-most-popular-girl-in-this-rich-kid-school"
   },
   "201667": {
    "title": "Bungo Stray Dogs WAN! 2",
@@ -802,8 +805,8 @@
   "206949": {
    "title": "Kyouran Reijou Nia Liston: Byoujaku Reijou ni Tensei shita Kamigoroshi no Bujin no Karei naru Musouroku",
    "malId": 63382,
-   "aniworld": "https://aniworld.to/anime/stream/nia-liston-the-merciless-maiden",
-   "subsplease": "https://subsplease.org/shows/kyouran-reijou-nia-liston"
+   "subsplease": "https://subsplease.org/shows/kyouran-reijou-nia-liston",
+   "aniworld": "https://aniworld.to/anime/stream/nia-liston-the-merciless-maiden"
   },
   "206950": {
    "title": "Kumarba Season 3",
@@ -915,8 +918,8 @@
   "209504": {
    "title": "Suterare Seijo no Isekai Gohan Tabi: Kakure Skill de Camping Car wo Shoukan shimashita",
    "malId": 63752,
-   "aniworld": "https://aniworld.to/anime/stream/the-forsaken-saintess-and-her-foodie-road-trip-in-another-world",
-   "subsplease": "https://subsplease.org/shows/suterare-seijo-no-isekai-gohan-tabi"
+   "subsplease": "https://subsplease.org/shows/suterare-seijo-no-isekai-gohan-tabi",
+   "aniworld": "https://aniworld.to/anime/stream/the-forsaken-saintess-and-her-foodie-road-trip-in-another-world"
   },
   "209562": {
    "title": "VERTEX FORCE",
@@ -953,7 +956,8 @@
   },
   "209983": {
    "title": "Hell Mode: Yarikomizuki no Gamer wa Hai Settei no Isekai de Musou suru 2nd Season",
-   "malId": 63817
+   "malId": 63817,
+   "subsplease": "https://subsplease.org/shows/hell-mode"
   },
   "210031": {
    "title": "Seihantai na Kimi to Boku 2nd Season",
