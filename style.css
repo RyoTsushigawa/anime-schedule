@@ -298,10 +298,11 @@ header.away ~ main .day h2 { top: 0; }
 @media (hover: hover) { .daystrip button:not(.picked):hover { color: var(--text); opacity: 1; } }
 @media (pointer: coarse) { .daystrip button { min-height: 30px; } }
 body.searching .daystrip { display: none; }
-/* After the last day: on to another week */
-.pager { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
-.pager button { border-radius: 99px; font-size: 13px; color: var(--muted); padding: 7px 14px; }
-body.searching .pager { display: none; }
+/* The breaks pill shares the day strip's line; opened, or where there's no room, it takes a line of its own */
+.weekline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 6px; }
+.weekline > .daystrip { flex: 1 1 340px; min-width: 0; margin: 0; }
+.weekline > .alerts { margin: 0; padding: 0; }
+.weekline > .alerts[open] { flex: 0 0 100%; }
 .cr { --svc: var(--accent); flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px; border: 1px solid transparent; background: color-mix(in srgb, var(--svc) 8%, transparent); color: color-mix(in srgb, color-mix(in srgb, var(--svc) var(--svc-ink), #000), #fff calc(var(--text-lift, 0%) * var(--lift-on))); text-decoration: none; font-weight: 600; font-size: 13px; line-height: 1.2; padding: 6px 13px; border-radius: 99px; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 1px 3px rgba(0, 0, 0, .22); }
 .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
 .row .cr .site-icon, .row.compact .cr .site-icon { display: block; flex: none; width: 18px; height: 18px; margin-left: -3px; border-radius: 4px; object-fit: contain; background: none; box-shadow: none; }
@@ -488,17 +489,6 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
   *, ::before, ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
-/* ⚙ No frills: the same page without decoration. Words, times and buttons only. */
-.no-frills .row img, .no-frills .logo, .no-frills .status.happy img, .no-frills .daystrip, .no-frills .row::before { display: none; }
-.no-frills header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
-.no-frills .row, .no-frills .shared, .no-frills .cr, .no-frills .segmented button, .no-frills .popover, .no-frills .dlg, .no-frills #notice { box-shadow: none; }
-.no-frills *, .no-frills ::before, .no-frills ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
-.no-frills button:active, .no-frills .cr:active, .no-frills .toggle:active { transform: none; }
-.no-frills .skeleton i { background: var(--card); }
-@media (max-width: 560px) {
-  .no-frills .row:not(.compact):not(:has(> .time)) > .info { grid-column: 1 / -1; }
-  .no-frills .row:not(.compact):not(:has(> .time)) > .links { grid-column: 1 / 3; }
-}
 
 /* ---------- Watch plan generator (planner.html) ---------- */
 .plan-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 16px; }
