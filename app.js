@@ -1728,6 +1728,28 @@ document.addEventListener('keydown', e => {
 
 // A short notice at the bottom after each action, with "Undo" (phones have no Ctrl+Z).
 let noticeTimer = null;
+// AniList's minute is used up while something is being saved: count down to when ✓ works again.
+// The click itself waits and saves by itself afterwards (its usual message follows).
+let pauseTimer = null;
+onAniListPause = until => {
+  if (!pendingChanges.size && !bulkSaving && !undoing) return;
+  clearInterval(pauseTimer);
+  const show = () => {
+    const s = Math.ceil((until - Date.now()) / 1000);
+    if (s <= 0) { clearInterval(pauseTimer); return; }
+    notice(`AniList-Pause: ✓ geht wieder in ${s} s`);
+  };
+  show();
+  pauseTimer = setInterval(show, 1000);
+};
+// After a ✓: how many more fit into AniList's minute, once only a few do.
+let requestsPerTick = 2;
+function ticksLeft() {
+  if (auth?.provider === 'mal' || !aniLimit.limit || !Number.isFinite(aniLimit.remaining)) return '';
+  const n = Math.floor(aniLimit.remaining / requestsPerTick);
+  return n > 5 ? '' : n > 0 ? ` · noch ${n} bis zur Pause` : ' · der nächste ✓ wartet kurz auf AniList';
+}
+
 function notice(text, withUndo = false) {
   $('noticeText').textContent = text;
   $('noticeUndo').hidden = !withUndo;
@@ -1755,8 +1777,11 @@ $('list').addEventListener('click', async e => {
   b.disabled = true;
   const title = rowTitle(b);
   try {
+    const sent = aniLimit.count;
     const record = await change(mediaId, { progress, status: b.dataset.add ? 'CURRENT' : undefined });
-    remember([record], `${title}: Folge ${progress} gesehen`);
+    if (aniLimit.count > sent) requestsPerTick = aniLimit.count - sent;
+    clearInterval(pauseTimer);
+    remember([record], `${title}: Folge ${progress} gesehen${ticksLeft()}`);
     // The last episode: AniList set it to Completed, so ask for the score right away
     if (record.after.status === 'COMPLETED' && record.before.status !== 'COMPLETED' && !record.after.score) {
       openScore(mediaId, title);
