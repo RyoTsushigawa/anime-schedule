@@ -11,6 +11,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseSubsPlease, matchSubsPlease, parseAniWorld, matchAniWorld } from './fallback-links.mjs';
+import { parseSeason, parseStreams, parseSchedules, parseHeadlines, parseTimetableNotes } from './livechart-pages.mjs';
 
 const SHEET = 'https://docs.google.com/spreadsheets/d/1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ';
 const FALLBACK_TAB = { name: 'Guckplan Herbst 2026', gid: '488548700' };
@@ -28,8 +29,6 @@ async function livechart(path) {
   if (!res.ok) throw new Error(`LiveChart ${path} returned ${res.status}`);
   return res.text();
 }
-
-const decode = s => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
 function seasons() {
   if (process.argv.length > 2) return process.argv.slice(2);
@@ -104,35 +103,9 @@ function titleScore(a, b) {
 
 // ---------- LiveChart ----------
 
-// A season's shows from its LiveChart page (TV; LiveChart sends the ONA page there too). Besides
-// what's needed here, each card keeps what the season list in the sheet needs (seasons.json, read
-// by the Season-Helfer script, since LiveChart doesn't answer Google's servers): premiere time
-// and how exact it is, the rough start when not exact ("January 2027"), short form or not, the
-// MyAnimeList link and LiveChart's "※ NOTE" lines.
-async function seasonCards(season) {
-  const cards = [];
-  const html = await livechart(`/${season}/tv`);
-  for (const [, attrs, body] of html.matchAll(/<article class="anime" ([^>]*)>([\s\S]*?)<\/article>/g)) {
-    const attr = name => decode((attrs.match(new RegExp(`data-${name}="([^"]*)"`)) || [])[1] || '');
-    let alternate = [];
-    try { alternate = JSON.parse(attr('alternate') || '[]'); } catch {}
-    cards.push({
-      id: attr('anime-id'),
-      anilist: (body.match(/anilist\.co\/anime\/(\d+)/) || [])[1],
-      titles: [attr('romaji'), attr('english'), ...alternate],
-      list: {
-        romaji: attr('romaji'), english: attr('english'),
-        premiere: Number(attr('premiere')) || null, precision: Number(attr('premiere-precision')) || 0,
-        rough: decode((body.match(/data-intl-time-placeholder="([^"]*)"/) || [])[1] || ''),
-        short: /<div class="anime-extra">Short-form<\/div>/.test(body),
-        mal: (body.match(/class="mal-icon" href="([^"]+)"/) || [])[1] || '',
-        notes: [...body.matchAll(/class="editor-note[^"]*"[^>]*>([^<]*)</g)]
-          .map(m => decode(m[1]).replace(/^※\s*NOTE:\s*/i, '').trim()).filter(Boolean),
-      },
-    });
-  }
-  return cards;
-}
+// A season's shows from its LiveChart page (TV; LiveChart sends the ONA page there too). The season
+// list in the sheet reads part of each card from seasons.json, since LiveChart doesn't answer Google's servers.
+const seasonCards = async season => parseSeason(await livechart(`/${season}/tv`));
 
 const SEASONS_OUT = fileURLToPath(new URL('../seasons.json', import.meta.url));
 // A season LiveChart now lists with less than half the shows of last time (empty during its
@@ -152,16 +125,7 @@ async function writeSeasons(bySeason) {
   console.log(`Wrote ${Object.keys(bySeason).join(', ')} to seasons.json`);
 }
 
-// Each stream with its service name and link, plus `extra` when LiveChart notes an add-on
-// subscription (e.g. Prime Video titles that need the "aniverse" channel).
-async function streams(livechartId) {
-  const html = await livechart(`/anime/${livechartId}/streams`);
-  const pattern = /<a class="link link-hover font-medium[^"]*" href="([^"]+)"[^>]*>([^<]+)<\/a>((?:<div class="text-sm text-base-content\/75">[^<]*<\/div>)*)/g;
-  return [...html.matchAll(pattern)].map(([, url, name, notes]) => {
-    const extra = decode(notes).match(/※\s*(.+?)\s+subscription required/i)?.[1];
-    return { name: decode(name).trim(), url: decode(url), ...(extra && { extra }) };
-  });
-}
+const streams = async livechartId => parseStreams(await livechart(`/anime/${livechartId}/streams`));
 
 // From LiveChart's release schedules: `release`, how much later (in seconds) an episode comes out
 // on one of our services than on Japanese TV (a subbed simulcast with German or English subtitles
@@ -169,14 +133,7 @@ async function streams(livechartId) {
 // (no `next` = nothing scheduled, e.g. finished).
 const OUR_SERVICES = /crunchyroll|netflix|prime video|amazon|youtube|disney/i;
 async function schedules(livechartId) {
-  const html = await livechart(`/anime/${livechartId}/schedules`);
-  const all = [...html.matchAll(/<article class="card[^"]*" data-controller="release-schedule"[\s\S]*?<\/article>/g)].map(([card]) => ({
-    time: Number(card.match(/data-timestamp="(\d+)"/)?.[1]),
-    episode: Number(card.match(/data-label="EP(\d+)"/)?.[1]),
-    title: decode(card.match(/title="([^"]+)"/)?.[1] || ''),
-    service: decode(card.match(/lc-text-contextual-accent"[^>]*>([^<]+)</)?.[1] || ''),
-    readable: /(&quot;|")(de|en)(&quot;|")/i.test(card),
-  })).filter(s => s.time && s.episode);
+  const all = parseSchedules(await livechart(`/anime/${livechartId}/schedules`));
   // The original release: "Broadcast (Japan)", or "Streaming (Japan)" for web/foreign productions.
   const japan = all.find(s => /^(broadcast|streaming)\b/i.test(s.title));
   if (!japan) {
@@ -204,10 +161,8 @@ function pickRelease(schedules, japan) {
 // newest one's title as the reason.
 const BREAK_NEWS = /\b(delay(ed|s)?|postpone[sd]?|break|hiatus|pushed back|suspend(ed|s)?|on hold|resum(e|es|ed|ing)|recap(s)?( episode)?|will not air|won'?t air|not air(ing)?|skip(s|ped|ping)?|special (program|broadcast)|preempt(ed|s)?|reschedul(e|ed|es)|production (issues?|reasons|circumstances)|cancel(l)?ed)\b/i;
 async function breakNews(livechartId) {
-  const html = await livechart(`/anime/${livechartId}/headlines`);
   const since = Date.now() - 42 * 86400 * 1000;
-  return [...html.matchAll(/<a class="link link-hover font-medium" href="([^"]+)"[^>]*>([^<]+)<\/a>[\s\S]*?<time datetime="([^"]+)"/g)]
-    .map(([, url, title, date]) => ({ title: decode(title).trim(), url: decode(url), date }))
+  return parseHeadlines(await livechart(`/anime/${livechartId}/headlines`))
     .filter(n => BREAK_NEWS.test(n.title) && Date.parse(n.date) > since);
 }
 
@@ -217,12 +172,8 @@ async function timetableNotes() {
   const notes = {};
   for (const days of [0, 7]) {
     const date = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
-    const html = await livechart(`/timetable?date=${date}`);
-    for (const [, at, slot] of html.matchAll(/data-controller="timeslot" data-timestamp="(\d+)"([\s\S]*?)(?=data-controller="timeslot"|$)/g))
-      for (const [, id, body] of slot.matchAll(/lc-timetable-timeslot__note[\s\S]*?href="\/anime\/(\d+)"[\s\S]*?lc-markdown-html[^>]*>([\s\S]*?)<\/div>/g)) {
-        const text = decode(body.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
-        if (text && !(notes[id] || []).some(n => n.at === Number(at))) (notes[id] ||= []).push({ at: Number(at), text });
-      }
+    for (const { id, at, text } of parseTimetableNotes(await livechart(`/timetable?date=${date}`)))
+      if (!(notes[id] || []).some(n => n.at === at)) (notes[id] ||= []).push({ at, text });
   }
   return notes;
 }
