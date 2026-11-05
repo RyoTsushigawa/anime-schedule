@@ -13,8 +13,8 @@
 // where they watch nothing), then the fewest shows moved off their release day, then short evenings.
 // Its own page (planner.html), opened in a new tab from the schedule's ⚙ menu; uses common.js.
 
-const PLAN_DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const PLAN_DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const PLAN_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const PLAN_DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const SHEET_DAYS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const SLOT_LENGTH = 30;
 const MAX_SLOTS = 24;
@@ -291,13 +291,13 @@ function planCost(plan, ctx, details = false) {
         const clash = s.mask & busy[d][Math.min(k, MAX_SLOTS - 1)];
         if (clash) {
           cost += PLAN_COST.hard;
-          if (details) problems.push(`${s.title}: ${people.filter((p, b) => clash & (1 << b)).join(', ')} kann nicht am ${PLAN_DAYS_SHORT[d]} ${clock(at(k))}`);
+          if (details) problems.push(`${s.title}: ${people.filter((p, b) => clash & (1 << b)).join(', ')} can't on ${PLAN_DAYS_SHORT[d]} ${clock(at(k))}`);
         }
         if (s.release) {
           const delay = (d - s.release.day + 7) % 7;
           if (delay === 0 && at(k) < s.release.min) {
             cost += PLAN_COST.hard;
-            if (details) problems.push(`${s.title}: erst ab ${clock(s.release.min)}`);
+            if (details) problems.push(`${s.title}: only out at ${clock(s.release.min)}`);
           }
           if (delay) { cost += PLAN_COST.delay * delay + moveCost; moved++; }
         }
@@ -305,11 +305,11 @@ function planCost(plan, ctx, details = false) {
         const f = fixed[i];
         if (f && f.day !== null && f.day !== d) {
           cost += PLAN_COST.hard;
-          if (details) problems.push(`${s.title}: fest am ${PLAN_DAYS_SHORT[f.day]}`);
+          if (details) problems.push(`${s.title}: fixed to ${PLAN_DAYS_SHORT[f.day]}`);
         }
         if (f && f.slot !== null && f.slot !== k) {
           cost += PLAN_COST.hard;
-          if (details) problems.push(`${s.title}: fest auf Slot ${f.slot + 1}`);
+          if (details) problems.push(`${s.title}: fixed to slot ${f.slot + 1}`);
         }
       }
     }
@@ -455,12 +455,12 @@ async function loadPlanner() {
   await ready;
   const tab = tabs.find(t => t.gid === planTabGid) || tabs[0] || FALLBACK_TAB;
   planTabGid = tab.gid;
-  $('list').innerHTML = `<div class="status">${esc(tab.name)} wird gelesen und Release-Zeiten werden gesucht…</div>`;
+  $('list').innerHTML = `<div class="status">Reading ${esc(tab.name)} and looking up release times…</div>`;
   let data;
   try {
     data = await plannerData(tab);
   } catch (e) {
-    $('list').innerHTML = `<div class="status">Die Plandaten konnten nicht geladen werden (${esc(e.message)}).</div>`;
+    $('list').innerHTML = `<div class="status">Couldn't load the plan data (${esc(e.message)}).</div>`;
     return;
   }
   // Busy times: filled from "Seasonpläne" the first time (Belly's Mondays are a whole-day block).
@@ -485,77 +485,77 @@ async function loadPlanner() {
 
 function plannerSetup(data) {
   const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
-    `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (Stimmen)' : ''}</option>`).join('');
+    `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');
   // Days across the top, each day's own start time, then whole days off: "Everyone" first.
-  const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}<span class="avail-head" title="Letzte Serie endet spätestens um">Bis</span>`;
+  const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}<span class="avail-head" title="Last show over by">Until</span>`;
   const starts = `<span class="avail-name everyone">Start</span>${PLAN_DAYS.map((day, d) =>
     `<input class="avail-start" data-day="${d}" value="${esc(planStarts.days[d] || '')}" placeholder="${esc(planStarts.standard)}"
-      inputmode="numeric" maxlength="5" aria-label="Start am ${day}" title="Start am ${day} (leer = Standard)">`).join('')}<span></span>`;
+      inputmode="numeric" maxlength="5" aria-label="Start on ${day}" title="Start on ${day} (empty = standard)">`).join('')}<span></span>`;
   const grid = [EVERYONE, ...data.people].map(p => `
-    <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Alle' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
+    <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Everyone' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
       `<button class="avail-day" data-person="${esc(p)}" data-day="${d}" aria-pressed="${(planUnavailable[p] || []).includes(d)}"
-        title="${PLAN_DAYS[d]}: ${p === EVERYONE ? 'niemand schaut' : esc(p) + ' kann nicht'}">${day.slice(0, 2)}</button>`).join('')}
+        title="${p === EVERYONE ? 'Nobody watches' : esc(p) + " can't"} on ${PLAN_DAYS[d]}">${day.slice(0, 2)}</button>`).join('')}
       <input class="avail-start avail-until" data-person="${esc(p)}" value="${esc(planUntil[p] || '')}" placeholder="–" inputmode="numeric" maxlength="5"
-        aria-label="${p === EVERYONE ? 'Alle' : esc(p)}: letzte Serie endet spätestens um" title="${p === EVERYONE ? 'Alle' : esc(p)}: letzte Serie endet spätestens um (leer = kein Limit)">`).join('');
+        aria-label="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by" title="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by (empty = no limit)">`).join('');
   return `<section class="plan-card">
     <div class="plan-head">
-      <select id="planTab" class="pill" aria-label="Guckplan-Tab">${tabOptions}</select>
-      <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard-Start"></label>
-      <button id="planRun" class="pill plan-go">Plan erstellen</button>
+      <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>
+      <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard start"></label>
+      <button id="planRun" class="pill plan-go">Generate plan</button>
     </div>
-    <div class="menu-label">Wer wann nicht kann <span class="plan-hint">· tippe auf einen Tag für den ganzen Tag frei</span></div>
+    <div class="menu-label">Who can't when <span class="plan-hint">· tap a day for the whole day off</span></div>
     <div class="avail">${header}${starts}${grid}</div>
-    <div class="menu-label">Belegte Zeiten <span class="plan-hint">· „Alle“ lässt die Zeit für alle aus</span></div>
+    <div class="menu-label">Busy times <span class="plan-hint">· “Everyone” skips that time for all</span></div>
     <div id="busyList" class="busy-list">${busyRows(data)}</div>
     <div class="plan-actions busy-actions">
-      <button id="busyAdd" class="pill">+ Hinzufügen</button>
-      <button id="busyReload" class="pill" title="Ersetzt die belegten Zeiten durch die aus dem Tab Seasonpläne">↻ Aus Seasonpläne</button>
+      <button id="busyAdd" class="pill">+ Add</button>
+      <button id="busyReload" class="pill" title="Replace the busy times with the ones in the Seasonpläne tab">↻ From Seasonpläne</button>
     </div>
-    <div class="menu-label">Andere Tage <span class="plan-hint">· eine Serie vom Release-Tag wegschieben</span></div>
-    <div class="segmented plan-moves" role="group" aria-label="Serien auf andere Tage schieben">${[['ok', 'Wenn es hilft'], ['rarely', 'Selten'], ['never', 'Nie']].map(([v, label]) =>
+    <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
+    <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
       `<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div>
-    <div class="menu-label">Pausen <span class="plan-hint">· tippe auf einen Namen: ★ = Pausen vermeiden, ☕ = bekommt Pausen zuerst</span></div>
+    <div class="menu-label">Breaks <span class="plan-hint">· tap a name: ★ = avoid their breaks, ☕ = they get breaks first</span></div>
     <div class="plan-break-prefs">${data.people.map(p => breakChip(p)).join('')}</div>
-    <div class="menu-label">Feste Serien <span class="plan-hint">· fest auf einem Tag, in einem Slot oder nur am Tag (spät abends)</span></div>
+    <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, in a slot, or day only (late night)</span></div>
     <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
-    <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Hinzufügen</button></div>
+    <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Add</button></div>
   </section>`;
 }
 
 const breakChip = p => {
   const pref = planBreaks[p] || 'normal';
   return `<button class="break-pref ${pref}" data-break-person="${esc(p)}" style="${personStyle(p)}"
-    title="Pausen von ${esc(p)}: ${pref === 'protect' ? 'vermeiden' : pref === 'fine' ? 'bekommt Pausen zuerst' : 'normal'}">${BREAK_LABEL[pref] ? `${BREAK_LABEL[pref]} ` : ''}${esc(p)}</button>`;
+    title="${esc(p)}'s breaks: ${pref === 'protect' ? 'avoid them' : pref === 'fine' ? 'they get breaks first' : 'normal'}">${BREAK_LABEL[pref] ? `${BREAK_LABEL[pref]} ` : ''}${esc(p)}</button>`;
 };
 
 const selectOptions = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 
 function fixedRows(data) {
-  if (!planFixed.length) return '<div class="ep busy-empty">Keine.</div>';
+  if (!planFixed.length) return '<div class="ep busy-empty">None.</div>';
   const shows = data.shows.map(s => [s.sheetTitle, s.title]).sort((a, b) => a[1].localeCompare(b[1]));
-  const days = [['release', 'Release-Tag'], ...PLAN_DAYS_SHORT.map((d, j) => [j, d])];
-  const slots = [['', 'Beliebiger Slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`]), ['none', 'Nur der Tag (kein Slot)']];
+  const days = [['release', 'Release day'], ...PLAN_DAYS_SHORT.map((d, j) => [j, d])];
+  const slots = [['', 'Any slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`]), ['none', 'Day only (no slot)']];
   return planFixed.map((f, i) => `
     <div class="busy-row" data-i="${i}">
-      <select class="pill fixed-show" data-field="show" aria-label="Serie">${selectOptions(shows, f.show)}</select>
-      <select class="pill" data-field="day" aria-label="Tag">${selectOptions(days, f.day)}</select>
+      <select class="pill fixed-show" data-field="show" aria-label="Show">${selectOptions(shows, f.show)}</select>
+      <select class="pill" data-field="day" aria-label="Day">${selectOptions(days, f.day)}</select>
       <select class="pill" data-field="slot" aria-label="Slot">${selectOptions(slots, f.slot)}</select>
-      <button class="round busy-remove" aria-label="Entfernen">✕</button>
+      <button class="round busy-remove" aria-label="Remove">✕</button>
     </div>`).join('');
 }
 
 function busyRows(data) {
-  if (!planBusy?.length) return '<div class="ep busy-empty">Keine.</div>';
+  if (!planBusy?.length) return '<div class="ep busy-empty">None.</div>';
   const options = selectOptions;
-  const who = [[EVERYONE, 'Alle'], ...data.people.map(p => [p, p])];
+  const who = [[EVERYONE, 'Everyone'], ...data.people.map(p => [p, p])];
   return planBusy.map((e, i) => `
     <div class="busy-row" data-i="${i}">
-      <select class="pill" data-field="person" aria-label="Wer">${options(who, e.person)}</select>
-      <select class="pill" data-field="day" aria-label="Tag">${options(PLAN_DAYS_SHORT.map((d, j) => [j, d]), e.day)}</select>
-      <input class="pill busy-time" data-field="from" value="${esc(e.from || '')}" placeholder="von" inputmode="numeric" maxlength="5" aria-label="Von">
-      <input class="pill busy-time" data-field="to" value="${esc(e.to || '')}" placeholder="bis" inputmode="numeric" maxlength="5" aria-label="Bis">
-      <input class="pill busy-note" data-field="note" value="${esc(e.note || '')}" placeholder="Notiz" aria-label="Notiz">
-      <button class="round busy-remove" aria-label="Entfernen">✕</button>
+      <select class="pill" data-field="person" aria-label="Who">${options(who, e.person)}</select>
+      <select class="pill" data-field="day" aria-label="Day">${options(PLAN_DAYS_SHORT.map((d, j) => [j, d]), e.day)}</select>
+      <input class="pill busy-time" data-field="from" value="${esc(e.from || '')}" placeholder="from" inputmode="numeric" maxlength="5" aria-label="From">
+      <input class="pill busy-time" data-field="to" value="${esc(e.to || '')}" placeholder="to" inputmode="numeric" maxlength="5" aria-label="To">
+      <input class="pill busy-note" data-field="note" value="${esc(e.note || '')}" placeholder="note" aria-label="Note">
+      <button class="round busy-remove" aria-label="Remove">✕</button>
     </div>`).join('');
 }
 
@@ -600,10 +600,10 @@ function bindPlannerSetup(data) {
   bindBusy();
   $('busyAdd').onclick = () => { planBusy.push({ person: EVERYONE, day: 0, from: '', to: '', note: '' }); saveSettings(); redrawBusy(); };
   $('busyReload').onclick = async () => {
-    try { planBusy = await seasonplanBusy(data); } catch { notice('Seasonpläne konnte nicht gelesen werden'); return; }
+    try { planBusy = await seasonplanBusy(data); } catch { notice("Couldn't read Seasonpläne"); return; }
     saveSettings();
     redrawBusy();
-    notice('Belegte Zeiten aus Seasonpläne übernommen');
+    notice('Busy times taken from Seasonpläne');
   };
   for (const b of document.querySelectorAll('[data-moves]'))
     b.onclick = () => {
@@ -648,9 +648,9 @@ function bindPlannerSetup(data) {
 async function generatePlan(data) {
   const out = $('planOut');
   if (!out) return;
-  if (!data.shows.length) { out.innerHTML = '<div class="status">In diesem Tab hat noch niemand eine Serie gewählt.</div>'; return; }
+  if (!data.shows.length) { out.innerHTML = '<div class="status">Nobody has picked any show in this tab yet.</div>'; return; }
   $('planRun').disabled = true;
-  out.innerHTML = '<div class="status">Pläne werden ausprobiert… <span id="planProgress">0%</span></div>';
+  out.innerHTML = '<div class="status">Trying out plans… <span id="planProgress">0%</span></div>';
   const ctx = planContext(data);
   const plan = await findPlan(ctx, f => { const el = $('planProgress'); if (el) el.textContent = Math.round(f * 100) + '%'; });
   if (!$('planOut')) return;
@@ -670,27 +670,27 @@ function showPlan(data, plan) {
   const nowEnds = now.days.map(evening => evening.length ? evening[evening.length - 1].at + SLOT_LENGTH : 0);
   const sideBySide = p => p.flat().filter(slot => slot.length > 1).length;
   const nowMoved = shows.filter(s => s.release && s.current && s.current.day !== s.release.day).length;
-  const tile = (value, label, was) => `<div class="plan-tile"><b>${value}</b><span>${label}</span><small>Guckplan jetzt: ${was}</small></div>`;
+  const tile = (value, label, was) => `<div class="plan-tile"><b>${value}</b><span>${label}</span><small>Guckplan now: ${was}</small></div>`;
   const stats = `<div class="plan-stats">
-    ${tile(result.breaks, result.breaks === 1 ? 'Pause' : 'Pausen', nowResult.breaks)}
-    ${tile(result.moved, 'vom Release-Tag verschoben', nowMoved)}
-    ${tile(sideBySide(plan), 'Slots nebeneinander', sideBySide(now.plan))}
-    ${tile(clock(endOf(ends)), 'spätestes Ende', nowEnds.some(Boolean) ? clock(endOf(nowEnds)) : '–')}
+    ${tile(result.breaks, result.breaks === 1 ? 'break' : 'breaks', nowResult.breaks)}
+    ${tile(result.moved, 'moved off release day', nowMoved)}
+    ${tile(sideBySide(plan), 'slots side by side', sideBySide(now.plan))}
+    ${tile(clock(endOf(ends)), 'latest end', nowEnds.some(Boolean) ? clock(endOf(nowEnds)) : '–')}
   </div>`;
-  const problems = result.problems.length ? `<details class="warning" open><summary>${result.problems.length} ${result.problems.length === 1 ? 'Serie passt' : 'Serien passen'} nirgends sauber</summary>
+  const problems = result.problems.length ? `<details class="warning" open><summary>${result.problems.length} ${result.problems.length === 1 ? "show doesn't" : "shows don't"} fit anywhere cleanly</summary>
     <ul>${result.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : '';
   const chips = people => `<span class="who">${people.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span>`;
   const showInfo = (i, d) => {
     const s = shows[i];
     const notes = [];
     if (s.release) {
-      notes.push(`ab ${PLAN_DAYS_SHORT[s.release.day]} ${clock(s.release.min)}`);
+      notes.push(`out ${PLAN_DAYS_SHORT[s.release.day]} ${clock(s.release.min)}`);
       const delay = d < 0 ? 0 : (d - s.release.day + 7) % 7;
-      if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'Tag' : 'Tage'}</span>`);
-    } else notes.push('kein wöchentlicher Release');
-    if (s.short) notes.push('Kurz');
-    if (ctx.fixed[i]?.dayOnly) notes.push('nur Tag');
-    else if (ctx.fixed[i]) notes.push('📌 fest');
+      if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'day' : 'days'}</span>`);
+    } else notes.push('no weekly release');
+    if (s.short) notes.push('short');
+    if (ctx.fixed[i]?.dayOnly) notes.push('day only');
+    else if (ctx.fixed[i]) notes.push('📌 fixed');
     return `<div class="info"><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
   };
   const row = (at, label, slot, d) => `
@@ -701,7 +701,7 @@ function showPlan(data, plan) {
   // Day-only shows (late night): after the evening, without a time.
   const dayOnlyRows = (list, d) => list.map(i => `
     <div class="row plan-row">
-      <div class="time">–<small>kein Slot</small></div>
+      <div class="time">–<small>no slot</small></div>
       <div class="plan-slot">${showInfo(i, d)}</div>
     </div>`).join('');
   const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d)).join('') + dayOnlyRows(ctx.dayOnly[d], d);
@@ -715,27 +715,27 @@ function showPlan(data, plan) {
     if (planView === 'now') return hasTheirs ? `<section class="day"><h2>${day} ${theirs}</h2>${nowDay(d)}</section>` : '';
     if (!hasMine && !hasTheirs) return '';
     return `<section class="day"><h2>${day}</h2><div class="plan-compare">
-      <div><div class="plan-side">Guckplan jetzt ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nichts</div>'}</div>
-      <div><div class="plan-side">Vorschlag ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nichts</div>'}</div>
+      <div><div class="plan-side">Guckplan now ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
+      <div><div class="plan-side">Suggestion ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
     </div></section>`;
   }).join('');
   const unplaced = planView !== 'suggestion' && now.unplaced.length
-    ? `<section class="day"><h2>Noch kein Tag im Guckplan</h2>${now.unplaced.map(i => `<div class="row plan-row"><div class="time">–</div><div class="plan-slot">${showInfo(i, -1)}</div></div>`).join('')}</section>` : '';
+    ? `<section class="day"><h2>No day in the Guckplan yet</h2>${now.unplaced.map(i => `<div class="row plan-row"><div class="time">–</div><div class="plan-slot">${showInfo(i, -1)}</div></div>`).join('')}</section>` : '';
   const breakList = (r, label) => {
     const list = data.people.map((p, b) => ({ p, list: r.personBreaks[b] })).filter(x => x.list.length);
     return `<div class="plan-breaks"><span class="plan-side">${label}</span>${list.length
       ? list.map(({ p, list }) => `<span class="plan-break"><span class="who"><span style="${personStyle(p)}">${esc(p)}</span></span>
           ${list.map(x => `${PLAN_DAYS_SHORT[x.day]}${x.gaps > 1 ? ` ×${x.gaps}` : ''}`).join(', ')}</span>`).join('')
-      : '<span class="ep">niemand</span>'}</div>`;
+      : '<span class="ep">nobody</span>'}</div>`;
   };
-  const breaks = `<section class="day"><h2>Pausen</h2>${breakList(result, 'Vorschlag')}${breakList(nowResult, 'Guckplan jetzt')}</section>`;
-  const views = [['compare', 'Nebeneinander'], ['suggestion', 'Vorschlag'], ['now', 'Guckplan jetzt']];
+  const breaks = `<section class="day"><h2>Breaks</h2>${breakList(result, 'Suggestion')}${breakList(nowResult, 'Guckplan now')}</section>`;
+  const views = [['compare', 'Side by side'], ['suggestion', 'Suggestion'], ['now', 'Guckplan now']];
   const actions = `<div class="plan-actions">
-    <div class="segmented plan-views" role="group" aria-label="Anzeigen">${views.map(([v, label]) =>
+    <div class="segmented plan-views" role="group" aria-label="Show">${views.map(([v, label]) =>
       `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
-    <button id="planAgain" class="pill">Anderen versuchen</button><button id="planCopy" class="pill">Als Tabelle kopieren</button>
-    <button id="planSheet" class="pill" title="Ein Code für den Season-Helfer im Sheet: Season-Helfer → 3. Watch-Plan einfügen, dann einfügen">Für Season-Helfer kopieren</button>
-    <button id="planXlsx" class="pill" title="Der Plan als Guckplan-Tab: in Google Sheets Datei → Importieren → Neue Tabellenblätter einfügen">.xlsx herunterladen</button></div>`;
+    <button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button>
+    <button id="planSheet" class="pill" title="A code for the Season-Helfer in the sheet: Season-Helfer → 3. Watch-Plan einfügen, then paste">Copy for Season-Helfer</button>
+    <button id="planXlsx" class="pill" title="The plan as a Guckplan tab: in Google Sheets, File → Import → Insert new sheet">Download .xlsx</button></div>`;
   $('planOut').innerHTML = problems + stats + actions + days + unplaced + breaks;
   const cells = [...document.querySelectorAll('#planOut .time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
@@ -765,9 +765,9 @@ async function copyPlan(data, plan, times) {
   });
   try {
     await navigator.clipboard.writeText(lines.join('\n'));
-    notice('Plan als Tabelle kopiert');
+    notice('Plan copied as a table');
   } catch {
-    notice('Kopieren ging nicht (vom Browser nicht erlaubt)');
+    notice("Couldn't copy (the browser didn't allow it)");
   }
 }
 
@@ -838,7 +838,7 @@ function downloadXlsx(data, plan, times) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  notice('Heruntergeladen: in Google Sheets Datei → Importieren → Hochladen → „Neue Tabellenblätter einfügen“');
+  notice('Downloaded: in Google Sheets, File → Import → Upload → "Insert new sheet(s)"');
 }
 
 // The plan as a code for the Season-Helfer script in the sheet (Season-Helfer → "3. Watch-Plan
@@ -856,9 +856,9 @@ async function copyForSheet(data, plan, times) {
   });
   try {
     await navigator.clipboard.writeText(code);
-    notice('Plan-Code kopiert: im Sheet Season-Helfer → „3. Watch-Plan einfügen“, dann einfügen');
+    notice('Plan code copied: in the sheet, Season-Helfer → "3. Watch-Plan einfügen" and paste it');
   } catch {
-    notice('Kopieren ging nicht (vom Browser nicht erlaubt)');
+    notice("Couldn't copy (the browser didn't allow it)");
   }
 }
 
