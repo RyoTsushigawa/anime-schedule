@@ -104,7 +104,7 @@ async function headerColors(tab) {
   const range = encodeURIComponent(`'${tab.name.replace(/'/g, "''")}'!A1:AZ6`);
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?ranges=${range}` +
     `&fields=sheets(data(rowData(values(formattedValue,effectiveFormat(backgroundColor)))))&key=${encodeURIComponent(sheetsKey)}`);
-  if (!res.ok) throw new Error('Sheets API returned ' + res.status);
+  if (!res.ok) throw new Error('Sheets-API antwortet ' + res.status);
   const rows = (await res.json()).sheets?.[0]?.data?.[0]?.rowData || [];
   const header = rows.find(r => (r.values || []).some(v => v.formattedValue?.trim() === 'Anime Titel'))?.values || [];
   const hex = c => '#' + ['red', 'green', 'blue'].map(k => Math.round((c[k] || 0) * 255).toString(16).padStart(2, '0')).join('');
@@ -137,11 +137,11 @@ let configPromise = null;
 const config = () => configPromise ??= fetch('config.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
 async function hiddenRows(tab) {
   const { sheetsKey } = await config();
-  if (!sheetsKey) throw new Error('no Sheets API key');
+  if (!sheetsKey) throw new Error('kein Sheets-API-Schlüssel');
   const range = encodeURIComponent(`'${tab.name.replace(/'/g, "''")}'!A1:AZ300`);
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?ranges=${range}` +
     `&fields=sheets(data(rowMetadata(hiddenByUser),columnMetadata(hiddenByUser)))&key=${encodeURIComponent(sheetsKey)}`);
-  if (!res.ok) throw new Error('Sheets API returned ' + res.status);
+  if (!res.ok) throw new Error('Sheets-API antwortet ' + res.status);
   const data = (await res.json()).sheets?.[0]?.data?.[0] || {};
   return {
     rows: new Set((data.rowMetadata || []).flatMap((r, i) => r.hiddenByUser ? [i + 1] : [])),
@@ -151,13 +151,13 @@ async function hiddenRows(tab) {
 
 async function loadSheet(gid, hidden = null) {
   const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
-  if (!res.ok) throw new Error('Google Sheet returned ' + res.status);
+  if (!res.ok) throw new Error('Google Sheet antwortet ' + res.status);
   const rows = parseCsv(await res.text());
   const headerIndex = rows.findIndex(r => r.some(c => c.trim() === 'Anime Titel'));
   const header = rows[headerIndex]?.map(c => c.trim()) || [];
   const col = name => header.indexOf(name);
   for (const name of ['Anime Titel', 'Tag', 'Uhrzeit'])
-    if (col(name) < 0) throw new Error(`the sheet has no "${name}" column anymore`);
+    if (col(name) < 0) throw new Error(`die Tabelle hat keine Spalte „${name}“ mehr`);
   // Everyone right of "Uhrzeit", except columns hidden by hand. (All of them, hidden too, in
   // `columns`, for the planner's export in the sheet's own layout.)
   const columns = header.flatMap((name, i) => i > col('Uhrzeit') && name ? [{ name, hidden: !!hidden?.cols.has(i) }] : []);
@@ -266,15 +266,15 @@ async function anilist(query, variables = {}, token, options = {}) {
       });
     } catch {}
     if (res && res.status !== 429 && res.status < 500) {
-      if (res.status === 401) throw Object.assign(new Error('AniList login expired, connect again'), { status: 401 });
+      if (res.status === 401) throw Object.assign(new Error('AniList-Anmeldung abgelaufen, bitte neu verbinden'), { status: 401 });
       const json = await res.json().catch(() => ({}));
       if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { status: res.status });
       return json.data;
     }
     // Offline: no point waiting for retries
-    if (attempt >= (options.retries ?? RETRY_WAITS.length) || (!res && navigator.onLine === false)) throw new Error("AniList isn't answering right now (it limits how often it can be asked). Try again in a minute");
+    if (attempt >= (options.retries ?? RETRY_WAITS.length) || (!res && navigator.onLine === false)) throw new Error("AniList antwortet gerade nicht (es begrenzt, wie oft man fragen darf). Versuch es in einer Minute nochmal");
     const status = document.querySelector('#list .status');
-    if (status) status.textContent = 'AniList is busy, trying again…';
+    if (status) status.textContent = 'AniList ist beschäftigt, neuer Versuch…';
     await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
   }
 }
