@@ -418,7 +418,11 @@ details ul { margin: 6px 0 0; padding-left: 20px; }
 .alerts .notice-count { white-space: nowrap; }
 .alerts-body { display: grid; gap: 6px; margin: 8px 0 6px; }
 /* Buttons on one line, so rows keep their height when "Other services" adds some */
-@media (min-width: 561px) { .links { flex-wrap: nowrap; max-width: none; } }
+@media (min-width: 561px) {
+  .links { flex-wrap: nowrap; max-width: none; }
+  /* One width (as wide as "Prime Video"), so the icons line up in a column down the page */
+  .links > .cr { min-width: 124px; justify-content: flex-start; }
+}
 @media (max-width: 560px) {
   /* With ✓ and Drop the row needs two lines, or the title gets a few letters: time and title on
      top, the service on the left and the list buttons on the right below. */
