@@ -526,12 +526,15 @@ const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplea
   [/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)']];
 function alternativeButton(l) {
   const [, icon, color] = ALTERNATIVE_LOOK.find(([match]) => match.test(l.label));
-  return `<a class="cr none" style="--svc:${color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}"><img class="site-icon" src="services/${icon}" alt="" width="18" height="18">${esc(l.label)}</a>`;
+  return `<a class="cr none" style="${serviceStyle(color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}"><img class="site-icon" src="services/${icon}" alt="" width="18" height="18">${esc(l.label)}</a>`;
 }
+// The red and blue names are hard to read on a dark card, so their text (not icon or tint) goes this much toward white there.
+const TEXT_LIFT = { '#e50914': '30%', '#0578ff': '12%', '#ff0000': '25%', '#ff1a00': '15%', '#657efa': '8%', '#3582f7': '8%' };
+const serviceStyle = color => `--svc:${color}${TEXT_LIFT[color] ? ';--text-lift:' + TEXT_LIFT[color] : ''}`;
 function linkButtons(links, mediaId, watchers) {
   const button = l => l.main
-    ? `<a class="cr" style="--svc:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
-    : `<a class="cr other" style="--svc:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${serviceIcon(l.label)}${esc(l.label)}</a>`;
+    ? `<a class="cr" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
+    : `<a class="cr other" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${serviceIcon(l.label)}${esc(l.label)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked);
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
