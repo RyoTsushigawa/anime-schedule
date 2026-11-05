@@ -166,7 +166,13 @@ function setNote(source, text) {
   return true;
 }
 const unreachable = name => navigator.onLine === false ? "You're offline" : `${name} didn't answer`;
-const savedAt = time => new Date(time).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+// Days and dates in German, whatever language the browser is set to.
+const DAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+const dayName = date => DAY_NAMES[date.getDay()];
+const shortDayName = date => dayName(date).slice(0, 2);
+const germanDate = date => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(date);
+const shortDayDate = date => `${shortDayName(date)}, ${germanDate(date)}`;
+const savedAt = time => `${shortDayName(new Date(time))} ${new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`;
 function notesHtml(scoped = []) {
   const lines = new Set([...dataNotes].filter(([k]) => !k.includes(':') || scoped.includes(k)).map(([, t]) => t));
   return lines.size ? `<div class="datanote" role="status">${[...lines].map(t => `<div>${esc(t)}</div>`).join('')}</div>` : '';
@@ -338,7 +344,7 @@ const moveButton = (show, slot) => !movesKey || !show ? '' :
 // headline (linked), else `none` (already HTML). A note is cut down to its cause ("…no broadcast
 // today due to sports coverage." → "sports coverage"); otherwise its "today" becomes its day.
 const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
-  || note.text.replace(/\btoday\b/i, 'on ' + new Date(note.at * 1000).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }));
+  || note.text.replace(/\btoday\b/i, 'on ' + shortDayDate(new Date(note.at * 1000)));
 const reasonHtml = (note, news, none) => note
   ? esc(noteReason(note))
   : news?.length ? `<a href="${safeUrl(news[0].url)}" target="_blank" rel="noopener">${esc(news[0].title)}</a>` : none;
@@ -685,6 +691,12 @@ function assignWatchTimes(day) {
 // With release times on show, a day reads in release order. Each group is one card (shows sharing a watch
 // slot stay together, at their earliest release). Rows with no release time (breaks, rewatches, shows
 // without airing data) keep their plan order after the rest.
+// "Heute" and "Morgen" in place of the weekday in a day's heading; hovering it still gives the full date.
+function nearDayName(date) {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const away = Math.round((new Date(date).setHours(0, 0, 0, 0) - start) / 86400000);
+  return away === 0 ? 'Heute' : away === 1 ? 'Morgen' : '';
+}
 function releaseOrder(groups) {
   const releasedAt = group => Math.min(...group.map(r => r.it ? new Date(r.when).getTime() : Infinity));
   return [...groups].sort((a, b) => {
@@ -899,12 +911,12 @@ function render(items, start, plans) {
   const ordered = picked ? [picked] : searching() || todayIndex < 0 || range === 'week' ? days
     : range === 'today' ? [days[todayIndex]] : days.slice(todayIndex);
   let html = ordered.map(({ date, rows }) => {
-    const heading = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'short' }).formatToParts(date)
-      .map(p => p.type === 'weekday' ? `<b>${esc(p.value)}</b>` : esc(p.value)).join('');
+    const fullDate = `${dayName(date)}, ${germanDate(date)}`;
+    const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
     // Rows without a ✓ keep its place, so every row's buttons line up.
     const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
     // When it's back, and why if LiveChart says (its note, or its newest headline, linked).
-    const backLine = (when, note, news) => [`Back ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
+    const backLine = (when, note, news) => [`Back ${shortDayDate(when)}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
     const pause = ({ show, slot, when, episode, note, news, watchAt, cover }) => `
       <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
@@ -936,7 +948,7 @@ function render(items, start, plans) {
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
     const hm = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const timeCell = (when, watchAt) => {
-      const weekday = when.toLocaleDateString(undefined, { weekday: 'short' });
+      const weekday = shortDayName(when);
       const release = `${weekday} ${hm(when)}`;
       const releaseCell = `<span class="time-day${when.toDateString() === date.toDateString() ? ' same' : ''}">${weekday}</span> ${hm(when)}`;
       const watch = hm(new Date(watchAt));
@@ -965,15 +977,15 @@ function render(items, start, plans) {
       ? ordered.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
       : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
     const isToday = date.toDateString() === today;
-    return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}><span>${heading}</span></h2>${body}</section>`;
+    return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span></h2>${body}</section>`;
   }).join('');
   // Above the days: one slim line with the week; pressing a day goes there. Days without a show step back.
   const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
   html = `<nav class="daystrip" aria-label="Show one day">${days.map(({ date, rows }) => {
-    const long = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
+    const long = `${dayName(date)}, ${germanDate(date)}`;
     const alone = !searching() && (range === 'day' ? isoDay(date) === pickedDay : range === 'today' && date.toDateString() === today);
     const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free', alone ? 'picked' : ''].filter(Boolean).join(' ');
-    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}">${esc(date.toLocaleDateString(undefined, { weekday: 'short' }))} <b>${date.getDate()}</b></button>`;
+    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}">${esc(shortDayName(date))} <b>${date.getDate()}</b></button>`;
   }).join('')}</nav>` + html;
   // At the end of the week: on to the next one without scrolling back up to the arrows.
   html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
@@ -987,9 +999,8 @@ function render(items, start, plans) {
   else if (linksAge >= 14) html = `<div class="notice">Stream links were last updated ${linksAge} days ago; the weekly refresh may have stopped.</div>` + html;
   // At the very top, one line per show: breaks in the same words as their row, then plan shows that
   // couldn't be placed.
-  const dayName = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const lines = [
-    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Back ' + dayName(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
+    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Back ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
     ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'No episode confirmed for this week; airing status unknown')}</span></div>`),
   ];
   if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
@@ -1965,7 +1976,7 @@ async function loadCatchup(refresh = false) {
       <div class="row" ${searchKey(...mediaTitles(m))}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}
-          <div class="ep">Completed ${completed.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</div>
+          <div class="ep">Completed ${completed.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>
         </div>
         ${scoreButton(m.id)}
       </div>`).join('')}</section>`);
@@ -2034,7 +2045,7 @@ async function load(refresh = false) {
   const end = new Date(start); end.setDate(end.getDate() + 6);
   // The year only when it isn't this one, or the week spans New Year ("Dec 28, 2026 – Jan 3, 2027")
   const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
-  const fmt = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
+  const fmt = d => d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
   $('week').textContent = $('weekSub').textContent = `${fmt(start)} – ${fmt(end)}`;
   if (!cache.has(start.getTime()) && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
   // Last week too: an episode airing after its watch day is watched the following week.
