@@ -2055,10 +2055,10 @@ async function loadCatchup(refresh = false) {
   // At your own pace: one row per show with the next episode and its ✓ (that episode only).
   const paced = ({ m, first, out, progress, links }) => `
     <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
-      <div class="time">Folge ${first}</div>
+      <div class="time"><span class="time-day">Folge</span> ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${progress} of ${m.episodes || out} watched</div>
+        <div class="ep">${progress} von ${m.episodes || out} gesehen</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) : ''}
