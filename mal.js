@@ -27,12 +27,12 @@ const MAL = (() => {
     const response = await fetch(base + path, { ...options, redirect: 'error', signal: AbortSignal.timeout(20000),
       headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(account?.token ? { Authorization: 'Bearer ' + account.token } : {}) } });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw Object.assign(new Error(body.error || 'MyAnimeList is not answering. Try again.'), { status: response.status });
+    if (!response.ok) throw Object.assign(new Error(body.error || 'MyAnimeList antwortet nicht. Versuch es nochmal.'), { status: response.status });
     return body;
   }
   const profile = account => request(account, '/me');
   async function exchange(code) {
-    if (!/^[a-f0-9]{64}$/.test(code)) throw new Error('Invalid MyAnimeList login code. Connect again.');
+    if (!/^[a-f0-9]{64}$/.test(code)) throw new Error('Ungültiger MyAnimeList-Anmeldecode. Bitte neu verbinden.');
     const { session } = await request(null, '/auth/exchange', { method: 'POST', body: JSON.stringify({ code }) });
     const account = { provider: 'mal', token: session, expires: Date.now() + 30 * 86400000, scoreFormat: 'POINT_10' };
     const me = await profile(account);
@@ -76,13 +76,13 @@ const MAL = (() => {
         const rows = [];
         let offset = 0;
         for (let page = 0; ; page++) {
-          if (page >= 100) throw new Error('MyAnimeList list was incomplete. Try refreshing.');
+          if (page >= 100) throw new Error('Die MyAnimeList-Liste war unvollständig. Lade die Seite neu.');
           const data = await request(account, '/list?offset=' + offset);
-          if (!Array.isArray(data.data)) throw new Error('MyAnimeList returned an incomplete list.');
+          if (!Array.isArray(data.data)) throw new Error('MyAnimeList hat eine unvollständige Liste geliefert.');
           rows.push(...data.data);
           if (!data.paging?.next) break;
           const next = Number(new URL(data.paging.next).searchParams.get('offset'));
-          if (!Number.isInteger(next) || next <= offset) throw new Error('MyAnimeList pagination did not advance.');
+          if (!Number.isInteger(next) || next <= offset) throw new Error('MyAnimeList liefert keine weiteren Seiten.');
           offset = next;
         }
         await enrich(rows.map(r => r.node));
@@ -108,14 +108,14 @@ const MAL = (() => {
     if (known) return known.idMal;
     const { Media } = await anilist(`query ($id: Int) { Media(id: $id, type: ANIME) { ${fields} } }`, { id }, undefined, { retries: 0 });
     rememberMedia(Media);
-    if (!Media?.idMal) throw new Error('This show has no confirmed MyAnimeList ID. No list change was made.');
+    if (!Media?.idMal) throw new Error('Für diese Serie gibt es keine bestätigte MyAnimeList-ID. Die Liste wurde nicht geändert.');
     return Media.idMal;
   }
   async function anilistId(id) {
     if (id > 0) return id;
     if (!metadata.has(-id)) await enrich([{id:-id}]);
     const known = metadata.get(-id);
-    if (!known?.id) throw new Error('No confirmed AniList ID is available for this show; the other list was not changed.');
+    if (!known?.id) throw new Error('Für diese Serie gibt es keine bestätigte AniList-ID; die andere Liste wurde nicht geändert.');
     return known.id;
   }
   async function entry(account, id) {
