@@ -472,7 +472,7 @@ function streamLinks(media, wo, searchTitle) {
       // Needs an add-on channel we don't have (e.g. Prime Video + aniverse): counts as another service.
       const label = (s?.label || name) + (extra ? ' + ' + extra : '');
       if (!links.some(l => l.url === url))
-        links.push({ url, label, color: s?.color || OTHER_SERVICE_COLORS.find(([match]) => match.test(name))?.[1] || '#5b5b66', main: !!s?.main && !extra, first: !!s && s.wo === wo && !extra });
+        links.push({ url, label, color: s?.color || OTHER_SERVICE_COLORS.find(([match]) => match.test(name))?.[1] || 'var(--muted)', main: !!s?.main && !extra, first: !!s && s.wo === wo && !extra });
     }
     return links.sort((a, b) => b.first - a.first);
   }
@@ -531,7 +531,7 @@ function alternativeButton(l) {
 function linkButtons(links, mediaId, watchers) {
   const button = l => l.main
     ? `<a class="cr" style="--svc:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
-    : `<a class="cr other" style="color:${l.color};border-color:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${serviceIcon(l.label)}${esc(l.label)}</a>`;
+    : `<a class="cr other" style="--svc:${l.color}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${serviceIcon(l.label)}${esc(l.label)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked);
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
