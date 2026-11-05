@@ -264,7 +264,6 @@ header.away ~ main .day h2 { top: 0; }
 .row.aired .time, .row.aired .title, .row.pause .time, .row.pause .title { color: var(--muted); }
 .row.aired img, .row.pause img { opacity: .7; }
 /* Its stream button steps back too, in plain colors, and comes back under the mouse or keyboard */
-:root.plain-services .cr { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.aired:not(:hover) .cr:not(:focus-visible) { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.pause { border-style: dashed; padding: 10px 8px; }
 .row.pause .time { font-weight: 500; }
@@ -309,8 +308,8 @@ body.searching .pager { display: none; }
 .svc-icon { flex: none; width: 18px; height: 18px; margin-left: -3px; background: color-mix(in srgb, var(--svc) var(--svc-ink), #000); -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
 @media (hover: hover) { .cr:not(.other, .news):hover { background: color-mix(in srgb, var(--svc) 15%, transparent); } .cr.other:hover { background: color-mix(in srgb, var(--svc) 8%, transparent); } }
 .cr.other { background: transparent; border: 1px solid color-mix(in srgb, var(--svc) 40%, transparent); box-shadow: none; }
-:root.plain-services .cr.other, .row.aired:not(:hover) .cr.other:not(:focus-visible) { border-color: transparent; }
-:root.plain-services .svc-icon, .row.aired:not(:hover) .cr:not(:focus-visible) .svc-icon { background: currentColor; }
+.row.aired:not(:hover) .cr.other:not(:focus-visible) { border-color: transparent; }
+.row.aired:not(:hover) .cr:not(:focus-visible) .svc-icon { background: currentColor; }
 /* ✓ = watched (written to AniList) */
 .watch { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 9px; color: var(--green); border-color: color-mix(in srgb, var(--green) 55%, transparent); background: color-mix(in srgb, var(--green) 10%, transparent); font-size: 15px; font-weight: 700; line-height: 1; }
 .watch:hover { border-color: var(--green); background: color-mix(in srgb, var(--green) 15%, var(--card)); }
