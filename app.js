@@ -1852,7 +1852,7 @@ function showCatchupCount(rows) {
   const count = rows.reduce((sum, r) => sum + r.out - r.first + 1, 0);
   $('catchupCount').textContent = count || '';
   $('catchupCount').hidden = !count;
-  $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} zum Nachholen` : '';
+  $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} zum Aufholen` : '';
 }
 let countingCatchup = false;
 async function updateCatchupCount() {
@@ -1871,7 +1871,7 @@ async function loadCatchup(refresh = false) {
   updateFallbackControls();
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
-  const name = shown === 'pace' ? 'Nicht saisonal' : 'Nachholen';
+  const name = shown === 'pace' ? 'Nicht saisonal' : 'Aufholen';
   $('tabName').textContent = user ? `${name} · ${user} auf ${listService()}` : name;
   if (!user) { $('list').innerHTML = '<div class="status">Gib im AniList-Menü einen AniList-Namen ein.</div>'; return; }
   if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
@@ -2528,7 +2528,7 @@ $('helpClose').onclick = () => $('helpDialog').close();
 $('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
 for (const [id, key, hint] of [
   ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
-  ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Nachholen (2)'], ['viewPace', '3', 'Nicht saisonal (3)'],
+  ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Aufholen (2)'], ['viewPace', '3', 'Nicht saisonal (3)'],
   ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Gruppe (G)'],
   ['searchButton', '/', 'Serien suchen (/)'], ['helpButton', 'Shift+/', 'Anleitung und Kürzel (?)'],
 ]) {
