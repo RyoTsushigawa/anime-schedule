@@ -248,7 +248,7 @@ kbd{font:inherit;font-family:var(--mono)}
     <img class="logo" src="../icon-192.png" alt="" width="36" height="36">
     <div>
       <h1>Higher or Lower Ranker</h1>
-      <p class="muted">Bewerte deine Liste Serie für Serie neu: höher oder niedriger als eine Serie, die du schon bewertet hast?</p>
+      <p class="muted">Bewerte deine Liste Serie für Serie neu: higher oder lower als eine Serie, die du schon bewertet hast?</p>
     </div>
   </header>
 
@@ -350,7 +350,7 @@ kbd{font:inherit;font-family:var(--mono)}
     </details>
   </section>
 
-  <details class="rank-help" id="rankHelp"><summary>So geht's &amp; Tastenkürzel</summary><p>Vergleiche die zwei Serien. Wähle Höher oder Niedriger, oder setze direkt eine Wertung. Rückgängig geht während dieses Besuchs immer.</p><p><kbd>↑</kbd> Höher · <kbd>↓</kbd> Niedriger · <kbd>←</kbd> / <kbd>→</kbd> Wertung anpassen · <kbd>E</kbd> Wertung setzen · <kbd>Z</kbd> Rückgängig · <kbd>K</kbd> Überspringen · <kbd>N</kbd> Unsicher · <kbd>1–9</kbd> Jemandem zustimmen</p><p>Am Handy: nach oben wischen für höher, nach unten für niedriger.</p></details>
+  <details class="rank-help" id="rankHelp"><summary>So geht's &amp; Tastenkürzel</summary><p>Vergleiche die zwei Serien. Wähle Higher oder Lower, oder setze direkt eine Wertung. Rückgängig geht während dieses Besuchs immer.</p><p><kbd>↑</kbd> Higher · <kbd>↓</kbd> Lower · <kbd>←</kbd> / <kbd>→</kbd> Wertung anpassen · <kbd>E</kbd> Wertung setzen · <kbd>Z</kbd> Rückgängig · <kbd>K</kbd> Überspringen · <kbd>N</kbd> Unsicher · <kbd>1–9</kbd> Jemandem zustimmen</p><p>Am Handy: nach oben wischen für higher, nach unten für lower.</p></details>
   <section class="stage" id="stage" aria-live="polite"></section>
 
   <section class="lower">
@@ -1350,7 +1350,7 @@ function renderStage(){
     const ln = S.lastNew && S.bench[S.lastNew.L]===S.lastNew.idx ? S.lastNew : null;
     const note = stageNote; stageNote = '';
     st.innerHTML = `${picker}${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} hat die leere Stufe ${fmt(ln.L)} gefüllt und ist jetzt ihr Benchmark.</div>`:''}
-      <div class="prompt">Ist <b>${esc(T(a))}</b> höher oder niedriger als <b>${esc(T(bi))}</b>?</div>
+      <div class="prompt">Ist <b>${esc(T(a))}</b> higher oder lower als <b>${esc(T(bi))}</b>?</div>
       <div class="duel">
         <article class="card new"><div class="eyebrow">Wird bewertet${g?` · Start nahe ${fmt(g)}`:''}${a.added?` · noch nicht auf deiner Liste`:''}</div>
           <div class="cardrow">${showInfo&&a.id?`<img class="cv" data-id="${esc(a.id)}" alt="">`:''}<div><div>${titleBlock(a)}</div><div class="meta">${metaLine(a,true)}</div>${a.added&&a.from?`<div class="muted" style="font-size:.84rem">Gefunden über ${esc(a.from)}</div>`:''}</div></div></article>
@@ -1359,15 +1359,15 @@ function renderStage(){
           <div class="cardrow">${showInfo&&bi.id?`<img class="cv" data-id="${esc(bi.id)}" alt="">`:''}<div><div>${titleBlock(bi)}</div><div class="meta">${metaLine(bi,false)}</div></div></div></article>
       </div>
       <div class="answers">
-        <button class="ans hi" data-a="higher">↑ Höher<span class="kbd">↑</span></button>
+        <button class="ans hi" data-a="higher">↑ Higher<span class="kbd">↑</span></button>
         <div class="direct">
           ${steps.filter(d => d<0).map(d => `<button class="btn step" data-step="${d}">−${stepLabel(d)}</button>`).join('')}
           <button class="btn primary" id="directSet" title="Gleiche Stufe, oder erst anpassen (← →)">Setze ${fmt(directFor(b))}<span class="kbd">E</span></button>
           ${steps.filter(d => d>0).map(d => `<button class="btn step" data-step="${d}">+${stepLabel(d)}</button>`).join('')}
         </div>
-        <button class="ans lo" data-a="lower">↓ Niedriger<span class="kbd">↓</span></button>
+        <button class="ans lo" data-a="lower">↓ Lower<span class="kbd">↓</span></button>
       </div>
-      <div class="swipehint">Nach oben wischen für höher, nach unten für niedriger</div>
+      <div class="swipehint">Nach oben wischen für higher, nach unten für lower</div>
       ${(() => {
         // One button per distinct score: people who'd give the same (rounded) score share a button
         const groups = new Map();
