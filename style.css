@@ -66,6 +66,8 @@ body:not(.catchup) #anilistUser, body:not(.catchup) .catchup-only { display: non
 body.pace .seasonal-only { display: none; }
 .row.compact { padding-top: 6px; padding-bottom: 6px; }
 .row.show-head { padding-bottom: 10px; }
+body.catchup .controls-left { flex: 1 1 auto; }
+#markAllStart { margin-left: auto; min-height: 30px; }
 .catchup-bar {display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 10px; }
 .catchup-bar .hint { color: var(--muted); font-size: 13px; margin-right: auto; }
 #markAll.sure { border-color: var(--green); color: var(--green); font-weight: 600; }
@@ -188,6 +190,11 @@ img.avatar { object-fit: cover; }
 .catchup-show .row.compact { padding: 7px 12px; gap: 10px; background: color-mix(in srgb, var(--bg) 35%, var(--card)); }
 .catchup-show .row.compact .time { width: auto; color: var(--muted); font-size: 13px; font-weight: 500; }
 .catchup-bar { margin-bottom: 12px; }
+.catchup-bar .pill { white-space: nowrap; }
+@media (max-width: 560px) {
+  .catchup-bar { flex-wrap: wrap; }
+  .catchup-bar .hint { flex: 1 1 100%; margin-right: 0; }
+}
 @media (pointer: coarse) {
   .menu .pills > button, .menu .pills > a, .menu .pill-row > button, .menu .toggle, #accountSection .account-choice { min-height: 44px; }
   #listSyncSection .field select { min-height: 40px; font-size: 16px; }
