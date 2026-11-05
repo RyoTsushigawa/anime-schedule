@@ -88,7 +88,7 @@ function updateSyncControls() {
   const candidates = auth ? accounts.filter(a => (a.provider || 'anilist') !== (auth.provider || 'anilist')) : [];
   $('listSyncSection').hidden = !candidates.length;
   const pair = syncPairs[accountKey(auth)];
-  $('syncTarget').replaceChildren(new Option('Choose an account', ''), ...candidates.map(a => new Option(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name}`, accountKey(a))));
+  $('syncTarget').replaceChildren(new Option('Konto wählen', ''), ...candidates.map(a => new Option(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name}`, accountKey(a))));
   $('syncTarget').value = pair?.target || '';
   $('syncBoth').checked = !!syncTargetFor(auth);
   $('syncBoth').disabled = !$('syncTarget').value;
@@ -124,7 +124,7 @@ function updateFallbackControls() {
     b.setAttribute('aria-pressed',String(selected.has(b.dataset.fallbackSource)));
     b.disabled = !activePeople().length;
   }
-  $('fallbackHint').textContent = selected.size > 1 ? 'Mixed preferences · choose to apply to selected people' : 'When no service is shown · for selected people';
+  $('fallbackHint').textContent = selected.size > 1 ? 'Gemischte Auswahl · wählen, um es für alle gewählten Leute zu setzen' : 'Wenn kein Dienst angezeigt wird · für die gewählten Leute';
 }
 for (const b of document.querySelectorAll('[data-fallback-source]')) b.onclick = () => {
   for (const person of activePeople()) fallbackSources.set(person,b.dataset.fallbackSource);
@@ -165,7 +165,7 @@ function setNote(source, text) {
   text ? dataNotes.set(source, text) : dataNotes.delete(source);
   return true;
 }
-const unreachable = name => navigator.onLine === false ? "You're offline" : `${name} didn't answer`;
+const unreachable = name => navigator.onLine === false ? "Du bist offline" : `${name} antwortet nicht`;
 // Days and dates in German, whatever language the browser is set to.
 const DAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 const dayName = date => DAY_NAMES[date.getDay()];
@@ -178,7 +178,7 @@ function notesHtml(scoped = []) {
   return lines.size ? `<div class="datanote" role="status">${[...lines].map(t => `<div>${esc(t)}</div>`).join('')}</div>` : '';
 }
 // A load that failed with nothing saved to show instead: the reason and a way to try again
-const failed = text => `<div class="status">${esc(text)}<br><button class="pill retry">Try again</button></div>`;
+const failed = text => `<div class="status">${esc(text)}<br><button class="pill retry">Nochmal versuchen</button></div>`;
 
 const sheets = new Map();
 // A tab's Guckplan: the last copy shown in this browser at once, then the current one when it arrives.
@@ -187,7 +187,7 @@ const sheetFor = tab => {
   const key = tab.gid + ':' + (tab.catalogGid || '');
   if (!sheets.has(key)) {
     const onChange = fresh => { sheets.set(key, Promise.resolve(fresh)); load(true); };
-    const onFresh = e => { if (setNote('sheet ' + tab.gid, e && `${unreachable('Google Sheets')}: “${tab.name}” as last saved in this browser.`)) load(true); };
+    const onFresh = e => { if (setNote('sheet ' + tab.gid, e && `${unreachable('Google Sheets')}: „${tab.name}“ wie zuletzt in diesem Browser gespeichert.`)) load(true); };
     sheets.set(key, savedOrFresh('sheet:' + key, () => loadPlan(tab), onChange, onFresh)
       .catch(e => { sheets.delete(key); throw e; }));
   }
@@ -228,7 +228,7 @@ async function liveChartWeek(start) {
     }
   }
   fallbackWeeks.add(start.getTime());
-  setNote('week:' + start.getTime(), `${unreachable('AniList')}: using LiveChart (${savedAt(Date.parse(streamsDe.statusUpdated || streamsDe.generated))}) and the Guckplan. Unconfirmed episode numbers are left out.`);
+  setNote('week:' + start.getTime(), `${unreachable('AniList')}: nutze LiveChart (${savedAt(Date.parse(streamsDe.statusUpdated || streamsDe.generated))}) und den Guckplan. Unbestätigte Folgennummern werden ausgelassen.`);
   return items;
 }
 // Once a week is on screen, the ones the arrows lead to get ready in the background, so they open
@@ -290,7 +290,7 @@ async function downloadWeek(start) {
         cache.set(start.getTime(), Promise.resolve(items));
         load(true);
       } else if (noted) load(true);
-    }, () => { if (setNote(storeKey, `${unreachable('AniList')}: airings as saved ${savedAt(saved.time)}.`)) load(true); });
+    }, () => { if (setNote(storeKey, `${unreachable('AniList')}: Sendetermine vom ${savedAt(saved.time)}.`)) load(true); });
     return saved.items;
   }
   let items;
@@ -299,8 +299,8 @@ async function downloadWeek(start) {
   } catch (e) {
     const fallback = await liveChartWeek(start);
     if (fallback) return fallback;
-    throw new Error(navigator.onLine === false ? "You're offline, and this week isn't saved in this browser yet."
-      : "AniList isn't answering right now (it limits how often it can be asked). Try again in a minute.");
+    throw new Error(navigator.onLine === false ? "Du bist offline, und diese Woche ist in diesem Browser noch nicht gespeichert."
+      : "AniList antwortet gerade nicht (es begrenzt, wie oft man fragen darf). Versuch es in einer Minute nochmal.");
   }
   storeWeek(storeKey, items);
   fallbackWeeks.delete(start.getTime());
@@ -335,16 +335,16 @@ async function downloadAirings(start) {
 }
 
 // The owner gets a ⇄ on each show to move it (others just see it in its new place).
-const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'no day';
+const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'kein Tag';
 const moveButton = (show, slot) => !movesKey || !show ? '' :
   `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
-    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" draggable="true" title="Drag to a day or slot, or click to enter a destination">⇄</button>`;
+    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben">⇄</button>`;
 
 // Why a show has a break: LiveChart's timetable note for that week, else its newest break
 // headline (linked), else `none` (already HTML). A note is cut down to its cause ("…no broadcast
 // today due to sports coverage." → "sports coverage"); otherwise its "today" becomes its day.
 const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
-  || note.text.replace(/\btoday\b/i, 'on ' + shortDayDate(new Date(note.at * 1000)));
+  || note.text.replace(/\btoday\b/i, 'am ' + shortDayDate(new Date(note.at * 1000)));
 const reasonHtml = (note, news, none) => note
   ? esc(noteReason(note))
   : news?.length ? `<a href="${safeUrl(news[0].url)}" target="_blank" rel="noopener">${esc(news[0].title)}</a>` : none;
@@ -532,7 +532,7 @@ const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplea
   [/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)']];
 function alternativeButton(l) {
   const [, icon, color] = ALTERNATIVE_LOOK.find(([match]) => match.test(l.label));
-  return `<a class="cr none" style="${serviceStyle(color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative source${l.label.endsWith('search') ? ': no exact show-page match' : ''}"><img class="site-icon" src="services/${icon}" alt="" width="18" height="18">${esc(l.label)}</a>`;
+  return `<a class="cr none" style="${serviceStyle(color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative Quelle${l.label.endsWith('Suche') ? ': keine genaue Serienseite gefunden' : ''}"><img class="site-icon" src="services/${icon}" alt="" width="18" height="18">${esc(l.label)}</a>`;
 }
 // The red and blue names are hard to read on a dark card, so their text (not icon or tint) goes this much toward white there.
 const TEXT_LIFT = { '#e50914': '30%', '#0578ff': '12%', '#ff0000': '25%', '#ff1a00': '15%', '#657efa': '8%', '#3582f7': '8%' };
@@ -540,7 +540,7 @@ const serviceStyle = color => `--svc:${color}${TEXT_LIFT[color] ? ';--text-lift:
 function linkButtons(links, mediaId, watchers) {
   const button = l => l.main
     ? `<a class="cr" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
-    : `<a class="cr other" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Available, but not a service we have">${serviceIcon(l.label)}${esc(l.label)}</a>`;
+    : `<a class="cr other" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Verfügbar, aber kein Dienst, den wir haben">${serviceIcon(l.label)}${esc(l.label)}</a>`;
   const shown = links.filter(l => l.main || $('others').checked);
   const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
   const torrent = people.some(p => fallbackChoice(p) === 'torrent');
@@ -550,11 +550,11 @@ function linkButtons(links, mediaId, watchers) {
   const alternatives = [];
   if (torrent && !shown.length) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
     ? { label: 'SubsPlease', url: source.subsplease }
-    : { label: 'Nyaa search', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
+    : { label: 'Nyaa-Suche', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(title) });
   if (streaming && !shown.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
   else if (streaming && !shown.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
     ? { label: 'AniWorld', url: source.aniworld }
-    : { label: 'AniWorld search', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
+    : { label: 'AniWorld-Suche', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
   return shown.map(button).join('') + alternatives.map(alternativeButton).join('');
 }
 
@@ -573,7 +573,7 @@ function applySearch() {
   let none = $('noMatch');
   if (q && items.length && !document.querySelector('#list [data-search]:not(.hidden-by-search)')) {
     if (!none) { none = document.createElement('div'); none.id = 'noMatch'; none.className = 'nomatch'; }
-    none.textContent = `No show matches “${$('search').value.trim()}”${view === 'week' ? ' this week' : ''}.`;
+    none.textContent = `Keine Serie passt zu „${$('search').value.trim()}“${view === 'week' ? ' in dieser Woche' : ''}.`;
     if (!none.isConnected) $('list').prepend(none);
   } else none?.remove();
 }
@@ -593,7 +593,7 @@ function openSearch(open) {
   $('searchBox').classList.toggle('open', open);
   document.body.classList.toggle('searching', open);
   $('searchButton').setAttribute('aria-expanded', String(open));
-  $('searchButton').setAttribute('aria-label', open ? 'Clear and close search' : 'Search shows');
+  $('searchButton').setAttribute('aria-label', open ? 'Suche leeren und schließen' : 'Serien suchen');
   if (open) $('search').focus();
 }
 // The 🔍 opens the field, and closes it again (clearing the search) when it's open.
@@ -706,7 +706,7 @@ function releaseOrder(groups) {
 }
 
 // plans: Map tab gid → sheet, for every Guckplan tab that can be active this week.
-const LOADING_HTML = '<div class="status loading">Loading…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>';
+const LOADING_HTML = '<div class="status loading">Lädt…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>';
 // A short slide or fade when the list changes because you went somewhere (never on a refresh).
 var enter = null;
 // The first and last episode stand out; the total is only known once AniList has it (a one-episode
@@ -714,7 +714,7 @@ var enter = null;
 function episodeTags(episodes, total) {
   const tag = text => `<span class="ep-tag">${text}</span>`;
   if (total === 1) return '';
-  return (Math.min(...episodes) === 1 ? tag('Premiere') : '') + (total && Math.max(...episodes) === total ? tag('Final') : '');
+  return (Math.min(...episodes) === 1 ? tag('Premiere') : '') + (total && Math.max(...episodes) === total ? tag('Finale') : '');
 }
 // A row's cover again, as a faint wash of its colors behind the row.
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
@@ -740,7 +740,7 @@ function render(items, start, plans) {
   // Shows any selected person watches (solo: one person, group: the toggled ones); nobody = nothing.
   const people = activePeople();
   if (!people.length) {
-    $('list').innerHTML = '<div class="status">Pick at least one person above.</div>';
+    $('list').innerHTML = '<div class="status">Wähle oben mindestens eine Person aus.</div>';
     return;
   }
   // Per tab: show → slot, merged over the selected people (a slot with a time wins), and everyone
@@ -765,7 +765,7 @@ function render(items, start, plans) {
   const showWho = $('who').checked;
   const others = who => mode === 'solo' ? who?.filter(p => !activePeople().includes(p)) : who;
   const whoChips = all => { const who = others(all); return showWho && who?.length
-    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Show everyone: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
+    ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
   const found = new Set();
   // Logged in and Solo: shows you dropped on AniList are gone from your week. In Group they stay,
   // with "Dropped" in place of the Drop button, since the others may still watch them.
@@ -830,7 +830,7 @@ function render(items, start, plans) {
   const weekEnd = days[6].date.getTime() + 86400000;
   const unknown = []; // { show, why }
   const breaks = []; // also listed at the top, with the reason
-  const busy = () => `${unreachable('AniList')}, so it's unknown whether it airs`;
+  const busy = () => `${unreachable('AniList')}, daher ist unklar, ob sie läuft`;
   // Without the LiveChart data (streams-de.json didn't load) breaks and rewatches can't be told
   // from finished shows: none are guessed (the note at the top says so).
   for (const [show, slot] of !streamsDe ? [] : [...weekTabs].flatMap(gid => plans.has(gid) ? [...chosen.get(plans.get(gid))] : [])) {
@@ -843,7 +843,7 @@ function render(items, start, plans) {
     if (finishedBy(airingFacts.get(alId) || status?.airingStatus, weekEnd)) continue;
     if (fallback) {
       const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
-      if (!day) { unknown.push({ show, why: 'No watch day set in the Guckplan' }); continue; }
+      if (!day) { unknown.push({ show, why: 'Kein Guck-Tag im Guckplan eingetragen' }); continue; }
       const note = (status?.notes || []).find(n => n.at * 1000 >= start.getTime() - 86400000 && n.at * 1000 < weekEnd);
       if (upcoming?.at * 1000 >= weekEnd && note) {
         const why = { note: note || null, news: status.news || [] };
@@ -867,7 +867,7 @@ function render(items, start, plans) {
     }
     if (status && !upcoming) {
       unknown.push({ show, why: airingFacts.get(alId)?.status === 'RELEASING'
-        ? 'Still airing; no next episode date announced' : 'Airing status could not be confirmed' });
+        ? 'Läuft noch; nächster Folgentermin nicht angekündigt' : 'Ausstrahlung konnte nicht bestätigt werden' });
       continue;
     }
     const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
@@ -897,9 +897,9 @@ function render(items, start, plans) {
       day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode, cover: media.coverImage?.medium, ...why });
       breaks.push({ show, when, episode: media.nextAiringEpisode.episode, ...why });
       found.add(show);
-    } else unknown.push({ show, why: media === undefined ? 'Checking airing status…'
-      : media?.status === 'RELEASING' ? 'Still airing; no episode date confirmed for this week'
-      : 'Could not match the show or confirm its airing status' });
+    } else unknown.push({ show, why: media === undefined ? 'Ausstrahlung wird geprüft…'
+      : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
+      : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
   }
   for (const d of days) assignWatchTimes(d);
 
@@ -916,7 +916,7 @@ function render(items, start, plans) {
     // Rows without a ✓ keep its place, so every row's buttons line up.
     const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
     // When it's back, and why if LiveChart says (its note, or its newest headline, linked).
-    const backLine = (when, note, news) => [`Back ${shortDayDate(when)}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
+    const backLine = (when, note, news) => [`Zurück am ${shortDayDate(when)}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
     const pause = ({ show, slot, when, episode, note, news, watchAt, cover }) => `
       <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
@@ -943,7 +943,7 @@ function render(items, start, plans) {
     const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
       ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
-      <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Episode not confirmed${whoChips(who)}</div></div>
+      <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Folge nicht bestätigt${whoChips(who)}</div></div>
       <div class="links">${linkButtons(links, m.id, who)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
     // ⚙ Time: the release ("Wed 15:00"), the watch time from the Guckplan ("19:30"), or both.
     const hm = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -953,7 +953,7 @@ function render(items, start, plans) {
       const releaseCell = `<span class="time-day${when.toDateString() === date.toDateString() ? ' same' : ''}">${weekday}</span> ${hm(when)}`;
       const watch = hm(new Date(watchAt));
       return choices.time === 'watch' ? watch
-        : choices.time === 'both' ? `${watch}<small><span class="out">out </span>${release}</small>` : releaseCell;
+        : choices.time === 'both' ? `${watch}<small><span class="out">ab </span>${release}</small>` : releaseCell;
     };
     const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
       <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
@@ -961,7 +961,7 @@ function render(items, start, plans) {
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Ep ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Ep ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${it.episode}`}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -975,35 +975,35 @@ function render(items, start, plans) {
     const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
     const body = ordered.length
       ? ordered.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
-      : `<div class="ep empty-day">Nothing airing${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Show the rest of the week</button>' : ''}</div>`;
+      : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
     const isToday = date.toDateString() === today;
     return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span></h2>${body}</section>`;
   }).join('');
   // Above the days: one slim line with the week; pressing a day goes there. Days without a show step back.
   const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
-  html = `<nav class="daystrip" aria-label="Show one day">${days.map(({ date, rows }) => {
+  html = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
     const long = `${dayName(date)}, ${germanDate(date)}`;
     const alone = !searching() && (range === 'day' ? isoDay(date) === pickedDay : range === 'today' && date.toDateString() === today);
     const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free', alone ? 'picked' : ''].filter(Boolean).join(' ');
-    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'show' : 'shows'}">${esc(shortDayName(date))} <b>${date.getDate()}</b></button>`;
+    return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'Serie' : 'Serien'}">${esc(shortDayName(date))} <b>${date.getDate()}</b></button>`;
   }).join('')}</nav>` + html;
   // At the end of the week: on to the next one without scrolling back up to the arrows.
-  html += '<nav class="pager" aria-label="Change week"><button data-week="prev">‹ Previous week</button><button data-week="next">Next week ›</button></nav>';
+  html += '<nav class="pager" aria-label="Woche wechseln"><button data-week="prev">‹ Vorherige Woche</button><button data-week="next">Nächste Woche ›</button></nav>';
 
   // Only when a refresh seems to have stopped (LiveChart changes, GitHub token, PC task). The status
   // comes daily, from GitHub or the run from home; the stream links only weekly, from home.
   const daysOld = time => Math.floor((Date.now() - time) / 86400000);
   const linksAge = streamsDe?.generated ? daysOld(Date.parse(streamsDe.generated)) : 0;
   const statusAge = streamsDe ? daysOld(Math.max(Date.parse(streamsDe.generated) || 0, Date.parse(streamsDe.statusUpdated) || 0)) : 0;
-  if (statusAge >= 3) html = `<div class="notice">LiveChart data was last updated ${statusAge} days ago, so breaks and episode dates may be off.</div>` + html;
-  else if (linksAge >= 14) html = `<div class="notice">Stream links were last updated ${linksAge} days ago; the weekly refresh may have stopped.</div>` + html;
+  if (statusAge >= 3) html = `<div class="notice">Die LiveChart-Daten wurden vor ${statusAge} Tagen zuletzt aktualisiert, Pausen und Folgentermine können also abweichen.</div>` + html;
+  else if (linksAge >= 14) html = `<div class="notice">Die Stream-Links wurden vor ${linksAge} Tagen zuletzt aktualisiert; das wöchentliche Update läuft vielleicht nicht mehr.</div>` + html;
   // At the very top, one line per show: breaks in the same words as their row, then plan shows that
   // couldn't be placed.
   const lines = [
-    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Back ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
-    ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'No episode confirmed for this week; airing status unknown')}</span></div>`),
+    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Zurück am ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
+    ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
   ];
-  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
+  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
   // Above everything: data that's old or missing (this week's and last week's airings count here)
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
@@ -1034,7 +1034,7 @@ const LIST_CACHE_MS = 10 * 60 * 1000;
 async function anilistList(user) {
   if (auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
     const result = await MAL.list(auth);
-    setNote('list:' + user.toLowerCase(), result.stale ? `MyAnimeList didn't answer: list as saved ${savedAt(result.stale)}.` : null);
+    setNote('list:' + user.toLowerCase(), result.stale ? `MyAnimeList antwortet nicht: Liste vom ${savedAt(result.stale)}.` : null);
     return result.entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status));
   }
   const key = 'list:' + user.toLowerCase();
@@ -1048,7 +1048,7 @@ async function anilistList(user) {
     return entries;
   } catch (e) {
     if (!saved) throw e;
-    setNote(key, `${unreachable('AniList')}: ${user}'s list as saved ${savedAt(saved.time)}.`);
+    setNote(key, `${unreachable('AniList')}: Liste von ${user} vom ${savedAt(saved.time)}.`);
     return saved.entries;
   }
 }
@@ -1056,7 +1056,7 @@ async function anilistList(user) {
 // ---------- Writing to AniList (when connected) ----------
 
 async function anilistAsMe(query, variables = {}) {
-  if (auth?.provider === 'mal') throw new Error('This action requires an AniList account.');
+  if (auth?.provider === 'mal') throw new Error('Dafür brauchst du ein AniList-Konto.');
   try {
     return await anilist(query, variables, auth.token);
   } catch (e) {
@@ -1068,7 +1068,7 @@ async function anilistAsMe(query, variables = {}) {
 // Log out the active account (also when AniList says its login expired); the next saved one, if
 // any, becomes active.
 function disconnect() {
-  if (pendingChanges.size || bulkSaving || undoing) { notice('Please wait for the current list change to finish.'); return; }
+  if (pendingChanges.size || bulkSaving || undoing) { notice('Bitte warte, bis die aktuelle Listenänderung fertig ist.'); return; }
   if (auth?.provider === 'mal') MAL.logout(auth).catch(() => {});
   accounts = accounts.filter(a => a !== auth);
   useAccount(accounts[0] || null);
@@ -1076,7 +1076,7 @@ function disconnect() {
 
 // Make an account the active one: ✓ and Catch-up then use its list.
 function useAccount(account) {
-  if (pendingChanges.size || bulkSaving || undoing) { notice('Please wait for the current list change to finish.'); return; }
+  if (pendingChanges.size || bulkSaving || undoing) { notice('Bitte warte, bis die aktuelle Listenänderung fertig ist.'); return; }
   auth = account;
   myProgress.clear();
   knownEntries.clear(); notOnList.clear(); toScore = []; planShowsCache.time = 0; selecting = false;
@@ -1119,10 +1119,10 @@ function updateConnect() {
   button.classList.toggle('empty', !auth);
   if (auth) button.replaceChildren(avatarOf(auth));
   else button.innerHTML = PERSON_ICON;
-  button.title = auth?.name ? `${listService()}: ${auth.name}` : 'List accounts';
-  button.setAttribute('aria-label', 'List accounts');
+  button.title = auth?.name ? `${listService()}: ${auth.name}` : 'Listen-Konten';
+  button.setAttribute('aria-label', 'Listen-Konten');
   $('anilistUser').readOnly = auth?.provider === 'mal';
-  $('anilistUser').placeholder = auth?.provider === 'mal' ? 'MyAnimeList account' : 'AniList name';
+  $('anilistUser').placeholder = auth?.provider === 'mal' ? 'MyAnimeList-Konto' : 'AniList-Name';
   // A pill: optionally the account's picture or initial, then the text.
   const item = (text, onclick, { account = null, muted = false, current = false, label = null } = {}) => {
     const b = document.createElement('button');
@@ -1131,10 +1131,10 @@ function updateConnect() {
       b.classList.add('account-choice');
       b.setAttribute('aria-pressed', String(current));
       const provider = account.provider === 'mal' ? 'MAL' : 'AniList';
-      const name = document.createElement('span'); name.className = 'account-name'; name.textContent = account.name || 'Account';
+      const name = document.createElement('span'); name.className = 'account-name'; name.textContent = account.name || 'Konto';
       const badge = document.createElement('span'); badge.className = 'provider-badge'; badge.textContent = provider;
       b.append(avatarOf(account, 'avatar'), name, badge);
-      b.title = `${provider}: ${account.name || 'Account'}`;
+      b.title = `${provider}: ${account.name || 'Konto'}`;
       b.setAttribute('aria-label', b.title);
     } else b.append(text);
     if (label) { b.setAttribute('aria-label', label); b.title = label; }
@@ -1148,9 +1148,9 @@ function updateConnect() {
     return div;
   };
   $('accountSection').replaceChildren(
-    ...accounts.map(a => item(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name || 'Account'}`, () => a !== auth && useAccount(a), { account: a, current: a === auth })),
-    row(item('+ AniList', connect, { muted: true, label:'Connect AniList' }), item('+ MAL', MAL.connect, { muted: true, label:'Connect MyAnimeList' })),
-    ...(auth ? [row(item('Log out', disconnect, { muted: true }))] : []),
+    ...accounts.map(a => item(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name || 'Konto'}`, () => a !== auth && useAccount(a), { account: a, current: a === auth })),
+    row(item('+ AniList', connect, { muted: true, label:'AniList verbinden' }), item('+ MAL', MAL.connect, { muted: true, label:'MyAnimeList verbinden' })),
+    ...(auth ? [row(item('Abmelden', disconnect, { muted: true }))] : []),
   );
   updateSyncControls();
 }
@@ -1246,7 +1246,7 @@ for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]
 function syncMoveEditor() {
   $('editSchedule').hidden = $('editScheduleMenu').hidden = $('moveToggle').hidden;
   const on = $('moveButtons').checked;
-  $('editSchedule').innerHTML = on ? 'Done<span class="title-long"> editing</span>' : 'Edit<span class="title-long"> schedule</span>';
+  $('editSchedule').innerHTML = on ? 'Fertig<span class="title-long"> mit Bearbeiten</span>' : 'Plan<span class="title-long"> bearbeiten</span>';
   $('editSchedule').setAttribute('aria-pressed', String(on));
 }
 $('editScheduleMenu').onclick = () => { showSettings(false); $('editSchedule').click(); };
@@ -1455,7 +1455,7 @@ function syncSavingButtons() {
     b.disabled = saving || bulkSaving || accountLoading;
     if (saving) {
       if (!b.hasAttribute('data-idle-title')) b.dataset.idleTitle = b.title;
-      b.title = `Saving to ${listService()}…`;
+      b.title = `Speichert auf ${listService()}…`;
     } else if (b.hasAttribute('data-idle-title')) {
       b.title = b.dataset.idleTitle;
       delete b.dataset.idleTitle;
@@ -1471,7 +1471,7 @@ function syncSavingButtons() {
   $('syncBoth').disabled = bulkSaving || pendingChanges.size > 0 || !$('syncTarget').value;
 }
 async function change(mediaId, vars) {
-  if (pendingChanges.has(mediaId)) throw new Error('This show is still saving.');
+  if (pendingChanges.has(mediaId)) throw new Error('Diese Serie wird noch gespeichert.');
   pendingChanges.add(mediaId);
   syncSavingButtons();
   try {
@@ -1493,13 +1493,13 @@ async function change(mediaId, vars) {
       if (vars.score !== undefined) synced.score = await convertSyncScore(vars.score, sourceAccount, targetAccount);
       if (vars.progress !== undefined && !vars.status && !ON_WATCHING_LIST.includes(targetBefore.status)) synced.status = 'CURRENT';
       if (vars.progress !== undefined && vars.progress > (before.progress || 0) && targetBefore.progress > vars.progress) {
-        record.syncMessage = `${targetAccount.name} is already further ahead; its progress was kept.`;
+        record.syncMessage = `${targetAccount.name} ist schon weiter; der Fortschritt dort bleibt.`;
       } else {
         const second = await saveForAccount(targetAccount, targetId, synced, true);
         invalidateAccount(targetAccount);
         record.linked = [{mediaId:targetId,before:targetBefore,after:{progress:second.progress,status:second.status,score:second.score},entryId:second.id,account:targetAccount}];
       }
-    } catch (error) { record.syncMessage = `Sync incomplete for ${targetAccount.name}: ${error.message}`; }
+    } catch (error) { record.syncMessage = `Abgleich unvollständig für ${targetAccount.name}: ${error.message}`; }
   }
   return record;
   } finally {
@@ -1534,7 +1534,7 @@ function remember(records, text) {
   if (!records.length || !auth) return;
   const messages = [...new Set(records.map(r => r.syncMessage).filter(Boolean))];
   const flattened = records.flatMap(r => [r, ...(r.linked || [])]);
-  undoSteps.push({ records:flattened, time: Date.now(), token: auth.token, name: auth.name || 'the other account' });
+  undoSteps.push({ records:flattened, time: Date.now(), token: auth.token, name: auth.name || 'dem anderen Konto' });
   if (messages.length) text += ' · ' + messages.join(' · ');
   notice(text, true);
 }
@@ -1543,18 +1543,18 @@ async function undo() {
   if (!auth || undoing || bulkSaving || pendingChanges.size) return;
   const last = undoSteps.at(-1);
   if (!last) return;
-  if (Date.now() - last.time > UNDO_MS) { undoSteps.length = 0; notice('Too late to undo; change it on AniList instead.'); return; }
-  if (last.token !== auth.token) { notice(`Made with ${last.name}: switch back to that account to undo it.`); return; }
+  if (Date.now() - last.time > UNDO_MS) { undoSteps.length = 0; notice('Zu spät zum Rückgängigmachen; ändere es stattdessen auf AniList.'); return; }
+  if (last.token !== auth.token) { notice(`Gemacht mit ${last.name}: wechsle zu diesem Konto, um es rückgängig zu machen.`); return; }
   undoSteps.pop();
   undoing = true;
-  notice('Undoing…');
+  notice('Wird rückgängig gemacht…');
   const left = [...last.records]; // newest change first comes off the end
   let done = 0, elsewhere = 0, failed = null;
   while (left.length) {
     const { mediaId, before, after, entryId, account:originalAccount } = left.at(-1);
     try {
       const account = originalAccount ? accounts.find(a => accountKey(a) === accountKey(originalAccount)) : auth;
-      if (!account) throw new Error(`Connect ${originalAccount.name} to undo its change.`);
+      if (!account) throw new Error(`Verbinde ${originalAccount.name}, um die Änderung rückgängig zu machen.`);
       const now = await entryForAccount(account, mediaId);
       if (!now.onList || now.progress !== after.progress || now.status !== after.status || now.score !== after.score) elsewhere++;
       else {
@@ -1575,12 +1575,12 @@ async function undo() {
     if (left.length) await new Promise(r => setTimeout(r, 700));
   }
   const parts = [];
-  if (done) parts.push(last.records.length > 1 ? `Undone for ${done}` : 'Undone');
-  if (elsewhere) parts.push(`${elsewhere === 1 ? (done || failed ? 'one show was' : 'This show was') : `${elsewhere} shows were`} changed elsewhere meanwhile and left as is`);
+  if (done) parts.push(last.records.length > 1 ? `Rückgängig für ${done}` : 'Rückgängig gemacht');
+  if (elsewhere) parts.push(`${elsewhere === 1 ? (done || failed ? 'eine Serie wurde' : 'Diese Serie wurde') : `${elsewhere} Serien wurden`} inzwischen woanders geändert und so gelassen`);
   if (failed) {
     // The rest stays for another try (same account, same 10 minutes)
     undoSteps.push({ ...last, records: left });
-    parts.push(`${left.length === 1 ? 'one show is' : `${left.length} shows are`} still to undo (${failed.message})`);
+    parts.push(`${left.length === 1 ? 'eine Serie ist' : `${left.length} Serien sind`} noch rückgängig zu machen (${failed.message})`);
   }
   const text = parts.join('; ');
   notice(text.charAt(0).toUpperCase() + text.slice(1) + '.', !!failed);
@@ -1604,10 +1604,10 @@ function notice(text, withUndo = false) {
   noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
 }
 $('noticeUndo').onclick = () => undo();
-const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'show';
+const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'Serie';
 const watchButton = (mediaId, episode, add = false) => !auth ? '' :
   `<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
-    title="Episode ${episode} watched (${listService()})">✓</button>`;
+    title="Folge ${episode} gesehen (${listService()})">✓</button>`;
 
 // ✓ sets the AniList progress to that episode; clicking a ticked one undoes it (back to what it
 // was before this visit's tick, else one episode back).
@@ -1624,15 +1624,15 @@ $('list').addEventListener('click', async e => {
   const title = rowTitle(b);
   try {
     const record = await change(mediaId, { progress, status: b.dataset.add ? 'CURRENT' : undefined });
-    remember([record], `${title}: episode ${progress} watched`);
+    remember([record], `${title}: Folge ${progress} gesehen`);
     // The last episode: AniList set it to Completed, so ask for the score right away
     if (record.after.status === 'COMPLETED' && record.before.status !== 'COMPLETED' && !record.after.score) {
       openScore(mediaId, title);
       loadToScore().then(() => load(true));
     }
   } catch (err) {
-    b.title = `Couldn't save: ${err.message}`;
-    notice(`Couldn't save ${title}: ${err.message}. You can try again.`);
+    b.title = `Nicht gespeichert: ${err.message}`;
+    notice(`${title} nicht gespeichert: ${err.message}. Du kannst es nochmal versuchen.`);
   }
   load(true);
 });
@@ -1647,7 +1647,7 @@ const showScore = score => scoreFormat() === 'POINT_5' ? '★'.repeat(score)
   : scoreFormat() === 'POINT_3' ? SMILEYS[score - 1] || score : String(score);
 const scoreButton = mediaId => {
   const score = knownEntries.get(mediaId)?.score;
-  return `<button class="score${score ? ' scored' : ''}" data-score-media="${mediaId}" title="${score ? 'Change the score' : 'Score it'} on ${listService()}">${score ? esc(showScore(score)) : '★ Score'}</button>`;
+  return `<button class="score${score ? ' scored' : ''}" data-score-media="${mediaId}" title="${score ? 'Bewertung ändern' : 'Bewerten'} auf ${listService()}">${score ? esc(showScore(score)) : '★ Bewerten'}</button>`;
 };
 let scoring = null; // { mediaId, title }
 function openScore(mediaId, title) {
@@ -1657,7 +1657,7 @@ function openScore(mediaId, title) {
   const format = scoreFormat();
   const current = knownEntries.get(mediaId)?.score || 0;
   $('scoreName').textContent = title;
-  $('scoreService').textContent = `Completed. Your score on ${listService()}:`;
+  $('scoreService').textContent = `Abgeschlossen. Deine Bewertung auf ${listService()}:`;
   $('scoreMsg').textContent = '';
   $('scoreClear').hidden = !current;
   $('scoreSave').hidden = !['POINT_100', 'POINT_10_DECIMAL'].includes(format); // buttons save by themselves
@@ -1667,7 +1667,7 @@ function openScore(mediaId, title) {
     // decimal (8.3) is fine, as on AniList.
     const max = format === 'POINT_100' ? 100 : 10;
     box.innerHTML = `<input id="scoreValue" type="number" min="${max === 100 ? 1 : 0.5}" max="${max}" step="${max === 100 ? 1 : 0.5}"
-      inputmode="decimal" value="${current || ''}" placeholder="${max === 100 ? 1 : 0.5}–${max}" aria-label="Score out of ${max}"><span class="muted">/ ${max}</span>`;
+      inputmode="decimal" value="${current || ''}" placeholder="${max === 100 ? 1 : 0.5}–${max}" aria-label="Bewertung von ${max}"><span class="muted">/ ${max}</span>`;
   } else {
     const values = { POINT_10: 10, POINT_5: 5, POINT_3: 3 }[format] || 10;
     box.innerHTML = Array.from({ length: values }, (_, i) => i + 1).map(v =>
@@ -1678,14 +1678,14 @@ function openScore(mediaId, title) {
 }
 async function saveScore(score) {
   const { mediaId, title } = scoring;
-  $('scoreMsg').textContent = 'Saving…';
+  $('scoreMsg').textContent = 'Speichert…';
   try {
     const record = await change(mediaId, { score });
     $('scoreDlg').close();
     toScore = toScore.filter(t => t.media.id !== mediaId || !score);
-    remember([record], score ? `${title}: scored ${showScore(record.after.score)}` : `${title}: score removed`);
+    remember([record], score ? `${title}: mit ${showScore(record.after.score)} bewertet` : `${title}: Bewertung entfernt`);
     load(true);
-  } catch (e) { $('scoreMsg').textContent = `Not saved: ${e.message}`; }
+  } catch (e) { $('scoreMsg').textContent = `Nicht gespeichert: ${e.message}`; }
 }
 $('list').addEventListener('click', e => {
   const b = e.target.closest('[data-score-media]');
@@ -1700,7 +1700,7 @@ $('scoreSave').onclick = () => {
   if (!input) return; // the buttons save by themselves
   // One decimal at most (whole numbers on the 100 scale), like AniList stores it
   const v = Math.round(Number(input.value.replace(',', '.')) * (input.step === '1' ? 1 : 10)) / (input.step === '1' ? 1 : 10);
-  if (!input.value || !(v >= Number(input.min) && v <= Number(input.max))) { $('scoreMsg').textContent = `A score from ${input.min} to ${input.max}.`; return; }
+  if (!input.value || !(v >= Number(input.min) && v <= Number(input.max))) { $('scoreMsg').textContent = `Eine Bewertung von ${input.min} bis ${input.max}.`; return; }
   saveScore(v);
 };
 $('scoreDlg').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'scoreValue') { e.preventDefault(); $('scoreSave').click(); } });
@@ -1712,27 +1712,27 @@ $('scoreClear').onclick = () => saveScore(0);
 // them): a quiet "Dropped" in its place; Ctrl+Z / Undo brings it back.
 // Completed: ★ to score it in Drop's place (the score once given).
 const dropButton = mediaId => knownEntries.get(mediaId)?.status === 'DROPPED'
-  ? '<span class="drop dropped" title="Dropped on AniList">Dropped</span>'
+  ? '<span class="drop dropped" title="Auf AniList gedroppt">Gedroppt</span>'
   : knownEntries.get(mediaId)?.status === 'COMPLETED' ? scoreButton(mediaId)
-  : `<button class="drop" data-media="${mediaId}" title="Set to Dropped on ${listService()}">Drop</button>`;
+  : `<button class="drop" data-media="${mediaId}" title="Auf ${listService()} droppen">Droppen</button>`;
 $('list').addEventListener('click', async e => {
   const b = e.target.closest('.drop');
   if (!b || !auth || b.disabled) return;
   if (!b.dataset.sure) {
     b.dataset.sure = '1';
-    b.textContent = 'Sure?';
-    setTimeout(() => { if (b.isConnected && !b.disabled) { delete b.dataset.sure; b.textContent = 'Drop'; } }, 4000);
+    b.textContent = 'Sicher?';
+    setTimeout(() => { if (b.isConnected && !b.disabled) { delete b.dataset.sure; b.textContent = 'Droppen'; } }, 4000);
     return;
   }
   b.disabled = true;
   const title = rowTitle(b);
   try {
-    remember([await change(Number(b.dataset.media), { status: 'DROPPED' })], `${title} dropped`);
+    remember([await change(Number(b.dataset.media), { status: 'DROPPED' })], `${title} gedroppt`);
   } catch (err) {
     delete b.dataset.sure;
-    b.textContent = 'Drop';
+    b.textContent = 'Droppen';
     b.disabled = false;
-    notice(`Couldn't drop ${title}: ${err.message}. You can try again.`);
+    notice(`${title} nicht gedroppt: ${err.message}. Du kannst es nochmal versuchen.`);
     return;
   }
   load(true);
@@ -1744,7 +1744,7 @@ $('list').addEventListener('click', async e => {
 let catchupTargets = [];
 let selecting = false;
 const skipped = new Set(); // media ids left out while selecting
-const markAllLabel = () => `Mark ${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} as watched`;
+const markAllLabel = () => `${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} als gesehen markieren`;
 $('list').addEventListener('click', e => {
   const b = e.target.closest('[data-select]');
   if (!b) return;
@@ -1774,21 +1774,21 @@ $('list').addEventListener('click', async e => {
   selecting = false;
   const records = []; // the whole run is one undo step
   for (const [i, { mediaId, progress, add }] of targets.entries()) {
-    b.textContent = `Saving ${i + 1}/${targets.length}…`;
+    b.textContent = `Speichert ${i + 1}/${targets.length}…`;
     try {
       records.push(await change(mediaId, { progress, status: add ? 'CURRENT' : undefined }));
     } catch (err) {
-      b.textContent = `Stopped at ${i + 1}/${targets.length}: ${err.message}`;
-      remember(records, `${records.length} of ${targets.length} shows marked as watched`);
+      b.textContent = `Gestoppt bei ${i + 1}/${targets.length}: ${err.message}`;
+      remember(records, `${records.length} von ${targets.length} Serien als gesehen markiert`);
       bulkSaving = false;
       syncSavingButtons();
-      notice(`Saved ${records.length} of ${targets.length} shows. Stopped: ${err.message}`, records.length > 0);
+      notice(`${records.length} von ${targets.length} Serien gespeichert. Gestoppt: ${err.message}`, records.length > 0);
       load(true);
       return;
     }
     await new Promise(r => setTimeout(r, 700));
   }
-  remember(records, `${records.length} ${records.length === 1 ? 'show' : 'shows'} marked as watched`);
+  remember(records, `${records.length} ${records.length === 1 ? 'Serie' : 'Serien'} als gesehen markiert`);
   bulkSaving = false;
   syncSavingButtons();
   load(true);
@@ -1852,7 +1852,7 @@ function showCatchupCount(rows) {
   const count = rows.reduce((sum, r) => sum + r.out - r.first + 1, 0);
   $('catchupCount').textContent = count || '';
   $('catchupCount').hidden = !count;
-  $('catchupCount').title = count ? `${count} ${count === 1 ? 'episode' : 'episodes'} to catch up` : '';
+  $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} zum Nachholen` : '';
 }
 let countingCatchup = false;
 async function updateCatchupCount() {
@@ -1871,9 +1871,9 @@ async function loadCatchup(refresh = false) {
   updateFallbackControls();
   const user = $('anilistUser').value.trim();
   const shown = view; // Catch-up or Non-seasonal; stop if the view changes while loading
-  const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
-  $('tabName').textContent = user ? `${name} · ${user} on ${listService()}` : name;
-  if (!user) { $('list').innerHTML = '<div class="status">Enter an AniList name in the AniList menu.</div>'; return; }
+  const name = shown === 'pace' ? 'Nicht saisonal' : 'Nachholen';
+  $('tabName').textContent = user ? `${name} · ${user} auf ${listService()}` : name;
+  if (!user) { $('list').innerHTML = '<div class="status">Gib im AniList-Menü einen AniList-Namen ein.</div>'; return; }
   if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
   await ready;
   let entries;
@@ -1881,11 +1881,11 @@ async function loadCatchup(refresh = false) {
     entries = await anilistList(user);
   } catch (e) {
     if (refresh && view === shown && document.querySelector('#list .row')) {
-      notice(`Couldn't refresh ${name}: ${e.message}. Still showing the previous data.`);
+      notice(`${name} konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
       return;
     }
     if (view === shown) $('list').innerHTML = failed(navigator.onLine === false
-      ? `You're offline, and ${user}'s AniList list isn't saved in this browser yet.` : `Couldn't load ${user}'s AniList list (${e.message}).`);
+      ? `Du bist offline, und die AniList-Liste von ${user} ist in diesem Browser noch nicht gespeichert.` : `Die AniList-Liste von ${user} konnte nicht geladen werden (${e.message}).`);
     return;
   }
   if (view !== shown) return;
@@ -1895,7 +1895,7 @@ async function loadCatchup(refresh = false) {
     plan = await sheetFor(tabFor(tabs, new Date()));
     setNote('catchup:plan', null);
   } catch (e) {
-    setNote('catchup:plan', `${unreachable('Google Sheets')}: without the Guckplan, watch slots and planned shows missing from the list are left out.`);
+    setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehlen Guck-Slots und geplante Serien, die nicht auf der Liste sind.`);
   }
   // Plus the Solo person's Guckplan shows that aren't on the AniList Watching list (forgotten).
   const planShows = await missingPlanShows(plan, entries);
@@ -1912,10 +1912,10 @@ async function loadCatchup(refresh = false) {
   // A ✓ on a forgotten show also puts it on the AniList list as Watching.
   const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
   catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
-  const note = missing => missing ? ` · not on your ${listService()} yet` : '';
+  const note = missing => missing ? ` · noch nicht auf deiner ${listService()}-Liste` : '';
   // While picking shows for "Mark all as watched", each show's ✓ is its switch: filled = included.
   const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
-    title="Include in Mark all as watched">✓</button>`;
+    title="Bei „Alle als gesehen markieren“ mitnehmen">✓</button>`;
   const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
   const single = singleEpisodes;
   const showLinks = $('catchupLinks').checked;
@@ -1924,7 +1924,7 @@ async function loadCatchup(refresh = false) {
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${out > first ? `${out - first + 1} episodes · Ep ${first}–${out}` : `Ep ${first}`}${note(missing)}</div>
+        <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}${note(missing)}</div>
       </div>
       ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
@@ -1937,12 +1937,12 @@ async function loadCatchup(refresh = false) {
     return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep">${eps.length} episodes · Ep ${first}–${out}${note(missing)}</div></div>
+        <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}${note(missing)}</div></div>
         ${showLinks ? `<div class="links">${linkButtons(links, m.id)}</div>` : ''}
         ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
       <div class="row compact">
-        <div class="time">Ep ${ep}</div>
+        <div class="time">Folge ${ep}</div>
         <div class="info"></div>
         ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, ep, missing)) : ''}
       </div>`).join('')}</div>`;
@@ -1950,7 +1950,7 @@ async function loadCatchup(refresh = false) {
   // At your own pace: one row per show with the next episode and its ✓ (that episode only).
   const paced = ({ m, first, out, progress, links }) => `
     <div class="row" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
-      <div class="time">Ep ${first}</div>
+      <div class="time">Folge ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
         <div class="ep">${progress} of ${m.episodes || out} watched</div>
@@ -1963,20 +1963,20 @@ async function loadCatchup(refresh = false) {
   if (shown === 'pace') {
     ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) : byTitle);
     $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
-      : '<div class="status">No older shows open on the Watching list.</div>';
+      : '<div class="status">Keine älteren Serien offen auf der Watching-Liste.</div>';
   } else {
     const top = !mine || !rows.length ? ''
-      : selecting ? `<div class="catchup-bar"><span class="hint">Click a ✓ to leave that show out</span>
-          <button id="cancelMark" class="pill">Cancel</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
-      : `<div class="catchup-bar"><button id="markAll" class="pill">Mark all as watched</button></div>`;
-    $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status happy"><img src="icon-192.png" alt="">All caught up.</div>';
+      : selecting ? `<div class="catchup-bar"><span class="hint">Klick auf ein ✓, um die Serie auszunehmen</span>
+          <button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`
+      : `<div class="catchup-bar"><button id="markAll" class="pill">Alle als gesehen markieren</button></div>`;
+    $('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
     // Your own list: shows finished lately that have no score yet, each with ★ to score it
     const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
-    if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Finished · not scored yet</h2>${unscored.map(({ media: m, completed }) => `
+    if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Beendet · noch nicht bewertet</h2>${unscored.map(({ media: m, completed }) => `
       <div class="row" ${searchKey(...mediaTitles(m))}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}
-          <div class="ep">Completed ${completed.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>
+          <div class="ep">Abgeschlossen am ${completed.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>
         </div>
         ${scoreButton(m.id)}
       </div>`).join('')}</section>`);
@@ -1985,8 +1985,8 @@ async function loadCatchup(refresh = false) {
   // Not logged in, or someone else's list: say why there are no ✓ / Drop buttons. (Typing a name
   // into "Catch-up list of" only shows that list; logging in is "Connect AniList".)
   if (!mine && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', `<div class="notice">${auth
-    ? `This is ${esc(user)}'s list: ✓ and Drop only work on your own (${esc(auth.name)}).`
-    : 'To tick episodes or drop shows, connect AniList: the person icon at the top right → “Connect AniList”.'}</div>`);
+    ? `Das ist die Liste von ${esc(user)}: ✓ und Droppen gehen nur auf deiner eigenen (${esc(auth.name)}).`
+    : 'Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList: Personen-Symbol oben rechts → „AniList verbinden“.'}</div>`);
   const times = [...document.querySelectorAll('.time')];
   document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
   applySearch();
@@ -2024,7 +2024,7 @@ async function missingPlanShows(plan, entries) {
       planShowsCache = { key, time: Date.now(), media: data.Page.media };
       setNote('catchup:missing', null);
     } catch {
-      setNote('catchup:missing', `${unreachable('AniList')}: planned shows missing from the AniList list couldn't be checked.`);
+      setNote('catchup:missing', `${unreachable('AniList')}: geplante Serien, die nicht auf der AniList-Liste sind, konnten nicht geprüft werden.`);
       return [];
     }
   }
@@ -2064,17 +2064,17 @@ async function load(refresh = false) {
     .then(sheet => { plans.set(t.gid, sheet); setNote('missing ' + t.gid, null); })
     .catch(e => {
       problems.push(`${t.name}: ${e.message}`);
-      setNote('missing ' + t.gid, `${unreachable('Google Sheets')}: “${t.name}” couldn't be read, its shows are missing.`);
+      setNote('missing ' + t.gid, `${unreachable('Google Sheets')}: „${t.name}“ konnte nicht gelesen werden, seine Serien fehlen.`);
     })));
   const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
   if (view !== 'week') return; // switched to Catch-up meanwhile
   if (!weekTabs.some(t => plans.has(t.gid))) {
     if (refresh && document.querySelector('#list .row')) {
-      notice("Couldn't refresh the Guckplan. Still showing the previous data.");
+      notice("Der Guckplan konnte nicht aktualisiert werden. Es werden weiter die bisherigen Daten angezeigt.");
       return;
     }
-    $('list').innerHTML = failed(navigator.onLine === false ? "You're offline, and this Guckplan isn't saved in this browser yet."
-      : `Couldn't read the Guckplan (${problems.join('; ') || 'unknown error'}).`);
+    $('list').innerHTML = failed(navigator.onLine === false ? "Du bist offline, und dieser Guckplan ist in diesem Browser noch nicht gespeichert."
+      : `Der Guckplan konnte nicht gelesen werden (${problems.join('; ') || 'unbekannter Fehler'}).`);
     return;
   }
   $('tabName').textContent = weekTabs.map(t => t.name).join(' / ');
@@ -2097,10 +2097,10 @@ async function load(refresh = false) {
     readyNeighbours(start);
   } catch (e) {
     if (refresh && document.querySelector('#list .row')) {
-      notice(`Couldn't refresh the schedule: ${e.message}. Still showing the previous data.`);
+      notice(`Der Zeitplan konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
       return;
     }
-    $('list').innerHTML = failed(`Couldn't load the schedule: ${e.message}`);
+    $('list').innerHTML = failed(`Der Zeitplan konnte nicht geladen werden: ${e.message}`);
   }
 }
 $('list').addEventListener('click', e => { if (e.target.closest('.retry')) load(); });
@@ -2213,7 +2213,7 @@ async function loadMoves() {
     site = res.status === 404 ? { moves: [] } : await res.json();
     setNote('moves', null);
   } catch {
-    setNote('moves', `${unreachable('The site')}: moved shows couldn't be loaded, so all shows are in their Guckplan slots.`);
+    setNote('moves', `${unreachable('Die Seite')}: verschobene Serien konnten nicht geladen werden, daher stehen alle Serien in ihren Guckplan-Slots.`);
   }
   // Right after a move the site takes a minute to update: until then this browser's copy is newer
   try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
@@ -2235,7 +2235,7 @@ async function saveMoves(next) {
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
   const res = await fetch(MOVES_API, { method: 'PUT', headers,
     body: JSON.stringify({ message: 'Move shows', content, branch: 'main', ...(sha && { sha }) }) });
-  if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'the GitHub key may not write here' : `GitHub answered ${res.status}`);
+  if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
   moves = next;
   try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
 }
@@ -2246,7 +2246,7 @@ $('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
 syncMoveEditor();
 function openKeyDialog() {
   $('keyInput').value = '';
-  $('keyMsg').textContent = movesKey ? 'A key is saved in this browser.' : '';
+  $('keyMsg').textContent = movesKey ? 'In diesem Browser ist ein Schlüssel gespeichert.' : '';
   $('keyDlg').showModal();
 }
 $('movesSetup').onclick = openKeyDialog;
@@ -2254,18 +2254,18 @@ if (location.hash === '#moves') { history.replaceState(null, '', location.pathna
 $('keySave').onclick = async () => {
   const key = $('keyInput').value.trim();
   if (!key) return;
-  $('keyMsg').textContent = 'Checking…';
+  $('keyMsg').textContent = 'Wird geprüft…';
   try {
     const res = await fetch('https://api.github.com/repos/RyoTsushigawa/anime-schedule', { headers: { Authorization: `Bearer ${key}` } });
     const repo = res.ok ? await res.json() : null;
-    if (!repo?.permissions?.push) throw new Error(res.ok ? "this key can't change the site" : `GitHub answered ${res.status}`);
+    if (!repo?.permissions?.push) throw new Error(res.ok ? "dieser Schlüssel kann die Seite nicht ändern" : `GitHub antwortet ${res.status}`);
     movesKey = key;
     try { localStorage.setItem('movesKey', key); } catch {}
     $('movesSetup').hidden = $('moveToggle').hidden = false;
     syncMoveEditor();
-    $('keyMsg').textContent = 'Saved. Use “Edit schedule” above the week to move shows.';
+    $('keyMsg').textContent = 'Gespeichert. Mit „Plan bearbeiten“ über der Woche verschiebst du Serien.';
     load(true);
-  } catch (e) { $('keyMsg').textContent = `Not saved: ${e.message}`; }
+  } catch (e) { $('keyMsg').textContent = `Nicht gespeichert: ${e.message}`; }
 };
 $('keyRemove').onclick = () => {
   movesKey = '';
@@ -2273,7 +2273,7 @@ $('keyRemove').onclick = () => {
   $('movesSetup').hidden = true;
   syncMoveEditor();
   try { localStorage.removeItem('movesKey'); } catch {}
-  $('keyMsg').textContent = 'Removed from this browser.';
+  $('keyMsg').textContent = 'Aus diesem Browser entfernt.';
   load(true);
 };
 
@@ -2297,7 +2297,7 @@ function openMoveDialog(b, destination = null) {
   const week = isoDay(weekStart(weekOffset));
   const mv = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
   $('moveName').textContent = moving.name;
-  $('moveFrom').textContent = mv ? `Moved ${mv.week ? 'for this week' : 'from now on'}; “Back” returns it to the Guckplan slot.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
+  $('moveFrom').textContent = mv ? `Verschoben ${mv.week ? 'für diese Woche' : 'ab jetzt immer'}; „Zurück“ setzt sie in den Guckplan-Slot zurück.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
   $('moveTag').value = b.dataset.tag || 'Mo.';
   $('moveTime').value = b.dataset.time || '';
   setMoveScope(mv && !mv.week ? 'always' : 'week');
@@ -2307,26 +2307,26 @@ function openMoveDialog(b, destination = null) {
     $('moveTag').value = destination.tag;
     $('moveTime').value = destination.time;
     setMoveScope('week');
-    $('moveMsg').textContent = destination.parallel ? 'This shares the destination show’s slot. Save to confirm, or choose another time.' : 'Save to confirm this destination.';
+    $('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot mit der Zielserie. Speichern bestätigt das, oder wähle eine andere Zeit.' : 'Speichern bestätigt dieses Ziel.';
   }
   $('moveDlg').showModal();
 }
 async function storeMoves(next, done) {
-  $('moveMsg').textContent = 'Saving…';
+  $('moveMsg').textContent = 'Speichert…';
   try {
     await saveMoves(next);
     $('moveDlg').close();
-    notice(`${done} Everyone sees it in about a minute.`);
+    notice(`${done} Alle sehen es in etwa einer Minute.`);
     load(true);
-  } catch (e) { $('moveMsg').textContent = `Not saved: ${e.message}`; }
+  } catch (e) { $('moveMsg').textContent = `Nicht gespeichert: ${e.message}`; }
 }
 $('moveSave').onclick = () => {
   const time = $('moveTime').value.trim();
-  if (time && !parseTime(time)) { $('moveMsg').textContent = 'Time like 21:00, or empty for the next free slot.'; return; }
+  if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
   const week = moveScope === 'week' ? isoDay(weekStart(weekOffset)) : '';
   const next = moves.filter(m => !(m.show === moving.key && m.week === week))
     .concat({ show: moving.key, title: moving.name, tag: $('moveTag').value, time, week });
-  storeMoves(next, `${moving.name} moved to ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' this week' : ''}.`);
+  storeMoves(next, `${moving.name} verschoben auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
 };
 $('moveReset').onclick = () => {
   const week = isoDay(weekStart(weekOffset));
@@ -2340,12 +2340,12 @@ const ready = Promise.all([
   fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
     .then(json => { streamsDe = json; }, e => {
       console.warn('streams-de.json not loaded:', e);
-      setNote('streams', `${unreachable('The site')}: the stream data didn't load, so links come from AniList and breaks and rewatches aren't shown.`);
+      setNote('streams', `${unreachable('Die Seite')}: die Stream-Daten wurden nicht geladen, daher kommen die Links von AniList, und Pausen und Rewatches fehlen.`);
     }),
   savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
     .then(list => { tabs = list; }, e => {
       console.warn('Sheet tabs not loaded:', e);
-      setNote('tabs', `${unreachable('Google Sheets')}: the list of Guckplan tabs is unknown, so “${FALLBACK_TAB.name}” is shown.`);
+      setNote('tabs', `${unreachable('Google Sheets')}: die Liste der Guckplan-Tabs ist unbekannt, daher wird „${FALLBACK_TAB.name}“ angezeigt.`);
     }),
 ]);
 // An AniList outage must not hold the independent schedule sources hostage.
@@ -2436,7 +2436,7 @@ $('modeGroup').onclick = () => { setMode('group'); load(true); };
 // Group button: short summary of who's selected; opens the panel with everyone's names.
 function updateGroupButton() {
   const names = [...selectedPeople];
-  $('groupButton').textContent = !names.length ? 'Pick people'
+  $('groupButton').textContent = !names.length ? 'Leute wählen'
     : names.length <= 2 ? names.join(', ')
     : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
 }
@@ -2527,10 +2527,10 @@ $('helpButton').onclick = () => openHelp();
 $('helpClose').onclick = () => $('helpDialog').close();
 $('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
 for (const [id, key, hint] of [
-  ['prev', 'ArrowLeft', 'Previous week (←)'], ['next', 'ArrowRight', 'Next week (→)'],
-  ['viewWeek', '1', 'Schedule (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
-  ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Group (G)'],
-  ['searchButton', '/', 'Search shows (/)'], ['helpButton', 'Shift+/', 'Guide and shortcuts (?)'],
+  ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
+  ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Nachholen (2)'], ['viewPace', '3', 'Nicht saisonal (3)'],
+  ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Gruppe (G)'],
+  ['searchButton', '/', 'Serien suchen (/)'], ['helpButton', 'Shift+/', 'Anleitung und Kürzel (?)'],
 ]) {
   $(id).setAttribute('aria-keyshortcuts', key);
   $(id).title = hint;
@@ -2619,7 +2619,7 @@ document.addEventListener('keydown', event => {
 
 // Pair explicitly chosen accounts. Enabling a pair works from either side and never copies a list.
 function storeSyncPairs() {
-  try { localStorage.setItem('listSyncPairs', JSON.stringify(syncPairs)); } catch { notice('Sync preference could not be saved in this browser.'); }
+  try { localStorage.setItem('listSyncPairs', JSON.stringify(syncPairs)); } catch { notice('Die Abgleich-Einstellung konnte in diesem Browser nicht gespeichert werden.'); }
   updateSyncControls();
 }
 $('syncTarget').onchange = () => {
@@ -2638,5 +2638,5 @@ $('syncBoth').onchange = () => {
   for (const [id, pair] of Object.entries(syncPairs)) if ([key,target].includes(id) || [key,target].includes(pair.target)) pair.enabled = false;
   syncPairs[key] = {target,enabled}; syncPairs[target] = {target:key,enabled};
   storeSyncPairs();
-  notice(enabled ? `Changes made here will also update ${partner.name}. Existing list entries were not changed.` : 'List syncing is off.');
+  notice(enabled ? `Änderungen von hier aktualisieren auch ${partner.name}. Bestehende Listeneinträge wurden nicht geändert.` : 'Listen-Abgleich ist aus.');
 };
