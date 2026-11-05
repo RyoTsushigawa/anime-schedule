@@ -148,7 +148,7 @@ let tabs = []; // Guckplan tabs, newest first
 const SERVICES = [
   { match: /crunchyroll/i, label: 'Crunchyroll', color: '#ff5e00', wo: 'C', main: true, search: 'https://www.crunchyroll.com/search?q=' },
   { match: /netflix/i, label: 'Netflix', color: '#e50914', wo: 'N', main: true, search: 'https://www.netflix.com/search?q=' },
-  { match: /amazon|prime video/i, label: 'Prime Video', color: '#0578ff', wo: 'AM', main: true, search: 'https://www.primevideo.com/search/?phrase=' },
+  { match: /amazon|prime video|^prime$/i, label: 'Prime', color: '#0578ff', wo: 'AM', main: true, search: 'https://www.primevideo.com/search/?phrase=' },
   { match: /youtube/i, label: 'YouTube', color: '#ff0000', wo: 'Y', main: true },
   { match: /disney/i, label: 'Disney+', color: 'var(--disney)', wo: 'D+', main: true, search: 'https://www.disneyplus.com/search?q=' },
   { match: /hidive/i, label: 'HIDIVE', color: '#00aeef', wo: 'H' },
@@ -521,7 +521,7 @@ try { localStorage.removeItem('resumeWatching'); localStorage.removeItem('resume
 const serviceKey = label => label.replace(/ 🔍$/, '');
 // The services' flat icons (a copy in services/, so they don't depend on anyone else's site). One-colour shapes:
 // the button's text color fills them. It's Anime streams on YouTube, and LiveChart shows that icon for it too.
-const SERVICE_ICONS = [[/crunchyroll/i, 'crunchyroll'], [/netflix/i, 'netflix'], [/prime video|amazon/i, 'prime-video'], [/disney/i, 'disney'],
+const SERVICE_ICONS = [[/crunchyroll/i, 'crunchyroll'], [/netflix/i, 'netflix'], [/prime video|amazon|^prime$/i, 'prime-video'], [/disney/i, 'disney'],
   [/^adn$|animation digital network/i, 'adn'], [/youtube|it'?s anime/i, 'youtube'], [/akiba/i, 'akiba'], [/hidive/i, 'hidive']];
 const serviceIcon = label => {
   const icon = SERVICE_ICONS.find(([match]) => match.test(label))?.[1];
