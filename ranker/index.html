@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -187,8 +187,8 @@ details.settings[open] > summary{background:var(--sunk);color:var(--ink)}
 .pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-text);font-weight:500}
 details.fold > summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:end;gap:10px}
 details.fold > summary::-webkit-details-marker{display:none}
-details.fold > summary::after{content:"Anzeigen";font-size:.85rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 12px}
-details.fold[open] > summary::after{content:"Ausblenden"}
+details.fold > summary::after{content:"Show";font-size:.85rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 12px}
+details.fold[open] > summary::after{content:"Hide"}
 details.fold[open] > summary{margin-bottom:14px}
 .crowded{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin-top:6px;font-size:.86rem}
 .crowded .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -244,58 +244,58 @@ kbd{font:inherit;font-family:var(--mono)}
 
 <div class="wrap">
   <header class="top">
-    <button class="btn round" id="themeBtn" aria-label="Hell oder dunkel umschalten"></button>
+    <button class="btn round" id="themeBtn" aria-label="Switch light or dark mode"></button>
     <img class="logo" src="../icon-192.png" alt="" width="36" height="36">
     <div>
       <h1>Higher or Lower Ranker</h1>
-      <p class="muted">Bewerte deine Liste Serie für Serie neu: higher oder lower als eine Serie, die du schon bewertet hast?</p>
+      <p class="muted">Rescore your list one show at a time: higher or lower than a show you already scored?</p>
     </div>
   </header>
 
   <section class="panel" id="loadPanel">
     <details class="settings" id="settingsPanel">
-      <summary>Einstellungen <span class="muted">Liste, Optionen &amp; Leute</span></summary>
+      <summary>Settings <span class="muted">List, preferences &amp; people</span></summary>
     <div class="banner">
       <div id="sourceLine"></div>
-      <button class="btn" id="resetBtn" hidden>Von vorn beginnen</button>
+      <button class="btn" id="resetBtn" hidden>Start over</button>
     </div>
-    <div class="tabs" role="group" aria-label="Bereiche">
-      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Deine Liste &amp; Optionen</button>
-      <button class="tab" id="tabCompare" aria-expanded="false" aria-controls="compareDetails">Mit anderen vergleichen<span class="tabnote" id="tabCompareNote"></span></button>
+    <div class="tabs" role="group" aria-label="Panels">
+      <button class="tab" id="tabLoad" aria-expanded="false" aria-controls="loadDetails">Your list &amp; preferences</button>
+      <button class="tab" id="tabCompare" aria-expanded="false" aria-controls="compareDetails">Compare to others<span class="tabnote" id="tabCompareNote"></span></button>
     </div>
     <details class="load" id="loadDetails">
-      <summary>Deine Liste laden</summary>
+      <summary>Load your list</summary>
       <div class="start">
-        <h3>Starte mit deiner AniList</h3>
-        <p class="muted">Lade zum Start deine öffentliche AniList. Der Fortschritt wird in diesem Browser gespeichert.</p>
+        <h3>Start with your AniList</h3>
+        <p class="muted">Load your public AniList to begin. Progress saves in this browser.</p>
         <div class="setgrid" id="setup"></div>
         <div class="startrow">
-          <input type="text" id="userLoadIn" placeholder="AniList-Name" aria-label="Dein AniList-Name" autocomplete="username">
-          <button class="btn go" id="userLoadBtn">Bewerten starten →</button>
+          <input type="text" id="userLoadIn" placeholder="AniList username" aria-label="Your AniList username" autocomplete="username">
+          <button class="btn go" id="userLoadBtn">Start ranking →</button>
         </div>
       </div>
       <details class="more">
-      <summary>Andere Wege: Listendatei oder eingefügte Titel</summary>
+      <summary>Other ways: a list file, or pasted titles</summary>
       <div class="loadgrid">
         <div class="drop" id="drop">
-          <h3>Oder eine Listendatei (AniList oder MyAnimeList)</h3>
+          <h3>Or a list file (AniList or MyAnimeList)</h3>
           <ol>
-            <li><b>AniList:</b> ein Listen-Export aus den AniList-Einstellungen oder aus einem Backup-Tool, als <code>.json</code> oder <code>.xml</code>.</li>
-            <li><b>MyAnimeList:</b> Profilmenü → Export (myanimelist.net/panel.php?go=export), eine <code>.xml.gz</code>-Datei.</li>
-            <li>Wähle sie aus oder ziehe sie hierher. Gepackte <code>.gz</code>-Dateien gehen auch.</li>
+            <li><b>AniList:</b> a list export from AniList's settings, or from a backup tool, as <code>.json</code> or <code>.xml</code>.</li>
+            <li><b>MyAnimeList:</b> Profile menu → Export (myanimelist.net/panel.php?go=export), a <code>.xml.gz</code> file.</li>
+            <li>Choose or drop it here. Zipped <code>.gz</code> files are fine.</li>
           </ol>
           <div><input type="file" id="fileIn" accept=".xml,.gz,.json,application/xml,application/gzip,application/json,text/xml"></div>
         </div>
         <div class="drop">
-          <h3>Oder Titel einfügen</h3>
-          <p class="muted" style="margin:0;font-size:.88rem">Ein Titel pro Zeile. Benchmarks wählst du dann von Hand, und nur mit einer Listendatei kannst du Wertungen automatisch zurück importieren.</p>
+          <h3>Or paste titles</h3>
+          <p class="muted" style="margin:0;font-size:.88rem">One title per line. You'll need to choose benchmarks by hand, and only a list file lets you import scores back automatically.</p>
           <textarea id="pasteIn" placeholder="Cowboy Bebop&#10;Steins;Gate&#10;Frieren: Beyond Journey's End"></textarea>
-          <div><button class="btn" id="pasteBtn">Diese Titel verwenden</button></div>
+          <div><button class="btn" id="pasteBtn">Use these titles</button></div>
         </div>
       </div>
       <div class="drop" style="margin-top:16px" hidden>
-        <h3>Site-Mediane (optional)</h3>
-        <p class="muted" style="margin:0;font-size:.88rem">Serien, die du nie bewertet hast, starten beim Median der Community. Die Werte laden automatisch, wenn diese Seite sie hat. Für neuere Werte lade eine <code>site-scores.json</code> vom Helfer-Skript.</p>
+        <h3>Site median scores (optional)</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">Shows you never scored start their search at the community median. They load automatically when this page has them. To use newer ones, load a <code>site-scores.json</code> made by the helper.</p>
         <div><input type="file" id="siteIn" accept=".json,application/json"></div>
         <div class="muted" id="siteMsg" style="font-size:.88rem"></div>
       </div>
@@ -304,25 +304,25 @@ kbd{font:inherit;font-family:var(--mono)}
       <p class="err" id="loadErr" hidden></p>
     </details>
     <details class="load" id="compareDetails">
-      <summary>Mit anderen vergleichen</summary>
+      <summary>Compare to others</summary>
       <div class="drop" style="margin-top:14px" id="followBox">
-        <h3>Auf AniList folgen</h3>
-        <p class="muted" style="margin:0;font-size:.88rem">Füge Leute über ihren AniList-Namen hinzu; ihre Liste lädt direkt von AniList (sie muss öffentlich sein). Dein eigener Name hält deine Liste aktuell: Serien, die du auf AniList abschließt, kommen beim nächsten Öffnen in deine Warteschlange.</p>
+        <h3>Follow on AniList</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">Add people by AniList username; their list loads straight from AniList (it has to be public). Your own username keeps your list in sync: shows you complete on AniList join your queue the next time you open this page.</p>
         <div class="opts">
-          <input type="text" id="followIn" placeholder="AniList-Name" aria-label="AniList-Name zum Folgen" class="field">
-          <button class="btn" id="followBtn">Folgen</button>
-          <button class="btn" id="refreshLists" title="Listen werden 30 Minuten aufbewahrt; das lädt sie neu">Listen jetzt neu laden</button>
+          <input type="text" id="followIn" placeholder="AniList username" aria-label="AniList username to follow" class="field">
+          <button class="btn" id="followBtn">Follow</button>
+          <button class="btn" id="refreshLists" title="Lists are kept for 30 minutes; this loads them fresh">Reload lists now</button>
         </div>
         <div class="chips" id="followList"></div>
         <div class="opts">
-          <label>Dein AniList-Name <input type="text" id="meUser" class="field"></label>
-          <button class="btn" id="meSave">Speichern</button>
+          <label>Your AniList username <input type="text" id="meUser" class="field"></label>
+          <button class="btn" id="meSave">Save</button>
         </div>
         <div class="muted" id="followMsg" style="font-size:.88rem"></div>
       </div>
       <div class="drop" style="margin-top:14px">
-        <h3>Oder eine Listendatei laden</h3>
-        <p class="muted" style="margin:0;font-size:.88rem">Lade eine AniList- oder MAL-Listendatei pro Person, für beliebig viele Leute. Ihre Wertungen stehen dann beim Bewerten und in den Ergebnissen neben deinen und dem Site-Median. Eine Liste unter einem vorhandenen Namen ersetzt die Liste dieser Person. Fern (fern.ignoffo.dev) kann jede öffentliche AniList über den Namen exportieren.</p>
+        <h3>Or load a list file</h3>
+        <p class="muted" style="margin:0;font-size:.88rem">Load one AniList or MAL list file per person, as many people as you like. Their scores then show next to yours and the site median while you rate, and in the results. Loading a list under a name that's already here replaces that person's list. Fern (fern.ignoffo.dev) can export any public AniList by username.</p>
         <div class="opts">
           <label>Name <input type="text" id="refName" placeholder="Optional" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px;width:11em"></label>
           <input type="file" id="refIn" accept=".xml,.gz,.json,application/xml,application/gzip,application/json,text/xml">
@@ -333,24 +333,24 @@ kbd{font:inherit;font-family:var(--mono)}
           <div class="substrip">
             <b id="refOnlyHead"></b>
             <div class="opts">
-              <select id="refWho" aria-label="Wessen Liste" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px"></select>
+              <select id="refWho" aria-label="Whose list" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px"></select>
               <button class="btn" id="refAddAll" style="padding:3px 12px"></button>
-              <input type="search" id="refSearch" placeholder="Titel suchen" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px;width:13em">
-              <label><input type="checkbox" id="refDoneOnly" checked> Nur abgeschlossene</label>
+              <input type="search" id="refSearch" placeholder="Search titles" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 6px;width:13em">
+              <label><input type="checkbox" id="refDoneOnly" checked> Only ones they completed</label>
             </div>
           </div>
           <div class="tablewrap" style="max-height:320px;margin-top:8px"><table>
-            <thead><tr><th>Titel</th><th class="num">Ihre Wertung</th><th>Ihr Status</th><th></th></tr></thead>
+            <thead><tr><th>Title</th><th class="num">Their score</th><th>Their status</th><th></th></tr></thead>
             <tbody id="refOnlyBody"></tbody>
           </table></div>
-          <p class="note" style="margin-top:6px">Hinzufügen setzt die Serie in deine Warteschlange. Jede bewertete Serie kommt als neuer abgeschlossener Eintrag in die Importdatei.</p>
+          <p class="note" style="margin-top:6px">Adding puts the show into your queue to rate. Each one you score goes into the import file as a new Completed entry.</p>
         </div>
       </div>
     </details>
     </details>
   </section>
 
-  <details class="rank-help" id="rankHelp"><summary>So geht's &amp; Tastenkürzel</summary><p>Vergleiche die zwei Serien. Wähle Higher oder Lower, oder setze direkt eine Wertung. Rückgängig geht während dieses Besuchs immer.</p><p><kbd>↑</kbd> Higher · <kbd>↓</kbd> Lower · <kbd>←</kbd> / <kbd>→</kbd> Wertung anpassen · <kbd>E</kbd> Wertung setzen · <kbd>Z</kbd> Rückgängig · <kbd>K</kbd> Überspringen · <kbd>N</kbd> Unsicher · <kbd>1–9</kbd> Jemandem zustimmen</p><p>Am Handy: nach oben wischen für higher, nach unten für lower.</p></details>
+  <details class="rank-help" id="rankHelp"><summary>How to play &amp; shortcuts</summary><p>Compare the two shows. Pick Higher or Lower, or set a score directly. Undo is always available during this visit.</p><p><kbd>↑</kbd> Higher · <kbd>↓</kbd> Lower · <kbd>←</kbd> / <kbd>→</kbd> Adjust score · <kbd>E</kbd> Set score · <kbd>Z</kbd> Undo · <kbd>K</kbd> Skip · <kbd>N</kbd> Not sure · <kbd>1–9</kbd> Agree with a friend</p><p>On a phone, swipe up for higher or down for lower.</p></details>
   <section class="stage" id="stage" aria-live="polite"></section>
 
   <section class="lower">
@@ -360,37 +360,37 @@ kbd{font:inherit;font-family:var(--mono)}
           <h2>Benchmarks <span class="muted" id="benchCount" style="font-weight:400;font-size:.9rem"></span></h2>
         </div>
       </summary>
-      <p class="note">Ausgewählt aus Serien, denen du diese Wertung schon gegeben hast. Tausche jede gegen eine, die zur Wertung besser passt; schon eingeordnete Serien behalten ihre Wertung.</p>
+      <p class="note">Picked from shows you already gave that score. Swap any for one that represents the score better; shows already placed keep their scores.</p>
       <div class="ladder" id="ladder"></div>
     </details>
     <details class="panel fold" id="resultsPanel">
       <summary>
         <div>
-          <h2 id="rankHead">Ergebnisse</h2>
+          <h2 id="rankHead">Results</h2>
         </div>
       </summary>
       <div class="substrip">
-        <span class="muted" style="font-size:.85rem">Passt ein Ergebnis nicht, ändere die Wertung über ihr Menü.</span>
-        <button class="btn" id="tierBtn2" style="padding:3px 12px" title="Cover in Reihen nach Wertung, für das, was du gerade bewertest">Tierlist-Bild</button>
+        <span class="muted" style="font-size:.85rem">Change a score from its menu if a result feels off.</span>
+        <button class="btn" id="tierBtn2" style="padding:3px 12px" title="Covers in rows by score, for what you're ranking now">Tier list picture</button>
         <div id="refSummary" style="font-size:.88rem;flex-basis:100%;min-width:0"></div>
       </div>
       <div class="chart" id="chartBox" hidden>
         <div class="chart-legend" id="chartLegend"></div>
         <div class="chart-wrap" id="chartWrap">
-          <svg id="chartSvg" viewBox="0 0 720 230" role="img" aria-label="Wie sich deine Wertungen verteilen"></svg>
+          <svg id="chartSvg" viewBox="0 0 720 230" role="img" aria-label="How your scores are spread"></svg>
           <div class="chart-tip" id="chartTip" hidden></div>
         </div>
       </div>
       <div class="filters">
-        <input type="search" id="fSearch" placeholder="Titel suchen" aria-label="Titel suchen">
-        <select id="fLetter" aria-label="Anfangsbuchstabe"><option value="">Alle Buchstaben</option><option value="#">0–9 / Symbole</option></select>
-        <select id="fScore" aria-label="Neue Wertung"><option value="">Alle Wertungen</option></select>
-        <select id="fKind" aria-label="Anzeigen">
-          <option value="">Alles</option><option value="bench">Nur Benchmarks</option><option value="changed">Geändert</option>
-          <option value="up">Gestiegen</option><option value="down">Gefallen</option><option value="added">Vorher nicht auf deiner Liste</option>
+        <input type="search" id="fSearch" placeholder="Search titles" aria-label="Search titles">
+        <select id="fLetter" aria-label="First letter"><option value="">All letters</option><option value="#">0–9 / symbols</option></select>
+        <select id="fScore" aria-label="New score"><option value="">All scores</option></select>
+        <select id="fKind" aria-label="Show">
+          <option value="">Everything</option><option value="bench">Benchmarks only</option><option value="changed">Changed from old</option>
+          <option value="up">Went up</option><option value="down">Went down</option><option value="added">Not in your list before</option>
         </select>
         <span class="muted" id="fCount"></span>
-        <button class="btn" id="fExport" style="padding:3px 12px;margin-left:auto">Diese Ansicht exportieren (CSV)</button>
+        <button class="btn" id="fExport" style="padding:3px 12px;margin-left:auto">Export this view (CSV)</button>
       </div>
       <div class="tablewrap"><table>
         <thead id="rankThead"></thead>
@@ -401,43 +401,43 @@ kbd{font:inherit;font-family:var(--mono)}
 
   <section class="panel export" id="exportPanel">
     <details class="fold" id="exportMenu">
-      <summary><h2>Export &amp; Sicherung</h2></summary>
-      <p class="note">Speichere Wertungen zu AniList, lade Ergebnisse herunter oder nimm deinen Fortschritt in einen anderen Browser mit.</p>
+      <summary><h2>Export &amp; backup</h2></summary>
+      <p class="note">Save scores to AniList, download results, or move your progress to another browser.</p>
     <div class="opts" id="exportOpts">
-      <label><input type="checkbox" id="markDone"> Jede bewertete Serie als abgeschlossen markieren, mit allen Folgen gesehen</label>
-      <label><input type="checkbox" id="wholeNums"> Auf ganze Zahlen runden (für MyAnimeList, dort gibt es keine halben Punkte)</label>
+      <label><input type="checkbox" id="markDone"> Mark every scored show as Completed, with all episodes watched</label>
+      <label><input type="checkbox" id="wholeNums"> Round to whole numbers (for MyAnimeList, which has no half points)</label>
     </div>
     <div class="row">
-      <button class="btn go" id="alSave" title="Schreibt die geänderten Wertungen direkt in deine AniList (einmal anmelden)">Zu AniList speichern</button>
+      <button class="btn go" id="alSave" title="Writes the changed scores straight to your AniList (log in once)">Save to AniList</button>
       <span class="muted" id="alMsg" style="font-size:.88rem"></span>
     </div>
     <div class="row small">
-      <button class="btn" id="saveXml">Importdatei speichern (.xml)</button>
-      <button class="btn" id="copyXml">Import-XML kopieren</button>
-      <button class="btn" id="saveCsv">Ergebnisse als CSV speichern</button>
+      <button class="btn" id="saveXml">Save import file (.xml)</button>
+      <button class="btn" id="copyXml">Copy import XML</button>
+      <button class="btn" id="saveCsv">Save results as CSV</button>
     </div>
     <details class="howto" id="exportSteps">
-      <summary>So importierst du sie</summary>
+      <summary>How to import it</summary>
       <ol class="steps">
-        <li><b>AniList:</b> stelle dein Bewertungssystem unter Settings → Lists auf <b>10 Point Decimal</b> (oder <b>100 Point</b>), dann lade sie unter Settings → Import Lists → MyAnimeList hoch (anilist.co/settings/import).</li>
-        <li><b>MyAnimeList:</b> setze zuerst das Häkchen bei „Auf ganze Zahlen runden“, dann lade sie auf myanimelist.net/import.php über <b>MyAnimeList Import</b> hoch.</li>
-        <li>Die Datei enthält jede bewertete Serie und jeden Benchmark. Serien werden über ihre MyAnimeList-ID zugeordnet.</li>
+        <li><b>AniList:</b> set your scoring system to <b>10 Point Decimal</b> (or <b>100 Point</b>) in Settings → Lists, then upload under Settings → Import Lists → MyAnimeList (anilist.co/settings/import).</li>
+        <li><b>MyAnimeList:</b> tick the round-to-whole-numbers box first, then upload at myanimelist.net/import.php using <b>MyAnimeList Import</b>.</li>
+        <li>The file holds every scored show and benchmark. Shows are matched by their MyAnimeList ID.</li>
       </ol>
     </details>
     <div class="row small">
-      <button class="btn" id="backupBtn">Fortschritt sichern</button>
-      <label class="btn" style="cursor:pointer">Wiederherstellen… <input type="file" id="restoreIn" accept=".json,application/json" hidden></label>
-      <span class="muted" style="font-size:.82rem">Nimmt deinen Fortschritt in einen anderen Browser mit.</span>
+      <button class="btn" id="backupBtn">Back up progress</button>
+      <label class="btn" style="cursor:pointer">Restore… <input type="file" id="restoreIn" accept=".json,application/json" hidden></label>
+      <span class="muted" style="font-size:.82rem">Moves your progress to another browser.</span>
     </div>
     </details>
     <div class="toast" id="toast" role="status"></div>
     <textarea class="xmlout" id="xmlOut" hidden readonly></textarea>
   </section>
   <dialog id="tierDlg" class="tierdlg">
-    <div class="substrip"><b>Tierlist-Bild</b><button class="btn round" id="tierClose" aria-label="Schließen">✕</button></div>
-    <img id="tierImg" alt="Tierlist" hidden>
+    <div class="substrip"><b>Tier list picture</b><button class="btn round" id="tierClose" aria-label="Close">✕</button></div>
+    <img id="tierImg" alt="Tier list" hidden>
     <div class="substrip"><span class="muted" id="tierMsg"></span>
-      <span><button class="btn primary" id="tierCopy">Für Discord kopieren</button> <button class="btn" id="tierSave">Als .png speichern</button></span></div>
+      <span><button class="btn primary" id="tierCopy">Copy for Discord</button> <button class="btn" id="tierSave">Save .png</button></span></div>
   </dialog>
 </div>
 
@@ -554,13 +554,13 @@ function save(){
     if(!document.getElementById('saveWarning')){
       const warning = document.createElement('p'); warning.id = 'saveWarning'; warning.setAttribute('role','alert');
       $('exportMenu').open = true;
-      warning.textContent = 'Dein Browser konnte den Fortschritt nicht speichern. Lass diesen Tab offen und nutze unten „Fortschritt sichern“, bevor du gehst.';
+      warning.textContent = 'Your browser could not save progress. Keep this tab open and use Back up progress below before leaving.';
       $('backupBtn').parentElement.prepend(warning);
     }
   }
   syncRemoved();
 }
-// Copies what you marked "Nicht gesehen" or "Dropped" (and how each show got into the game) to the page database,
+// Copies what you marked "Didn't watch" or "Dropped" (and how each show got into the game) to the page database,
 // so Claude can read it and tune which seasons get added automatically. Writes only when the lists change.
 let removedTimer = null, removedSent = '';
 function syncRemoved(){ return; // only used by the Claude version (lets Claude read what you removed)
@@ -704,12 +704,12 @@ function dropShow(idx){
   if(!S.dropped.includes(idx)) S.dropped.push(idx);
   delete S.results[idx];
   const seq = dropSequels(idx);
-  stageNote = seq ? `${T(S.items[idx])} gedroppt und ${seq} automatisch ${seq>1?'hinzugefügte spätere Staffeln':'hinzugefügte spätere Staffel'} entfernt. Rückgängig (Z) holt sie zurück.` : '';
+  stageNote = seq ? `Dropped ${T(S.items[idx])} and removed ${seq} later season${seq>1?'s':''} that were added automatically. Undo (Z) brings them back.` : '';
   S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx);
   if(S.cur && S.cur.idx===idx) S.cur = null;
   advance(); save(); render();
 }
-// "Nicht gesehen": out of the game, and never written to the import file
+// "Didn't watch": out of the game, and never written to the import file
 function notWatched(idx){
   if(idx==null){ if(!S.cur) return; idx = S.cur.idx; }
   snap(); S.removed = S.removed || [];
@@ -721,7 +721,7 @@ function notWatched(idx){
 }
 // Formats you can leave out of the game (set up before you start). A left-out show isn't scored
 // and isn't used as a benchmark; unknown formats always stay in.
-const SKIPS = [['short','Shorts'], ['movie','Filme'], ['ova','OVAs'], ['special','Specials'], ['ona','ONAs'], ['music','Musikvideos']];
+const SKIPS = [['short','Shorts'], ['movie','Movies'], ['ova','OVAs'], ['special','Specials'], ['ona','ONAs'], ['music','Music videos']];
 const SKIP_DEFAULT = {short:true, music:true};
 const skipsOf = () => (S && S.skip) || PREFS.skip || SKIP_DEFAULT;
 function formatOf(it){
@@ -783,7 +783,7 @@ function agreeRef(pi){
 function stepDirect(d){
   if(!S.cur || !direct) return;
   direct.v = clampScore(direct.v + d);
-  $('directSet').innerHTML = `Setze ${fmt(direct.v)}<span class="kbd">E</span>`;
+  $('directSet').innerHTML = `Set ${fmt(direct.v)}<span class="kbd">E</span>`;
 }
 function setDirect(){
   if(!S.cur || !direct || direct.key!==directKey()) return;
@@ -853,7 +853,7 @@ function checkPairs(n){
 }
 function startCheck(){
   const pairs = checkPairs(CHECK_ROUND);
-  if(!pairs.length){ stageNote = 'Keine neuen Paare zum Prüfen: Jedes nahe Paar wurde schon gefragt.'; render(); return; }
+  if(!pairs.length){ stageNote = 'No new pairs to check: every close pair has been asked already.'; render(); return; }
   if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
   S.check = {pairs, n:pairs.length, asked:0, flagged:0, fixed:0, issue:null};
   save(); render(); $('stage').scrollIntoView({behavior:'smooth', block:'start'});
@@ -879,13 +879,13 @@ function checkFixes(){
   const is = S.check.issue, fs = finalScores(), bl = benchLevelOf(), name = i => T(S.items[i]);
   const free = i => bl[i]==null, fixes = [];
   if(is.kind==='equal'){
-    if(free(is.a)) fixes.push({label:`${name(is.a)} bekommt ${fmt(fs[is.b])}`, set:[[is.a, fs[is.b]]]});
-    if(free(is.b)) fixes.push({label:`${name(is.b)} bekommt ${fmt(fs[is.a])}`, set:[[is.b, fs[is.a]]]});
+    if(free(is.a)) fixes.push({label:`Give ${name(is.a)} ${fmt(fs[is.b])}`, set:[[is.a, fs[is.b]]]});
+    if(free(is.b)) fixes.push({label:`Give ${name(is.b)} ${fmt(fs[is.a])}`, set:[[is.b, fs[is.a]]]});
   } else {
     const up = clampScore(fs[is.worse] + STEP()), down = clampScore(fs[is.better] - STEP());
-    if(free(is.better) && up>fs[is.better]) fixes.push({label:`${name(is.better)} auf ${fmt(up)} anheben`, set:[[is.better, up]]});
-    if(free(is.worse) && down<fs[is.worse]) fixes.push({label:`${name(is.worse)} auf ${fmt(down)} senken`, set:[[is.worse, down]]});
-    if(is.kind==='against' && free(is.better) && free(is.worse)) fixes.push({label:'Wertungen tauschen', set:[[is.better, fs[is.worse]], [is.worse, fs[is.better]]]});
+    if(free(is.better) && up>fs[is.better]) fixes.push({label:`Raise ${name(is.better)} to ${fmt(up)}`, set:[[is.better, up]]});
+    if(free(is.worse) && down<fs[is.worse]) fixes.push({label:`Lower ${name(is.worse)} to ${fmt(down)}`, set:[[is.worse, down]]});
+    if(is.kind==='against' && free(is.better) && free(is.worse)) fixes.push({label:'Swap their scores', set:[[is.better, fs[is.worse]], [is.worse, fs[is.better]]]});
   }
   return fixes;
 }
@@ -906,32 +906,32 @@ function renderCheck(st, statsHtml){
   let body;
   if(c.issue){
     const is = c.issue, fixes = checkFixes();
-    const why = is.kind==='equal' ? `Du fandest <b>${name(is.a)}</b> und <b>${name(is.b)}</b> etwa gleich, aber sie liegen ${fmt(Math.abs(fs[is.a]-fs[is.b]))} auseinander (${fmt(fs[is.a])} und ${fmt(fs[is.b])}).`
-      : is.kind==='tie' ? `<b>${name(is.better)}</b> gefiel dir besser, aber beide haben ${fmt(fs[is.better])}.`
-      : `<b>${name(is.better)}</b> gefiel dir besser, hat aber ${fmt(fs[is.better])} und <b>${name(is.worse)}</b> hat ${fmt(fs[is.worse])}.`;
+    const why = is.kind==='equal' ? `You called <b>${name(is.a)}</b> and <b>${name(is.b)}</b> about the same, but they're ${fmt(Math.abs(fs[is.a]-fs[is.b]))} apart (${fmt(fs[is.a])} and ${fmt(fs[is.b])}).`
+      : is.kind==='tie' ? `You liked <b>${name(is.better)}</b> more, but both have ${fmt(fs[is.better])}.`
+      : `You liked <b>${name(is.better)}</b> more, but it has ${fmt(fs[is.better])} and <b>${name(is.worse)}</b> has ${fmt(fs[is.worse])}.`;
     body = `<div class="prompt">${why}</div>
       <div class="direct">${fixes.map((f, n) => `<button class="btn${n?'':' primary'}" data-fix="${n}">${esc(f.label)}<span class="kbd">${n+1}</span></button>`).join('')}
-        <button class="btn" data-fix="-1">So lassen<span class="kbd">K</span></button></div>
-      ${fixes.length ? '' : '<div class="muted" style="text-align:center;font-size:.88rem">Beide sind Benchmarks oder am Rand der Skala; ändere bei Bedarf einen Benchmark in der Benchmark-Liste.</div>'}`;
+        <button class="btn" data-fix="-1">Keep as is<span class="kbd">K</span></button></div>
+      ${fixes.length ? '' : '<div class="muted" style="text-align:center;font-size:.88rem">Both are benchmarks or at the edge of the scale; change a benchmark in the Benchmarks list if needed.</div>'}`;
   } else if(c.pairs.length){
     const [x, y] = c.pairs[0];
-    body = `<div class="prompt">Was hat dir besser gefallen? <span class="muted">Paar ${c.n - c.pairs.length + 1} von ${c.n}</span></div>
+    body = `<div class="prompt">Which did you like more? <span class="muted">Pair ${c.n - c.pairs.length + 1} of ${c.n}</span></div>
       <div class="duel">${card(x, 'left')}<div class="vs" aria-hidden="true">VS</div>${card(y, 'right')}</div>
       <div class="answers">
-        <button class="ans hi" data-check="left">← Diese<span class="kbd">←</span></button>
-        <div class="direct"><button class="btn" data-check="same">Etwa gleich<span class="kbd">↓</span></button>
-          <button class="btn" data-check="skip">Paar überspringen<span class="kbd">K</span></button></div>
-        <button class="ans hi" data-check="right">Diese →<span class="kbd">→</span></button>
+        <button class="ans hi" data-check="left">← This one<span class="kbd">←</span></button>
+        <div class="direct"><button class="btn" data-check="same">About the same<span class="kbd">↓</span></button>
+          <button class="btn" data-check="skip">Skip pair<span class="kbd">K</span></button></div>
+        <button class="ans hi" data-check="right">This one →<span class="kbd">→</span></button>
       </div>
-      <div class="swipehint">Wische zu der Serie, die dir besser gefiel, nach unten für etwa gleich</div>`;
+      <div class="swipehint">Swipe left or right toward the one you liked more, down for about the same</div>`;
   } else {
-    body = `<div class="done"><div class="big">Prüfung fertig</div>
-      <div class="muted">${c.asked} Paar${c.asked===1?'':'e'} verglichen · ${c.flagged} passten nicht zu deinen Wertungen · ${c.fixed} korrigiert</div>
-      <div class="substrip" style="justify-content:center"><button class="btn primary" id="checkMore">${CHECK_ROUND} weitere prüfen</button></div></div>`;
+    body = `<div class="done"><div class="big">Check done</div>
+      <div class="muted">${c.asked} pair${c.asked===1?'':'s'} compared · ${c.flagged} didn't match your scores · ${c.fixed} fixed</div>
+      <div class="substrip" style="justify-content:center"><button class="btn primary" id="checkMore">Check ${CHECK_ROUND} more</button></div></div>`;
   }
-  st.innerHTML = `<div class="eyebrow" style="text-align:center">Konsistenzprüfung · Wertungen versteckt</div>${body}
-    <div class="minor"><button class="btn" id="checkEnd">Zurück zum Bewerten<span class="kbd">Esc</span></button>
-      <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Rückgängig<span class="kbd">Z</span></button></div>${statsHtml}`;
+  st.innerHTML = `<div class="eyebrow" style="text-align:center">Consistency check · scores hidden</div>${body}
+    <div class="minor"><button class="btn" id="checkEnd">Back to ranking<span class="kbd">Esc</span></button>
+      <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button></div>${statsHtml}`;
   fillCovers(st);
   st.querySelectorAll('[data-check]').forEach(b => b.onclick = () => checkAnswer(b.dataset.check));
   st.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => checkFix(+b.dataset.fix));
@@ -944,9 +944,9 @@ function renderCheck(st, statsHtml){
    up; the others wait in the queue. Seasons come from AniList on demand (cached in this browser). */
 const SEASON_KEY = 'hl-seasons';
 let seasonOf = {}; try{ seasonOf = JSON.parse(localStorage.getItem(SEASON_KEY) || '{}') || {}; }catch(e){}
-const SEASON_NAMES = {WINTER:'Winter', SPRING:'Frühling', SUMMER:'Sommer', FALL:'Herbst'};
+const SEASON_NAMES = {WINTER:'Winter', SPRING:'Spring', SUMMER:'Summer', FALL:'Fall'};
 const SEASON_ORDER = ['FALL', 'SUMMER', 'SPRING', 'WINTER'];
-const FORMAT_LABEL = {TV:'TV', TV_SHORT:'Shorts', MOVIE:'Filme', OVA:'OVAs', ONA:'ONAs', SPECIAL:'Specials', TV_SPECIAL:'Specials', MUSIC:'Musikvideos'};
+const FORMAT_LABEL = {TV:'TV', TV_SHORT:'Shorts', MOVIE:'Movies', OVA:'OVAs', ONA:'ONAs', SPECIAL:'Specials', TV_SPECIAL:'Specials', MUSIC:'Music videos'};
 const alOf = it => +(it.alId || malToAl[it.id] || (showInfo && it.id && showInfo.anilist?.[it.id]) || 0);
 // Runs after every render: fetches seasons for shows that don't have one yet, in the background
 let seasonsLoading = false, seasonsFailed = false;
@@ -975,7 +975,7 @@ function sliceKeys(i){
 const inSlice = (f, i) => !f || sliceKeys(i)[f.kind]===f.value;
 const inFocus = i => inSlice(S.focus, i);
 function sliceLabel(f){
-  if(!f) return 'Alles';
+  if(!f) return 'Everything';
   if(f.kind==='season'){ const [s, y] = f.value.split(' '); return `${SEASON_NAMES[s] || s} ${y}`; }
   return f.kind==='format' ? (FORMAT_LABEL[f.value] || f.value) : f.value;
 }
@@ -988,12 +988,12 @@ function focusPicker(){
     for(const i of shows){ const k = sliceKeys(i)[kind]; if(!k) continue; const e = m.get(k) || {n:0, left:0}; e.n++; if(queued.has(i)) e.left++; m.set(k, e); }
     const order = kind==='season' ? ([a], [b]) => (+b.split(' ')[1] - +a.split(' ')[1]) || SEASON_ORDER.indexOf(a.split(' ')[0]) - SEASON_ORDER.indexOf(b.split(' ')[0])
       : kind==='year' ? ([a], [b]) => +b - +a : ([, a], [, b]) => b.n - a.n;
-    return [...m].sort(order).map(([value, e]) => `<option value="${kind}|${esc(value)}" ${S.focus && S.focus.kind===kind && S.focus.value===value ? 'selected' : ''}>${esc(sliceLabel({kind, value}))} · ${e.left ? e.left + ' offen' : 'fertig'}</option>`).join('');
+    return [...m].sort(order).map(([value, e]) => `<option value="${kind}|${esc(value)}" ${S.focus && S.focus.kind===kind && S.focus.value===value ? 'selected' : ''}>${esc(sliceLabel({kind, value}))} · ${e.left ? e.left + ' to rank' : 'done'}</option>`).join('');
   };
-  return `<div class="focusrow"><span class="lbl">Bewerten</span>
-    <select id="focusSel" aria-label="Was bewertet wird"><option value="">Alles</option>
-      <optgroup label="Saison">${group('season')}</optgroup><optgroup label="Jahr">${group('year')}</optgroup><optgroup label="Format">${group('format')}</optgroup></select>
-    ${seasonsLoading ? '<span class="muted">Saisons werden geladen…</span>' : ''}</div>`;
+  return `<div class="focusrow"><span class="lbl">Ranking</span>
+    <select id="focusSel" aria-label="What to rank"><option value="">Everything</option>
+      <optgroup label="Season">${group('season')}</optgroup><optgroup label="Year">${group('year')}</optgroup><optgroup label="Format">${group('format')}</optgroup></select>
+    ${seasonsLoading ? '<span class="muted">loading seasons…</span>' : ''}</div>`;
 }
 function setFocus(f){
   S.focus = f;
@@ -1055,19 +1055,19 @@ async function tierCanvas(ids, title){
   return c;
 }
 async function showTierList(){
-  const ids = activeShows().filter(inFocus), title = S.focus ? `Tierlist ${sliceLabel(S.focus)}` : 'Meine Anime-Tierlist';
+  const ids = activeShows().filter(inFocus), title = S.focus ? `${sliceLabel(S.focus)} tier list` : 'My anime tier list';
   const dlg = $('tierDlg');
-  $('tierImg').hidden = true; $('tierMsg').textContent = 'Wird gezeichnet…'; dlg.showModal();
+  $('tierImg').hidden = true; $('tierMsg').textContent = 'Drawing…'; dlg.showModal();
   try{
     const c = await tierCanvas(ids, title);
     const blob = await new Promise(r => c.toBlob(r, 'image/png'));
     $('tierImg').src = URL.createObjectURL(blob); $('tierImg').hidden = false; $('tierMsg').textContent = '';
     $('tierSave').onclick = () => { const a = document.createElement('a'); a.href = $('tierImg').src; a.download = title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.png'; a.click(); };
     $('tierCopy').onclick = async () => {
-      try{ await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]); $('tierMsg').textContent = 'Kopiert: Füge es in Discord mit Strg+V ein.'; }
-      catch(e){ $('tierMsg').textContent = 'Dein Browser erlaubt das Kopieren nicht; speichere es stattdessen.'; }
+      try{ await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]); $('tierMsg').textContent = 'Copied: paste it into Discord with Ctrl+V.'; }
+      catch(e){ $('tierMsg').textContent = "Your browser didn't allow copying; use Save instead."; }
     };
-  }catch(e){ $('tierMsg').textContent = 'Das Bild konnte nicht gezeichnet werden: ' + e.message; }
+  }catch(e){ $('tierMsg').textContent = 'Couldn’t draw the picture: ' + e.message; }
 }
 /* ---------- crowded scores ----------
    A score that six or more of your shows share (benchmarks aside) can be split with 0.1 steps: its
@@ -1091,10 +1091,10 @@ function splitScore(s){
 }
 function crowdedHtml(){
   const list = crowdedScores().slice(0, 4); if(!list.length) return '';
-  return `<div class="crowded"><span class="lbl">Gedrängt</span>${list.map(c => STEP()===0.1
-      ? `<button class="pill" data-split="${c.s}" title="Sortiert diese ${c.n} Serien innerhalb des halben Punkts gegeneinander">${fmt(c.s)} · ${c.n} Serien · aufteilen</button>`
-      : `<span class="pill" title="Wechsle zu 0.1-Schritten (Deine Liste & Optionen), um sie aufzuteilen">${fmt(c.s)} · ${c.n} Serien</span>`).join('')}
-    ${STEP()===0.1 ? '' : '<span class="muted">0.1-Schritte können sie aufteilen</span>'}</div>`;
+  return `<div class="crowded"><span class="lbl">Crowded</span>${list.map(c => STEP()===0.1
+      ? `<button class="pill" data-split="${c.s}" title="Sort these ${c.n} shows against each other inside the half point">${fmt(c.s)} · ${c.n} shows · split</button>`
+      : `<span class="pill" title="Switch to 0.1 steps (Your list & setup) to split them">${fmt(c.s)} · ${c.n} shows</span>`).join('')}
+    ${STEP()===0.1 ? '' : '<span class="muted">0.1 steps can split these</span>'}</div>`;
 }
 
 /* ---------- "not sure" ----------
@@ -1152,11 +1152,11 @@ async function saveToAniList(){
   if(S.source==='sample') return; // the example list is never saved anywhere
   if(!login){ connectAniList(); return; }
   const changes = aniListChanges();
-  if(!changes.length){ msg.textContent = 'Nichts zu speichern: AniList hat diese Wertungen schon.'; return; }
+  if(!changes.length){ msg.textContent = 'Nothing to save: AniList already has these scores.'; return; }
   if(!alArmed){
     const n = k => changes.filter(c => c.kind===k).length;
-    msg.textContent = `${n('score')} neue Wertung${n('score')===1?'':'en'}${n('new') ? `, ${n('new')} Serie${n('new')===1?'':'n'}, noch nicht auf deiner Liste` : ''}${n('drop') ? `, ${n('drop')} Drop${n('drop')===1?'':'s'}` : ''} zu ${login.name || 'deiner AniList'} speichern${S.markDone!==false ? ', als abgeschlossen markiert (siehe Häkchen oben)' : ''}? Zum Speichern nochmal klicken.`;
-    alArmed = true; btn.textContent = 'Ja, zu AniList speichern'; setTimeout(() => { alArmed = false; btn.textContent = 'Zu AniList speichern'; }, 8000);
+    msg.textContent = `Save ${n('score')} new score${n('score')===1?'':'s'}${n('new') ? `, ${n('new')} show${n('new')===1?'':'s'} not on your list yet` : ''}${n('drop') ? `, ${n('drop')} drop${n('drop')===1?'':'s'}` : ''} to ${login.name || 'your AniList'}${S.markDone!==false ? ', marked Completed (see the box above)' : ''}? Click again to save.`;
+    alArmed = true; btn.textContent = 'Yes, save to AniList'; setTimeout(() => { alArmed = false; btn.textContent = 'Save to AniList'; }, 8000);
     return;
   }
   alArmed = false; btn.disabled = true;
@@ -1175,9 +1175,9 @@ async function saveToAniList(){
     save(); render();
     msg.textContent = `Saved ${done} change${done===1?'':'s'} to AniList${login.name ? ` (${login.name})` : ''}.`;
   }catch(e){
-    msg.textContent = `Gestoppt nach ${done} von ${changes.length}: ${e.message}${/invalid token|unauthorized/i.test(e.message) ? ' (melde dich über „AniList verbinden“ neu an)' : ''}`;
+    msg.textContent = `Stopped after ${done} of ${changes.length}: ${e.message}${/invalid token|unauthorized/i.test(e.message) ? ' (log in again with Connect AniList)' : ''}`;
   }
-  btn.disabled = false; btn.textContent = 'Zu AniList speichern';
+  btn.disabled = false; btn.textContent = 'Save to AniList';
 }
 function estLeft(){
   const per = Math.ceil(Math.log2(benchList().length+1));
@@ -1213,14 +1213,14 @@ function itemUrl(it){
   if(al) return `https://anilist.co/${k}/${encodeURIComponent(al)}`;
   return it.id ? `https://myanimelist.net/${k}/${encodeURIComponent(it.id)}` : '';
 }
-const STATUS_DE = {Completed:'Abgeschlossen', Rewatching:'Rewatch', Rereading:'Reread', 'Missing season':'Fehlende Staffel', Watching:'Am Schauen', Reading:'Am Lesen', 'On-Hold':'Pausiert', Dropped:'Gedroppt', 'Plan to Watch':'Geplant', 'Plan to Read':'Geplant', Listed:'Gelistet', Unknown:'Unbekannt'}; const statusDe = s => STATUS_DE[s] || s; function metaLine(it, mine){
+function metaLine(it, mine){
   const bits = [], scores = [];
-  if(it.type) bits.push(esc(it.type==='Movie' ? 'Film' : it.type));
-  if(it.eps) bits.push(`${it.eps} ${S.kind==='manga'?'Kap.':(it.eps===1?'Folge':'Folgen')}`);
+  if(it.type) bits.push(esc(it.type));
+  if(it.eps) bits.push(`${it.eps} ${S.kind==='manga'?'ch':(it.eps===1?'ep':'eps')}`);
   const u = itemUrl(it); if(u) bits.push(`<a href="${u}" target="_blank" rel="noopener">${u.includes('anilist')?'AniList':'MAL'} ↗</a>`);
   if(S.showOld){
-    if(mine && it.old) scores.push(`du vorher ${scoreChip(it.old)}`);
-    if(it.site) scores.push(`Site-Median ${scoreChip(it.site)}`);
+    if(mine && it.old) scores.push(`you before ${scoreChip(it.old)}`);
+    if(it.site) scores.push(`site median ${scoreChip(it.site)}`);
     REFS.forEach(P => { const r = refScore(it, P); if(r) scores.push(`${esc(P.name)} ${scoreChip(r)}`); });
   }
   return bits.map(b => `<span>${b}</span>`).join('') + (scores.length ? `<span class="scoreline">${scores.map(s=>`<span>${s}</span>`).join('')}</span>` : '');
@@ -1249,16 +1249,16 @@ function refSummary(){
   return REFS.map(P => {
     let n = 0, diff = 0, same = 0;
     for(const k in fs){ const r = refScore(S.items[k], P); if(r){ n++; const d = Math.abs(fs[k]-r); diff += d; if(d<=0.5) same++; } }
-    return n ? `${P.name}: ${n} gemeinsam, im Schnitt ${fmt(diff/n)} Punkte auseinander, ${Math.round(same/n*100)}% innerhalb eines halben Punkts.` : `${P.name}: noch keine deiner bewerteten Serien.`;
+    return n ? `${P.name}: ${n} in common, ${fmt(diff/n)} points apart on average, ${Math.round(same/n*100)}% within half a point.` : `${P.name}: none of your scored shows yet.`;
   }).join(' ');
 }
 function renderSource(){
   const line = $('sourceLine');
   if(S.source==='sample'){
-    line.innerHTML = `<span class="tag">Beispielliste</span> <span class="muted">Unten ist ein Beispiel zum Ausprobieren. Starte hier mit deiner eigenen Liste.</span>`;
+    line.innerHTML = `<span class="tag">Example list</span> <span class="muted">Below is an example to try. Start with your own list here.</span>`;
   } else {
-    const what = S.source==='paste' ? 'Eingefügte Titel' : `${esc(S.fileName||'Listen-Export')} · ${S.kind}`;
-    line.innerHTML = `<span class="tag">${what}</span> <span class="muted">${S.items.length} Serien. Der Fortschritt wird in diesem Browser gespeichert.</span>`;
+    const what = S.source==='paste' ? 'Pasted titles' : `${esc(S.fileName||'List export')} · ${S.kind}`;
+    line.innerHTML = `<span class="tag">${what}</span> <span class="muted">${S.items.length} shows. Progress saves in this browser.</span>`;
   }
   $('resetBtn').hidden = S.source==='sample';
 }
@@ -1267,19 +1267,19 @@ function renderSource(){
 function renderSetup(){
   const sk = skipsOf();
   $('setup').innerHTML = `
-    <div class="setrow"><span class="lbl">Schritte</span>
-      <div class="seg" role="group" aria-label="Wertungsschritte (← →)">${[1, 0.5, 0.1].map(v => `<button data-opt-step="${v}" aria-pressed="${PREFS.step===v}">${PREFS.scale===100 ? v*10 : v}</button>`).join('')}</div>
-      <span class="lbl">Skala</span>
-      <div class="seg" role="group" aria-label="Skala">${[10, 100].map(v => `<button data-opt-scale="${v}" aria-pressed="${PREFS.scale===v}">${v}</button>`).join('')}</div>
+    <div class="setrow"><span class="lbl">Steps</span>
+      <div class="seg" role="group" aria-label="Score steps (← →)">${[1, 0.5, 0.1].map(v => `<button data-opt-step="${v}" aria-pressed="${PREFS.step===v}">${PREFS.scale===100 ? v*10 : v}</button>`).join('')}</div>
+      <span class="lbl">Scale</span>
+      <div class="seg" role="group" aria-label="Scale">${[10, 100].map(v => `<button data-opt-scale="${v}" aria-pressed="${PREFS.scale===v}">${v}</button>`).join('')}</div>
     </div>
-    <div class="setrow"><span class="lbl">Auslassen</span>
+    <div class="setrow"><span class="lbl">Skip</span>
       ${SKIPS.map(([k, label]) => `<button class="pill" data-skip="${k}" aria-pressed="${!!sk[k]}">${label}</button>`).join('')}
     </div>
-    <div class="setrow"><span class="lbl">Vergleich</span>
-      <button class="pill" data-opt="vary" aria-pressed="${PREFS.vary}" title="Vergleicht mit irgendeiner Serie, die genau die Benchmark-Wertung hat, nicht immer mit dem Benchmark selbst">Serien variieren</button>
-      <button class="pill" data-opt="hints" aria-pressed="${!!S.hints}" title="Startet jede Suche bei deiner alten Wertung, oder beim Site-Median, wenn du die Serie nie bewertet hast">Nahe alter Wertung starten</button>
-      <button class="pill" data-opt="fill" aria-pressed="${S.fillGaps!==false}" title="Landet eine Serie zwischen zwei Benchmarks mit einer leeren Stufe dazwischen, wird sie der Benchmark dieser Stufe">Leere Stufen füllen</button>
-      <button class="pill" data-opt="old" aria-pressed="${!!S.showOld}" title="Deine alte Wertung, der Site-Median und die Wertungen der Leute, denen du folgst, auf den Karten">Alte &amp; fremde Wertungen zeigen</button>
+    <div class="setrow"><span class="lbl">Compare</span>
+      <button class="pill" data-opt="vary" aria-pressed="${PREFS.vary}" title="Compare against any show with the benchmark's exact score, not always the benchmark itself">Vary the shows</button>
+      <button class="pill" data-opt="hints" aria-pressed="${!!S.hints}" title="Starts each search at your old score, or the site median if you never scored it">Start near old score</button>
+      <button class="pill" data-opt="fill" aria-pressed="${S.fillGaps!==false}" title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark">Fill empty steps</button>
+      <button class="pill" data-opt="old" aria-pressed="${!!S.showOld}" title="Your old score, the site median and followed people's scores on the cards">Show old &amp; others' scores</button>
     </div>`;
   const OPTS = {
     old: on => { S.showOld = PREFS.old = on; },
@@ -1312,12 +1312,12 @@ function renderStage(){
   const nDropped = (S.dropped||[]).length, nUnsure = (S.unsure||[]).length;
   const total = S.items.length - S.skipped.length - nRemoved - nShort - nDropped - nUnsure;
   // On the finished screens: shows marked "not sure", and crowded scores to split
-  const unsureBtn = nUnsure ? `<button class="btn" id="unsureBtn">Die ${nUnsure} als „unsicher“ markierten bewerten</button>` : '';
+  const unsureBtn = nUnsure ? `<button class="btn" id="unsureBtn">Rank the ${nUnsure} marked “not sure”</button>` : '';
   const scored = Object.keys(finalScores()).length, pct = total ? Math.round(scored/total*100) : 0;
   const statsHtml = `<div class="progress"><i style="width:${pct}%"></i></div>
-    <div class="progress-summary"><span>${scored} bewertet · ${Math.max(0,total-scored)} offen</span><details id="progressDetails" ${progressDetailsOpen?'open':''}><summary>Details</summary><div class="stats"><span>${B.length} Benchmarks</span><span>${S.compares} Vergleiche</span>${S.cur||S.queue.length?`<span>noch etwa ${estLeft()}</span>`:''}${S.skipped.length?`<span>${S.skipped.length} übersprungen</span>`:''}${nShort?`<span>${nShort} wegen Format ausgelassen</span>`:''}${nDropped?`<span>${nDropped} gedroppt</span>`:''}${nUnsure?`<span>${nUnsure} unsicher</span>`:''}${nRemoved?`<span>${nRemoved} nicht gesehen · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Zurückholen</button></span>`:''}</div></details></div>`;
+    <div class="progress-summary"><span>${scored} scored · ${Math.max(0,total-scored)} left</span><details id="progressDetails" ${progressDetailsOpen?'open':''}><summary>Details</summary><div class="stats"><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nUnsure?`<span>${nUnsure} not sure</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div></details></div>`;
   if(!B.length){
-    st.innerHTML = `<div class="done"><div class="big">Wähle zum Start einen Benchmark</div><div class="muted">Wähle mindestens eine Serie in der Benchmark-Liste unten. Am besten eine pro Wertung.</div></div>${statsHtml}`;
+    st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
     $('benchPanel').open = true;
     return;
   }
@@ -1327,33 +1327,33 @@ function renderStage(){
   if(!S.cur && S.focus){
     // The slice is done (the rest of the list may not be)
     const inIt = activeShows().filter(inFocus).length, left = S.queue.length;
-    st.innerHTML = `${picker}<div class="done"><div class="big">${esc(sliceLabel(S.focus))} ist fertig</div>
-      <div class="muted">${inIt} Serie${inIt===1?'':'n'} bewertet${left ? ` · ${left} weitere warten im Rest deiner Liste` : ''}</div>
-      <div class="substrip" style="justify-content:center"><button class="btn primary" id="tierBtn">Tierlist-Bild</button>
-      <button class="btn" id="rerankBtn" title="Setzt die bewerteten Serien dieser Auswahl zurück in die Warteschlange (Benchmarks bleiben)">Neu bewerten</button>
-      <button class="btn" id="allBtn">Zurück zu allem</button>${unsureBtn}</div>${crowdedHtml()}</div>${statsHtml}`;
+    st.innerHTML = `${picker}<div class="done"><div class="big">${esc(sliceLabel(S.focus))} is done</div>
+      <div class="muted">${inIt} show${inIt===1?'':'s'} scored${left ? ` · ${left} more wait in the rest of your list` : ''}</div>
+      <div class="substrip" style="justify-content:center"><button class="btn primary" id="tierBtn">Tier list picture</button>
+      <button class="btn" id="rerankBtn" title="Put this slice's scored shows back in the queue (benchmarks stay)">Re-rank these</button>
+      <button class="btn" id="allBtn">Back to everything</button>${unsureBtn}</div>${crowdedHtml()}</div>${statsHtml}`;
   } else if(!S.cur){
-    st.innerHTML = `${picker}<div class="done"><div class="big">Alle ${scored} bewertet</div>
-      <div class="muted">${S.compares} Vergleiche. Prüfe unten die Ergebnisse, dann exportiere.</div>
-      <div class="substrip" style="justify-content:center">${canCheck?`<button class="btn primary" id="checkBtn" title="Vergleiche nahe Paare mit versteckten Wertungen und korrigiere, was nicht passt">Konsistenz prüfen</button>`:''}<button class="btn" id="tierBtn">Tierlist-Bild</button>${S.skipped.length?`<button class="btn" id="unskipBtn">Die ${S.skipped.length} übersprungenen bewerten</button>`:''}
-      ${unsureBtn}<button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Letzte Antwort rückgängig</button></div>${crowdedHtml()}</div>${statsHtml}`;
+    st.innerHTML = `${picker}<div class="done"><div class="big">All ${scored} scored</div>
+      <div class="muted">${S.compares} comparisons. Check the results below, then export.</div>
+      <div class="substrip" style="justify-content:center">${canCheck?`<button class="btn primary" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency</button>`:''}<button class="btn" id="tierBtn">Tier list picture</button>${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
+      ${unsureBtn}<button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div>${crowdedHtml()}</div>${statsHtml}`;
   } else {
     const a = S.items[S.cur.idx];
     // Against: a soft benchmark inside the tier, or the benchmark (or a show with exactly its score)
     const soft = S.cur.soft;
     const b = soft ? {s: soft.s, idx: soft.idx} : B[S.cur.m];
     const shown = soft ? soft.idx : (S.cur.show ?? b.idx), bi = S.items[shown];
-    const against = soft ? `Wertung ${fmt(b.s)} · Sortierung innerhalb ${fmt(S.cur.fine.min)}–${fmt(S.cur.fine.max)}`
-      : shown!==b.idx ? `Wertung ${fmt(b.s)} · gleich wie der Benchmark` : `Benchmark für ${fmt(b.s)}`;
+    const against = soft ? `Scored ${fmt(b.s)} · sorting inside ${fmt(S.cur.fine.min)}–${fmt(S.cur.fine.max)}`
+      : shown!==b.idx ? `Scored ${fmt(b.s)} · same as the benchmark` : `Benchmark for ${fmt(b.s)}`;
     const steps = STEP()===1 ? [-1, 1] : [-1, -STEP(), STEP(), 1];
     const g = S.hints && guessOf(a);
     const ln = S.lastNew && S.bench[S.lastNew.L]===S.lastNew.idx ? S.lastNew : null;
     const note = stageNote; stageNote = '';
-    st.innerHTML = `${picker}${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} hat die leere Stufe ${fmt(ln.L)} gefüllt und ist jetzt ihr Benchmark.</div>`:''}
-      <div class="prompt">Ist <b>${esc(T(a))}</b> higher oder lower als <b>${esc(T(bi))}</b>?</div>
+    st.innerHTML = `${picker}${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} filled the empty ${fmt(ln.L)} step and is now its benchmark.</div>`:''}
+      <div class="prompt">Is <b>${esc(T(a))}</b> higher or lower than <b>${esc(T(bi))}</b>?</div>
       <div class="duel">
-        <article class="card new"><div class="eyebrow">Wird bewertet${g?` · Start nahe ${fmt(g)}`:''}${a.added?` · noch nicht auf deiner Liste`:''}</div>
-          <div class="cardrow">${showInfo&&a.id?`<img class="cv" data-id="${esc(a.id)}" alt="">`:''}<div><div>${titleBlock(a)}</div><div class="meta">${metaLine(a,true)}</div>${a.added&&a.from?`<div class="muted" style="font-size:.84rem">Gefunden über ${esc(a.from)}</div>`:''}</div></div></article>
+        <article class="card new"><div class="eyebrow">Scoring now${g?` · started near ${fmt(g)}`:''}${a.added?` · not in your list yet`:''}</div>
+          <div class="cardrow">${showInfo&&a.id?`<img class="cv" data-id="${esc(a.id)}" alt="">`:''}<div><div>${titleBlock(a)}</div><div class="meta">${metaLine(a,true)}</div>${a.added&&a.from?`<div class="muted" style="font-size:.84rem">Found through ${esc(a.from)}</div>`:''}</div></div></article>
         <div class="vs" aria-hidden="true">VS</div>
         <article class="card"><div class="benchscore">${scoreChip(b.s)}<span class="eyebrow">${against}</span></div>
           <div class="cardrow">${showInfo&&bi.id?`<img class="cv" data-id="${esc(bi.id)}" alt="">`:''}<div><div>${titleBlock(bi)}</div><div class="meta">${metaLine(bi,false)}</div></div></div></article>
@@ -1362,27 +1362,27 @@ function renderStage(){
         <button class="ans hi" data-a="higher">↑ Higher<span class="kbd">↑</span></button>
         <div class="direct">
           ${steps.filter(d => d<0).map(d => `<button class="btn step" data-step="${d}">−${stepLabel(d)}</button>`).join('')}
-          <button class="btn primary" id="directSet" title="Gleiche Stufe, oder erst anpassen (← →)">Setze ${fmt(directFor(b))}<span class="kbd">E</span></button>
+          <button class="btn primary" id="directSet" title="Same level, or adjust first (← →)">Set ${fmt(directFor(b))}<span class="kbd">E</span></button>
           ${steps.filter(d => d>0).map(d => `<button class="btn step" data-step="${d}">+${stepLabel(d)}</button>`).join('')}
         </div>
         <button class="ans lo" data-a="lower">↓ Lower<span class="kbd">↓</span></button>
       </div>
-      <div class="swipehint">Nach oben wischen für higher, nach unten für lower</div>
+      <div class="swipehint">Swipe up for higher, down for lower</div>
       ${(() => {
         // One button per distinct score: people who'd give the same (rounded) score share a button
         const groups = new Map();
         REFS.forEach((P,pi) => { const r = refScore(a,P); if(!r) return; const v = clampScore(r); if(!groups.has(v)) groups.set(v, []); groups.get(v).push([P,pi]); });
         // Keys 1, 2, 3... follow the button order
         agreeKeys = [...groups].sort((x, y) => x[1][0][1] - y[1][0][1]).map(([v, ps]) => ({v, ps})); // fixed order: by who comes first in your people list
-        return agreeKeys.length ? `<div class="direct">${agreeKeys.map(({v, ps}, n) => `<button class="btn" data-agree="${ps[0][1]}">Wie ${ps.map(([P]) => esc(P.name)).join(', ')} · ${fmt(v)}${n<9?`<span class="kbd">${n+1}</span>`:''}</button>`).join('')}</div>` : '';
+        return agreeKeys.length ? `<div class="direct">${agreeKeys.map(({v, ps}, n) => `<button class="btn" data-agree="${ps[0][1]}">Agree with ${ps.map(([P]) => esc(P.name)).join(', ')} · ${fmt(v)}${n<9?`<span class="kbd">${n+1}</span>`:''}</button>`).join('')}</div>` : '';
       })()}
       <div class="minor">
-        <button class="btn" id="dropBtn">Gedroppt<span class="kbd">D</span></button>
-        <button class="btn" id="nwBtn">Nicht gesehen<span class="kbd">X</span></button>
-        <button class="btn" id="skipBtn">Später<span class="kbd">K</span></button>
-        <button class="btn" id="notSureBtn" title="Beiseitelegen, bis du dir sicher bist (z. B. nach einem Rewatch)">Unsicher<span class="kbd">N</span></button>
-        <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Rückgängig<span class="kbd">Z</span></button>
-        ${canCheck?`<button class="btn" id="checkBtn" title="Vergleiche nahe Paare mit versteckten Wertungen und korrigiere, was nicht passt">Konsistenz prüfen<span class="kbd">C</span></button>`:''}
+        <button class="btn" id="dropBtn">Dropped<span class="kbd">D</span></button>
+        <button class="btn" id="nwBtn">Didn't watch<span class="kbd">X</span></button>
+        <button class="btn" id="skipBtn">Skip for now<span class="kbd">K</span></button>
+        <button class="btn" id="notSureBtn" title="Set it aside until you're sure (e.g. after a rewatch)">Not sure<span class="kbd">N</span></button>
+        <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button>
+        ${canCheck?`<button class="btn" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency<span class="kbd">C</span></button>`:''}
       </div>${statsHtml}`;
     fillCovers(st);
     st.querySelectorAll('[data-a]').forEach(btn => btn.onclick = () => answer(btn.dataset.a));
@@ -1430,13 +1430,13 @@ function renderLadder(){
   };
   // Benchmark check: one that got "same" in a third or more of 8+ answers covers too much
   const broad = LEVELS.filter(L => S.bench[L]!=null && benchTooBroad(L));
-  $('benchCount').textContent = `· ${LEVELS.filter(L => S.bench[L]!=null).length} von ${LEVELS.length} gesetzt${broad.length ? ` · ⚠ ${broad.length} zum Ansehen` : ''}`;
+  $('benchCount').textContent = `· ${LEVELS.filter(L => S.bench[L]!=null).length} of ${LEVELS.length} set${broad.length ? ` · ⚠ ${broad.length} to look at` : ''}`;
   const flag = L => { if(!broad.includes(L)) return ''; const [n, same] = S.benchStats[L];
-    return `<span class="flag" title="${same} von ${n} Antworten waren „gleich“: Diese Serie deckt vielleicht zu viel ab. Eine Serie, die klarer bei ${fmt(L)} liegt, macht die Antworten leichter.">⚠ </span>`; };
+    return `<span class="flag" title="${same} of ${n} answers were “same”: this show may cover too much. A show that sits more clearly at ${fmt(L)} makes the answers easier.">⚠ </span>`; };
   $('ladder').innerHTML = LEVELS.map(L => `<div class="rung${broad.includes(L) ? ' warn' : ''}">${scoreChip(L)}
-      <input type="text" list="benchOptions" id="bench-${L*10}" data-l="${L}" class="${S.bench[L]==null?'empty':''}" placeholder="Titel eingeben…"
-        value="${S.bench[L]!=null ? esc(labelOf[S.bench[L]] || T(S.items[S.bench[L]])) : ''}" aria-label="Benchmark für ${fmt(L)}" autocomplete="off">
-      <span class="n" title="Serien, die jetzt diese Wertung haben">${flag(L)}${countAt[L]||0}</span></div>`).join('') + '<datalist id="benchOptions"></datalist>';
+      <input type="text" list="benchOptions" id="bench-${L*10}" data-l="${L}" class="${S.bench[L]==null?'empty':''}" placeholder="Type a title…"
+        value="${S.bench[L]!=null ? esc(labelOf[S.bench[L]] || T(S.items[S.bench[L]])) : ''}" aria-label="Benchmark for ${fmt(L)}" autocomplete="off">
+      <span class="n" title="Shows with this score now">${flag(L)}${countAt[L]||0}</span></div>`).join('') + '<datalist id="benchOptions"></datalist>';
   $('ladder').querySelectorAll('input[data-l]').forEach(inp => {
     const L = +inp.dataset.l, was = inp.value;
     inp.onfocus = () => { fillList(L); inp.select(); };
@@ -1445,7 +1445,7 @@ function renderLadder(){
       if(!v){ if(S.bench[L]!=null) setBench(L, null); return; }
       let i = byLabel.get(v);
       if(i==null){ const low = v.toLowerCase(); const hits = order.filter(j => !removed.has(j) && labelOf[j].toLowerCase().includes(low)); if(hits.length===1) i = hits[0]; }
-      if(i==null){ inp.value = was; inp.setCustomValidity('Wähle eine Serie aus den Vorschlägen'); inp.reportValidity(); setTimeout(() => inp.setCustomValidity(''), 2000); return; }
+      if(i==null){ inp.value = was; inp.setCustomValidity('Pick a show from the suggestions'); inp.reportValidity(); setTimeout(() => inp.setCustomValidity(''), 2000); return; }
       if(i!==S.bench[L]) setBench(L, i);
     };
     inp.onkeydown = e => { if(e.key==='Escape'){ inp.value = was; inp.blur(); } };
@@ -1456,15 +1456,15 @@ let tSort = {key:'new', dir:-1};
 let lastView = null; // {cols, ids, fs} of the rows on screen, for "Export this view"
 function tableCols(fs){
   const cols = [
-    {key:'title', label:'Titel', text:true, val:i => T(S.items[i]).toLowerCase()},
-    {key:'old', label:'Alt', val:i => S.items[i].old || null},
-    {key:'new', label:'Neu', val:i => fs[i]},
-    {key:'change', label:'Änderung', val:i => S.items[i].old ? fs[i]-S.items[i].old : null},
+    {key:'title', label:'Title', text:true, val:i => T(S.items[i]).toLowerCase()},
+    {key:'old', label:'Old', val:i => S.items[i].old || null},
+    {key:'new', label:'New', val:i => fs[i]},
+    {key:'change', label:'Change', val:i => S.items[i].old ? fs[i]-S.items[i].old : null},
     {key:'median', label:'Median', val:i => S.items[i].site || null},
   ];
   REFS.forEach((P,pi) => {
     cols.push({key:'p'+pi, label:P.name, person:P, val:i => refScore(S.items[i], P) || null});
-    cols.push({key:'g'+pi, label:'Abstand', title:`Deine Wertung minus die von ${P.name}. Sortiere, um die größten Unterschiede zu finden.`, gapOf:P, val:i => { const r = refScore(S.items[i], P); return r ? fs[i]-r : null; }});
+    cols.push({key:'g'+pi, label:'Gap', title:`Your score minus ${P.name}'s. Sort to find where you disagree most.`, gapOf:P, val:i => { const r = refScore(S.items[i], P); return r ? fs[i]-r : null; }});
   });
   return cols;
 }
@@ -1472,12 +1472,12 @@ function tableCols(fs){
 function agreementTable(fs){
   if(!REFS.length) return '';
   const you = {}; for(const k in fs){ const id = S.items[k].id; if(id) you[id] = fs[k]; }
-  const people = [{name:'Du', map:you}, ...REFS.map(P => ({name:P.name, map:P.byMal}))];
+  const people = [{name:'You', map:you}, ...REFS.map(P => ({name:P.name, map:P.byMal}))];
   const pair = (A, B) => { let n = 0, d = 0; for(const id in A.map){ const b = B.map[id]; if(b){ n++; d += Math.abs(A.map[id]-b); } } return n ? `${fmt(d/n)}<span class="muted"> · ${n}</span>` : '<span class="muted">–</span>'; };
   return `<div class="tablewrap" style="max-height:none;margin-top:6px"><table class="agree">
-    <thead><tr><th>Mittlerer Abstand · gemeinsame Serien</th>${people.map(p => `<th class="num">${esc(p.name)}</th>`).join('')}</tr></thead>
+    <thead><tr><th>Average gap · shows in common</th>${people.map(p => `<th class="num">${esc(p.name)}</th>`).join('')}</tr></thead>
     <tbody>${people.map((A,ai) => `<tr><th>${esc(A.name)}</th>${people.map((B,bi) => `<td class="num">${ai===bi ? '' : pair(A,B)}</td>`).join('')}</tr>`).join('')}</tbody>
-  </table></div><p class="note" style="margin-top:4px">Kleinerer Abstand heißt ähnlicherer Geschmack. „Du“ nutzt deine neuen Wertungen.</p>`;
+  </table></div><p class="note" style="margin-top:4px">Smaller gap means closer taste. "You" uses your new scores.</p>`;
 }
 /* ---------- score spread chart: your new scores as bars, smooth curves for you and everyone else ---------- */
 let chartOpts = {}; try{ chartOpts = JSON.parse(localStorage.getItem('hl-chart') || '{}') || {}; }catch(e){}
@@ -1494,16 +1494,16 @@ function renderChart(fs){
   const mine = Object.values(fs).map(Number);
   if(mine.length < 2){ box.hidden = true; return; }
   box.hidden = false;
-  const series = [{key:'you', name:'Du', vals:mine, color:'var(--s1)'}];
+  const series = [{key:'you', name:'You', vals:mine, color:'var(--s1)'}];
   const old = Object.keys(fs).map(k => S.items[k].old).filter(v => v > 0);
-  if(old.length > 1) series.push({key:'old', name:'Du vorher', vals:old, color:'var(--s2)'});
+  if(old.length > 1) series.push({key:'old', name:'You before', vals:old, color:'var(--s2)'});
   const people = REFS.slice(0, 5);
   people.forEach((P, i) => { const v = Object.values(P.byMal || {}).map(Number).filter(x => x > 0); if(v.length > 1) series.push({key:'p:' + (P.user || P.name), name:P.name, vals:v, color:`var(--s${3+i})`}); });
   // legend with on/off toggles and each series' average and median
   $('chartLegend').innerHTML = series.map(s => `<label><input type="checkbox" data-series="${esc(s.key)}" ${chartOn(s.key)?'checked':''}>
       <span class="sw ${s.key==='you'?'bar':''}" style="background:${s.color};opacity:${s.key==='you'?0.4:1}"></span>${esc(s.name)}
       <span class="stat">avg ${fmt(avgOf(s.vals))} · median ${fmt(medianOf(s.vals))} · ${s.vals.length}</span></label>`).join('')
-    + (REFS.length > 5 ? `<span class="muted">+${REFS.length-5} weitere nicht gezeichnet</span>` : '');
+    + (REFS.length > 5 ? `<span class="muted">+${REFS.length-5} more not drawn</span>` : '');
   $('chartLegend').querySelectorAll('[data-series]').forEach(cb => cb.onchange = () => {
     chartOpts[cb.dataset.series] = cb.checked; try{ localStorage.setItem('hl-chart', JSON.stringify(chartOpts)); }catch(e){}
     renderChart(finalScores());
@@ -1559,7 +1559,7 @@ function renderTable(){
   // Person-specific filters
   const kindSel = $('fKind'), keep = kindSel.value;
   kindSel.querySelectorAll('.pf').forEach(o => o.remove());
-  REFS.forEach((P,pi) => kindSel.insertAdjacentHTML('beforeend', `<option class="pf" value="by${pi}">Bewertet von ${esc(P.name)}</option><option class="pf" value="apart${pi}">1+ Punkte Abstand zu ${esc(P.name)}</option>`));
+  REFS.forEach((P,pi) => kindSel.insertAdjacentHTML('beforeend', `<option class="pf" value="by${pi}">Scored by ${esc(P.name)}</option><option class="pf" value="apart${pi}">1+ points apart from ${esc(P.name)}</option>`));
   kindSel.value = [...kindSel.options].some(o => o.value===keep) ? keep : '';
   // Filters above the table
   const q = $('fSearch').value.trim().toLowerCase(), letter = $('fLetter').value, fScore = $('fScore').value, kind = kindSel.value;
@@ -1591,7 +1591,7 @@ function renderTable(){
   });
   $('fCount').textContent = ids.length!==all.length ? `${ids.length} of ${all.length}` : '';
   const done = !S.cur && !S.queue.length;
-  $('rankHead').textContent = done ? `Endgültige Wertungen (${all.length})` : `Bisher bewertet (${all.length})`;
+  $('rankHead').textContent = done ? `Final scores (${all.length})` : `Scored so far (${all.length})`;
   $('rankThead').innerHTML = `<tr>${cols.map(c => `<th class="${c.text?'':'num'} sortable" data-sort="${c.key}" ${c.title?`title="${esc(c.title)}"`:''} aria-sort="${tSort.key===c.key ? (tSort.dir>0?'ascending':'descending') : 'none'}">${esc(c.label)}${tSort.key===c.key ? (tSort.dir>0?' ▲':' ▼') : ''}</th>`).join('')}</tr>`;
   $('rankThead').querySelectorAll('[data-sort]').forEach(th => th.onclick = () => {
     const k = th.dataset.sort;
@@ -1601,13 +1601,13 @@ function renderTable(){
   $('refSummary').innerHTML = agreementTable(fs);
   renderChart(fs);
   lastView = {cols, ids, fs};
-  if(!ids.length){ body.innerHTML = `<tr><td colspan="${cols.length}" class="empty-row">${all.length ? 'Keine Serien passen zu diesen Filtern.' : 'Beantworte ein paar Vergleiche, dann erscheinen hier deine Wertungen.'}</td></tr>`; return; }
+  if(!ids.length){ body.innerHTML = `<tr><td colspan="${cols.length}" class="empty-row">${all.length ? 'No shows match these filters.' : 'Answer a few comparisons and your scores show up here.'}</td></tr>`; return; }
   body.innerHTML = ids.map(idx => {
     const it = S.items[idx], s = fs[idx], isB = bl[idx]!=null, d = it.old ? s - it.old : null;
     const u = itemUrl(it);
     const ctrl =
-      `${scoreChip(s)} <select data-i="${idx}" aria-label="Wertung ändern">${[...new Set([...scoreValues(), s])].sort((x,y) => y-x).map(v=>`<option value="${v}" ${v===s?'selected':''}>${fmt(v)}</option>`).join('')}<option value="redo">Neu bewerten…</option><option value="drop">Gedroppt</option><option value="nw">Nicht gesehen</option></select>`;
-    return `<tr><td class="t">${u?`<a href="${u}" target="_blank" rel="noopener">${esc(T(it))}</a>`:esc(T(it))}${isB?'<span class="star">Benchmark</span>':''}</td>
+      `${scoreChip(s)} <select data-i="${idx}" aria-label="Change score">${[...new Set([...scoreValues(), s])].sort((x,y) => y-x).map(v=>`<option value="${v}" ${v===s?'selected':''}>${fmt(v)}</option>`).join('')}<option value="redo">Redo…</option><option value="drop">Dropped</option><option value="nw">Didn't watch</option></select>`;
+    return `<tr><td class="t">${u?`<a href="${u}" target="_blank" rel="noopener">${esc(T(it))}</a>`:esc(T(it))}${isB?'<span class="star">benchmark</span>':''}</td>
       <td class="num">${scoreChip(it.old)}</td>
       <td class="num">${ctrl}</td>
       <td class="num delta ${d>0?'up':d<0?'down':''}">${d===null?'':d>0?'+'+fmt(d):d===0?'·':fmt(d)}</td>
@@ -1642,12 +1642,12 @@ function renderExport(){
   $('saveCsv').disabled = !any;
   // The example list is never saved anywhere
   $('alSave').hidden = S.source==='sample';
-  if(!alArmed && !$('alSave').disabled) $('alSave').textContent = anilistLogin() ? 'Zu AniList speichern' : 'AniList verbinden zum Speichern';
+  if(!alArmed && !$('alSave').disabled) $('alSave').textContent = anilistLogin() ? 'Save to AniList' : 'Connect AniList to save';
   $('exportSteps').hidden = !canImport;
   $('exportOpts').hidden = !canImport;
   $('markDone').checked = S.markDone !== false;
   $('wholeNums').checked = !!S.wholeNums;
-  if(!canImport) toast(S.source==='sample' ? 'Lade deine AniList- oder MAL-Listendatei, um eine Importdatei zu bekommen. Die Beispielliste kann nur eine CSV speichern.' : 'Eingefügte Titel lassen sich als CSV speichern. Lade eine Listendatei, um eine Importdatei zu bekommen.');
+  if(!canImport) toast(S.source==='sample' ? 'Load your AniList or MAL list file to get an import file. The example list can only save a CSV.' : 'Pasted titles can be saved as CSV. Load a list file to get an import file.');
 }
 function render(){ setTimeout(loadSeasons); renderSource(); renderSetup(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
 
@@ -1667,7 +1667,7 @@ function normScores(entries){
   return entries;
 }
 function parseJson(text){
-  let data; try{ data = JSON.parse(text); }catch(e){ throw new Error('Diese Datei ist kein lesbares JSON.'); }
+  let data; try{ data = JSON.parse(text); }catch(e){ throw new Error('That file is not readable JSON.'); }
   const out = {anime:[], manga:[]}, seen = new Set();
   const titleOf = t => typeof t==='string' ? t : t ? (t.userPreferred||t.english||t.romaji||t.native||'') : '';
   const push = (o, m) => {
@@ -1690,16 +1690,16 @@ function parseJson(text){
     if(o.title && ('score' in o || 'status' in o)){ push(o, o); return; }
     for(const k in o) walk(o[k]);
   })(data);
-  if(!out.anime.length && !out.manga.length) throw new Error('In dieser JSON-Datei wurden keine Listeneinträge gefunden.');
+  if(!out.anime.length && !out.manga.length) throw new Error('No list entries found in that JSON file.');
   normScores(out.anime); normScores(out.manga);
   return out;
 }
 function parseXml(text){
   const doc = new DOMParser().parseFromString(text, 'application/xml');
-  if(doc.getElementsByTagName('parsererror').length) throw new Error('Diese Datei ist kein lesbares XML oder JSON. Nutze die Listendatei aus deinem AniList- oder MAL-Export.');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('That file is not readable XML or JSON. Use the list file from your AniList or MAL export.');
   let kind = 'anime', ents = [...doc.getElementsByTagName('anime')];
   if(!ents.length){ kind = 'manga'; ents = [...doc.getElementsByTagName('manga')]; }
-  if(!ents.length) throw new Error('In dieser Datei wurden keine Anime- oder Manga-Einträge gefunden.');
+  if(!ents.length) throw new Error('No anime or manga entries found in that file.');
   const g = (el,t) => { const c = el.getElementsByTagName(t)[0]; return c ? c.textContent.trim() : ''; };
   const A = kind==='anime';
   return {kind, entries: normScores(ents.map((el,e) => {
@@ -1717,7 +1717,7 @@ function parseXml(text){
 async function readFile(file){
   const head = new Uint8Array(await file.slice(0,2).arrayBuffer());
   if(head[0]===0x1f && head[1]===0x8b){
-    if(typeof DecompressionStream==='undefined') throw new Error('Dieser Browser kann .gz-Dateien nicht entpacken. Entpacke sie zuerst und lade die Datei darin.');
+    if(typeof DecompressionStream==='undefined') throw new Error('This browser cannot unzip .gz files. Unzip it first and load the file inside.');
     return await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).text();
   }
   return await file.text();
@@ -1739,7 +1739,7 @@ async function onFile(file){
       applySite(entries);
     }
     renderPending();
-  }catch(e){ showErr(e.message || 'Diese Datei konnte nicht gelesen werden.'); }
+  }catch(e){ showErr(e.message || 'Could not read that file.'); }
 }
 function showErr(m){ $('loadErr').hidden = !m; $('loadErr').textContent = m; }
 function renderPending(){
@@ -1753,18 +1753,18 @@ function renderPending(){
   const L = pending.lists, both = L && L.anime.length && L.manga.length;
   const scored = pending.entries.filter(x=>x.old).length, withSite = pending.entries.filter(x=>!x.old && x.site).length, unscored = pending.entries.filter(x=>!x.old).length;
   const kindPick = both ? `<div class="chips">${['anime','manga'].map(k=>`<label class="chip"><input type="radio" name="kindPick" id="kp-${k}" value="${k}" ${pending.kind===k?'checked':''}> ${k==='anime'?'Anime':'Manga'} <span class="muted">${L[k].length}</span></label>`).join('')}</div>` : '';
-  const siteNote = unscored ? `<div class="muted" style="font-size:.88rem">${unscored} haben keine Wertung von dir. ${withSite ? `${withSite} davon starten beim Site-Median.` : `Lade oben die Datei mit den Site-Wertungen, damit sie beim Site-Median starten. Sonst starten sie in der Mitte.`}</div>` : '';
-  el.innerHTML = `<div><b>${pending.entries.length} Einträge gefunden</b>${pending.fileName?` in ${esc(pending.fileName)}`:''}, ${scored} mit deinen Wertungen. Welche sollen bewertet werden?</div>${kindPick}
-    <div class="chips">${sts.map((s,i)=>`<label class="chip"><input type="checkbox" id="st${i}" data-s="${esc(s)}" ${def(s)?'checked':''}> ${esc(statusDe(s))} <span class="muted">${counts[s]}</span></label>`).join('')}</div>
+  const siteNote = unscored ? `<div class="muted" style="font-size:.88rem">${unscored} have no score from you. ${withSite ? `${withSite} of them start at the site's median score.` : `Load the site scores file above to start them at the site's median. Otherwise they start in the middle.`}</div>` : '';
+  el.innerHTML = `<div><b>${pending.entries.length} entries found</b>${pending.fileName?` in ${esc(pending.fileName)}`:''}, ${scored} with your scores. Which ones should be scored?</div>${kindPick}
+    <div class="chips">${sts.map((s,i)=>`<label class="chip"><input type="checkbox" id="st${i}" data-s="${esc(s)}" ${def(s)?'checked':''}> ${esc(s)} <span class="muted">${counts[s]}</span></label>`).join('')}</div>
     ${siteNote}
-    <div class="opts"><label><input type="checkbox" id="pOld" checked> Beim Vergleichen meine alten Wertungen zeigen</label></div>
-    <div><button class="btn primary" id="startBtn">Starten</button> <span class="muted" style="font-size:.85rem">${S.source!=='sample'?'Das ersetzt deinen aktuellen Fortschritt.':''}</span></div>`;
+    <div class="opts"><label><input type="checkbox" id="pOld" checked> Show my old scores while comparing</label></div>
+    <div><button class="btn primary" id="startBtn">Start</button> <span class="muted" style="font-size:.85rem">${S.source!=='sample'?'This replaces your current progress.':''}</span></div>`;
   el.hidden = false;
   el.querySelectorAll('[name="kindPick"]').forEach(r => r.onchange = () => { pending.kind = r.value; pending.entries = L[r.value]; renderPending(); });
   $('startBtn').onclick = () => {
     const keep = new Set([...el.querySelectorAll('[data-s]')].filter(c=>c.checked).map(c=>c.dataset.s));
     const items = pending.entries.filter(x => keep.has(x.status));
-    if(items.length < 2){ showErr('Wähle mindestens zwei Serien.'); return; }
+    if(items.length < 2){ showErr('Pick at least two shows.'); return; }
     S = newState({source:pending.source, kind:pending.kind, xml:pending.xml, fileName:pending.fileName, items, showOld:$('pOld').checked});
     pending = null; undoStack = []; showErr(''); renderPending();
     $('loadDetails').open = false; $('settingsPanel').open = false;
@@ -1792,14 +1792,14 @@ function useSite(data, how){
   if(pending){ applySite(pending.entries); if(pending.lists){ applySite(pending.lists.anime); applySite(pending.lists.manga); } renderPending(); }
   save(); render();
   const n = Object.keys(data.byMal||{}).length || Object.keys(data.byAniList||{}).length;
-  const when = data.made ? ` (abgerufen am ${new Date(data.made).toLocaleDateString('de-DE')})` : '';
-  $('siteMsg').textContent = `${how}: ${n} Site-Mediane von ${data.source==='myanimelist'?'MyAnimeList':'AniList'}${when}${S.source!=='sample'?`, ${nItems} passen zu deiner aktuellen Liste`:''}.`;
+  const when = data.made ? ` (looked up ${new Date(data.made).toLocaleDateString()})` : '';
+  $('siteMsg').textContent = `${how}: ${n} site medians from ${data.source==='myanimelist'?'MyAnimeList':'AniList'}${when}${S.source!=='sample'?`, ${nItems} match your current list`:''}.`;
 }
 function showRefState(){
   $('tabCompareNote').textContent = REFS.length ? `· ${REFS.map(P => P.name).join(', ')}` : '';
-  $('refPeople').innerHTML = REFS.map((P,i) => P.auto ? '' : `<span class="chip"><b>${esc(P.name)}</b> <span class="muted">${P.count} bewertet</span>
-    <button class="btn" data-rename="${i}" style="padding:0 8px;font-size:.78rem">Umbenennen</button>
-    <button class="btn" data-drop-ref="${i}" style="padding:0 8px;font-size:.78rem">Entfernen</button></span>`).join('');
+  $('refPeople').innerHTML = REFS.map((P,i) => P.auto ? '' : `<span class="chip"><b>${esc(P.name)}</b> <span class="muted">${P.count} scored</span>
+    <button class="btn" data-rename="${i}" style="padding:0 8px;font-size:.78rem">Rename</button>
+    <button class="btn" data-drop-ref="${i}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`).join('');
   renderFollow();
   $('refPeople').querySelectorAll('[data-drop-ref]').forEach(b => b.onclick = () => {
     const P = REFS.splice(+b.dataset.dropRef, 1)[0]; saveRefs();
@@ -1807,11 +1807,11 @@ function showRefState(){
   });
   $('refPeople').querySelectorAll('[data-rename]').forEach(b => b.onclick = () => {
     const v = $('refName').value.trim();
-    if(!v){ $('refMsg').textContent = 'Trage zuerst den neuen Namen ins Namensfeld ein, dann klicke auf Umbenennen.'; $('refName').focus(); return; }
+    if(!v){ $('refMsg').textContent = 'Type the new name in the Name box first, then click Rename.'; $('refName').focus(); return; }
     REFS[+b.dataset.rename].name = v; saveRefs(); $('refName').value = '';
     showRefState(); render();
   });
-  $('refWho').innerHTML = REFS.map((P,i) => `<option value="${i}" ${i===refPick?'selected':''}>Liste von ${esc(P.name)}</option>`).join('');
+  $('refWho').innerHTML = REFS.map((P,i) => `<option value="${i}" ${i===refPick?'selected':''}>${esc(P.name)}'s list</option>`).join('');
   $('refWho').hidden = REFS.length < 2;
   renderRefOnly();
 }
@@ -1827,33 +1827,33 @@ function renderRefOnly(){
   const box = $('refOnly');
   if(!REF || !REF.list){ box.hidden = true; return; }
   box.hidden = false;
-  if(S.source==='sample'){ $('refAddAll').hidden = true; $('refOnlyHead').textContent = 'Starte zuerst deine eigene Liste, um Serien von dort hinzuzufügen.'; $('refOnlyBody').innerHTML = ''; return; }
+  if(S.source==='sample'){ $('refAddAll').hidden = true; $('refOnlyHead').textContent = 'Start your own list first to add shows from theirs.'; $('refOnlyBody').innerHTML = ''; return; }
   const all = refOnlyList(), q = $('refSearch').value.trim().toLowerCase(), doneOnly = $('refDoneOnly').checked;
   const rows = all.filter(x => !tooShort(x) && (!doneOnly || x.status==='Completed') && (!q || x.title.toLowerCase().includes(q) || T(x).toLowerCase().includes(q)))
     .sort((a,b) => (b.score-a.score) || T(a).localeCompare(T(b)));
-  $('refOnlyHead').textContent = `Auf der Liste von ${REF.name}, aber nicht auf deiner: ${all.length}`;
-  $('refOnlyBody').innerHTML = rows.length ? rows.slice(0,500).map(x => `<tr><td class="t">${esc(T(x))}</td><td class="num">${x.score?scoreChip(x.score):''}</td><td>${esc(statusDe(x.status))}</td>
-    <td class="num">${x.id ? `<button class="btn" data-add="${esc(x.id)}" data-al="${esc(x.alId)}" style="padding:2px 10px">Hinzufügen</button>` : `<span class="muted" title="Keine MyAnimeList-ID, deshalb kann sie nicht in die Importdatei">keine MAL-ID</span>`}</td></tr>`).join('')
-    + (rows.length>500 ? `<tr><td colspan="4" class="empty-row">500 von ${rows.length} werden gezeigt. Suche, um einzugrenzen.</td></tr>` : '')
-    : `<tr><td colspan="4" class="empty-row">Nichts anzuzeigen.</td></tr>`;
+  $('refOnlyHead').textContent = `On ${REF.name}'s list but not yours: ${all.length}`;
+  $('refOnlyBody').innerHTML = rows.length ? rows.slice(0,500).map(x => `<tr><td class="t">${esc(T(x))}</td><td class="num">${x.score?scoreChip(x.score):''}</td><td>${esc(x.status)}</td>
+    <td class="num">${x.id ? `<button class="btn" data-add="${esc(x.id)}" data-al="${esc(x.alId)}" style="padding:2px 10px">Add</button>` : `<span class="muted" title="No MyAnimeList id, so it can't go in the import file">no MAL id</span>`}</td></tr>`).join('')
+    + (rows.length>500 ? `<tr><td colspan="4" class="empty-row">Showing 500 of ${rows.length}. Search to narrow it down.</td></tr>` : '')
+    : `<tr><td colspan="4" class="empty-row">Nothing to show.</td></tr>`;
   $('refOnlyBody').querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
     const x = REF.list.find(r => r.id===b.dataset.add); if(!x) return;
     snap();
     S.queue.unshift(addFromRef(x)); // next after the current comparison
     advance(); save(); render();
-    $('refMsg').textContent = `${x.title} hinzugefügt. Sie kommt als Nächstes dran.`;
+    $('refMsg').textContent = `Added ${x.title}. It's up next to rate.`;
   });
   // Add every show the current filter shows (that has a MAL id), after a second click to confirm
   const addable = rows.filter(x => x.id), btn = $('refAddAll');
   btn.hidden = !addable.length;
-  btn.textContent = refAddArmed ? `Nochmal klicken, um ${addable.length} hinzuzufügen` : `Alle ${addable.length} gezeigten hinzufügen`;
+  btn.textContent = refAddArmed ? `Click again to add ${addable.length}` : `Add all ${addable.length} shown`;
   btn.onclick = () => {
     if(!refAddArmed){ refAddArmed = setTimeout(() => { refAddArmed = null; renderRefOnly(); }, 4000); renderRefOnly(); return; }
     clearTimeout(refAddArmed); refAddArmed = null;
     snap();
     addable.forEach(x => S.queue.push(addFromRef(x)));
     advance(); save(); render();
-    $('refMsg').textContent = `${addable.length} Serien von der Liste von ${REF.name} ans Ende deiner Warteschlange gesetzt. Rückgängig (Z) nimmt sie alle wieder heraus.`;
+    $('refMsg').textContent = `Added ${addable.length} shows from ${REF.name}'s list to the end of your queue. Undo (Z) takes them all back out.`;
   };
 }
 let refAddArmed = null;
@@ -1881,7 +1881,7 @@ $('refIn').onchange = async e => {
     } finally { preciseScores = false; }
     const byMal = {}, byAl = {}; let count = 0;
     entries.forEach(x => { if(!x.old) return; count++; if(x.id && x.id!=='0') byMal[x.id] = x.old; if(x.alId) byAl[x.alId] = x.old; });
-    if(!entries.length) throw new Error('In dieser Listendatei wurden keine Serien gefunden.');
+    if(!entries.length) throw new Error('No shows found in that list file.');
     name = $('refName').value.trim() || name.trim() || f.name.replace(/\.(xml|json|gz)+$/i,'');
     // Keep their whole list (small fields only) so shows you don't have can be added
     const list = entries.map(x => ({id:x.id&&x.id!=='0'?x.id:'', alId:x.alId||'', title:x.title, type:x.type||'', eps:x.eps||0, status:x.status, score:x.old||0}));
@@ -1890,15 +1890,15 @@ $('refIn').onchange = async e => {
     if(same>=0) REFS[same] = P; else REFS.push(P); // loading the same name again updates that person
     refPick = same>=0 ? same : REFS.length-1;
     saveRefs(); $('refName').value = '';
-    $('refMsg').textContent = `${name} ${same>=0 ? 'aktualisiert' : 'hinzugefügt'}: ${count} bewertete Serien.`;
+    $('refMsg').textContent = `${same>=0 ? 'Updated' : 'Added'} ${name}: ${count} scored shows.`;
     showRefState(); render();
-  }catch(err){ $('refMsg').textContent = err.message && !/JSON|XML/.test(err.message) ? err.message : 'Diese Listendatei konnte nicht gelesen werden.'; }
+  }catch(err){ $('refMsg').textContent = err.message && !/JSON|XML/.test(err.message) ? err.message : 'Could not read that list file.'; }
   e.target.value = '';
 };
 $('siteIn').onchange = async e => {
   const f = e.target.files[0]; if(!f) return;
-  try{ useSite(JSON.parse((await f.text()).replace(/^﻿/, '')), 'Geladen'); }
-  catch(err){ $('siteMsg').textContent = 'Diese Datei ist keine site-scores-Datei vom Helfer-Skript.'; }
+  try{ useSite(JSON.parse((await f.text()).replace(/^﻿/, '')), 'Loaded'); }
+  catch(err){ $('siteMsg').textContent = 'That file is not a site-scores file from the helper.'; }
 };
 const drop = $('drop');
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
@@ -1906,7 +1906,7 @@ drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if(f) onFile(f); });
 $('pasteBtn').onclick = () => {
   const lines = [...new Set($('pasteIn').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
-  if(lines.length < 2){ showErr('Füge mindestens zwei Titel ein, einen pro Zeile.'); return; }
+  if(lines.length < 2){ showErr('Paste at least two titles, one per line.'); return; }
   showErr('');
   pending = {source:'paste', kind:'anime', xml:null, fileName:'', entries: lines.map((title,e)=>({e,id:'',title,type:'',eps:0,old:0,site:0,status:'Listed'}))};
   renderPending();
@@ -1915,8 +1915,8 @@ $('pasteBtn').onclick = () => {
 let resetArmed = null;
 $('resetBtn').onclick = () => {
   const b = $('resetBtn');
-  if(!resetArmed){ b.textContent = 'Nochmal klicken zum Löschen'; resetArmed = setTimeout(()=>{ resetArmed=null; b.textContent='Von vorn beginnen'; }, 3000); return; }
-  clearTimeout(resetArmed); resetArmed = null; b.textContent = 'Von vorn beginnen';
+  if(!resetArmed){ b.textContent = 'Click again to erase progress'; resetArmed = setTimeout(()=>{ resetArmed=null; b.textContent='Start over'; }, 3000); return; }
+  clearTimeout(resetArmed); resetArmed = null; b.textContent = 'Start over';
   try{ localStorage.removeItem(KEY); }catch(e){}
   S = newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))}); undoStack = [];
   advance(); render(); $('settingsPanel').open = true; $('loadDetails').open = true;
@@ -1992,7 +1992,7 @@ function buildXml(){
   if(!/^<\?xml/.test(out)) out = '<?xml version="1.0" encoding="UTF-8" ?>\n' + out;
   return {xml:out, missing:0};
 }
-const missingNote = m => m ? ` ${m} bewertete Serie${m>1?'n haben':' hat'} keine MyAnimeList-ID und ${m>1?'können':'kann'} nicht in diese Datei.` : '';
+const missingNote = m => m ? ` ${m} scored show${m>1?'s have':' has'} no MyAnimeList ID and can't go in this file.` : '';
 function buildCsv(){
   const fs = finalScores(), bl = benchLevelOf(), q = v => /[",\n]/.test(v) ? `"${String(v).replace(/"/g,'""')}"` : v;
   const ids = Object.keys(fs).sort((a,b)=>fs[b]-fs[a]);
@@ -2006,14 +2006,14 @@ async function offer(filename, data, note=''){
     const a = document.createElement('a'); a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    toast(`${filename} gespeichert.${note}`);
+    toast(`Saved ${filename}.${note}`);
     return true;
   }catch(e){ return false; }
 }
 function showText(txt, msg){ const ta = $('xmlOut'); ta.value = txt; ta.hidden = false; ta.focus(); ta.select(); toast(msg); }
 $('saveXml').onclick = async () => {
   const {xml, missing} = buildXml(), base = (S.fileName||'animelist').replace(/\.gz$/i,'').replace(/\.(xml|json)$/i,'').replace(/[^\w.-]+/g,'_');
-  if(!await offer(`${base}_rescored.xml`, xml, missingNote(missing))) showText(xml, 'Dateien speichern geht hier nicht. Das XML steht unten: Kopiere es in eine Textdatei und speichere sie mit der Endung .xml.' + missingNote(missing));
+  if(!await offer(`${base}_rescored.xml`, xml, missingNote(missing))) showText(xml, 'Saving files is not available here. The XML is below: copy it into a text file and save it ending in .xml.' + missingNote(missing));
 };
 // Progress backup: everything this browser keeps (your game, people loaded from files, follows) in one .json file.
 // The Claude version of the ranker can make the same file, so progress moves over.
@@ -2033,21 +2033,21 @@ $('restoreIn').onchange = async e => {
     (b.follows || []).forEach(x => { if(x && /^[A-Za-z0-9_-]{2,20}$/.test(x.name || x.id || '')) store['follows/' + (x.id || x.name).toLowerCase()] = {name:x.name || x.id, nick:x.nick || '', mirrorDrops:!!x.mirrorDrops, added:x.added || new Date().toISOString()}; });
     if(b.me) store['settings/me'] = {username:b.me};
     localStorage.setItem(STORE_KEY, JSON.stringify(store));
-    toast('Fortschritt wiederhergestellt. Wird neu geladen…');
+    toast('Progress restored. Reloading…');
     setTimeout(() => location.reload(), 600);
-  }catch(err){ toast('Diese Datei ist keine Sicherung des Rankers.'); }
+  }catch(err){ toast('That file is not a ranker progress backup.'); }
   e.target.value = '';
 };
 $('markDone').onchange = e => { S.markDone = e.target.checked; save(); };
 $('wholeNums').onchange = e => { S.wholeNums = e.target.checked; save(); };
 $('copyXml').onclick = () => {
   const {xml, missing} = buildXml();
-  navigator.clipboard.writeText(xml).then(() => toast('Import-XML kopiert. Füge es in eine Textdatei mit der Endung .xml ein.' + missingNote(missing)))
-    .catch(() => showText(xml, 'Kopieren ist hier blockiert. Das XML ist unten markiert: Drücke Strg+C.' + missingNote(missing)));
+  navigator.clipboard.writeText(xml).then(() => toast('Import XML copied. Paste it into a text file saved with a .xml ending.' + missingNote(missing)))
+    .catch(() => showText(xml, 'Copy blocked here. The XML is selected below: press Ctrl+C.' + missingNote(missing)));
 };
 $('saveCsv').onclick = async () => {
   const csv = buildCsv();
-  if(!await offer('scores.csv', csv)) showText(csv, 'Dateien speichern geht hier nicht. Die CSV steht unten zum Kopieren.');
+  if(!await offer('scores.csv', csv)) showText(csv, 'Saving files is not available here. The CSV is below to copy.');
 };
 
 document.addEventListener('keydown', e => {
@@ -2100,10 +2100,10 @@ async function anilist(query, variables, token){
     const res = await fetch('https://graphql.anilist.co', {method:'POST', headers, body:JSON.stringify({query, variables}), signal:AbortSignal.timeout(20000)});
     if(res.status===429){ await new Promise(r => setTimeout(r, ((+res.headers.get('retry-after')) || 30) * 1000)); continue; }
     const json = await res.json();
-    if(!res.ok || json.errors) throw new Error(json.errors?.[0]?.message || `AniList antwortet mit ${res.status}`);
+    if(!res.ok || json.errors) throw new Error(json.errors?.[0]?.message || `AniList answered ${res.status}`);
     return json.data;
   }
-  throw new Error('AniList ist ausgelastet, versuche es in einer Minute nochmal');
+  throw new Error('AniList is busy, try again in a minute');
 }
 async function getList(userName, force = false){
   const key = userName.toLowerCase();
@@ -2200,10 +2200,10 @@ function applyMirroredDrops(){
 // Downloads everyone you follow (and your own list) from AniList, then applies sync and copied drops
 async function loadLiveLists(force = false){
   if(loadingLists) return; loadingLists = true;
-  $('refreshLists').disabled = true; $('refreshLists').textContent = 'Wird aktualisiert…';
+  $('refreshLists').disabled = true; $('refreshLists').textContent = 'Refreshing…';
   listIndex = {made:new Date().toISOString(), people:[], errors:[]};
   const loaded = [];
-  $('followMsg').textContent = follows.length || myUser ? 'Listen werden von AniList geladen…' : '';
+  $('followMsg').textContent = follows.length || myUser ? 'Loading lists from AniList…' : '';
   for(const f of follows){
     try{
       const L = await getList(f.name || f.id, force), P = toRef(L);
@@ -2218,14 +2218,14 @@ async function loadLiveLists(force = false){
   if(myUser){ try{ const L = await getList(myUser, force); meStale = !!L.stale; added = mergeMyEntries(L.entries); }catch(e){ meErr = e.message; } }
   const copied = applyMirroredDrops();
   const msgs = [];
-  if(added) msgs.push(`${added} auf AniList abgeschlossene Serie${added>1?'n':''} in deiner Warteschlange.`);
-  if(copied) msgs.push(`${copied} Serie${copied>1?'n':''} gedroppt, weil ${followNamesMirroring()} sie gedroppt hat. Rückgängig (Z) holt sie zurück.`);
-  if(meErr) msgs.push(`Deine eigene Liste (${myUser}) konnte nicht geladen werden: ${meErr}`);
-  if(meStale || listIndex.people.some(p => p.stale)) msgs.push('AniList ist nicht erreichbar. Gespeicherte Listen werden genutzt; versuche später „Listen jetzt neu laden“.');
-  if(!msgs.length && (myUser || follows.length)) msgs.push('Die Listen sind aktuell.');
+  if(added) msgs.push(`${added} show${added>1?'s':''} you completed on AniList joined your queue.`);
+  if(copied) msgs.push(`${copied} show${copied>1?'s':''} dropped because ${followNamesMirroring()} dropped ${copied>1?'them':'it'}. Undo (Z) brings ${copied>1?'them':'it'} back.`);
+  if(meErr) msgs.push(`Couldn't load your own list (${myUser}): ${meErr}`);
+  if(meStale || listIndex.people.some(p => p.stale)) msgs.push('AniList is unavailable. Using saved lists; try Reload lists now later.');
+  if(!msgs.length && (myUser || follows.length)) msgs.push('Lists are up to date.');
   $('followMsg').textContent = msgs.join(' ');
   loadingLists = false;
-  $('refreshLists').disabled = false; $('refreshLists').textContent = 'Listen jetzt neu laden';
+  $('refreshLists').disabled = false; $('refreshLists').textContent = 'Reload lists now';
   showRefState(); render();
 }
 function renderFollow(){
@@ -2234,10 +2234,10 @@ function renderFollow(){
   const failed = name => listIndex?.errors?.find(e => e.name.toLowerCase()===name);
   box.innerHTML = follows.map(f => {
     const p = inIndex(f.id), err = failed(f.id);
-    const state = p ? `${p.count} bewertet · ${p.stale ? 'gespeicherte Kopie vom ' + new Date(p.updated).toLocaleDateString('de-DE') : 'aktualisiert ' + new Date(p.updated).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})}` : err ? `konnte nicht geladen werden: ${esc(err.error)}` : 'wird geladen…';
-    return `<span class="chip"><input class="field nick" data-nick="${esc(f.id)}" value="${esc(f.nick || f.name || f.id)}" title="Spitzname auf der Seite (AniList: ${esc(f.name || f.id)})" aria-label="Spitzname für ${esc(f.name || f.id)}" style="width:8em;padding:1px 6px"> <span class="muted">${f.nick ? `@${esc(f.name || f.id)} · ` : ''}${state}</span>
-      <label title="Serien, die diese Person droppt, werden auch für dich gedroppt" style="display:inline-flex;gap:4px;align-items:center;font-size:.8rem"><input type="checkbox" data-mirror="${esc(f.id)}" ${f.mirrorDrops?'checked':''}> Drops übernehmen</label>
-      <button class="btn" data-unfollow="${esc(f.id)}" style="padding:0 8px;font-size:.78rem">Entfernen</button></span>`;
+    const state = p ? `${p.count} scored · ${p.stale ? 'saved copy from ' + new Date(p.updated).toLocaleDateString() : 'updated ' + new Date(p.updated).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : err ? `couldn't load: ${esc(err.error)}` : 'loading…';
+    return `<span class="chip"><input class="field nick" data-nick="${esc(f.id)}" value="${esc(f.nick || f.name || f.id)}" title="Nickname shown on the page (AniList: ${esc(f.name || f.id)})" aria-label="Nickname for ${esc(f.name || f.id)}" style="width:8em;padding:1px 6px"> <span class="muted">${f.nick ? `@${esc(f.name || f.id)} · ` : ''}${state}</span>
+      <label title="Shows they dropped are dropped for you too" style="display:inline-flex;gap:4px;align-items:center;font-size:.8rem"><input type="checkbox" data-mirror="${esc(f.id)}" ${f.mirrorDrops?'checked':''}> copy their drops</label>
+      <button class="btn" data-unfollow="${esc(f.id)}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`;
   }).join('');
   // Nicknames: saved with the follow, used everywhere the person's name shows
   box.querySelectorAll('[data-nick]').forEach(inp => inp.onchange = async () => {
@@ -2255,14 +2255,14 @@ function renderFollow(){
 }
 $('followBtn').onclick = async () => {
   const name = $('followIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
-  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'Das sieht nicht nach einem AniList-Namen aus (Buchstaben, Zahlen, - und _).'; return; }
+  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username (letters, numbers, - and _).'; return; }
   await followDb.doc('follows/' + name.toLowerCase()).set({name, added:new Date().toISOString()});
   $('followIn').value = '';
 };
 $('followIn').addEventListener('keydown', e => { if(e.key==='Enter') $('followBtn').click(); });
 $('meSave').onclick = async () => {
   const name = $('meUser').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
-  if(name && !/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'Das sieht nicht nach einem AniList-Namen aus.'; return; }
+  if(name && !/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username.'; return; }
   await followDb.doc('settings/me').set({username:name});
 };
 $('refreshLists').onclick = () => loadLiveLists(true);
@@ -2286,7 +2286,7 @@ function startFollowing(){
     REFS.forEach(P => { if(!P.auto) return; const f = follows.find(x => x.id===P.user); const nm = (f && (f.nick || f.name)) || P.name; if(nm !== P.name){ P.name = nm; changed = true; } });
     if(follows.some(f => !REFS.some(P => P.auto && P.user===f.id) && !listIndex?.errors?.some(e => e.name===f.id))){ loadLiveLists(); return; }
     const copied = applyMirroredDrops();
-    if(copied) $('followMsg').textContent = `${copied} Serie${copied>1?'n':''} gedroppt, die ${followNamesMirroring()} gedroppt hat. Rückgängig (Z) holt sie zurück.`;
+    if(copied) $('followMsg').textContent = `Dropped ${copied} show${copied>1?'s':''} that ${followNamesMirroring()} dropped. Undo (Z) brings them back.`;
     if(copied || changed || REFS.length !== before){ showRefState(); render(); } else renderFollow();
   });
 }
@@ -2295,7 +2295,7 @@ function startFollowing(){
 (() => {
   const root = document.documentElement, btn = $('themeBtn');
   const current = () => root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const show = () => { btn.textContent = current()==='dark' ? '☀' : '☾'; btn.title = current()==='dark' ? 'Heller Modus' : 'Dunkler Modus'; };
+  const show = () => { btn.textContent = current()==='dark' ? '☀' : '☾'; btn.title = current()==='dark' ? 'Light mode' : 'Dark mode'; };
   try{ const saved = localStorage.getItem('theme'); if(saved === 'light' || saved === 'dark') root.dataset.theme = saved;
     const accent = localStorage.getItem('accent'); if(/^#[0-9a-f]{6}$/i.test(accent || '')) root.style.setProperty('--accent', accent); }catch(e){}
   show();
@@ -2307,7 +2307,7 @@ $('fLetter').insertAdjacentHTML('beforeend', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(
 $('fScore').insertAdjacentHTML('beforeend', LEVELS.map(v => `<option value="${v}">${fmt(v)}</option>`).join(''));
 // Exports exactly the rows and order on screen, with every column
 $('fExport').onclick = async () => {
-  if(!lastView || !lastView.ids.length){ toast('Mit diesen Filtern gibt es nichts zu exportieren.'); return; }
+  if(!lastView || !lastView.ids.length){ toast('Nothing to export with these filters.'); return; }
   const {ids, fs} = lastView, q = v => v==null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
   const num = v => v==null ? '' : (+v).toFixed(1);
   const head = ['title','english_title','mal_id','anilist_id','old','new','change','median', ...REFS.flatMap(P => [P.name, `gap_${P.name}`])];
@@ -2317,8 +2317,8 @@ $('fExport').onclick = async () => {
       ...REFS.flatMap(P => { const r = refScore(it, P); return [r ? num(r) : '', r ? num(fs[i]-r) : '']; })].map(q).join(',');
   });
   const csv = [head.map(q).join(','), ...lines].join('\n');
-  if(!await offer('results.csv', csv)) showText(csv, 'Dateien speichern geht hier nicht. Die CSV steht unten zum Kopieren.');
-  else toast(`${ids.length} Zeilen in results.csv gespeichert.`);
+  if(!await offer('results.csv', csv)) showText(csv, 'Saving files is not available here. The CSV is below to copy.');
+  else toast(`Saved ${ids.length} rows to results.csv.`);
 };
 ['fSearch','fLetter','fScore','fKind'].forEach(id => $(id).addEventListener(id==='fSearch' ? 'input' : 'change', () => renderTable()));
 
@@ -2435,18 +2435,18 @@ function missingSeasons(entries){
 // Start from an AniList username: no export file needed
 $('userLoadBtn').onclick = async () => {
   const name = $('userLoadIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
-  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ showErr('Das sieht nicht nach einem AniList-Namen aus (Buchstaben, Zahlen, - und _).'); return; }
-  showErr(''); $('userLoadBtn').disabled = true; $('userLoadBtn').textContent = 'Wird geladen…';
+  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ showErr('That doesn\'t look like an AniList username (letters, numbers, - and _).'); return; }
+  showErr(''); $('userLoadBtn').disabled = true; $('userLoadBtn').textContent = 'Loading…';
   try{
     const L = await getList(name, true);
-    if(L.stale) showErr('AniList ist nicht erreichbar. Deine gespeicherte Liste vom ' + new Date(L.updated).toLocaleDateString('de-DE') + ' wurde geladen.');
+    if(L.stale) showErr('AniList is unavailable. Loaded your saved list from ' + new Date(L.updated).toLocaleDateString() + '.');
     const entries = normScores(L.entries.map((e, i) => ({e:i, id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, old:e.score, site:0, progress:e.progress, status:e.status})));
     await dbReady; entries.push(...missingSeasons(entries));
     pending = {source:'json', kind:'anime', xml:null, fileName:`${L.name} (AniList)`, lists:{anime:entries, manga:[]}, entries};
     applySite(entries); renderPending();
     if(!myUser && followDb) await followDb.doc('settings/me').set({username:L.name}); // keeps your list in sync from now on
-  }catch(e){ showErr(`Diese Liste konnte nicht geladen werden: ${e.message}. Stimmt der Name und ist die Liste öffentlich?`); }
-  $('userLoadBtn').disabled = false; $('userLoadBtn').textContent = 'Meine Liste laden';
+  }catch(e){ showErr(`Couldn't load that list: ${e.message}. Is the username right and the list public?`); }
+  $('userLoadBtn').disabled = false; $('userLoadBtn').textContent = 'Load my list';
 };
 $('userLoadIn').addEventListener('keydown', e => { if(e.key==='Enter') $('userLoadBtn').click(); });
 })();
