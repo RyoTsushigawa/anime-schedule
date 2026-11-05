@@ -873,16 +873,15 @@ function render(items, start, plans) {
       .map(p => p.type === 'weekday' ? `<b>${esc(p.value)}</b>` : esc(p.value)).join('');
     // Rows without a ✓ keep its place, so every row's buttons line up.
     const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
-    // The reason: the newest LiveChart headline about the break (linked to the article), or a
-    // note that none was announced.
+    // When it's back, and why if LiveChart says (its note, or its newest headline, linked).
+    const backLine = (when, note, news) => [`Back ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
     const pause = ({ show, slot, when, episode, note, news, watchAt, cover }) => `
       <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         ${cover ? `<img src="${safeUrl(cover)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
-          <div class="ep">No episode this week · ${episode ? `episode ${episode} ` : ''}${episode ? 'on' : 'back'} ${when.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-          <div class="ep reason">${reasonHtml(note, news, 'No reason announced on LiveChart')}</div>
+          <div class="ep">${backLine(when, note, news)}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
@@ -955,15 +954,14 @@ function render(items, start, plans) {
   const statusAge = streamsDe ? daysOld(Math.max(Date.parse(streamsDe.generated) || 0, Date.parse(streamsDe.statusUpdated) || 0)) : 0;
   if (statusAge >= 3) html = `<div class="notice">LiveChart data was last updated ${statusAge} days ago, so breaks and episode dates may be off.</div>` + html;
   else if (linksAge >= 14) html = `<div class="notice">Stream links were last updated ${linksAge} days ago; the weekly refresh may have stopped.</div>` + html;
-  // At the very top, one line per show: breaks with the reason (the newest LiveChart
-  // headline about it, linked) and when it's back, then plan shows that couldn't be placed.
+  // At the very top, one line per show: breaks in the same words as their row, then plan shows that
+  // couldn't be placed.
   const dayName = d => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const lines = [
-    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> isn't airing this week → ${reasonHtml(b.note, b.news,
-      '<span class="why">no reason announced on LiveChart</span>')} · ${b.episode ? `episode ${b.episode} on` : 'back'} ${dayName(b.when)}</div>`),
+    ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Back ' + dayName(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
     ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'No episode confirmed for this week; airing status unknown')}</span></div>`),
   ];
-  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary>Schedule notices <span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
+  if (lines.length) html = `<details id="airingWarnings" class="alerts"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'break' : 'breaks'}` : '', unknown.length ? `${unknown.length} unconfirmed` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>` + html;
   // Above everything: data that's old or missing (this week's and last week's airings count here)
   const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
   html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
@@ -1952,6 +1950,7 @@ async function loadCatchup(refresh = false) {
   applySearch();
   syncSavingButtons();
   restore();
+  resumeScroll();
   playEnter();
 }
 
@@ -2051,6 +2050,7 @@ async function load(refresh = false) {
     // A new week starts at the top (with "Today", that's today itself); this week as a whole starts
     // at today, with the days before it a scroll up.
     if (!refresh) scrollToStart();
+    resumeScroll();
     updateCatchupCount();
     readyNeighbours(start);
   } catch (e) {
@@ -2103,6 +2103,17 @@ function setRange(next) {
   $('fullWeek').setAttribute('aria-pressed', range === 'week');
 }
 setRange('rest');
+// Back from a reload into a new version: the same week, and resumeScroll() puts the list back.
+let resumeY = null;
+try {
+  const place = JSON.parse(sessionStorage.getItem('resumePlace'));
+  sessionStorage.removeItem('resumePlace');
+  if (place) { weekOffset = place.weekOffset; setRange(place.range); pickedDay = place.pickedDay; resumeY = place.y; }
+} catch {}
+function resumeScroll() {
+  if (resumeY !== null) scrollTo(0, resumeY);
+  resumeY = null;
+}
 $('prev').onclick = () => { weekOffset--; setRange('week'); enter = { x: -14 }; load(); };
 $('next').onclick = () => { weekOffset++; setRange('week'); enter = { x: 14 }; load(); };
 $('fullWeek').onclick = () => {
@@ -2312,20 +2323,23 @@ load();
 
 // Home screen app: the service worker keeps the page fresh online and available offline.
 // An installed app can stay open for days without reloading: whenever it's brought back, the browser
-// looks for a new version, and once that has taken over, a bar offers to reload into it.
-// A new version is ready: a dot on ⚙ and a line in its menu. The next visit has it either way.
-function showUpdate() {
-  $('settingsButton').classList.add('has-update');
-  $('settingsButton').setAttribute('aria-label', 'Settings: a new version is ready');
-  $('updateSection').hidden = false;
+// looks for a new version. Once that has taken over, the page reloads into it the next time it's out of
+// sight, on the same week and at the same place, unless something would be lost. The next visit has it either way.
+let updateWaiting = false;
+let reloadPage = () => location.reload();
+const inTheMiddleOfSomething = () => !!document.querySelector('dialog[open]') || searching() || selecting || bulkSaving || pendingChanges.size > 0 || $('moveButtons').checked || (!$('notice').hidden && !$('noticeUndo').hidden);
+function reloadWhenAway() {
+  if (!updateWaiting || document.visibilityState !== 'hidden' || inTheMiddleOfSomething()) return;
+  try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, pickedDay, y: scrollY })); } catch {}
+  reloadPage();
 }
-$('updateReload').onclick = () => location.reload();
+document.addEventListener('visibilitychange', reloadWhenAway);
 if ('serviceWorker' in navigator) {
   const hadWorker = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js').then(reg => {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
   }).catch(e => console.warn('No offline copy:', e));
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) showUpdate(); });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) { updateWaiting = true; reloadWhenAway(); } });
 }
 
 function setMode(next) {
