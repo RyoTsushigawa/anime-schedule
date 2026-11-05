@@ -53,7 +53,7 @@
           <div class="menu-label">Anzeigen</div>
           <div class="pills settings-options">
             <label class="toggle" title="Wenn du einen Stream öffnest, wird die Folge auch als gesehen markiert (wenn deine Liste verbunden ist). Rückgängig bleibt möglich."><input type="checkbox" id="markOnOpen">Beim Öffnen ✓</label>
-            <label class="toggle catchup-only" title="Stream-Buttons beim Nachholen"><input type="checkbox" id="catchupLinks">Stream-Links</label>
+            <label class="toggle catchup-only" title="Stream-Buttons beim Aufholen"><input type="checkbox" id="catchupLinks">Stream-Links</label>
             <label class="toggle week-only" title="Zeigt, wer welche Serie schaut"><input type="checkbox" id="who" aria-label="Wer schaut mit">Zuschauer</label>
             <label class="toggle" title="Zeigt auch Dienste, die du nicht hast"><input type="checkbox" id="others">Andere Dienste</label>
             <label class="toggle" title="Stream-Buttons in der Farbe des Dienstes oder schlicht umrandet"><input type="checkbox" id="serviceColors">Dienstfarben</label>
@@ -75,7 +75,7 @@
         </section>
         <section class="catchup-only">
           <div class="menu-label">Sortierung</div>
-          <div class="segmented" role="group" aria-label="Reihenfolge beim Nachholen">
+          <div class="segmented" role="group" aria-label="Reihenfolge beim Aufholen">
             <button data-set="sort" data-value="oldest" title="Am längsten wartend zuerst">Älteste</button><button data-set="sort" data-value="behind" title="Die meisten offenen Folgen zuerst">Rückstand</button><button data-set="sort" data-value="az">A–Z</button>
           </div>
         </section>
@@ -100,7 +100,7 @@
         <section>
           <div class="menu-label">Listen-Konten</div>
           <div id="accountSection" class="pills"></div>
-          <label class="field catchup-only"><span>Nachholen-Liste von</span>
+          <label class="field catchup-only"><span>Aufholen-Liste von</span>
             <input id="anilistUser" placeholder="AniList-Name" aria-label="AniList-Name" spellcheck="false"></label>
         </section>
         <section id="listSyncSection" hidden>
@@ -116,12 +116,12 @@
   <div class="bar controls">
     <div class="controls-left">
     <div class="segmented" role="group" aria-label="Ansicht">
-      <button id="viewWeek">Zeitplan</button><button id="viewCatchup">Nachholen<span id="catchupCount" class="count" hidden></span></button><button id="viewPace" title="Ältere Serien, die du in deinem eigenen Tempo schaust">Nicht saisonal</button>
+      <button id="viewWeek">Zeitplan</button><button id="viewCatchup">Aufholen<span id="catchupCount" class="count" hidden></span></button><button id="viewPace" title="Ältere Serien, die du in deinem eigenen Tempo schaust">Nicht saisonal</button>
     </div>
     <div class="segmented soft week-only" role="group" aria-label="Modus">
       <button id="modeSolo">Solo</button><button id="modeGroup">Gruppe</button>
     </div>
-    <div class="segmented soft catchup-only seasonal-only" role="group" aria-label="Darstellung beim Nachholen">
+    <div class="segmented soft catchup-only seasonal-only" role="group" aria-label="Darstellung beim Aufholen">
       <button id="perShow">Pro Serie</button><button id="perEpisode">Einzelne Folgen</button>
     </div>
     <select id="soloPerson" class="pill" aria-label="Person"></select>
@@ -204,9 +204,9 @@
   <h2 id="helpTitle">Kurzanleitung</h2>
   <div class="help-sections">
     <section><h3>Plan wählen</h3><p><b>Solo</b> zeigt den Plan einer Person. <b>Gruppe</b> kombiniert die Leute, die du auswählst. Wählst du niemanden, wird nichts angezeigt.</p></section>
-    <section><h3>Ansicht wählen</h3><p><b>Zeitplan</b> folgt den Gucktagen der Gruppe. <b>Nachholen</b> listet verpasste Folgen der Season. <b>Nicht saisonal</b> sammelt ältere Serien für dein eigenes Tempo. Am Handy wechselst du die Woche durch Wischen nach links oder rechts.</p></section>
+    <section><h3>Ansicht wählen</h3><p><b>Zeitplan</b> folgt den Gucktagen der Gruppe. <b>Aufholen</b> listet verpasste Folgen der Season. <b>Nicht saisonal</b> sammelt ältere Serien für dein eigenes Tempo. Am Handy wechselst du die Woche durch Wischen nach links oder rechts.</p></section>
     <section><h3>Schauen, dann ✓ setzen</h3><p>Die Dienst-Buttons öffnen die Serie. Verbinde ein Konto, um ✓, Droppen und Bewertungen zu nutzen. Ein ✓ setzt deinen Fortschritt bis zu dieser Folge, auch für frühere Folgen. Bei Fehlern hilft <b>Rückgängig</b> oder Strg/⌘+Z.</p></section>
-    <section><h3>Nachholen, wie du willst</h3><p><b>Einzelne Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle als gesehen markieren</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
+    <section><h3>Aufholen, wie du willst</h3><p><b>Einzelne Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle als gesehen markieren</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
     <section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle das passende Konto und aktiviere <b>Beide Listen abgleichen</b>, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
     <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest, und <b>Einfache Ansicht</b> schaltet auf einen schlichten Look um. <b>Ersatz-Links</b> wählt AniWorld oder Torrents für die gewählten Leute, wenn kein Dienst angezeigt wird. <b>Andere Dienste</b> zeigt auch Dienste, die du nicht hast. Planer und Ranker findest du unter dem Zeitplan.</p></section>
     <section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Plan bearbeiten</b>. Ziehe eine Serie auf einen Tag oder Slot und speichere das Ziel. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Ziehst du sie auf eine andere Serie, teilen sich beide den Slot. Mit ⇄ gibst du das Ziel stattdessen von Hand ein. Gespeicherte Verschiebungen gelten für alle.</p></section>
@@ -214,7 +214,7 @@
       <dl class="keyboard-guide">
         <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
         <div><dt><kbd>T</kbd></dt><dd>Heute anzeigen</dd></div>
-        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Zeitplan / Nachholen / Nicht saisonal</dd></div>
+        <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Zeitplan / Aufholen / Nicht saisonal</dd></div>
         <div><dt><kbd>G</kbd></dt><dd>Solo / Gruppe</dd></div>
         <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Nächste / vorherige Serie</dd></div>
         <div><dt><kbd>Enter</kbd></dt><dd>Stream der gewählten Serie öffnen</dd></div>
