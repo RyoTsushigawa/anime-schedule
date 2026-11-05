@@ -307,8 +307,9 @@ body.searching .pager { display: none; }
 .links { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
 .row .cr .site-icon, .row.compact .cr .site-icon { display: block; flex: none; width: 18px; height: 18px; margin-left: -3px; border-radius: 4px; object-fit: contain; background: none; box-shadow: none; }
 .svc-icon { flex: none; width: 18px; height: 18px; margin-left: -3px; background: currentColor; -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
-@media (hover: hover) { .cr:not(.other, .news):hover { background: color-mix(in srgb, var(--svc) 15%, transparent); } }
-.cr.other { background: transparent; border: 1px solid; font-weight: 500; box-shadow: none; }
+@media (hover: hover) { .cr:not(.other, .news):hover { background: color-mix(in srgb, var(--svc) 15%, transparent); } .cr.other:hover { background: color-mix(in srgb, var(--svc) 8%, transparent); } }
+.cr.other { background: transparent; border: 1px solid color-mix(in srgb, var(--svc) 40%, transparent); box-shadow: none; }
+:root.plain-services .cr.other, .row.aired:not(:hover) .cr.other:not(:focus-visible) { border-color: transparent; }
 /* ✓ = watched (written to AniList) */
 .watch { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 9px; color: var(--green); border-color: color-mix(in srgb, var(--green) 55%, transparent); background: color-mix(in srgb, var(--green) 10%, transparent); font-size: 15px; font-weight: 700; line-height: 1; }
 .watch:hover { border-color: var(--green); background: color-mix(in srgb, var(--green) 15%, var(--card)); }
