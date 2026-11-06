@@ -125,3 +125,24 @@ at `https://0neko.cc/#/anime/ID`. The source-health workflow checks every 30 min
 (GitHub may delay scheduled runs). Two failed requests are required; blocked or
 unrecognised responses are unknown. Only a confirmed outage checked within 90
 minutes changes the button. Legal services and torrent preferences take priority.
+
+## Anime Wrapped
+
+Open **Anime Wrapped** below the schedule. Choose the season and any visible plan
+person, or the whole group. Story cards show planned series, weekly slots, the
+busiest day, shared watch partners, popular shows and parallel slots. Plan time is
+estimated at 30 minutes per slot, not actual watched time. Hidden rows and columns
+follow the same rules as the schedule. The source is that season's current
+Guckplan snapshot, not a historical event log or temporary weekly moves.
+
+**Profile** maps one or more public AniList names or locally connected MAL accounts
+to a plan person. Names are not inferred; MaRyo's already-known RyoTsushigawa
+identity is the only default. Mappings are local to this browser. Group totals
+read each account once and disclose how many plan people have been linked.
+Completions require a complete list completion date within the selected season;
+genres and favourites use those records. Approximate runtime is explicitly not
+watchtime during the season. Missing data is not treated as zero across the group.
+List snapshots are cached for an hour, refreshable with ↻; stale fallback is labelled.
+Currently saved group delays appear for everyone with their limited date coverage
+clearly labelled. Old delays are pruned, so no lifetime delay totals are inferred.
+Use **Karte speichern** to download the visible card as a PNG; nothing is posted.
