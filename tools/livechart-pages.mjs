@@ -2,6 +2,52 @@
 // 2026-10-30) there is one file to fix, and tests/livechart-pages.test.mjs to show what's expected.
 export const decode = s => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
+// Titles compared without case, marks and spacing; "2nd Season" = "Season 2", "Cour 2" = "Part 2"
+export const norm = s => String(s || '').normalize('NFKD').toLowerCase()
+  .replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1')
+  .replace(/\b(\d+)(st|nd|rd|th) cour\b|\bcour (\d+)\b/g, (m, a, b, c) => `part ${a || c}`) // LiveChart "Cour 2" = Guckplan "Part 2"
+  .replace(/[^a-z0-9]/g, '');
+
+// 2: the same title, 1: one starts with the other (8+ letters), 0: different
+export function titleScore(a, b) {
+  const A = a.map(norm).filter(Boolean), B = b.map(norm).filter(Boolean);
+  if (A.some(x => B.includes(x))) return 2;
+  return A.some(x => B.some(y => Math.min(x.length, y.length) >= 8 && (x.startsWith(y) || y.startsWith(x)))) ? 1 : 0;
+}
+
+// The part, cour or season a title names at its end ("Part 2", "2nd Cour", "Season 3"), or 0
+const partOf = title => Number(norm(title).match(/(?:part|season)(\d+)$/)?.[1]) || 0;
+const SUFFIX = /\s*(?:[:\-–]\s*)?(?:(?:part|cour|season)\s*\d+|\d+(?:st|nd|rd|th)\s+(?:season|cour))\s*$/i;
+
+// AniList searches to try for a sheet title, best first: as written, without its Part/Cour/Season,
+// with two neighbouring words joined ("Lulutto Lilly" → "LuluttoLilly"), then its first words.
+// A search by first words only counts for a card whose title starts with them.
+export function searchVariants(title) {
+  const full = title.trim().replace(/\s+/g, ' ');
+  const base = full.replace(SUFFIX, '');
+  const suffix = full.slice(base.length);
+  const words = base.split(' ');
+  const out = [{ search: full }, { search: base }];
+  for (let i = 0; i < words.length - 1; i++)
+    if (/^[a-z]{2}/i.test(words[i]) && /^[a-z]{2}/i.test(words[i + 1]))
+      out.push({ search: [...words.slice(0, i), words[i] + words[i + 1], ...words.slice(i + 2)].join(' ') + suffix });
+  for (let n = words.length - 1; n >= 2; n--) {
+    const prefix = words.slice(0, n).join(' ');
+    if (norm(prefix).length >= 10) out.push({ search: prefix, prefix: norm(prefix) });
+  }
+  return out.filter((v, i) => v.search && out.findIndex(w => w.search.toLowerCase() === v.search.toLowerCase()) === i);
+}
+
+// Of this season's cards that AniList's ids lead to: the one for the same part (Part 2 → the Part 2
+// card); else AniList's best hit, but after a search by first words only when it is the one card.
+export function pickCard(sheetTitles, variant, ids, cards) {
+  const found = ids.map(id => cards.find(c => c.anilist === id)).filter(Boolean)
+    .filter(c => !variant.prefix || c.titles.some(x => norm(x).startsWith(variant.prefix)));
+  const part = Math.max(0, ...sheetTitles.filter(Boolean).map(partOf));
+  const same = found.find(c => Math.max(0, ...c.titles.map(partOf)) === part);
+  return same || (!variant.prefix || found.length === 1 ? found[0] : null) || null;
+}
+
 // A season's page (/fall-2026/tv). Besides what the schedule needs, each card keeps what the season
 // list in the sheet needs: premiere time and how exact it is, the rough start when not exact
 // ("January 2027"), short form or not, the MyAnimeList link and LiveChart's "※ NOTE" lines.
