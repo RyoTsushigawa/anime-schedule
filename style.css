@@ -141,7 +141,6 @@ img.avatar { object-fit: cover; }
 .sync-row { display: flex; gap: 8px; align-items: center; padding: 4px 10px 10px; }
 .sync-row select { flex: 1; min-width: 0; border-radius: 8px; font-size: 12px; padding: 6px 8px; }
 #settingsMenu .settings-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-#editScheduleMenu { grid-column: 1 / -1; }
 .menu .menu-label { padding-top: 6px; }
 .menu section + section { margin-top: 4px; padding-top: 4px; }
 #accountMenu { width: 240px; }
@@ -193,7 +192,6 @@ body:not(.catchup) .week-sub { display: block; white-space: nowrap; overflow: hi
 .controls { justify-content: flex-start; }
 .weeknav { margin-left: auto; flex: none; gap: 3px; }
 .controls-left > .segmented:not(:first-child) button { padding-left: 7px; padding-right: 7px; }
-#editSchedule[aria-pressed="false"] { display: none; }
 .phone-only { display: inline-flex; }
 #groupButton { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #week { display: none; }
