@@ -93,7 +93,9 @@ async function sheetTitles() {
 }
 
 const norm = s => String(s || '').normalize('NFKD').toLowerCase()
-  .replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1').replace(/[^a-z0-9]/g, '');
+  .replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1')
+  .replace(/\b(\d+)(st|nd|rd|th) cour\b|\bcour (\d+)\b/g, (m, a, b, c) => `part ${a || c}`) // LiveChart "Cour 2" = Guckplan "Part 2"
+  .replace(/[^a-z0-9]/g, '');
 
 function titleScore(a, b) {
   const A = a.map(norm).filter(Boolean), B = b.map(norm).filter(Boolean);
