@@ -734,7 +734,7 @@ updateFallbackControls();
 const fallback = fallbackWeeks.has(start.getTime());
 const people = activePeople();
 if (!people.length) {
-$('list').innerHTML = '<div class="status">Wähle oben mindestens eine Person aus.</div>';
+$('list').innerHTML = '<div class="status">Keine Person ausgewählt.</div>';
 return;
 }
 const whoBySheet = new Map();
@@ -953,8 +953,8 @@ const daysOld = time => Math.floor((Date.now() - time) / 86400000);
 const linksAge = streamsDe?.generated ? daysOld(Date.parse(streamsDe.generated)) : 0;
 const statusAge = streamsDe ? daysOld(Math.max(Date.parse(streamsDe.generated) || 0, Date.parse(streamsDe.statusUpdated) || 0)) : 0;
 let staleNotice = '';
-if (statusAge >= 3) staleNotice = `<div class="notice">Die LiveChart-Daten wurden vor ${statusAge} Tagen zuletzt aktualisiert, Pausen und Folgentermine können also abweichen.</div>`;
-else if (linksAge >= 14) staleNotice = `<div class="notice">Die Stream-Links wurden vor ${linksAge} Tagen zuletzt aktualisiert; das wöchentliche Update läuft vielleicht nicht mehr.</div>`;
+if (statusAge >= 3) staleNotice = `<div class="notice">Die LiveChart-Daten wurden vor ${statusAge} Tagen zuletzt aktualisiert.</div>`;
+else if (linksAge >= 14) staleNotice = `<div class="notice">Die Stream-Links wurden vor ${linksAge} Tagen zuletzt aktualisiert.</div>`;
 const lines = [
 ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Zurück am ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
 ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
@@ -1755,7 +1755,7 @@ const user = $('anilistUser').value.trim();
 const shown = view;
 const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
 $('tabName').textContent = user ? `${name} · ${user} auf ${listService()}` : name;
-if (!user) { $('list').innerHTML = '<div class="status">Gib im AniList-Menü einen AniList-Namen ein.</div>'; return; }
+if (!user) { $('list').innerHTML = '<div class="status">Kein AniList-Name eingetragen.</div>'; return; }
 if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
 await ready;
 let entries;
@@ -1857,7 +1857,7 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
 if (!mine && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', `<div class="notice">${auth
 ? `Das ist die Liste von ${esc(user)}: ✓ und Droppen gehen nur auf deiner eigenen (${esc(auth.name)}).`
-: 'Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList: Personen-Symbol oben rechts → „AniList verbinden“.'}</div>`);
+: 'Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.'}</div>`);
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 applySearch();
@@ -2134,7 +2134,7 @@ if (destination) {
 $('moveTag').value = destination.tag;
 $('moveTime').value = destination.time;
 setMoveScope('week');
-$('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot mit der Zielserie. Speichern bestätigt das, oder wähle eine andere Zeit.' : 'Speichern bestätigt dieses Ziel.';
+$('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot mit der Zielserie.' : '';
 }
 $('moveDlg').showModal();
 }
