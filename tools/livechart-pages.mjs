@@ -123,3 +123,31 @@ export function parseTimetableNotes(html) {
     }
   return notes;
 }
+
+// YouTube pages for shows streaming on a YouTube channel (LiveChart links its playlist): the
+// episode uploads they list, as { id, episode, title }. Reads a playlist page (only its first
+// videos) and a search page sorted by upload date (the newest), whose data is JSON in a script.
+export function parseYouTube(html) {
+  const data = html.replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+  const found = [
+    ...[...data.matchAll(/"contentId":"([\w-]{11})","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"[\s\S]{0,600}?"accessibilityContext":\{"label":"([^"]*)"/g)]
+      .map(m => [m[1], m[2].replace(/\s+\d+ (?:minutes?|seconds?|hours?)\b.*$/, '')]),
+    ...data.split('"videoRenderer":{"videoId":').slice(1)
+      .map(part => [part.match(/^"([\w-]{11})"/)?.[1], part.match(/"title":\{"runs":\[\{"text":"([^"]*)"/)?.[1]]),
+  ];
+  const videos = [];
+  for (const [id, title] of found) {
+    const episode = Number(title?.match(/\bEpisode\s*(\d+)/i)?.[1]);
+    if (id && episode && !videos.some(v => v.id === id)) videos.push({ id, episode, title: decode(title) });
+  }
+  return videos;
+}
+
+// What the uploads of one series share before their number ("【Magical Sisters LuluttoLilly】Episode"),
+// and the newest of them, preferring subtitled ones
+export const episodeStem = title => title.replace(/(\bEpisode)\s*\d+[\s\S]*$/i, '$1').trim();
+export function newestEpisode(videos, stem) {
+  const same = videos.filter(v => episodeStem(v.title) === stem);
+  const subbed = same.filter(v => /subtitle|english|\beng\b/i.test(v.title));
+  return (subbed.length ? subbed : same).sort((a, b) => b.episode - a.episode)[0] || null;
+}
