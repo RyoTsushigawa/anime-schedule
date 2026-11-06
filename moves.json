@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T21:20:46.455Z",
+ "updated": "2026-11-06T21:27:02.404Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -152,6 +152,14 @@
    "title": "Welsh & Shedar",
    "minutes": 60,
    "reason": "Belly, Quecks und Marius sind dick"
+  },
+  {
+   "id": "ohtw7nql",
+   "day": "2026-11-06",
+   "show": "uchinootoutodomogasumimasen",
+   "title": "Please Excuse My Younger Brothers",
+   "minutes": 15,
+   "reason": "Bauarbeiten am Discord-Server"
   }
  ]
 }
