@@ -1020,27 +1020,50 @@ const LIST_QUERY = `query ($user: String) {
   }
 }`;
 const LIST_CACHE_MS = 10 * 60 * 1000;
-async function anilistList(user) {
+async function anilistList(user, fresh = false) {
 if (auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
-const result = await MAL.list(auth);
+const result = await MAL.list(auth, fresh);
+if (fresh && result.stale) throw new Error('MyAnimeList ist gerade nicht erreichbar; die gespeicherte Liste bleibt erhalten.');
 setNote('list:' + user.toLowerCase(), result.stale ? `MyAnimeList antwortet nicht: Liste vom ${savedAt(result.stale)}.` : null);
 return result.entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status));
 }
 const key = 'list:' + user.toLowerCase();
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
-if (saved && Date.now() - saved.time < LIST_CACHE_MS) return saved.entries;
+if (!fresh && saved && Date.now() - saved.time < LIST_CACHE_MS) return saved.entries;
 try {
 const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
 try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
 setNote(key, null);
 return entries;
 } catch (e) {
-if (!saved) throw e;
+if (fresh || !saved) throw e;
 setNote(key, `${unreachable('AniList')}: Liste von ${user} vom ${savedAt(saved.time)}.`);
 return saved.entries;
 }
 }
+$('refreshCatchup').onclick = async () => {
+const button = $('refreshCatchup');
+if (button.disabled || !listView()) return;
+const user = $('anilistUser').value.trim();
+if (!user) return;
+button.disabled = true;
+button.setAttribute('aria-busy', 'true');
+button.textContent = 'Lädt…';
+try {
+await anilistList(user, true);
+planShowsCache.time = 0;
+if (auth && auth.name.toLowerCase() === user.toLowerCase()) await loadMe();
+if (listView()) await loadCatchup(true);
+notice('Liste aktualisiert.');
+} catch (error) {
+notice('Liste konnte nicht aktualisiert werden: ' + error.message);
+} finally {
+button.disabled = false;
+button.removeAttribute('aria-busy');
+button.textContent = '↻';
+}
+};
 async function anilistAsMe(query, variables = {}) {
 if (auth?.provider === 'mal') throw new Error('Dafür brauchst du ein AniList-Konto.');
 try {
