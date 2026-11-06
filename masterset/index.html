@@ -109,6 +109,7 @@ tfoot td{font-weight:600;border-bottom:0}
 .found img,.found .noimg{width:56px;height:78px;border-radius:3px;object-fit:cover;background:var(--line);font-size:10px;padding:2px}
 .linkish{background:none;border:0;padding:0;color:var(--tide);text-decoration:underline;cursor:pointer;font-size:13px}
 textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(--line);border-radius:6px;padding:8px;font:13px var(--data);color:inherit}
+.share-status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 15px;color:var(--muted);font-size:12px}.share-status span{flex:1}.share-status a{color:var(--deep)}input[disabled]{cursor:default;opacity:.65}#expansion{max-width:220px}@media(max-width:600px){#expansion{max-width:none;flex:1 1 100%;width:100%}}
 </style>
 
 <header>
@@ -127,10 +128,12 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
     <button class="tab" role="tab" id="tab-backup" aria-selected="false">Backup</button>
     <span class="note" id="fresh" style="margin-left:auto"></span>
   </nav>
+  <div class="share-status"><span id="collection-status" role="status">Loading shared collection…</span> <button id="collection-retry" class="linkish">Retry</button><a id="collection-owner" href="../#moves" target="_blank" rel="noopener">Owner access</a></div>
   <main id="view-cards">
     <div id="fam" class="fams"></div>
     <div class="tools">
-      <input id="q" class="grow" type="search" placeholder="Search name or set" aria-label="Search name or set">
+      <input id="q" class="grow" type="search" placeholder="Search Pokémon (DE / EN) or set" aria-label="Search Pokémon (DE / EN) or set">
+      <select id="expansion" aria-label="Filter by expansion"><option value="">All expansions</option></select>
       <select id="sort" aria-label="Sort cards">
         <option value="name">Sort by name</option>
         <option value="asc">Cheapest first</option>
@@ -157,7 +160,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
   <main id="view-orders" hidden></main>
   <main id="view-ship" hidden></main>
   <main id="view-add" hidden>
-    <section class="panel"><h3>Add a Pokémon or card</h3>
+    <p id="add-owner-note" class="note" hidden>These are the owner’s shared lists. Only the owner can add or remove cards.</p><section class="panel"><h3>Add a Pokémon or card</h3>
       <p class="note">Type an English name, such as Turtwig. Same-art prints are grouped where images exist. Asian prints are patchy, so untick any that repeat a card.</p>
       <form id="add-form" class="tools">
         <input id="add-q" class="grow" type="search" placeholder="Pokémon or card name" aria-label="Pokémon or card name">
@@ -171,38 +174,40 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
   </main>
   <main id="view-backup" hidden>
     <section class="panel"><h3>Back up your progress</h3>
-      <p class="note">Your progress is saved on this device. Copy a backup to keep it safe or move it elsewhere.</p>
+      <p class="note">Owned cards and added lists are shared with everyone. Seller choices, orders and shipping stay on this device. A backup contains both.</p>
       <p><button class="primary" id="backup-copy">Copy backup</button><span id="backup-msg" style="margin-left:8px" class="note"></span></p>
-      <h3 style="margin-top:14px">Restore a backup</h3>
-      <p class="note">Paste a backup below. Restoring replaces the progress on this device.</p>
+      <p><button class="linkish" id="backup-original" hidden>Copy the backup from before sharing</button></p><h3 style="margin-top:14px">Restore a backup</h3>
+      <p class="note">Paste a backup below. Owner access is required to restore collection progress. Restoring also updates the shared collection.</p>
       <textarea id="backup-text" aria-label="Backup text"></textarea>
       <p><button class="primary" id="backup-restore">Restore</button></p>
     </section>
   </main>
 </div>
 
+<script src="shared-collection.js"></script>
+<script src="pokemon-names.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const eur=v=>v==null||!isFinite(v)?'–':'€'+v.toFixed(2);
 let baseCards=[],cards=[],prices={},guideDate='';
 let state={owned:{},pick:{},vendors:{},ship:{letter:1.5,tracked:4.5,threshold:25}};
-let ui={fam:'All',q:'',sort:'name',hide:false,open:new Set()};
-let dbDoc=null,saveTimer=null;
+let ui={fam:'All',q:'',sort:'name',expansion:'',hide:false,open:new Set()};
+let sharing=null;let nameIndex=PokemonNames.create([]);
 
 const LS='piplup-masterset';
 function loadLocal(){try{const s=localStorage.getItem(LS);if(s)Object.assign(state,JSON.parse(s))}catch{}}
 function save(){
   try{localStorage.setItem(LS,JSON.stringify(state))}catch{}
-  if(!dbDoc)return;
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>dbDoc.set(JSON.parse(JSON.stringify(state))).catch(e=>{$('fresh').textContent='Could not save to your account: '+(e.message||e.code)}),600);
+  sharing?.changed();
 }
+
 
 const printsOf=c=>c.prints.map(p=>({...p,...(p.pid&&prices[p.pid]||{})}));
 function bestIn(c,lang){return printsOf(c).filter(p=>p.low!=null&&(!lang||p.region===lang)).sort((a,b)=>a.low-b.low)[0]||null}
 // The chosen language wins; a card with no priced print in it falls back to its cheapest print.
 function best(c){return (state.lang&&bestIn(c,state.lang))||bestIn(c)}
+function bestForView(c){if(!ui.expansion)return best(c);const prints=printsOf(c).filter(p=>p.set===ui.expansion&&p.low!=null);return prints.filter(p=>!state.lang||p.region===state.lang).sort((a,b)=>a.low-b.low)[0]||prints.sort((a,b)=>a.low-b.low)[0]||null;}
 const LANGS=[['International','Intl'],['Japanese','JP'],['Chinese','CN'],['Korean','KR'],['Indonesian','ID'],['Thai','TH']];
 function langRow(c){
   const b=best(c);
@@ -271,9 +276,9 @@ function renderFam(){
 }
 
 function cardHtml(c){
-  const own=!!state.owned[c.id],b=best(c),p=pickOf(c.id),all=printsOf(c);
+  const own=!!state.owned[c.id],all=printsOf(c),b=bestForView(c),p=pickOf(c.id);
   const delta=b&&b.prevLow!=null&&b.prevLow!==b.low?`<span class="${b.low>b.prevLow?'up':'down'}">${b.low>b.prevLow?'▲':'▼'} ${eur(Math.abs(b.low-b.prevLow))}</span>`:'';
-  const pr=priceOf(c),buy=cmLink(c,b);
+  const pr=priceOf(c),targetPrint=b||(ui.expansion?all.find(p=>p.set===ui.expansion):null),buy=cmLink(c,targetPrint);
   const priceBlock=c.verify&&b?`<div class="price"><b>${eur(b.low)}</b><small>unconfirmed, not in totals</small></div>`
    :b?`<div class="price"><b>${eur(b.low)}</b>${delta}<small>about ${eur(b.low+shipFor(b.low))} delivered</small></div>`
    :`<div class="price"><small>No Cardmarket price. Prize or very rare card, watch auctions.</small></div>`;
@@ -284,8 +289,8 @@ function cardHtml(c){
       <div class="meta">${b?`${esc(b.set)} ${esc(b.num)} · ${esc(b.region)}`:`${esc(all[0].set)} ${esc(all[0].num)}`}${state.lang&&b&&!bestIn(c,state.lang)?`<span class="tag warn">No ${esc(state.lang)} price</span>`:''}</div>
       ${priceBlock}
       <div class="foot">
-        <label class="own-toggle"><input type="checkbox" data-act="own" ${own?'checked':''}> Owned</label>
-        ${buy?`<a href="${buy}" target="_blank" rel="noopener">${b&&b.url?'Open on Cardmarket':b&&b.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:`<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">Search eBay.de</a>`}
+        <label class="own-toggle"><input type="checkbox" data-act="own" ${sharing?.editable?'':'disabled'} ${own?'checked':''}> Owned</label>
+        ${buy?`<a href="${buy}" target="_blank" rel="noopener">${targetPrint&&targetPrint.url?'Open on Cardmarket':targetPrint&&targetPrint.setUrl?'Cardmarket set page':'Cardmarket list'}</a>`:`<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">Search eBay.de</a>`}
       </div>
     </div>
     <details class="more" data-more="${c.id}" ${ui.open.has(c.id)?'open':''}><summary>Details${p.vendor?' · '+esc(p.vendor):''}</summary><div>
@@ -300,19 +305,19 @@ function cardHtml(c){
         ${all.map(x=>`<li class="${b&&x.pid===b.pid?'best':''}">${esc(x.region)} · ${x.url?`<a href="${x.url}" target="_blank" rel="noopener">${esc(x.set)} ${esc(x.num)}</a>`:`${esc(x.set)} ${esc(x.num)}`} <span class="num">${x.low!=null?eur(x.low):'no price'}</span></li>`).join('')}
       </ul></div>
       ${langLinks(b)}
-      <div class="links">${buy?`<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">Search eBay.de</a>`:''}${c.added&&b&&b.url&&speciesLink(c)?`<a href="${speciesLink(c)}" target="_blank" rel="noopener">All versions</a>`:''}${c.added?`<button class="linkish" data-remove="${esc(c.id)}">Remove card</button>`:''}</div>
+      <div class="links">${buy?`<a href="${ebLink(c,b||all[0])}" target="_blank" rel="noopener">Search eBay.de</a>`:''}${c.added&&b&&b.url&&speciesLink(c)?`<a href="${speciesLink(c)}" target="_blank" rel="noopener">All versions</a>`:''}${c.added&&sharing?.editable?`<button class="linkish" data-remove="${esc(c.id)}">Remove card</button>`:''}</div>
     </div></details></article>`;
 }
 
 function renderCards(){
   const x=state.exclude||{},on=[state.lang,ui.hide,x.cameo,x.noPrice].filter(Boolean).length;
   $('filter-label').textContent=on?`Filters (${on})`:'Filters';$('filter-label').parentElement.dataset.on=on>0;
-  const q=ui.q.toLowerCase();
-  let list=inSet().filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!q||(c.name+' '+c.prints.map(p=>p.set+' '+p.num).join(' ')).toLowerCase().includes(q)));
-  const val=c=>best(c)?.low??null;
+  const q=PokemonNames.norm(ui.q);
+  let list=inSet().filter(c=>(ui.fam==='All'||c.family===ui.fam)&&(!ui.hide||!state.owned[c.id])&&(!ui.expansion||c.prints.some(p=>p.set===ui.expansion))&&(!q||nameIndex.text(c).includes(q)));
+  const val=c=>bestForView(c)?.low??null;
   if(ui.sort==='cond'){
     // Near Mint offers first, cheapest within each condition; cards with no offers last.
-    const rank=c=>{const o=byCondition(c)[0];return o?[COND.indexOf(o.cond),o.price]:[9,0]};
+    const rank=c=>{const o=byCondition(c,true)[0];return o?[COND.indexOf(o.cond),o.price]:[9,0]};
     list=[...list].sort((a,b)=>{const x=rank(a),y=rank(b);return x[0]-y[0]||x[1]-y[1]});
   }else if(ui.sort!=='name')list=[...list].sort((a,b)=>{const x=val(a),y=val(b);if(x==null)return 1;if(y==null)return -1;return ui.sort==='asc'?x-y:y-x});
   $('grid').innerHTML=(list.map(cardHtml).join('')||'<p class="note">No cards match. Clear the search or show owned cards.</p>')+
@@ -348,14 +353,14 @@ function planOrders(items,shipOf){
   return a;
 }
 let offerData=null;
-function offersFor(c){const f=state.auto||{};
-  return (offerData?.cards[c.id]||[]).filter(o=>(!f.lang||o.lang===f.lang)&&(!(f.eu??true)||EU.has(o.country)))}
+function offersFor(c,filtered=false){const f=state.auto||{};
+  return (offerData?.cards[c.id]||[]).filter(o=>(!filtered||!ui.expansion||String(o.label||'').startsWith(ui.expansion+' '))&&(!f.lang||o.lang===f.lang)&&(!(f.eu??true)||EU.has(o.country)))}
 // Cheapest offer in each condition, best condition first.
-function byCondition(c){return COND.map(name=>offersFor(c).filter(o=>o.cond===name).sort((a,b)=>a.price-b.price)[0]).filter(Boolean)}
+function byCondition(c,filtered=false){return COND.map(name=>offersFor(c,filtered).filter(o=>o.cond===name).sort((a,b)=>a.price-b.price)[0]).filter(Boolean)}
 const COND_SHORT={'Near Mint':'NM','Slightly Played':'SP','Moderately Played':'MP','Played':'PL','Poor':'PO'};
 function condRow(c){
   if(!offerData)return '';
-  const list=byCondition(c);
+  const list=byCondition(c,true);
   return `<div class="links">${list.length?list.map(o=>`<a href="${esc(o.link)}" target="_blank" rel="noopener" title="${esc(o.cond)} from ${esc(o.seller)}">${COND_SHORT[o.cond]} ${eur(o.price)}</a>`).join(''):'no offers match'}</div>`;
 }
 function autoInputs(){
@@ -458,7 +463,11 @@ function artScore(A,B){
   return best;
 }
 async function searchCards(q,allLangs,status){
-  const hits=(await getJson(TCG+'en/cards?name='+encodeURIComponent(q))).filter(c=>!/^(A\d|P-A|B\d)/.test(c.id));
+  const translated=nameIndex.query(q);
+  const responses=await Promise.allSettled([getJson(TCG+'en/cards?name='+encodeURIComponent(translated.en)),getJson(TCG+'de/cards?name='+encodeURIComponent(translated.de))]);
+  if(responses.every(r=>r.status==='rejected'))throw new Error('The card search is unavailable');
+  const searches=responses.map(r=>r.status==='fulfilled'?r.value:[]);
+  const hits=[...new Map(searches.flat().map(c=>[c.id,c])).values()].filter(c=>!/^(A\d|P-A|B\d)/.test(c.id));
   const found=[],add=async(list,lang)=>{await pool(list.slice(0,300),8,async c=>{const d=await getJson(TCG+lang+'/cards/'+encodeURIComponent(c.id)).catch(()=>null);if(d)found.push({d,lang});status(`Reading card details: ${found.length}`)})};
   await add(hits,'en');
   const dex=new Set(found.flatMap(x=>x.d.dexId||[]));
@@ -524,11 +533,12 @@ function renderLists(){
       const waiting=added.filter(c=>!offerData?.cards[c.id]).length;
       return `<tr><td>${esc(f)}</td><td class="r">${list.length}</td>
       <td><label class="own-toggle"><input type="checkbox" data-count="${esc(f)}" ${x.fam?.[f]?'':'checked'}> Include</label></td>
-      <td>${added.length?`${waiting?`<a href="${esc(watchLink(f))}" target="_blank" rel="noopener">Add to seller check</a> · `:''}<button class="linkish" data-drop="${esc(f)}">${ui.dropping===f?'Click again to remove':'Remove added cards'}</button>`:''}</td></tr>`}).join('')}
+      <td>${sharing?.editable&&added.length?`${waiting?`<a href="${esc(watchLink(f))}" target="_blank" rel="noopener">Add to seller check</a> · `:''}<button class="linkish" data-drop="${esc(f)}">${ui.dropping===f?'Click again to remove':'Remove added cards'}</button>`:''}</td></tr>`}).join('')}
     </tbody></table></div>
     <p class="note" style="margin-top:8px">Lists that are off leave the cards, totals and orders. Added cards get sellers after you commit "Add to seller check" on GitHub and the next daily run finishes.</p>`;
 }
 function dropCards(ids){
+  if(!sharing?.editable)return;
   state.added=(state.added||[]).filter(c=>!ids.includes(c.id));
   for(const id of ids){delete state.owned[id];delete state.pick[id]}
   save();renderAll();
@@ -545,10 +555,21 @@ async function refreshAdded(){
 }
 
 function renderAll(){cards=[...baseCards,...(state.added||[])];$('lang').value=state.lang||'';
+  const editable=!!sharing?.editable;
+  $('ledger').hidden=!!sharing?.ready&&!sharing.published&&!sharing.key;
+  $('hide').disabled=!!sharing?.ready&&!sharing.published;
+  $('backup-original').hidden=!localStorage.getItem('masterset-before-sharing');
+  $('add-form').hidden=!editable;$('add-owner-note').hidden=editable;$('backup-restore').disabled=!editable;
+  $('tab-add').textContent=editable?'Add / Lists':'Lists';
+  $('collection-owner').hidden=!!sharing?.key;
+  const sets=[...new Set(cards.flatMap(c=>c.prints.map(p=>p.set)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(ui.expansion&&!sets.includes(ui.expansion))ui.expansion='';
+  $('expansion').innerHTML='<option value="">All expansions</option>'+sets.map(s=>'<option'+(s===ui.expansion?' selected':'')+'>'+esc(s)+'</option>').join('');
   $('x-cameo').checked=!!state.exclude?.cameo;$('x-noprice').checked=!!state.exclude?.noPrice;
   $('x-cameo-label').textContent=`Leave out cameos (${cards.filter(isCameo).length})`;
   $('x-noprice-label').textContent=`Leave out cards with no price (${cards.filter(noPrice).length})`;
   renderLedger();renderFam();renderCards();renderOrders();renderShip();renderLists();renderFound();
+  document.querySelectorAll('[data-drop],[data-remove]').forEach(b=>{b.hidden=!sharing?.editable;});
   $('fresh').textContent=guideDate?'Prices from Cardmarket, '+new Date(guideDate).toLocaleDateString('de-DE'):'';}
 
 document.addEventListener('toggle',e=>{const id=e.target.dataset?.more;if(id){if(e.target.open)ui.open.add(id);else ui.open.delete(id)}},true);
@@ -562,6 +583,7 @@ document.addEventListener('click',e=>{
   if(e.target.id==='add-select'){ui.picked=new Set(ui.found.filter(g=>!g.have).map(g=>g.id));renderFound();return}
   if(e.target.id==='add-select-none'){ui.picked=new Set();renderFound();return}
   if(e.target.id==='add-go'){
+    if(!sharing?.editable)return;
     const fam=($('add-list').value||ui.listName||'Added').trim();
     const add=ui.found.filter(g=>ui.picked.has(g.id)).map(({have,unchecked,...g})=>({...g,family:fam,added:true}));
     state.added=[...(state.added||[]),...add];
@@ -572,8 +594,10 @@ document.addEventListener('click',e=>{
     const {items}=autoInputs(),a=planOrders(items,shipAuto);
     for(const it of items){state.pick[it.id]={vendor:a[it.id].seller,price:a[it.id].price};const sh=offerData.shipping?.[a[it.id].seller]?.cost;if(sh!=null)state.vendors[a[it.id].seller]={ship:sh}}
     save();renderLedger();renderCards();renderOrders();return}
+  if(e.target.id==='backup-original'){const text=localStorage.getItem('masterset-before-sharing');if(text)navigator.clipboard.writeText(text).then(()=>{$('backup-msg').textContent='Original backup copied';}).catch(()=>{$('backup-text').value=text;});return;}
   if(e.target.id==='backup-copy'){const text=JSON.stringify(state);navigator.clipboard.writeText(text).then(()=>{$('backup-msg').textContent='Backup copied'}).catch(()=>{$('backup-text').value=text;$('backup-text').select();$('backup-msg').textContent='Press Ctrl+C to copy the selected text'})}
   if(e.target.id==='backup-restore'){
+    if(!sharing?.editable)return;
     try{
       const d=JSON.parse($('backup-text').value);
       if(!d||typeof d.owned!=='object'||typeof d.pick!=='object')throw 0;
@@ -586,7 +610,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const el=e.target,cardEl=el.closest?.('.card');
   if(cardEl&&el.dataset.act){const id=cardEl.dataset.id;
-    if(el.dataset.act==='own'){if(el.checked)state.owned[id]=true;else delete state.owned[id]}
+    if(el.dataset.act==='own'){if(!sharing?.editable){el.checked=!!state.owned[id];return;}if(el.checked)state.owned[id]=true;else delete state.owned[id]}
     else{const p=state.pick[id]||{};if(el.dataset.act==='vendor')p.vendor=el.value.trim();else p.price=el.value===''?null:+el.value;state.pick[id]=p}
     save();renderLedger();renderCards();renderOrders();return}
   if(el.dataset.vendor!==undefined){const v=el.dataset.vendor;state.vendors[v]={ship:el.value===''?null:+el.value};save();renderLedger();renderOrders();return}
@@ -598,6 +622,7 @@ document.addEventListener('change',e=>{
     if(el.id==='a-lang')f.lang=el.value;if(el.id==='a-cond')f.cond=el.value;if(el.id==='a-eu')f.eu=el.checked;
     save();renderCards();renderOrders();return}
   if(el.id==='lang'){state.lang=el.value;save();renderLedger();renderCards();renderOrders();return}
+  if(el.id==='expansion'){ui.expansion=el.value;renderCards();return}
   if(el.id==='sort'){ui.sort=el.value;renderCards()}
   if(el.id==='hide'){ui.hide=el.checked;renderCards()}
   if(el.id==='x-cameo'||el.id==='x-noprice'){const x=state.exclude||(state.exclude={});
@@ -607,6 +632,7 @@ document.addEventListener('change',e=>{
 $('q').addEventListener('input',e=>{ui.q=e.target.value;renderCards()});
 $('add-form').addEventListener('submit',async e=>{
   e.preventDefault();
+  if(!sharing?.editable)return;
   const q=$('add-q').value.trim(),status=m=>{$('add-status').textContent=m};
   if(!q)return;
   ui.found=null;renderFound();status('Searching…');
@@ -615,7 +641,7 @@ $('add-form').addEventListener('submit',async e=>{
     ui.found=groups;ui.picked=new Set(groups.filter(g=>!g.have).map(g=>g.id));
     ui.listName=q[0].toUpperCase()+q.slice(1);
     const prints=groups.reduce((s,g)=>s+g.prints.length,0);
-    status(groups.length?`Found ${groups.length} artworks from ${prints} prints. Untick anything you don't want.`:'Nothing found under that name. Check the English spelling.');
+    status(groups.length?`Found ${groups.length} artworks from ${prints} prints. Untick anything you don't want.`:'Nothing found under that name. Try its German or English name.');
     renderFound();
   }catch{status('The card database could not be reached from this page. Try again, or use the site at ryotsushigawa.github.io/anime-schedule/masterset/.')}
 });
@@ -623,17 +649,24 @@ $('add-form').addEventListener('submit',async e=>{
 (async()=>{
   loadLocal();
   try{
-    const [c,p]=await Promise.all([fetch('cards.json').then(r=>r.json()),fetch('prices.json').then(r=>r.json())]);
+    const [c,p,n]=await Promise.all([fetch('cards.json').then(r=>r.json()),fetch('prices.json').then(r=>r.json()),fetch('pokemon-names.json').then(r=>r.json()).catch(()=>[])]);
+    nameIndex=PokemonNames.create(n);
     baseCards=c;prices=p.prices;guideDate=p.guideDate;
     // Seller stock is optional: without it the page runs on the price guide alone.
     try{const r=await fetch('offers.json');if(r.ok)offerData=await r.json()}catch{}
   }catch(e){$('grid').innerHTML='<p class="note">The card data did not load. Reload the page to try again.</p>';return}
-  renderAll();
-  refreshAdded();
-  try{
-    const db=window.claude?await window.claude.use('db'):null;
-    if(db){dbDoc=db.doc('tracker/state');const s=await dbDoc.get();if(s.exists){const d=s.data();state={...state,...JSON.parse(JSON.stringify(d))};renderAll();refreshAdded()}}
-  }catch(e){$('fresh').textContent='Your progress is saved in this browser only, because the account store did not answer.'}
+  sharing=new CollectionSharing.Client({getState:()=>state,setCollection:collection=>{
+    state.owned=collection.owned;state.added=collection.added;
+    try{localStorage.setItem(LS,JSON.stringify(state));}catch{}
+    renderAll();
+  },status:text=>{$('collection-status').textContent=text;}});
+  renderAll();await sharing.initialize();renderAll();
+  if(sharing.editable)refreshAdded();
+  setInterval(()=>{if(document.visibilityState==='visible')sharing.refresh();},30000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(sharing.key!==sharing.sessionKey)sharing.initialize().then(renderAll);else sharing.refresh();}});
+  window.addEventListener('storage',e=>{if(e.key==='movesKey')sharing.initialize().then(renderAll);});
+  $('collection-retry').onclick=async()=>{const b=$('collection-retry');b.disabled=true;try{if(!sharing.ready)await sharing.initialize();else if(sharing.key)await sharing.flush(true);else await sharing.refresh();}finally{b.disabled=false;}};
+
 })();
 </script>
 
