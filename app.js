@@ -1234,13 +1234,12 @@ editScope = b.dataset.editScope;
 for (const x of document.querySelectorAll('[data-edit-scope]')) x.setAttribute('aria-pressed', String(x === b));
 };
 function syncMoveEditor() {
-$('editSchedule').hidden = $('editScheduleMenu').hidden = $('moveToggle').hidden;
+$('editSchedule').hidden = $('moveToggle').hidden;
 const on = $('moveButtons').checked;
 $('editScope').hidden = $('editSchedule').hidden || !on;
 $('editSchedule').textContent = 'Edit';
 $('editSchedule').setAttribute('aria-pressed', String(on));
 }
-$('editScheduleMenu').onclick = () => { showSettings(false); $('editSchedule').click(); };
 $('editSchedule').onclick = () => {
 $('moveButtons').checked = !$('moveButtons').checked;
 $('moveButtons').dispatchEvent(new Event('change'));
