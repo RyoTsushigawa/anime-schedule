@@ -62,5 +62,8 @@ const WrappedStats = (() => {
       favourites:completed.filter(e=>e.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(e=>({title:e.media.title.english||e.media.title.romaji,score:e.score})),
       undated:entries.filter(e=>e.status==='COMPLETED'&&!Number.isFinite(from(e.completedAt))).length};
   }
-  return {plan,list,key,days};
+  const shared = name => key(name) === 'maryo';
+  const peopleCount = people => people.reduce((n,p)=>n+(shared(p)?2:1),0);
+  const listsAllowed = tab => Number.isFinite(tab?.start) && tab.start >= new Date(2027,0,1).getTime();
+  return {plan,list,key,days,shared,peopleCount,listsAllowed};
 })();
