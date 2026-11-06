@@ -925,7 +925,7 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) 
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${behindTag(m.id, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
@@ -1183,11 +1183,18 @@ $('behind').onchange = () => {
 try { localStorage.setItem('behind', $('behind').checked ? '1' : '0'); } catch {}
 redraw();
 };
-function behindTag(mediaId, episode) {
-if (!auth || !$('behind').checked || !myProgress.has(mediaId)) return '';
-const n = episode - 1 - myProgress.get(mediaId);
-return n > 0 ? `<span class="behind" title="${n === 1 ? 'Eine frühere Folge' : `${n} frühere Folgen`} noch nicht gesehen">${n} behind</span>` : '';
+function behindTag(m, episode) {
+if (!auth || !$('behind').checked || !myProgress.has(m.id)) return '';
+const n = episode - 1 - myProgress.get(m.id);
+return n > 0 ? `<button class="behind" data-behind="${esc(m.title.english || m.title.romaji)}" title="${n === 1 ? 'Eine frühere Folge' : `${n} frühere Folgen`} noch nicht gesehen: im Catch-up zeigen">${n} behind</button>` : '';
 }
+$('list').addEventListener('click', e => {
+const b = e.target.closest('.behind[data-behind]');
+if (!b) return;
+$('search').value = b.dataset.behind;
+openSearch(true);
+$('viewCatchup').click();
+});
 try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
 $('who').onchange = () => {
 try { localStorage.setItem('who', $('who').checked ? '1' : '0'); } catch {}
