@@ -468,7 +468,9 @@ links.title = searchTitle || media.title?.english || media.title?.romaji || '';
 links.names = [links.title, media.title?.english, media.title?.romaji];
 const de = streamsDe?.byAnilist[media.id];
 if (de?.length) {
-for (const { name, url, extra } of de) {
+const video = streamsDe.status?.[media.id]?.video?.url;
+for (const { name, url: listUrl, extra } of de) {
+const url = video && /youtube\.com\/playlist/.test(listUrl) ? video : listUrl;
 const s = SERVICES.find(s => s.match.test(name));
 const label = (s?.label || name) + (extra ? ' + ' + extra : '');
 if (!links.some(l => l.url === url))
