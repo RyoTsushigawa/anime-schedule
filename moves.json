@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T21:51:15.531Z",
+ "updated": "2026-11-06T23:10:18.787Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -160,6 +160,14 @@
    "title": "The Exiled Heavy Knight Knows How to Game the System",
    "minutes": 30,
    "reason": "DIESE VERSPÄTUNG IST GESPONSERT VON HOLY"
+  },
+  {
+   "id": "okhlutfp",
+   "day": "2026-11-07",
+   "show": "ranma12season3",
+   "title": "Ranma ½ (2024) Season 3",
+   "minutes": 5,
+   "reason": "Ein Truck-kun ist auf der Strecke liegen geblieben"
   }
  ]
 }
