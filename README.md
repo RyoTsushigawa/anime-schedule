@@ -3,23 +3,27 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
-The Misc. menu between Search and Settings contains the planner, ranker, Anime Wrapped and
-Piplup/Empoleon masterset. Owners enter/leave moving mode with
-“Edit schedule” above the week; editing access is managed from Misc. Settings contains
-display choices. Catch-up stream links
-default on unless explicitly disabled. Single open episodes use one compact card, while
-multiple episodes stay grouped chronologically with ✓ at the far right.
+The **Misc.** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
+and the Piplup/Empoleon Masterset Tracker. **Settings** holds the display choices and **Hilfe**, the
+guide (shortcuts at its end); `?` opens it too. Catch-up stream links default on unless disabled.
+Single open episodes use one compact card; several stay grouped chronologically with ✓ at the far right.
+Paused shows keep a smaller card in their slot. MAL avatars come from the connected profile, with an
+initial if unavailable.
 
-The small **?** next to the title opens the guide, with the keyboard shortcuts at its end.
-MAL avatars are refreshed from the connected profile, with an initial if unavailable.
-In **Edit schedule**, drag the whole show card onto a day to append a 30-minute slot,
-or onto another show to share its planned slot. Dropping only prefills the move dialog:
-the owner confirms before anything is saved for everyone. Escape cancels a drag. Clicking
-the handle still opens the original typed destination controls.
-On phones, hold a non-interactive part of a card for 300 ms before dragging; normal swipes
-still scroll. Buttons and service links remain clickable. Settings → Fallback links chooses
-AniWorld or torrents for the selected people, remembered in this browser. Defaults remain torrents for Rei and AniWorld for others. Mixed group
-preferences can show both alternatives. Available service buttons always take priority.
+**Moving shows** (with the GitHub key in this browser): **Edit** next to the views turns on moving.
+Drag a card onto the middle of another show to share its slot, or onto its top or bottom edge to go
+before or after; it saves at once for everyone, and **Rückgängig** in the notice undoes it. **Woche** or
+**Immer** sets how long a move lasts. On phones, hold the card 300 ms first; normal swipes still scroll.
+⇄ types a destination by hand, **Edit** on a day heading rewrites the day as a list, and the Discord icon
+turns the day into the message for the server.
+
+**Verspätung:** the clock on today's heading adds a delay from one show on; it and every later show move,
+and delays add up. **Edit** on the delay line changes or removes it. Everyone can add one (see
+"Verspätungen für alle"); other open pages pick it up within 30 seconds.
+
+**Ersatz-Links** (Settings) choose AniWorld or torrents for the selected people when no service shows,
+and Prime or torrents for Prime shows; remembered in this browser. Defaults are torrents for Rei and
+AniWorld for the others. Mixed groups can show both. Available service buttons always take priority.
 
 **MyAnimeList accounts:** open the account menu → Connect MyAnimeList. The Cloudflare helper
 (`https://anime-schedule-mal.shigeruhagano.workers.dev`) handles OAuth and keeps MAL credentials
@@ -75,10 +79,18 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 
 | File | What it is |
 |---|---|
-| `index.html` | The whole page |
+| `index.html`, `style.css` | The page and its look |
+| `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
+| `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
+| `planner.html`, `planner.js`, `xlsx.js` | Watch planner |
+| `wrapped.*`, `wrapped-profiles.json` | Anime Wrapped |
 | `streams-de.json` | Where each Guckplan show streams in Germany (from LiveChart) |
+| `seasons.json`, `fallback-links.json` | Season index and the alternative show links (daily GitHub run) |
+| `moves.json` | Moves, delays and kept delay reasons (only on GitHub, written by the page and the delay helper) |
 | `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany) |
-| `tools/publish.mjs` | Uploads `index.html`, `streams-de.json` and this README to GitHub |
+| `tools/publish.mjs` | Runs the tests, then uploads the changed files to GitHub |
+| `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
+| `tests/` | The page clicked through in a simulated browser (`node --test` there) |
 
 ## Weekly refresh
 
