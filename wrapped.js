@@ -1,5 +1,5 @@
 // A separate read-only recap, so Wrapped never gets in the way of the schedule.
-let wrappedTabs = [], wrappedPlan = null, wrappedRecords = [], wrappedDelays = [], wrappedProfiles = {}, wrappedAccounts = [];
+let wrappedTabs = [], wrappedPlan = null, wrappedRecords = [], wrappedProfiles = {}, wrappedAccounts = [];
 let wrappedTabNote = '', wrappedPlanNote = '';
 let wrappedCards = [], wrappedIndex = 0, wrappedGeneration = 0, wrappedLoadGeneration = 0;
 try { wrappedProfiles = JSON.parse(localStorage.getItem('wrappedProfiles') || '{}') || {}; } catch {}
@@ -17,7 +17,7 @@ const wrappedRank = items => `<ol class="rank">${items.map(([label,n],i)=>`<li><
 const wrappedAccountKey = a => `${a.provider || 'anilist'}:${String(a.name).toLowerCase()}`;
 const wrappedQuery = `query ($user:String) { MediaListCollection(userName:$user,type:ANIME) {
   lists { entries { status progress score:score(format:POINT_100) completedAt { year month day }
-    media { id episodes duration genres title { romaji english } } } }
+    media { id idMal episodes duration genres title { romaji english } } } }
 } }`;
 async function wrappedSheetApi(path) {
   const {sheetsKey}=await config();if(!sheetsKey)throw new Error('kein Sheets-API-Schlüssel');
@@ -146,9 +146,10 @@ async function wrappedRender(fresh=false) {
     note:'Serienauswahl einschließlich Vielleicht und eurer bedingten Zusagen. Keine Anwesenheitsmessung.'
   }];
   if(!person) cards.push({kicker:'Paralleluniversen',title:'Ein Slot. Mehrere Realitäten.',color:'#f4a9d1',html:`<div class="big">${stats.parallel}</div><p>Slots mit mehreren Serien gleichzeitig. Ihr habt den Multitasking-Skilltree freigeschaltet.</p>`,note:'Parallelität laut Guckplan; Slots ohne Zeit werden nur mit expliziter Slotnummer zusammengelegt.'});
+  cards.push({kicker:'Abseits des Mainstreams',title:stats.exclusive.length?'Das schaut sonst niemand hier.':'Ihr seid euch verdächtig einig.',color:'#f4a9d1',html:'<div class="big">'+stats.exclusive.length+'</div><p>Serien mit genau einer Person aus der Gruppe im Plan. Persönliche Nebenquests sind auch Quests.</p>'+wrappedRank(stats.exclusive.slice(0,3).map(s=>[s.title,'Solo'])),note:person?'Nur deine Serien, die sonst niemand im Gruppenplan hat.':'Gruppenweite Einzelpicks. Das ist keine Aussage über die allgemeine Popularität einer Serie.'});
+  if(stats.night)cards.push({kicker:'Die Nachtschicht',title:'Der Abspann kennt keine Schlafenszeit.',color:'#c8a6ff',html:'<div class="big">'+stats.night.time.split(':').map(v=>v.padStart(2,'0')).join(':')+'</div><p>Spätester eingetragener Start: '+wrappedSafe(stats.night.title)+' ('+wrappedSafe(stats.night.day)+'). Die Bettdecke wartet geduldig.</p>',note:'Geplante Startzeit, kein tatsächlicher Watch-Verlauf. Ohne Uhrzeit eingetragene Serien zählen hier nicht.'});
+  cards.push({kicker:person?'Deine Plan-Dimension':'Der Ja-Knopf hat gelitten',title:person?'Wie voll ist dein Anime-Rucksack?':'Wer braucht eigentlich Freizeit?',color:'#94dce0',html:wrappedRank(stats.perPerson.slice(0,5).map(([n,count])=>[n,count+' Serien']))+'<p>'+ (person?'Dein Plan enthält '+stats.shows+' der '+WrappedStats.plan(wrappedRecords,wrappedPlan.people).shows+' Gruppenserien.':'Alle sichtbaren Personen nach Zahl ihrer geplanten Serien. Vielleicht zählt mit. Natürlich zählt Vielleicht mit.')+'</p>',note:'Plan-Auswahl, keine Rangliste der tatsächlich gesehenen Folgen.'});
   const seasonStart=tab.start || new Date().getTime(), endDate=new Date(seasonStart);endDate.setMonth(endDate.getMonth()+3);
-  const recentDelays=wrappedDelays.filter(d=>Date.parse(d.day)>=seasonStart&&Date.parse(d.day)<endDate.getTime());
-  if(recentDelays.length) cards.push({kicker:'Die ganze Gruppe · zuletzt gespeichert',title:'Pünktlichkeit ist ein Genre.',color:'#ffc764',html:`<div class="big">+${recentDelays.reduce((n,d)=>n+Number(d.minutes||0),0)}</div><p>Minuten in ${recentDelays.length} zuletzt gespeicherten Verspätungen. Diese Minuten gelten für den ganzen Plan.</p>${wrappedRank(recentDelays.slice(-3).map(d=>[d.reason,'+'+d.minutes+' Min.']))}`,note:'Nur aktuell gespeicherte Verspätungen. Alte Einträge werden gelöscht: kein Season-Gesamttotal. Gilt auch im persönlichen Wrapped für die gesamte Gruppe.'});
   wrappedDraw(cards);
   $('status').textContent='Plan geladen · Listen-Statistiken werden gelesen…';
   let profiles=[...new Map(selected.flatMap(p=>Array.isArray(wrappedProfiles[p])?wrappedProfiles[p]:[]).filter(p=>p?.name).map(p=>[wrappedAccountKey(p),p])).values()];
@@ -175,6 +176,9 @@ async function wrappedRender(fresh=false) {
     const summary=WrappedStats.list(entries,seasonStart,endDate.getTime());
     const coverage=person?`${results.map(r=>r.profile.name).join(', ')}`:`${covered} von ${selected.length} Plan-Personen zugeordnet · ${results.length} Konten lesbar`;
     cards.push({kicker:`Listen-Rückblick · ${coverage}`,title:summary.completed?'Endings? Du sammelst sie.':'Die Endings kommen noch.',color:'#d6ff79',html:`<div class="big">${summary.completed}</div><p>Serien mit Abschlussdatum in ${wrappedSafe(season)}.</p>${wrappedMetrics([[summary.current,'aktuell Watching / Rewatching'],[summary.episodes,'Folgen dieser abgeschlossenen Serien'],['≈ '+wrappedHours(summary.minutes)+' h','Laufzeit der abgeschlossenen Serien']])}`,note:'Abschlussdatum aus der Liste. Laufzeit ≠ in dieser Season verbrachte Zeit; Folgen können früher gesehen worden sein. Fehlende Laufzeit: 24 Min. geschätzt.'});
+    if(summary.rated)cards.push({kicker:'Die Kritikerloge',title:summary.mean>=80?'Du bist leicht zu begeistern. Zum Glück.':summary.mean>=60?'Liebe mit konstruktiver Kritik.':'Der Rotstift hat Überstunden.',color:'#ffc764',html:'<div class="big">'+(summary.mean/10).toLocaleString('de-DE',{maximumFractionDigits:1})+'</div><p>von 10 Punkten im Schnitt. Basierend auf '+summary.rated+' bewerteten Abschlüssen in dieser Season.</p>',note:'Nur zugeordnete Listen mit vollständigem Abschlussdatum. Unbewertete Serien zählen nicht als 0.'});
+    if(summary.finishDay){const [date,count]=summary.finishDay;const [y,m,d]=date.split('-').map(Number);cards.push({kicker:'Tag der Endings',title:'An diesem Tag war Schluss. Mehrfach.',color:'#f4a9d1',html:'<div class="big">'+count+'</div><p>Listen-Abschlüsse am '+new Date(y,m-1,d).toLocaleDateString('de-DE')+'. Dein emotionaler Support-Snack hatte viel zu tun.</p>',note:'Der Tag mit den meisten eingetragenen Abschlüssen, keine Messung eines Binges. Gruppenwerte zählen Abschlüsse pro verknüpfter Person.'});}
+    if(!person&&summary.debate)cards.push({kicker:'Geschmacksgericht',title:summary.debate.title,color:'#ffb78d',html:'<div class="big">'+(summary.debate.gap/10).toLocaleString('de-DE')+'</div><p>Punkte Unterschied zwischen der höchsten und niedrigsten Bewertung. Diese Diskussion braucht einen Moderator.</p>',note:'Größte Bewertungsdifferenz bei derselben in dieser Season abgeschlossenen Serie. Nur die zugeordneten Konten mit Wertung zählen.'});
     if(summary.genre)cards.push({kicker:'Dein Genre-Plot-Twist',title:summary.genre[0],color:'#c8a6ff',html:`<div class="big">${summary.genre[1]}</div><p>abgeschlossene Serien mit diesem Genre. Zufall? Dein Algorithmus nennt es Persönlichkeit.</p>`,note:'Aus Serien mit Abschlussdatum in der gewählten Season. Serien können mehrere Genres haben; fehlende Metadaten zählen nicht.'});
     if(summary.favourites.length)cards.push({kicker:'Die Favoritenliste',title:'Du hast Geschmack. Und Zahlen.',color:'#ffb78d',html:wrappedRank(summary.favourites.map(f=>[f.title,(f.score/10).toLocaleString('de-DE')+'/10'])),note:'Bewertungen der in dieser Season abgeschlossenen Serien. AniList/MAL auf 10 Punkte umgerechnet; gleich bewertete Serien sind gleichauf.'});
     undated=summary.undated;
@@ -183,7 +187,7 @@ async function wrappedRender(fresh=false) {
   wrappedDraw(cards);wrappedShow(index);
   $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:(wrappedTabNote||wrappedPlanNote?'Gespeicherte Daten · ↻ versucht es erneut.':'Dein Wrapped ist bereit.');
   const stale=results.filter(r=>r.stale);
-  $('sources').textContent=`${wrappedTabNote} ${wrappedPlanNote} Guckplan-Snapshot: ${new Date().toLocaleDateString('de-DE')}. Season: ${season}. Plan-Daten sind keine Watch-Historie; temporäre Wochenverschiebungen sind nicht eingerechnet. ${person?'Persönliche Serienauswahl; Verspätungen bleiben gruppenweit.':'Konten zählen einmal; ausdrücklich gekoppelte AniList/MAL-Listen werden nicht doppelt gezählt.'} ${undated?undated+' undatierte Abschlüsse aus der gesamten Liste wurden nicht dieser Season zugeordnet. ':''}${stale.length?'Gespeicherte Listen statt Live-Daten: '+stale.map(r=>r.profile.name+' ('+new Date(r.time).toLocaleDateString('de-DE')+')').join(', '):''}`;
+  $('sources').textContent=`${wrappedTabNote} ${wrappedPlanNote} Guckplan-Snapshot: ${new Date().toLocaleDateString('de-DE')}. Season: ${season}. Plan-Daten sind keine Watch-Historie; temporäre Wochenverschiebungen sind nicht eingerechnet. ${person?'Persönliche Serienauswahl.':'Konten zählen einmal; ausdrücklich gekoppelte AniList/MAL-Listen werden nicht doppelt gezählt.'} ${undated?undated+' undatierte Abschlüsse aus der gesamten Liste wurden nicht dieser Season zugeordnet. ':''}${stale.length?'Gespeicherte Listen statt Live-Daten: '+stale.map(r=>r.profile.name+' ('+new Date(r.time).toLocaleDateString('de-DE')+')').join(', '):''}`;
 }
 async function wrappedLoad(fresh = false) {
   const loadGeneration=++wrappedLoadGeneration; ++wrappedGeneration;
@@ -295,7 +299,6 @@ async function wrappedInitialize(fresh = false){
     wrappedTabs=await wrappedReadTabs();
     $('season').replaceChildren(...wrappedTabs.map(t=>new Option(t.name.replace(/^Guckplan\s+/,''),t.gid)));
     $('season').value=wrappedTabs.some(t=>t.gid===selectedTab)?selectedTab:tabFor(wrappedTabs,new Date()).gid;
-    try{const response=await fetch('moves.json',{cache:'no-cache'});if(response.ok)wrappedDelays=(await response.json()).delays||[];}catch{}
     await wrappedLoad(fresh);
   }catch(error){$('status').textContent='Wrapped konnte nicht geladen werden: '+error.message;}
   finally{$('refresh').disabled=false;}
