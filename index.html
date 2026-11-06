@@ -42,10 +42,9 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <section>
 <div class="menu-label">Anzeigen</div>
 <div class="pills settings-options">
-<label class="toggle" title="Wenn du einen Stream öffnest, wird die Folge auch als gesehen markiert (wenn deine Liste verbunden ist). Rückgängig bleibt möglich."><input type="checkbox" id="markOnOpen">Beim Öffnen ✓</label>
+<label class="toggle" title="Wenn du einen Stream öffnest, wird die Folge auch als gesehen markiert (wenn deine Liste verbunden ist). Rückgängig bleibt möglich."><input type="checkbox" id="markOnOpen">Auto-✓</label>
 <label class="toggle week-only" title="Zeigt, wer welche Serie schaut"><input type="checkbox" id="who" aria-label="Wer schaut mit">Zuschauer</label>
 <label class="toggle week-only" title="Zeigt bei einer Folge, wie viele frühere Folgen du noch nicht gesehen hast (wenn deine Liste verbunden ist)"><input type="checkbox" id="behind">Behind</label>
-<label class="toggle" title="Zeigt auch Dienste, die du nicht hast"><input type="checkbox" id="others">Andere Dienste</label>
 <label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Droppen</label>
 <button id="editScheduleMenu" class="toggle phone-only week-only" hidden>Edit</button>
 </div>
@@ -83,7 +82,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 </section>
 <section>
-<button id="helpButton" class="menu-item" aria-haspopup="dialog">Anleitung und Tastenkürzel<kbd>?</kbd></button>
+<button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
 </section>
 </div>
 </div>
@@ -93,14 +92,13 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <section>
 <div class="menu-label">Listen-Konten</div>
 <div id="accountSection" class="pills"></div>
-<label class="field catchup-only"><span>Catch-up-Liste von</span>
+<label class="field catchup-only"><span>Aufhol-Liste</span>
 <input id="anilistUser" placeholder="AniList-Name" aria-label="AniList-Name" spellcheck="false"></label>
 </section>
 <section id="listSyncSection" hidden>
-<div class="menu-label">Listen abgleichen</div>
-<label class="field"><span>Auch aktualisieren</span><select id="syncTarget" aria-label="Konto zum Abgleichen"></select></label>
-<div class="pills"><label class="toggle"><input id="syncBoth" type="checkbox">Beide Listen abgleichen</label></div>
-<p class="sync-hint">Nur neue Änderungen. MAL rundet Bewertungen auf ganze Zahlen.</p>
+<div class="menu-label">Sync</div>
+<div class="sync-row"><select id="syncTarget" aria-label="Konto, das mit abgeglichen wird"></select>
+<label class="toggle" title="Neue Änderungen auch dort speichern. MAL rundet Bewertungen auf ganze Zahlen."><input id="syncBoth" type="checkbox">An</label></div>
 </section>
 </div>
 </div>
@@ -115,7 +113,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="modeSolo">Solo</button><button id="modeGroup">Gruppe</button>
 </div>
 <div class="segmented soft catchup-only seasonal-only" role="group" aria-label="Darstellung beim Catch-up">
-<button id="perShow">Pro Serie</button><button id="perEpisode">Einzelne Folgen</button>
+<button id="perShow" title="Eine Zeile pro Serie">Serien</button><button id="perEpisode" title="Jede Folge einzeln">Folgen</button>
 </div>
 <button id="markAllStart" class="pill catchup-only seasonal-only" title="Alle als gesehen markieren" aria-label="Alle als gesehen markieren" hidden>Alle gesehen</button>
 <select id="soloPerson" class="pill" aria-label="Person"></select>
@@ -158,7 +156,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="muted" id="moveMsg"></div>
 <div class="dlg-row">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
-<button type="button" id="moveReset" class="pill">Zurück in den Guckplan-Slot</button>
+<button type="button" id="moveReset" class="pill" title="Zurück in den Guckplan-Slot">Zurücksetzen</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
@@ -195,12 +193,12 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <dialog id="scoreDlg" class="dlg">
 <form method="dialog">
 <b id="scoreName"></b>
-<div class="muted" id="scoreService">Abgeschlossen. Deine Bewertung auf AniList:</div>
+<div class="muted" id="scoreService">Bewertung</div>
 <div class="dlg-row" id="scoreInput"></div>
 <div class="muted" id="scoreMsg"></div>
 <div class="dlg-row">
 <button type="button" id="scoreSave" class="pill primary">Speichern</button>
-<button type="button" id="scoreClear" class="pill">Bewertung entfernen</button>
+<button type="button" id="scoreClear" class="pill" title="Bewertung entfernen">Entfernen</button>
 <button value="cancel" class="pill">Später</button>
 </div>
 </form>
@@ -213,8 +211,8 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <input id="keyInput" type="password" placeholder="github_pat_…" autocomplete="off" aria-label="GitHub-Schlüssel">
 <div class="muted" id="keyMsg"></div>
 <div class="dlg-row">
-<button type="button" id="keySave" class="pill primary">Schlüssel speichern</button>
-<button type="button" id="keyRemove" class="pill">Schlüssel entfernen</button>
+<button type="button" id="keySave" class="pill primary" title="Schlüssel speichern">Speichern</button>
+<button type="button" id="keyRemove" class="pill" title="Schlüssel entfernen">Entfernen</button>
 <button value="cancel" class="pill">Schließen</button>
 </div>
 </form>
@@ -226,9 +224,9 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <section><h3>Plan wählen</h3><p><b>Solo</b> zeigt den Plan einer Person. <b>Gruppe</b> kombiniert die Leute, die du auswählst. Wählst du niemanden, wird nichts angezeigt.</p></section>
 <section><h3>Ansicht wählen</h3><p><b>Zeitplan</b> folgt den Gucktagen der Gruppe. <b>Catch-up</b> listet verpasste Folgen der Season. <b>Non-seasonal</b> sammelt ältere Serien für dein eigenes Tempo. Am Handy wechselst du die Woche durch Wischen nach links oder rechts.</p></section>
 <section><h3>Schauen, dann ✓ setzen</h3><p>Die Dienst-Buttons öffnen die Serie. Verbinde ein Konto, um ✓, Droppen und Bewertungen zu nutzen. Ein ✓ setzt deinen Fortschritt bis zu dieser Folge, auch für frühere Folgen. Bei Fehlern hilft <b>Rückgängig</b> oder Strg/⌘+Z.</p></section>
-<section><h3>Catch-up, wie du willst</h3><p><b>Einzelne Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle als gesehen markieren</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
-<section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle das passende Konto und aktiviere <b>Beide Listen abgleichen</b>, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
-<section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> wählt AniWorld oder Torrents für die gewählten Leute, wenn kein Dienst angezeigt wird, und bei Prime-Serien zwischen Prime und Torrents. <b>Andere Dienste</b> zeigt auch Dienste, die du nicht hast. Watch planner und Ranker findest du unter dem Zeitplan.</p></section>
+<section><h3>Catch-up, wie du willst</h3><p><b>Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle gesehen</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
+<section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle unter <b>Sync</b> das andere Konto und schalte <b>An</b> ein, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
+<section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> wählt AniWorld oder Torrents für die gewählten Leute, wenn kein Dienst angezeigt wird, und bei Prime-Serien zwischen Prime und Torrents. Watch planner und Ranker findest du unter dem Zeitplan.</p></section>
 <section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Edit</b>; <b>Woche</b> oder <b>Immer</b> daneben sagt, wie lange eine Verschiebung gilt. Ziehe eine Serie dorthin, wo sie diese Woche hin soll: auf die Mitte einer anderen Serie, um daneben zu laufen, oder auf ihren oberen oder unteren Rand, um davor oder danach zu kommen. Es wird sofort gespeichert; „Rückgängig“ in der Meldung nimmt es zurück. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Mit ⇄ gibst du das Ziel von Hand ein, mit <b>Edit</b> an einem Tag schreibst du den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server. Gespeicherte Verschiebungen gelten für alle.</p></section>
 <section id="helpKeys"><h3>Tastenkürzel</h3>
 <dl class="keyboard-guide">
