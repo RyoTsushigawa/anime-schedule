@@ -541,6 +541,8 @@ for (const day of document.querySelectorAll('#list .day'))
 day.classList.toggle('hidden-by-search', !!q && !day.querySelector('[data-search]:not(.hidden-by-search)'));
 for (const box of document.querySelectorAll('#list .shared:not([data-search])'))
 box.classList.toggle('hidden-by-search', !!q && !box.querySelector('[data-search]:not(.hidden-by-search)'));
+if (q) for (const fold of document.querySelectorAll('#list details.not-listed:not([open])'))
+if (fold.querySelector('[data-search]:not(.hidden-by-search)')) fold.open = true;
 let none = $('noMatch');
 if (q && items.length && !document.querySelector('#list [data-search]:not(.hidden-by-search)')) {
 if (!none) { none = document.createElement('div'); none.id = 'noMatch'; none.className = 'nomatch'; }
@@ -1732,7 +1734,7 @@ const row = { m, first, out, since, missing, progress, links: streamLinks(m, sho
 return { rows, ownPace };
 }
 function showCatchupCount(rows) {
-const count = rows.reduce((sum, r) => sum + r.out - r.first + 1, 0);
+const count = rows.filter(r => !r.missing).reduce((sum, r) => sum + r.out - r.first + 1, 0);
 $('catchupCount').textContent = count || '';
 $('catchupCount').hidden = !count;
 $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} für Catch-up` : '';
@@ -1840,9 +1842,14 @@ const top = !mine || !rows.length || !selecting ? ''
 : `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
 const listed = rows.filter(r => !r.missing), notListed = rows.filter(r => r.missing);
+let unfolded = false;
+try { unfolded = localStorage.getItem('notListedOpen') === '1'; } catch {}
 $('list').innerHTML = rows.length ? top + listed.map(show).join('') + (notListed.length
-? `<section class="day not-listed"><h2>Noch nicht auf deiner ${listService()}-Liste · ${notListed.length}</h2>${notListed.map(show).join('')}</section>` : '')
+? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2>Noch nicht auf deiner ${listService()}-Liste · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '')
 : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
+$('list').querySelector('.not-listed > summary')?.addEventListener('click', e => {
+try { localStorage.setItem('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1'); } catch {}
+});
 const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
 if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Beendet · noch nicht bewertet</h2>${unscored.map(({ media: m, completed }) => `
       <div class="row" ${searchKey(...mediaTitles(m))}>
