@@ -650,10 +650,10 @@ taken.add(r.watchAt);
 }
 day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
 }
-function applyDelays(day) {
+function applyDelays(day, timeline = day) {
 const list = delaysOf(isoDay(day.date));
 const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
-day.delayStarts = list.map(x => ({ ...x, at: day.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
+day.delayStarts = list.map(x => ({ ...x, at: timeline.rows.find(r => keyOf(r) === x.show)?.plannedAt ?? timeline.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
 for (const r of day.rows) {
 const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => n + x.minutes, 0);
 if (minutes) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, watchAt: r.watchAt + minutes * 60000 });
@@ -896,7 +896,8 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
-for (const d of days) { assignWatchTimes(d); applyDelays(d); }
+const fullDays = !everyone && delays.length ? render(items, start, plans, true) : null;
+for (const d of days) { assignWatchTimes(d); applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d); }
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
 const picked = range === 'day' && !searching() && days.find(d => isoDay(d.date) === pickedDay);
@@ -2114,22 +2115,48 @@ function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
-async function saveMoves(next, nextDelays = delays, nextReasons = sharedReasons) {
+async function saveMoves(next, changeDelays = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
-const current = await fetch(MOVES_API + '?ref=main', { headers, cache: 'no-store' });
-const sha = current.ok ? (await current.json()).sha : undefined;
+for (let attempt = 0; attempt < 3; attempt++) {
+const current = await fetch(MOVES_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
+const meta = current.ok ? await current.json() : null;
+let remote = {};
+try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
+let nextDelays = remote.delays || [], nextReasons = remote.reasons || [];
+if (changeDelays) ({ delays: nextDelays, reasons: nextReasons } = changeDelays(nextDelays, nextReasons));
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
-const file = { updated: new Date().toISOString(), moves: next, ...(nextDelays.length && { delays: nextDelays }), ...(nextReasons.length && { reasons: nextReasons }) };
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextReasons.length && { reasons: nextReasons }) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
-body: JSON.stringify({ message: 'Move shows', content, branch: 'main', ...(sha && { sha }) }) });
-if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
-moves = next;
+body: JSON.stringify({ message: changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
+if (res.ok) {
+moves = file.moves;
 delays = nextDelays;
 sharedReasons = nextReasons;
+movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
+return;
 }
+if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
+}
+throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
+}
+const movesStamp = () => JSON.stringify([moves, delays, sharedReasons]);
+let movesSeen = '';
+async function followMoves() {
+if (document.visibilityState !== 'visible' || view !== 'week' || !lastWeekRender) return;
+if (document.querySelector('dialog[open]') || document.body.classList.contains('dnd-moving')) return;
+const known = new Set(delays.map(d => d.id));
+await loadMoves();
+const stamp = movesStamp();
+if (stamp === movesSeen) return;
+const fresh = movesSeen && delays.filter(d => !known.has(d.id) && d.day === isoDay(new Date()));
+movesSeen = stamp;
+render(...lastWeekRender);
+if (fresh?.length) notice(fresh.map(d => `Verspätung: +${d.minutes} Min. ab ${d.title || d.show}`).join(' · '));
+}
+setInterval(followMoves, 30000);
 $('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
 syncMoveEditor();
 function openKeyDialog() {
@@ -2344,7 +2371,13 @@ if ($('delayCustom').value) for (const x of $('delayMinutes').querySelectorAll('
 });
 $('delayDice').onclick = () => { $('delayReason').value = randomReason(); syncRemember(); };
 async function postDelay(op) {
-const send = () => fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) });
+const send = async () => {
+for (let attempt = 0; ; attempt++) {
+const response = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) });
+if (response.status !== 409 || attempt >= 3) return response;
+await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+}
+};
 let res;
 try { res = await send(); } catch {
 await new Promise(r => setTimeout(r, 1500));
@@ -2355,18 +2388,19 @@ if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.s
 moves = body.moves || moves;
 delays = body.delays || [];
 sharedReasons = body.reasons || sharedReasons;
+movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
 }
 async function changeDelays(day, show, add, remember) {
 const mine = x => x.day === day && x.show === show;
 const old = delays.filter(mine);
 if (movesKey) {
-await saveMoves(moves, delays.filter(x => !mine(x)).concat(add || []), remember ? [...new Set([...sharedReasons, add.reason])] : sharedReasons);
+await saveMoves(moves, (d, r) => ({ delays: d.filter(x => !mine(x)).concat(add || []), reasons: remember ? [...new Set([...r, add.reason])] : r }));
 return;
 }
 if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
-for (const x of old) await postDelay({ remove: x.id });
 if (add) await postDelay({ add, ...(remember && { remember: true }) });
+for (const x of old) await postDelay({ remove: x.id });
 }
 async function storeDelay(add, done, remember = false) {
 $('delayMsg').textContent = 'Speichert…';
@@ -2381,7 +2415,7 @@ finally { $('delaySave').disabled = $('delayRemove').disabled = false; }
 }
 $('delaySave').onclick = () => {
 const minutes = Math.round(delayMinutes());
-if (!(minutes >= 1)) { $('delayMsg').textContent = 'Wie viele Minuten?'; return; }
+if (!Number.isSafeInteger(minutes) || minutes < 1 || minutes > 99999) { $('delayMsg').textContent = 'Bitte 1 bis 99999 Minuten eingeben.'; return; }
 const from = delayDay.rows.find(r => r.key === $('delayFrom').value);
 if (!from) return;
 const typed = $('delayReason').value.trim();
@@ -2535,7 +2569,7 @@ setNote('streams', `${unreachable('Die Seite')}: die Stream-Daten wurden nicht g
 });
 const ready = Promise.all([
 loadFallbackLinks(),
-loadMoves(),
+loadMoves().then(() => { movesSeen = movesStamp(); }),
 streamsReady,
 savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
 .then(list => { tabs = list; }, e => {
