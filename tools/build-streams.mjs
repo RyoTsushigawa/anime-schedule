@@ -95,17 +95,40 @@ async function activeTabs() {
   return i < 0 ? [tab] : [tab, tabs[i - 1], tabs[i + 1]].filter(Boolean);
 }
 
+// The MyAnimeList links on the sheet's titles, by title. The CSV export drops links, so they come
+// from the read-only Sheets API with the page's key (limited to the site, hence its Referer).
+async function sheetMalIds(tabName) {
+  try {
+    const { sheetsKey } = JSON.parse(await readFile(new URL('../config.json', import.meta.url), 'utf8'));
+    if (!sheetsKey) return new Map();
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET.split('/d/')[1]}?ranges=${encodeURIComponent(`'${tabName}'!A1:Z200`)}` +
+      `&fields=sheets(data(rowData(values(formattedValue,hyperlink))))&key=${encodeURIComponent(sheetsKey)}`,
+      { headers: { Referer: 'https://ryotsushigawa.github.io/anime-schedule/' }, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`Sheets API returned ${res.status}`);
+    const ids = new Map();
+    for (const row of (await res.json()).sheets?.[0]?.data?.[0]?.rowData || [])
+      for (const cell of row.values || []) {
+        const id = cell.hyperlink?.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
+        if (id && cell.formattedValue) ids.set(cell.formattedValue.trim(), id);
+      }
+    return ids;
+  } catch (e) { console.log(`MAL links not read: ${e.message}`); return new Map(); }
+}
+
+// Each show as [romaji, English], with .mal: its MyAnimeList id from the sheet's link, if any
 async function sheetTitles() {
   const shows = [];
   for (const tab of await activeTabs()) {
     console.log(`Sheet tab: ${tab.name}`);
     const rows = parseCsv(await (await fetch(`${SHEET}/export?format=csv&gid=${tab.gid}`)).text());
+    const mal = await sheetMalIds(tab.name);
     const headerIndex = rows.findIndex(r => r.some(c => c.trim() === 'Anime Titel'));
     const header = rows[headerIndex].map(c => c.trim());
     for (const r of rows.slice(headerIndex + 1)) {
       const romaji = (r[header.indexOf('Anime Titel')] || '').trim();
       if (!romaji) break;
-      shows.push([romaji, (r[header.indexOf('Eng Anime Titel')] || '').trim()]);
+      const english = (r[header.indexOf('Eng Anime Titel')] || '').trim();
+      shows.push(Object.assign([romaji, english], { mal: mal.get(romaji) || mal.get(english) || '' }));
     }
   }
   return shows;
@@ -287,16 +310,21 @@ const unmatched = [];
 // (a typo in the sheet, or a show LiveChart lists under another season).
 const reportUnmatched = () => unmatched.length && console.log(
   `\nNOT FOUND on LiveChart (${unmatched.length}), so not on the page:\n${unmatched.map(s => `  - ${s}`).join('\n')}`);
+const malOf = card => card.list?.mal?.match(/\/anime\/(\d+)/)?.[1];
 for (const t of titles) {
-  const scored = cards.map(c => ({ c, s: titleScore(t, c.titles) })).filter(x => x.s);
-  const best = Math.max(0, ...scored.map(x => x.s));
-  let card = scored.find(x => x.s === best)?.c;
+  // The sheet's MyAnimeList link names the show exactly; titles are only the fallback
+  let card = t.mal && cards.find(c => c.anilist && malOf(c) === t.mal);
+  if (!card) {
+    const scored = cards.map(c => ({ c, s: titleScore(t, c.titles) })).filter(x => x.s);
+    const best = Math.max(0, ...scored.map(x => x.s));
+    card = scored.find(x => x.s === best)?.c;
+  }
   if (!card?.anilist) {
     const known = Object.entries(previous?.status || {}).find(([, s]) => titleScore(t, s.titles || []) === 2)?.[0];
     if (known) card = cards.find(c => c.anilist === known) || card;
   }
   if (!card?.anilist) card = await cardByAnilist(t);
-  if (!card?.anilist) { unmatched.push(t.filter(Boolean).join(' / ')); continue; }
+  if (!card?.anilist) { unmatched.push(t.filter(Boolean).join(' / ') + (t.mal ? ` (MAL ${t.mal})` : ' (no MAL link in the sheet)')); continue; }
   if (status[card.anilist]) continue;
   // Streams and offsets depend on the region: only from home (Germany)
   byAnilist[card.anilist] = statusOnly ? [] : await streams(card.id);
