@@ -39,8 +39,7 @@ if (!allowed() || button.disabled || !button.isConnected) return false;
 source = button; dragWeek = weekOffset;
 button.closest('.row')?.classList.add('move-dragging');
 document.body.classList.add('dnd-moving');
-hint.textContent = 'Auf die Mitte einer Serie: daneben. Auf ihren Rand: davor oder danach.';
-hint.hidden = false; return true;
+return true;
 }
 const minutes = row => { const hm = parseTime(row?.dataset.watchTime); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0]+24 : hm[0])*60+hm[1] : null; };
 const clock = n => n === null || n < 0 || n >= 30*60 ? '' : `${String(Math.floor(n/60)%24).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
@@ -78,7 +77,6 @@ const box = target.row?.getBoundingClientRect();
 const at = target.mark === 'drop-before' ? box.top - 5 : target.mark === 'drop-after' ? box.bottom + 4 : (last ? last.bottom + 4 : head.bottom + 4);
 showLine(target.day, at, target.time);
 }
-hint.textContent = `${target.tag} ${target.time || 'nächster freier Slot'}${target.parallel ? ' · daneben' : ''}`;
 }
 function drop() {
 const button = source, to = target;
