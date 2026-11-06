@@ -602,7 +602,9 @@ for (const r of document.querySelectorAll('.row[data-fade-at]'))
 r.classList.toggle('aired', now >= Number(r.dataset.fadeAt));
 document.querySelector('.now-line')?.remove();
 const items = [...document.querySelectorAll('.day.is-today > .row[data-fade-at], .day.is-today > .shared:has(.row[data-fade-at])')];
-const past = el => [...el.matches('.row') ? [el] : el.querySelectorAll('.row[data-fade-at]')].every(r => r.classList.contains('aired'));
+const byRelease = choices.time === 'release';
+const done = r => byRelease && r.dataset.at ? now >= Number(r.dataset.at) : r.classList.contains('aired');
+const past = el => [...el.matches('.row') ? [el] : el.querySelectorAll('.row[data-fade-at]')].every(done);
 const next = items.findIndex(el => !past(el));
 if (next !== 0 && items.length)
 (next > 0 ? items[next] : items.at(-1)).insertAdjacentHTML(next > 0 ? 'beforebegin' : 'afterend', '<div class="now-line" aria-hidden="true"><span>Jetzt</span></div>');
@@ -849,7 +851,14 @@ unknown.push({ show, why: airingFacts.get(alId)?.status === 'RELEASING'
 continue;
 }
 const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
-if (!day || weekEnd < Date.now()) { unknown.push({ show }); continue; }
+if (!day) { unknown.push({ show }); continue; }
+if (weekEnd < Date.now()) {
+const back = status && [...(status.airings || []), ...(upcoming ? [upcoming] : [])]
+.filter(a => a.at * 1000 >= weekEnd).sort((a, b) => a.at - b.at)[0];
+if (back?.episode - lagOf(alId) <= 1) continue;
+if (!back) { unknown.push({ show }); continue; }
+upcoming = back;
+}
 const next = upcoming && new Date(upcoming.at * 1000);
 if (next && next >= weekEnd) {
 const note = (status.notes || []).find(n => n.at * 1000 >= days[0].date.getTime() - 86400000 && n.at * 1000 < weekEnd);
