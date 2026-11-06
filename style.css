@@ -303,6 +303,20 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .day h2 .day-edit { order: 1; padding: 3px 10px; font-size: 12px; }
 .day h2 .day-discord { display: inline-grid; place-items: center; padding: 3px 9px; }
 .day-dlg { width: min(460px, 92vw); }
+:root { --late: #f08c00; }
+.day h2 .day-delay { order: 1; padding: 3px 10px; font-size: 12px; }
+.day h2 .day-delay.on { border-color: var(--late); color: var(--late); }
+.time.late, .time.late * { color: var(--late) !important; }
+.delay-note { margin: 2px 0 6px; padding: 5px 10px; border-left: 3px solid var(--late); border-radius: 6px;
+background: color-mix(in srgb, var(--late) 12%, transparent); font-size: 13px; color: var(--text); }
+.delay-note b { color: var(--late); }
+.delay-list:empty { display: none; }
+.delay-list { display: grid; gap: 4px; font-size: 13px; }
+.delay-list > div { display: flex; align-items: center; gap: 8px; }
+.delay-list > div > span { flex: 1; min-width: 0; }
+.delay-list b { color: var(--late); }
+.dlg .delay-custom { flex: 0 0 72px; }
+#delayFrom { flex: 1; min-width: 0; }
 .day-text { position: relative; }
 .day-text textarea, .discord-text { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
 .day-suggest { display: grid; margin-top: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
