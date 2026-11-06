@@ -1,0 +1,54 @@
+{
+  "MaRyo": [
+    {
+      "provider": "anilist",
+      "name": "RyoTsushigawa"
+    },
+    {
+      "provider": "anilist",
+      "name": "MilkyWay95"
+    }
+  ],
+  "Belly": [
+    {
+      "provider": "anilist",
+      "name": "BelmontGabriel"
+    }
+  ],
+  "Blue": [
+    {
+      "provider": "anilist",
+      "name": "Blurakki"
+    }
+  ],
+  "Ceddl": [
+    {
+      "provider": "anilist",
+      "name": "charlyfox"
+    }
+  ],
+  "Marius": [
+    {
+      "provider": "anilist",
+      "name": "Farawyn98"
+    }
+  ],
+  "Quecks": [
+    {
+      "provider": "anilist",
+      "name": "Queccks"
+    }
+  ],
+  "Rei": [
+    {
+      "provider": "anilist",
+      "name": "Reidroc"
+    }
+  ],
+  "Terra": [
+    {
+      "provider": "anilist",
+      "name": "Terramel"
+    }
+  ]
+}
