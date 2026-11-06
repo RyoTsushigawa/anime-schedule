@@ -124,6 +124,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="people" class="popover" role="group" aria-label="Leute" hidden></div>
 </div>
 <button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" hidden>Plan bearbeiten</button>
+<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true">Diese Woche</button><button type="button" data-edit-scope="always" aria-pressed="false">Ab jetzt</button></div>
 </div>
 <div class="weeknav">
 <button id="prev" class="icon" aria-label="Vorherige Woche">‹</button>
@@ -158,6 +159,24 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="dlg-row">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
 <button type="button" id="moveReset" class="pill">Zurück in den Guckplan-Slot</button>
+<button value="cancel" class="pill">Abbrechen</button>
+</div>
+</form>
+</dialog>
+<dialog id="dayDlg" class="dlg day-dlg">
+<form method="dialog">
+<b id="dayName"></b>
+<div class="day-text">
+<textarea id="dayText" rows="9" spellcheck="false" autocomplete="off" aria-label="Eine Serie pro Zeile: Uhrzeit und Name"></textarea>
+<div id="daySuggest" class="day-suggest" role="listbox" hidden></div>
+</div>
+<div id="dayMissing" class="day-missing-list" hidden></div>
+<div class="segmented" role="group" aria-label="Für">
+<button type="button" id="dayWeek" aria-pressed="true">Diese Woche</button><button type="button" id="dayAlways" aria-pressed="false">Ab jetzt immer</button>
+</div>
+<div class="muted" id="dayMsg"></div>
+<div class="dlg-row">
+<button type="button" id="daySave" class="pill primary">Speichern</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
@@ -199,7 +218,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <section><h3>Catch-up, wie du willst</h3><p><b>Einzelne Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle als gesehen markieren</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
 <section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle das passende Konto und aktiviere <b>Beide Listen abgleichen</b>, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
 <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> wählt AniWorld oder Torrents für die gewählten Leute, wenn kein Dienst angezeigt wird, und bei Prime-Serien zwischen Prime und Torrents. <b>Andere Dienste</b> zeigt auch Dienste, die du nicht hast. Watch planner und Ranker findest du unter dem Zeitplan.</p></section>
-<section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Plan bearbeiten</b>. Ziehe eine Serie auf einen Tag oder Slot und speichere das Ziel. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Ziehst du sie auf eine andere Serie, teilen sich beide den Slot. Mit ⇄ gibst du das Ziel stattdessen von Hand ein. Gespeicherte Verschiebungen gelten für alle.</p></section>
+<section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Plan bearbeiten</b>. Ziehe eine Serie dorthin, wo sie diese Woche hin soll: auf die Mitte einer anderen Serie, um daneben zu laufen, oder auf ihren oberen oder unteren Rand, um davor oder danach zu kommen. Es wird sofort gespeichert; „Rückgängig“ in der Meldung nimmt es zurück. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Mit ⇄ gibst du das Ziel von Hand ein, und mit <b>Bearbeiten</b> an einem Tag schreibst du den ganzen Tag als Liste. Gespeicherte Verschiebungen gelten für alle.</p></section>
 <section id="helpKeys"><h3>Tastenkürzel</h3>
 <dl class="keyboard-guide">
 <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
