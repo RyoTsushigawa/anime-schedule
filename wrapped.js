@@ -238,8 +238,8 @@ async function wrappedLoad(fresh = false) {
     if(wrappedPlan.people.includes(previous))$('person').value=previous;
     $('profilePerson').replaceChildren(...wrappedPlan.people.map(p=>new Option(p,p)));
     await wrappedRender(fresh);
-  }catch(error){$('status').textContent='Wrapped konnte nicht geladen werden: '+error.message;$('stories').hidden=$('actions').hidden=true;}
-  finally{$('refresh').disabled=false;}
+  }catch(error){if(loadGeneration!==wrappedLoadGeneration)return;$('status').textContent='Wrapped konnte nicht geladen werden: '+error.message;$('stories').hidden=$('actions').hidden=true;}
+  finally{if(loadGeneration===wrappedLoadGeneration)$('refresh').disabled=false;}
 }
 function wrappedFillProfiles() {
   const linked=wrappedProfiles[$('profilePerson').value]||[];
@@ -269,7 +269,7 @@ $('saveProfiles').onclick=()=>{
   try{localStorage.setItem('wrappedProfiles',JSON.stringify(wrappedProfiles));}catch{$('profileMessage').textContent='Browser-Speicher nicht verfügbar.';return;}
   $('profiles').close();wrappedRender();
 };
-$('season').onchange=wrappedLoad;
+$('season').onchange=()=>wrappedLoad();
 $('person').onchange=()=>wrappedRender();
 $('refresh').onclick=async()=>{if($('refresh').disabled)return;await wrappedInitialize(true);};
 $('previous').onclick=()=>wrappedShow(wrappedIndex-1);
