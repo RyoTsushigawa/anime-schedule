@@ -1191,7 +1191,7 @@ return n > 0 ? `<button class="behind" data-behind="${esc(m.title.english || m.t
 $('list').addEventListener('click', e => {
 const b = e.target.closest('.behind[data-behind]');
 if (!b) return;
-$('search').value = b.dataset.behind;
+$('search').value = jumpSearch = b.dataset.behind;
 openSearch(true);
 $('viewCatchup').click();
 });
@@ -1788,7 +1788,6 @@ rows.sort(choices.sort === 'az' ? byTitle
 : (a, b) => a.since - b.since);
 const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
 catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
-const note = missing => missing ? ` · noch nicht auf deiner ${listService()}-Liste` : '';
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Bei „Alle als gesehen markieren“ mitnehmen">✓</button>`;
 const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
@@ -1798,7 +1797,7 @@ const grouped = ({ m, first, out, missing, links }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}${note(missing)}</div>
+        <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
@@ -1809,7 +1808,7 @@ if (eps.length === 1) return grouped({m,first,out,missing,links});
 return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}${note(missing)}</div></div>
+        <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
         ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
@@ -1840,7 +1839,11 @@ $('markAllStart').hidden = !mine || !rows.length || selecting;
 const top = !mine || !rows.length || !selecting ? ''
 : `<div class="catchup-bar"><span class="hint">Klick auf ein ✓, um die Serie auszunehmen</span>
           <button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`;
-$('list').innerHTML = rows.length ? top + rows.map(single ? perEpisode : grouped).join('') : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
+const show = single ? perEpisode : grouped;
+const listed = rows.filter(r => !r.missing), notListed = rows.filter(r => r.missing);
+$('list').innerHTML = rows.length ? top + listed.map(show).join('') + (notListed.length
+? `<section class="day not-listed"><h2>Noch nicht auf deiner ${listService()}-Liste · ${notListed.length}</h2>${notListed.map(show).join('')}</section>` : '')
+: '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
 const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
 if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Beendet · noch nicht bewertet</h2>${unscored.map(({ media: m, completed }) => `
       <div class="row" ${searchKey(...mediaTitles(m))}>
@@ -2210,7 +2213,12 @@ try { localStorage.setItem('mode', mode); } catch {}
 }
 setMode(mode);
 function listView() { return view === 'catchup' || view === 'pace'; }
+let jumpSearch = '';
 function setView(next) {
+if (next === 'week' && jumpSearch) {
+if ($('search').value === jumpSearch) { $('search').value = ''; openSearch(false); searchedWeek = false; }
+jumpSearch = '';
+}
 view = next;
 document.body.classList.toggle('catchup', listView());
 document.body.classList.toggle('pace', view === 'pace');
