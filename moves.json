@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T20:44:45.056Z",
+ "updated": "2026-11-06T20:46:27.779Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -126,16 +126,6 @@
    "tag": "Fr.",
    "time": "21:30",
    "week": ""
-  }
- ],
- "delays": [
-  {
-   "id": "0fep8j9c",
-   "day": "2026-11-06",
-   "show": "hotarunoyomeiri",
-   "title": "Firefly Wedding",
-   "minutes": 30,
-   "reason": "Probleme bei der Parkplatzsuche"
   }
  ]
 }
