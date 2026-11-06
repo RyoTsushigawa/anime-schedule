@@ -2,6 +2,15 @@
 let source = null, target = null, dragWeek = null, touch = null;
 let cardTouch = null, holdTimer = null;
 const hint = $('dragHint');
+const line = document.createElement('div');
+line.className = 'drop-line'; line.hidden = true; line.setAttribute('aria-hidden', 'true');
+document.body.append(line);
+function showLine(day, y, time) {
+const box = day.getBoundingClientRect();
+line.style.top = `${Math.round(y)}px`; line.style.left = `${Math.round(box.left)}px`; line.style.width = `${Math.round(box.width)}px`;
+line.dataset.time = time || 'frei';
+line.hidden = false;
+}
 const allowed = () => !!movesKey && view === 'week' && !document.body.classList.contains('no-move');
 function prepareCards() {
 if (!globalThis.document?.documentElement) { observer.disconnect(); return; }
@@ -20,8 +29,8 @@ return element?.closest?.('#list .row')?.querySelector('button.move') || null;
 }
 function clean(suppress = false) {
 clearTimeout(holdTimer); holdTimer = null; cardTouch = null;
-document.querySelectorAll('.drop-day,.drop-slot,.move-dragging').forEach(el=>el.classList.remove('drop-day','drop-slot','move-dragging'));
-document.body.classList.remove('dnd-moving'); hint.hidden = true;
+document.querySelectorAll('.drop-day,.drop-slot,.drop-before,.drop-after,.move-dragging').forEach(el=>el.classList.remove('drop-day','drop-slot','drop-before','drop-after','move-dragging'));
+document.body.classList.remove('dnd-moving'); hint.hidden = true; line.hidden = true;
 source = null; target = null; touch = null;
 if (suppress) { document.body.dataset.suppressMoveClick = '1'; setTimeout(()=>delete document.body.dataset.suppressMoveClick,400); }
 }
@@ -30,35 +39,52 @@ if (!allowed() || button.disabled || !button.isConnected) return false;
 source = button; dragWeek = weekOffset;
 button.closest('.row')?.classList.add('move-dragging');
 document.body.classList.add('dnd-moving');
-hint.textContent = 'Auf einen Tag ziehen für einen neuen Slot, oder auf eine Serie, um ihren Slot zu teilen. Gespeichert wird erst nach deiner Bestätigung.';
+hint.textContent = 'Auf die Mitte einer Serie: daneben. Auf ihren Rand: davor oder danach.';
 hint.hidden = false; return true;
 }
-function destination(element) {
+const minutes = row => { const hm = parseTime(row?.dataset.watchTime); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0]+24 : hm[0])*60+hm[1] : null; };
+const clock = n => n === null || n < 0 || n >= 30*60 ? '' : `${String(Math.floor(n/60)%24).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+const between = (a, b) => a === null && b === null ? 19*60 : a === null ? b-30 : b === null || b-a >= 60 ? a+30 : Math.round((a+b)/10)*5;
+function destination(element, y) {
 const day = element?.closest?.('#list .day[data-move-day]');
 if (!day) return null;
+const tag = day.dataset.moveDay;
+const rows = [...day.querySelectorAll('.row[data-watch-time]')].filter(r=>!r.contains(source));
 const row = element.closest('.row[data-watch-time]');
 if (row?.contains(source)) return null;
-let time = row?.dataset.watchTime;
-if (!time) {
-const times = [...day.querySelectorAll('.row[data-watch-time]')].filter(r=>!r.contains(source)).map(r=>parseTime(r.dataset.watchTime))
-.filter(Boolean).map(([h,m])=>(h < NIGHT_UNTIL ? h+24 : h)*60+m);
-const next = times.length ? Math.max(...times)+30 : 19*60;
-time = next < 30*60 ? `${String(Math.floor(next/60)%24).padStart(2,'0')}:${String(next%60).padStart(2,'0')}` : '';
+if (row) {
+const box = row.getBoundingClientRect(), f = box.height && y !== undefined ? (y-box.top)/box.height : .5;
+if (f > .25 && f < .75) return {day,row,tag,time:row.dataset.watchTime,parallel:true,mark:'drop-slot'};
+const i = rows.indexOf(row), before = f <= .25;
+const time = clock(before ? between(minutes(rows[i-1]), minutes(row)) : between(minutes(row), minutes(rows[i+1])));
+return {day,row,tag,time,parallel:false,mark:before ? 'drop-before' : 'drop-after'};
 }
-return {day,row,tag:day.dataset.moveDay,time,parallel:!!row};
+const times = rows.map(minutes).filter(n=>n!==null);
+return {day,row:null,tag,time:clock(between(times.length ? Math.max(...times) : null, null)),parallel:false,mark:'drop-day'};
 }
-function hover(element) {
-document.querySelectorAll('.drop-day,.drop-slot').forEach(el=>el.classList.remove('drop-day','drop-slot'));
-target = destination(element);
+function hover(element, y) {
+document.querySelectorAll('.drop-day,.drop-slot,.drop-before,.drop-after').forEach(el=>el.classList.remove('drop-day','drop-slot','drop-before','drop-after'));
+target = destination(element, y);
+line.hidden = true;
 if (!target) return;
-(target.row || target.day).classList.add(target.row ? 'drop-slot' : 'drop-day');
-hint.textContent = `${target.tag} ${target.time || 'nächster freier Slot'}${target.parallel ? ' · geteilter Slot' : ''} — loslassen zum Prüfen`;
+line.classList.toggle('beside', target.parallel);
+if (target.parallel) {
+target.row.classList.add('drop-slot');
+showLine(target.row, target.row.getBoundingClientRect().top, `${target.time} · daneben`);
+} else {
+const rows = [...target.day.querySelectorAll('.row')].filter(r=>!r.contains(source));
+const last = rows.at(-1)?.getBoundingClientRect(), head = target.day.querySelector('h2').getBoundingClientRect();
+const box = target.row?.getBoundingClientRect();
+const at = target.mark === 'drop-before' ? box.top - 5 : target.mark === 'drop-after' ? box.bottom + 4 : (last ? last.bottom + 4 : head.bottom + 4);
+showLine(target.day, at, target.time);
+}
+hint.textContent = `${target.tag} ${target.time || 'nächster freier Slot'}${target.parallel ? ' · daneben' : ''}`;
 }
 function drop() {
 const button = source, to = target;
 const valid = allowed() && weekOffset === dragWeek;
 clean(true);
-if (valid && button && to) openMoveDialog(button,{tag:to.tag,time:to.time,parallel:to.parallel});
+if (valid && button && to) placeByDrag(button,{tag:to.tag,time:to.time,parallel:to.parallel});
 }
 $('list').addEventListener('dragstart',event=>{
 const button = cardSource(event.target);
@@ -68,10 +94,10 @@ if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 });
 $('list').addEventListener('dragover',event=>{
 if (!source || !allowed()) return;
-hover(event.target);
+hover(event.target, event.clientY);
 if (target) {event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect='move';}
 });
-$('list').addEventListener('drop',event=>{if (!source) return;event.preventDefault();hover(event.target);drop();});
+$('list').addEventListener('drop',event=>{if (!source) return;event.preventDefault();hover(event.target, event.clientY);drop();});
 document.addEventListener('dragend',()=>{if (source) clean(true);});
 $('list').addEventListener('pointerdown',event=>{
 if (event.pointerType === 'mouse' || !allowed()) return;
@@ -85,13 +111,13 @@ if (!touch || event.pointerId !== touch.id) return;
 if (!touch.active && Math.hypot(event.clientX-touch.x,event.clientY-touch.y)>8) touch.active=begin(touch.button);
 if (!touch?.active) return;
 event.preventDefault();
-hover(document.elementFromPoint(event.clientX,event.clientY));
+hover(document.elementFromPoint(event.clientX,event.clientY), event.clientY);
 if (event.clientY<100) scrollBy(0,-16); else if (event.clientY>innerHeight-80) scrollBy(0,16);
 },{passive:false});
 document.addEventListener('pointerup',event=>{
 if (!touch || event.pointerId!==touch.id) return;
 const active=touch.active;
-if (active) {event.preventDefault();hover(document.elementFromPoint(event.clientX,event.clientY));drop();} else touch=null;
+if (active) {event.preventDefault();hover(document.elementFromPoint(event.clientX,event.clientY), event.clientY);drop();} else touch=null;
 });
 document.addEventListener('pointercancel',()=>{if(touch) clean(true);});
 $('list').addEventListener('touchstart',event=>{
@@ -108,7 +134,7 @@ if (!cardTouch.active) {
 if (Math.hypot(point.clientX-cardTouch.x,point.clientY-cardTouch.y)>8) {clearTimeout(holdTimer);cardTouch=null;}
 return;
 }
-event.preventDefault(); hover(document.elementFromPoint(point.clientX,point.clientY));
+event.preventDefault(); hover(document.elementFromPoint(point.clientX,point.clientY), point.clientY);
 if(point.clientY<100) scrollBy(0,-16); else if(point.clientY>innerHeight-80) scrollBy(0,16);
 },{passive:false});
 document.addEventListener('touchend',event=>{
@@ -116,7 +142,7 @@ if(!cardTouch) return;
 clearTimeout(holdTimer);
 if(cardTouch.active) {
 event.preventDefault(); const point=event.changedTouches[0];
-if(point) hover(document.elementFromPoint(point.clientX,point.clientY));
+if(point) hover(document.elementFromPoint(point.clientX,point.clientY), point.clientY);
 drop();
 } else cardTouch=null;
 },{passive:false});
