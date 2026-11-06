@@ -303,9 +303,10 @@ body.searching .daystrip { display: none; }
 .move { flex: none; width: 30px; height: 30px; border-radius: 8px; color: var(--muted); font-size: 14px; padding: 0; }
 body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .day-edit { display: none; }
 .day h2 .day-edit { order: 1; padding: 3px 10px; font-size: 12px; }
+.day h2 .day-discord { display: inline-grid; place-items: center; padding: 3px 9px; }
 .day-dlg { width: min(460px, 92vw); }
 .day-text { position: relative; }
-.day-text textarea { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
+.day-text textarea, .discord-text { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
 .day-suggest { display: grid; margin-top: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 .day-suggest button { display: flex; justify-content: space-between; gap: 12px; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
 .day-suggest button span { color: var(--muted); font-size: 12px; white-space: nowrap; }
