@@ -47,7 +47,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <label class="toggle week-only" title="Zeigt bei einer Folge, wie viele frühere Folgen du noch nicht gesehen hast (wenn deine Liste verbunden ist)"><input type="checkbox" id="behind">Behind</label>
 <label class="toggle" title="Zeigt auch Dienste, die du nicht hast"><input type="checkbox" id="others">Andere Dienste</label>
 <label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Droppen</label>
-<button id="editScheduleMenu" class="toggle phone-only week-only" hidden>Plan bearbeiten</button>
+<button id="editScheduleMenu" class="toggle phone-only week-only" hidden>Edit</button>
 </div>
 </section>
 <section>
@@ -123,8 +123,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
 <div id="people" class="popover" role="group" aria-label="Leute" hidden></div>
 </div>
-<button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" hidden>Plan bearbeiten</button>
-<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true">Diese Woche</button><button type="button" data-edit-scope="always" aria-pressed="false">Ab jetzt</button></div>
+<button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" title="Plan bearbeiten" hidden>Edit</button>
+<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" data-edit-scope="always" aria-pressed="false" title="Ab jetzt immer">Immer</button></div>
 </div>
 <div class="weeknav">
 <button id="prev" class="icon" aria-label="Vorherige Woche">‹</button>
@@ -153,13 +153,24 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <input id="moveTime" placeholder="Uhrzeit, z. B. 21:00" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (leer = nächster freier Slot)">
 </div>
 <div class="segmented" role="group" aria-label="Für">
-<button type="button" id="moveWeek" aria-pressed="true">Diese Woche</button><button type="button" id="moveAlways" aria-pressed="false">Ab jetzt immer</button>
+<button type="button" id="moveWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="moveAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
 </div>
 <div class="muted" id="moveMsg"></div>
 <div class="dlg-row">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
 <button type="button" id="moveReset" class="pill">Zurück in den Guckplan-Slot</button>
 <button value="cancel" class="pill">Abbrechen</button>
+</div>
+</form>
+</dialog>
+<dialog id="discordDlg" class="dlg day-dlg">
+<form method="dialog">
+<b id="discordName"></b>
+<textarea id="discordText" class="discord-text" rows="11" spellcheck="false" aria-label="Nachricht für Discord"></textarea>
+<div class="muted" id="discordMsg"></div>
+<div class="dlg-row">
+<button type="button" id="discordCopy" class="pill primary">Kopieren</button>
+<button value="cancel" class="pill">Schließen</button>
 </div>
 </form>
 </dialog>
@@ -172,7 +183,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 <div id="dayMissing" class="day-missing-list" hidden></div>
 <div class="segmented" role="group" aria-label="Für">
-<button type="button" id="dayWeek" aria-pressed="true">Diese Woche</button><button type="button" id="dayAlways" aria-pressed="false">Ab jetzt immer</button>
+<button type="button" id="dayWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="dayAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
 </div>
 <div class="muted" id="dayMsg"></div>
 <div class="dlg-row">
@@ -218,7 +229,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <section><h3>Catch-up, wie du willst</h3><p><b>Einzelne Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle als gesehen markieren</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
 <section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle das passende Konto und aktiviere <b>Beide Listen abgleichen</b>, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
 <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> wählt AniWorld oder Torrents für die gewählten Leute, wenn kein Dienst angezeigt wird, und bei Prime-Serien zwischen Prime und Torrents. <b>Andere Dienste</b> zeigt auch Dienste, die du nicht hast. Watch planner und Ranker findest du unter dem Zeitplan.</p></section>
-<section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Plan bearbeiten</b>. Ziehe eine Serie dorthin, wo sie diese Woche hin soll: auf die Mitte einer anderen Serie, um daneben zu laufen, oder auf ihren oberen oder unteren Rand, um davor oder danach zu kommen. Es wird sofort gespeichert; „Rückgängig“ in der Meldung nimmt es zurück. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Mit ⇄ gibst du das Ziel von Hand ein, und mit <b>Bearbeiten</b> an einem Tag schreibst du den ganzen Tag als Liste. Gespeicherte Verschiebungen gelten für alle.</p></section>
+<section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang nutzt du <b>Edit</b>; <b>Woche</b> oder <b>Immer</b> daneben sagt, wie lange eine Verschiebung gilt. Ziehe eine Serie dorthin, wo sie diese Woche hin soll: auf die Mitte einer anderen Serie, um daneben zu laufen, oder auf ihren oberen oder unteren Rand, um davor oder danach zu kommen. Es wird sofort gespeichert; „Rückgängig“ in der Meldung nimmt es zurück. Am Handy hältst du die Karte vor dem Ziehen kurz gedrückt. Mit ⇄ gibst du das Ziel von Hand ein, mit <b>Edit</b> an einem Tag schreibst du den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server. Gespeicherte Verschiebungen gelten für alle.</p></section>
 <section id="helpKeys"><h3>Tastenkürzel</h3>
 <dl class="keyboard-guide">
 <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
