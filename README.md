@@ -154,3 +154,7 @@ List snapshots are cached for an hour, refreshable with ↻; stale fallback is l
 Extra cards show niche picks, latest planned slots, plan-size comparisons, season
 ratings, completion-date peaks and group rating disagreements. Delays are excluded.
 Use **Karte speichern** to download the visible card as a PNG; nothing is posted.
+
+Shared Wrapped identities live in wrapped-profiles.json, using the owner-provided
+AniList names. MaRyo links RyoTsushigawa and MilkyWay95. Personal browser overrides
+remain possible; no accounts are fetched for Herbst 2026.
