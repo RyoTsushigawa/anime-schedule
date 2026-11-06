@@ -11,7 +11,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseSubsPlease, matchSubsPlease, parseAniWorld, matchAniWorld } from './fallback-links.mjs';
-import { parseSeason, parseStreams, parseSchedules, parseHeadlines, parseTimetableNotes } from './livechart-pages.mjs';
+import { parseSeason, parseStreams, parseSchedules, parseHeadlines, parseTimetableNotes, norm, titleScore, searchVariants, pickCard } from './livechart-pages.mjs';
 
 const SHEET = 'https://docs.google.com/spreadsheets/d/1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ';
 const FALLBACK_TAB = { name: 'Guckplan Herbst 2026', gid: '488548700' };
@@ -90,17 +90,6 @@ async function sheetTitles() {
     }
   }
   return shows;
-}
-
-const norm = s => String(s || '').normalize('NFKD').toLowerCase()
-  .replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1')
-  .replace(/\b(\d+)(st|nd|rd|th) cour\b|\bcour (\d+)\b/g, (m, a, b, c) => `part ${a || c}`) // LiveChart "Cour 2" = Guckplan "Part 2"
-  .replace(/[^a-z0-9]/g, '');
-
-function titleScore(a, b) {
-  const A = a.map(norm).filter(Boolean), B = b.map(norm).filter(Boolean);
-  if (A.some(x => B.includes(x))) return 2;
-  return A.some(x => B.some(y => Math.min(x.length, y.length) >= 8 && (x.startsWith(y) || y.startsWith(x)))) ? 1 : 0;
 }
 
 // ---------- LiveChart ----------
@@ -243,16 +232,25 @@ console.log(`Guckplan: ${titles.length} shows`);
 
 // When the titles don't line up ("Part 2" vs "2nd Cour"), ask AniList which show is meant and
 // find its LiveChart entry by the AniList link on the card.
-async function anilistId(title) {
+async function anilistIds(title) {
   try {
   const res = await fetch('https://graphql.anilist.co', {
     signal: AbortSignal.timeout(8000),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ query: 'query ($s: String) { Media(search: $s, type: ANIME) { id } }', variables: { s: title } }),
+    body: JSON.stringify({ query: 'query ($s: String) { Page(perPage: 10) { media(search: $s, type: ANIME) { id } } }', variables: { s: title } }),
   });
-  return res.ok ? String((await res.json()).data?.Media?.id || '') : '';
-  } catch { return ''; } // Optional title matching must not stop LiveChart updates during an outage.
+  return res.ok ? ((await res.json()).data?.Page?.media || []).map(m => String(m.id)) : [];
+  } catch { return []; } // Optional title matching must not stop LiveChart updates during an outage.
+}
+// AniList's search misses some spellings ("Lulutto Lilly" is "LuluttoLilly" there), so try the
+// variants one by one, slowly, until one leads to a card of these seasons.
+async function cardByAnilist(t) {
+  for (const v of [...new Set(t.filter(Boolean).flatMap(searchVariants))]) {
+    const card = pickCard(t, v, await anilistIds(v.search), cards);
+    if (card) return card;
+    await new Promise(r => setTimeout(r, 2500));
+  }
 }
 
 let slotNotes = {};
@@ -266,6 +264,10 @@ const release = {};
 // Per show, for marking breaks on the page: its sheet titles, next episode and break news.
 const status = {};
 const unmatched = [];
+// At the end of the log, one per line: these shows are missing from the page until fixed
+// (a typo in the sheet, or a show LiveChart lists under another season).
+const reportUnmatched = () => unmatched.length && console.log(
+  `\nNOT FOUND on LiveChart (${unmatched.length}), so not on the page:\n${unmatched.map(s => `  - ${s}`).join('\n')}`);
 for (const t of titles) {
   const scored = cards.map(c => ({ c, s: titleScore(t, c.titles) })).filter(x => x.s);
   const best = Math.max(0, ...scored.map(x => x.s));
@@ -274,11 +276,8 @@ for (const t of titles) {
     const known = Object.entries(previous?.status || {}).find(([, s]) => titleScore(t, s.titles || []) === 2)?.[0];
     if (known) card = cards.find(c => c.anilist === known) || card;
   }
-  if (!card?.anilist) {
-    const id = await anilistId(t[0]) || await anilistId(t[1]);
-    card = id && cards.find(c => c.anilist === id);
-  }
-  if (!card?.anilist) { unmatched.push(t[1] || t[0]); continue; }
+  if (!card?.anilist) card = await cardByAnilist(t);
+  if (!card?.anilist) { unmatched.push(t.filter(Boolean).join(' / ')); continue; }
   if (status[card.anilist]) continue;
   // Streams and offsets depend on the region: only from home (Germany)
   byAnilist[card.anilist] = statusOnly ? [] : await streams(card.id);
@@ -329,7 +328,7 @@ if (statusOnly) {
   await writeFile(OUT, JSON.stringify({ generated: previous?.generated || null, byAnilist: previous?.byAnilist || {}, release: previous?.release || {},
     status, statusUpdated: new Date().toISOString() }, null, 1) + '\n');
   console.log(`\nWrote the status of ${Object.keys(status).length} shows to streams-de.json (streams unchanged)`);
-  if (unmatched.length) console.log(`Not found on LiveChart: ${unmatched.join(' | ')}`);
+  reportUnmatched();
   process.exit(0);
 }
 
@@ -344,4 +343,4 @@ if (previous && streamCount({ byAnilist }) < streamCount(previous) / 2) {
 
 await writeFile(OUT, JSON.stringify({ generated: new Date().toISOString(), byAnilist, release, status }, null, 1) + '\n');
 console.log(`\nWrote ${Object.keys(byAnilist).length} shows to streams-de.json`);
-if (unmatched.length) console.log(`Not found on LiveChart: ${unmatched.join(' | ')}`);
+reportUnmatched();
