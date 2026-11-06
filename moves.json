@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T18:45:42.449Z",
+ "updated": "2026-11-06T20:20:22.481Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -126,6 +126,16 @@
    "tag": "Fr.",
    "time": "21:30",
    "week": ""
+  }
+ ],
+ "delays": [
+  {
+   "id": "w1uugunp",
+   "day": "2026-11-06",
+   "show": "hotarunoyomeiri",
+   "title": "Firefly Wedding",
+   "minutes": 30,
+   "reason": "Baum in der Internetleitung"
   }
  ]
 }
