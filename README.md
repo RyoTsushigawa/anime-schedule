@@ -101,6 +101,21 @@ and GitHub's servers are in the US.
 
 Changes to the page made on this PC are uploaded by the next weekly run, or right away with `node tools/publish.mjs`.
 
+## Verspätungen für alle (one time)
+
+With the GitHub key, "Verspätung" on today's heading saves straight to `moves.json`. For everyone else
+a small helper on Cloudflare saves it: it holds its own GitHub token and only changes the delays.
+
+1. Make a free account at <https://dash.cloudflare.com>, then **Workers & Pages → Create → Worker**.
+   Name it e.g. `schedule-delays`, **Deploy**, then **Edit code**: replace everything with
+   `tools/delays-worker.js` and **Deploy** again.
+2. On GitHub make a fine-grained token (Settings → Developer settings → Fine-grained tokens):
+   only the repository `anime-schedule`, permission **Contents: Read and write**.
+3. In the Worker: **Settings → Variables and Secrets → Add**, type **Secret**, name `GITHUB_TOKEN`,
+   the token as value.
+4. Put the Worker's address (e.g. `https://schedule-delays.<name>.workers.dev/`) into
+   `tools/delays-url.txt` and run `node tools/publish.mjs`. From then on everyone gets the button.
+
 ## Trying it locally
 
 Open it through a small web server (browsers block `fetch()` from `file://`), for example `npx serve .` in this folder.
