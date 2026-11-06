@@ -1129,7 +1129,7 @@ for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = ()
 const choices = { time: 'release', sort: 'oldest', accent: 'person' };
 const CHOICE_OK = {
 time: v => ['release', 'watch', 'both'].includes(v),
-sort: v => ['oldest', 'behind', 'az'].includes(v),
+sort: v => ['oldest', 'behind', 'next', 'az'].includes(v),
 accent: v => v === 'person' || /^#[0-9a-f]{6}$/i.test(v),
 };
 for (const name of Object.keys(choices))
@@ -1728,7 +1728,8 @@ while (next && out > progress && dueAt(released(out), slot, mine?.[0] || show) >
 if (!out || out <= progress) continue;
 const first = progress + 1;
 const since = next ? released(first) : 0;
-const row = { m, first, out, since, missing, progress, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
+const nextAt = next ? released(out + 1) : 0;
+const row = { m, first, out, since, nextAt, missing, progress, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
 (missing || show || recent(m) ? rows : ownPace).push(row);
 }
 return { rows, ownPace };
@@ -1787,7 +1788,10 @@ showCatchupCount(rows);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
+: choices.sort === 'next' ? (a, b) => (a.nextAt || Infinity) - (b.nextAt || Infinity) || a.since - b.since
 : (a, b) => a.since - b.since);
+const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
+: `<span class="next-hint"> · ${nextAt * 1000 <= Date.now() ? `Folge ${out + 1} schon da` : 'neu ' + (new Date(nextAt * 1000).toDateString() === new Date().toDateString() ? 'heute' + savedAt(nextAt * 1000).slice(2) : savedAt(nextAt * 1000))}</span>`;
 const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
 catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
@@ -1795,22 +1799,22 @@ const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" 
 const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
-const grouped = ({ m, first, out, missing, links }) => `
+const grouped = ({ m, first, out, nextAt, missing, links }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}</div>
+        <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
     </div>`;
-const perEpisode = ({ m, first, out, missing, links }) => {
+const perEpisode = ({ m, first, out, nextAt, missing, links }) => {
 const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
-if (eps.length === 1) return grouped({m,first,out,missing,links});
+if (eps.length === 1) return grouped({m,first,out,nextAt,missing,links});
 return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}</div></div>
+        <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}${nextHint(nextAt, out)}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
         ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
