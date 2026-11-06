@@ -127,17 +127,21 @@ export function parseTimetableNotes(html) {
 // YouTube pages for shows streaming on a YouTube channel (LiveChart links its playlist): the
 // episode uploads they list, as { id, episode, title }. Reads a playlist page (only its first
 // videos) and a search page sorted by upload date (the newest), whose data is JSON in a script.
+// "Episode 16", "Ep. 1", "Ep 3"
+const EPISODE = /\b(?:Episode|Ep\.?)\s*(\d+)/i;
 export function parseYouTube(html) {
   const data = html.replace(/\\"/g, '"').replace(/\\u0026/g, '&');
   const found = [
-    ...[...data.matchAll(/"contentId":"([\w-]{11})","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"[\s\S]{0,600}?"accessibilityContext":\{"label":"([^"]*)"/g)]
-      .map(m => [m[1], m[2].replace(/\s+\d+ (?:minutes?|seconds?|hours?)\b.*$/, '')]),
+    // A playlist entry has several labels (length, channels, title): the one naming an episode
+    ...data.split('"contentId":"').slice(1).filter(part => /^[\w-]{11}","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"/.test(part))
+      .map(part => [part.slice(0, 11), [...part.matchAll(/"accessibilityContext":\{"label":"([^"]*)"/g)].map(m => m[1]).find(l => EPISODE.test(l))
+        ?.replace(/\s+\d+ (?:minutes?|seconds?|hours?)\b.*$/, '')]),
     ...data.split('"videoRenderer":{"videoId":').slice(1)
       .map(part => [part.match(/^"([\w-]{11})"/)?.[1], part.match(/"title":\{"runs":\[\{"text":"([^"]*)"/)?.[1]]),
   ];
   const videos = [];
   for (const [id, title] of found) {
-    const episode = Number(title?.match(/\bEpisode\s*(\d+)/i)?.[1]);
+    const episode = Number(title?.match(EPISODE)?.[1]);
     if (id && episode && !videos.some(v => v.id === id)) videos.push({ id, episode, title: decode(title) });
   }
   return videos;
@@ -145,7 +149,7 @@ export function parseYouTube(html) {
 
 // What the uploads of one series share before their number ("【Magical Sisters LuluttoLilly】Episode"),
 // and the newest of them, preferring subtitled ones
-export const episodeStem = title => title.replace(/(\bEpisode)\s*\d+[\s\S]*$/i, '$1').trim();
+export const episodeStem = title => title.replace(/(\b(?:Episode|Ep\.?))\s*\d+[\s\S]*$/i, '$1').trim().toLowerCase();
 export function newestEpisode(videos, stem) {
   const same = videos.filter(v => episodeStem(v.title) === stem);
   const subbed = same.filter(v => /subtitle|english|\beng\b/i.test(v.title));
