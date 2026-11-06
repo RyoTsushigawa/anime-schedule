@@ -655,6 +655,8 @@ const list = delaysOf(isoDay(day.date));
 const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
 day.delayStarts = list.map(x => ({ ...x, at: timeline.rows.find(r => keyOf(r) === x.show)?.plannedAt ?? timeline.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
 for (const r of day.rows) {
+const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
+if (shared && timeline !== day) r.watchAt = shared.plannedAt ?? shared.watchAt;
 const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => n + x.minutes, 0);
 if (minutes) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, watchAt: r.watchAt + minutes * 60000 });
 }
@@ -936,7 +938,10 @@ const row = r => !r.delay ? plainRow(r) : plainRow(r)
 .replace(/data-watch-time="[^"]*"/, `data-watch-time="${hhmm(r.plannedAt)}"`)
 .replace('<div class="time">', `<div class="time late" title="Geplant ${hhmm(r.plannedAt)} · +${r.delay} Min.">`);
 const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
-.filter(x => g.some(r => r.plannedAt === x.at && norm(r.show?.romaji || r.show?.english || '') === x.show))
+.filter(x => {
+const first = Math.min(...rows.map(r => r.plannedAt ?? r.watchAt).filter(at => at >= x.at));
+return g.some(r => (r.plannedAt ?? r.watchAt) === first);
+})
 .map(x => `<div class="delay-note" role="note"><span><b>+${x.minutes} Min.</b> · ${esc(x.reason)}</span>${movesKey || delaysUrl ? `<button class="pill" data-delay-edit="${esc(x.show)}" title="Diese Verspätung ändern">Edit</button>` : ''}</div>`).join('');
 const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
