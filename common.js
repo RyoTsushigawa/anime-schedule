@@ -57,9 +57,9 @@ const tab = tabFor(tabs, date);
 const i = tabs.indexOf(tab);
 return i < 0 ? [tab] : [tab, tabs[i - 1], tabs[i + 1]].filter(Boolean);
 }
-async function loadPlan(tab) {
+async function loadPlan(tab, requireHiddenMetadata = false) {
 const [hidden, catalog, colors] = await Promise.all([
-hiddenRows(tab).catch(e => { console.warn('Hidden rows unknown, all rows count:', e.message); return null; }),
+hiddenRows(tab).catch(e => { if (requireHiddenMetadata) throw new Error('Ausgeblendete Serien und Personen konnten nicht geprüft werden: ' + e.message); console.warn('Hidden rows unknown, all rows count:', e.message); return null; }),
 tab.catalogGid ? loadSheet(tab.catalogGid).catch(() => null) : null,
 headerColors(tab).catch(() => ({})),
 ]);
