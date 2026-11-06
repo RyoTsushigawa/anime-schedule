@@ -1,5 +1,8 @@
 try {
 const root = document.documentElement;
+if (localStorage.getItem('theme') === null)
+for (const [key, value] of Object.entries({ theme: 'dark', time: 'watch', markOnOpen: '0', who: '0', behind: '0', others: '0', dropButtons: '0' }))
+if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
 const theme = localStorage.getItem('theme');
 if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
 const c = localStorage.getItem('accentNow');
