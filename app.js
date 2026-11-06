@@ -841,7 +841,7 @@ const note = (status?.notes || []).find(n => n.at * 1000 >= start.getTime() - 86
 if (upcoming?.at * 1000 >= weekEnd && note) {
 const why = { note: note || null, news: status.news || [] };
 const when = new Date(upcoming.at * 1000);
-day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode - lagOf(alId), cover: coverFor(alId), ...why });
+day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode - lagOf(alId), ...why });
 breaks.push({ show, when, episode: upcoming.episode - lagOf(alId), ...why });
 } else {
 const m = { id: Number(alId) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [], coverImage: { medium: coverFor(alId) } };
@@ -875,7 +875,7 @@ const next = upcoming && new Date(upcoming.at * 1000);
 if (next && next >= weekEnd) {
 const note = (status.notes || []).find(n => n.at * 1000 >= days[0].date.getTime() - 86400000 && n.at * 1000 < weekEnd);
 const why = { note: note || null, news: status.news || [] };
-day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode - lagOf(alId), cover: coverFor(alId), ...why });
+day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode - lagOf(alId), ...why });
 breaks.push({ show, when: next, episode: upcoming.episode - lagOf(alId), ...why });
 found.add(show);
 continue;
@@ -891,7 +891,7 @@ found.add(show);
 } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
 const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
 const why = { note: null, news: [] };
-day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), cover: media.coverImage?.medium, ...why });
+day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), ...why });
 breaks.push({ show, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), ...why });
 found.add(show);
 } else unknown.push({ show, why: media === undefined ? 'Ausstrahlung wird geprüft…'
@@ -910,10 +910,9 @@ const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [`Zurück am ${shortDayDate(when)}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
-const pause = ({ show, slot, when, episode, note, news, watchAt, cover }) => `
+const pause = ({ show, slot, when, episode, note, news, watchAt }) => `
       <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
-        ${cover ? `<img src="${safeUrl(cover)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
           <div class="ep">${backLine(when, note, news)}</div>
