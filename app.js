@@ -172,6 +172,8 @@ return true;
 const unreachable = name => navigator.onLine === false ? "Du bist offline" : `${name} antwortet nicht`;
 const DAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 const dayName = date => DAY_NAMES[date.getDay()];
+const discordDays = new Map();
+const DISCORD_PINGS = { sophie: '<@&1554739610628923452>' };
 const shortDayName = date => dayName(date).slice(0, 2);
 const germanDate = date => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(date);
 const shortDayDate = date => `${shortDayName(date)}, ${germanDate(date)}`;
@@ -938,12 +940,13 @@ for (const r of rows) {
 if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
+discordDays.set(isoDay(date), { date, groups: groups.map(g => g.filter(r => !r.pause)).filter(g => g.length) });
 const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
 const body = ordered.length
 ? ordered.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit" data-day-edit>Bearbeiten</button>' : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}</h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -1179,7 +1182,7 @@ function syncMoveEditor() {
 $('editSchedule').hidden = $('editScheduleMenu').hidden = $('moveToggle').hidden;
 const on = $('moveButtons').checked;
 $('editScope').hidden = $('editSchedule').hidden || !on;
-$('editSchedule').innerHTML = on ? 'Fertig<span class="title-long"> mit Bearbeiten</span>' : 'Plan<span class="title-long"> bearbeiten</span>';
+$('editSchedule').textContent = 'Edit';
 $('editSchedule').setAttribute('aria-pressed', String(on));
 }
 $('editScheduleMenu').onclick = () => { showSettings(false); $('editSchedule').click(); };
@@ -2116,7 +2119,7 @@ movesKey = key;
 try { localStorage.setItem('movesKey', key); } catch {}
 $('movesSetup').hidden = $('moveToggle').hidden = false;
 syncMoveEditor();
-$('keyMsg').textContent = 'Gespeichert. Mit „Plan bearbeiten“ über der Woche verschiebst du Serien.';
+$('keyMsg').textContent = 'Gespeichert.';
 load(true);
 } catch (e) { $('keyMsg').textContent = `Nicht gespeichert: ${e.message}`; }
 };
@@ -2198,6 +2201,35 @@ storeMoves(next, `${moving.name} verschoben auf ${slotLabel({ tag: $('moveTag').
 $('moveReset').onclick = () => {
 const week = isoDay(weekStart(weekOffset));
 storeMoves(moves.filter(m => !(m.show === moving.key && (m.week === week || !m.week))), `${moving.name} is back in its Guckplan slot.`);
+};
+function discordMessage({ date, groups }) {
+const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+const when = date.toDateString() === new Date().toDateString() ? 'Heute'
+: date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
+const lines = groups.map(g => {
+const names = [...new Set(g.map(r => r.show.english || r.show.romaji))];
+const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.toLowerCase()]).filter(Boolean))];
+const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
+});
+return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`;
+}
+$('list').addEventListener('click', e => {
+const b = e.target.closest('[data-day-discord]');
+const day = b && discordDays.get(b.closest('.day').dataset.date);
+if (!day) return;
+$('discordName').textContent = b.closest('.day').querySelector('h2 > span').textContent.trim();
+$('discordText').value = discordMessage(day);
+$('discordMsg').textContent = '';
+$('discordDlg').showModal();
+$('discordCopy').focus();
+});
+$('discordCopy').onclick = async () => {
+const text = $('discordText').value;
+try { await navigator.clipboard.writeText(text); }
+catch { $('discordText').select(); if (!document.execCommand?.('copy')) { $('discordMsg').textContent = 'Kopieren ging nicht: Text markieren und Strg+C.'; return; } }
+$('discordDlg').close();
+notice('Für Discord kopiert.');
 };
 let dayEdit = null;
 const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
