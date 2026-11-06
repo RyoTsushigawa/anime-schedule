@@ -111,7 +111,9 @@ cols: new Set((data.columnMetadata || []).flatMap((c, i) => c.hiddenByUser ? [i]
 async function loadSheet(gid, hidden = null) {
 const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
 if (!res.ok) throw new Error('Google Sheet antwortet ' + res.status);
-const rows = parseCsv(await res.text());
+return sheetFromRows(parseCsv(await res.text()), hidden);
+}
+function sheetFromRows(rows, hidden = null) {
 const headerIndex = rows.findIndex(r => r.some(c => c.trim() === 'Anime Titel'));
 const header = rows[headerIndex]?.map(c => c.trim()) || [];
 const col = name => header.indexOf(name);
