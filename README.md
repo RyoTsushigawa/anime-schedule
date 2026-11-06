@@ -143,6 +143,6 @@ Completions require a complete list completion date within the selected season;
 genres and favourites use those records. Approximate runtime is explicitly not
 watchtime during the season. Missing data is not treated as zero across the group.
 List snapshots are cached for an hour, refreshable with ↻; stale fallback is labelled.
-Currently saved group delays appear for everyone with their limited date coverage
-clearly labelled. Old delays are pruned, so no lifetime delay totals are inferred.
+Extra cards show niche picks, latest planned slots, plan-size comparisons, season
+ratings, completion-date peaks and group rating disagreements. Delays are excluded.
 Use **Karte speichern** to download the visible card as a PNG; nothing is posted.
