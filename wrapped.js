@@ -7,8 +7,8 @@ for (const storage of ['anilistAccounts','malAccounts']) {
   try { wrappedAccounts.push(...JSON.parse(localStorage.getItem(storage) || '[]')); } catch {}
 }
 wrappedAccounts = wrappedAccounts.filter(a => a?.name && (!a.expires || a.expires > Date.now()));
-// This identity is already explicitly known by the schedule; other names are never guessed.
-if (!wrappedProfiles.MaRyo) wrappedProfiles.MaRyo = [{provider:'anilist',name:'RyoTsushigawa'}];
+// Shared defaults contain only identities explicitly supplied by the group owner.
+if (!wrappedProfiles.MaRyo) wrappedProfiles.MaRyo = [{provider:'anilist',name:'RyoTsushigawa'},{provider:'anilist',name:'MilkyWay95'}];
 const wrappedSafe = text => String(text ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const wrappedTitle = show => show.english || show.romaji;
 const wrappedHours = minutes => new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(minutes/60);
@@ -19,6 +19,28 @@ const wrappedQuery = `query ($user:String) { MediaListCollection(userName:$user,
   lists { entries { status progress score:score(format:POINT_100) completedAt { year month day }
     media { id idMal episodes duration genres title { romaji english } } } }
 } }`;
+async function wrappedReadProfiles() {
+  try {
+    const response=await fetch('wrapped-profiles.json',{cache:'no-cache'});if(!response.ok)return;
+    const data=await response.json(), defaults={};
+    for(const [person,profiles] of Object.entries(data)){
+      if(['__proto__','constructor','prototype'].includes(person)||!Array.isArray(profiles))continue;
+      const valid=profiles.filter(p=>p?.provider==='anilist'&&/^[-\w]{1,50}$/.test(p.name));
+      if(valid.length)defaults[person]=valid.map(p=>({provider:p.provider,name:p.name}));
+    }
+    let local={};try{local=JSON.parse(localStorage.getItem('wrappedProfiles')||'{}')||{};}catch{}
+    // Upgrade the old single-account default once, without undoing later personal choices.
+    const version='group-map-2026-11';
+    if(localStorage.getItem('wrappedProfileMappingVersion')!==version){
+      const old=local.MaRyo;
+      if(defaults.MaRyo&&old?.length===1&&old[0].provider==='anilist'&&old[0].name.toLowerCase()==='ryotsushigawa'){
+        delete local.MaRyo;localStorage.setItem('wrappedProfiles',JSON.stringify(local));
+      }
+      localStorage.setItem('wrappedProfileMappingVersion',version);
+    }
+    wrappedProfiles={...defaults,...local};
+  }catch{} // Previously linked/local identities remain usable offline.
+}
 async function wrappedSheetApi(path) {
   const {sheetsKey}=await config();if(!sheetsKey)throw new Error('kein Sheets-API-Schlüssel');
   const response=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+path+(path.includes('?')?'&':'?')+'key='+encodeURIComponent(sheetsKey),{signal:AbortSignal.timeout(12000)});
@@ -310,6 +332,7 @@ async function wrappedInitialize(fresh = false){
   const selectedTab=$('season').value;
   $('refresh').disabled=true;
   try{
+    await wrappedReadProfiles();
     wrappedTabs=await wrappedReadTabs();
     $('season').replaceChildren(...wrappedTabs.map(t=>new Option(t.name.replace(/^Guckplan\s+/,''),t.gid)));
     $('season').value=wrappedTabs.some(t=>t.gid===selectedTab)?selectedTab:tabFor(wrappedTabs,new Date()).gid;
