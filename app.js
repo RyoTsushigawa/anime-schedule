@@ -651,7 +651,7 @@ taken.add(r.watchAt);
 day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
 }
 function applyDelays(day) {
-const list = delays.filter(x => x.day === isoDay(day.date));
+const list = [delayOf(isoDay(day.date))].filter(Boolean);
 const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
 day.delayStarts = list.map(x => ({ ...x, at: day.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
 for (const r of day.rows) {
@@ -2296,26 +2296,27 @@ const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vo
 const randomReason = () => DELAY_REASONS[Math.floor(Math.random() * DELAY_REASONS.length)];
 let delayDay = null;
 const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const delayOf = date => delays.filter(x => x.day === date).at(-1) || null;
 function openDelay(date) {
 const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === date);
 if (!found) return;
 const rows = found.rows.filter(r => !r.pause && r.show);
 const keyOf = r => norm(r.show.romaji || r.show.english);
-delayDay = { date, rows: [...new Map(rows.map(r => [keyOf(r), r])).values()].map(r => ({ key: keyOf(r), title: r.show.english || r.show.romaji, at: r.plannedAt ?? r.watchAt, now: r.watchAt })) };
+const current = delayOf(date);
+delayDay = { date, current, rows: [...new Map(rows.map(r => [keyOf(r), r])).values()].map(r => ({ key: keyOf(r), title: r.show.english || r.show.romaji, at: r.plannedAt ?? r.watchAt, now: r.watchAt })) };
 $('delayName').textContent = `Verspätung · ${dayName(found.date)}, ${germanDate(found.date)}`;
-const next = delayDay.rows.find(r => r.now > Date.now()) || delayDay.rows[0];
-$('delayFrom').innerHTML = delayDay.rows.map(r => `<option value="${esc(r.key)}"${r === next ? ' selected' : ''}>ab ${hhmmOf(r.at)} ${esc(r.title)}</option>`).join('');
-$('delayCustom').value = '';
-$('delayReason').value = '';
+const from = current && delayDay.rows.find(r => r.key === current.show) || delayDay.rows.find(r => r.now > Date.now()) || delayDay.rows[0];
+$('delayFrom').innerHTML = delayDay.rows.map(r => `<option value="${esc(r.key)}"${r === from ? ' selected' : ''}>ab ${hhmmOf(r.at)} ${esc(r.title)}</option>`).join('');
+const minutes = current?.minutes || 15;
+const chip = $('delayMinutes').querySelector(`[data-min="${minutes}"]`);
+for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', String(x === chip));
+$('delayCustom').value = chip ? '' : minutes;
+$('delayReason').value = current?.reason || '';
 $('delayReason').placeholder = randomReason();
+$('delayRemove').hidden = !current;
 $('delayMsg').textContent = delayDay.rows.length ? '' : 'An diesem Tag steht nichts an.';
 $('delaySave').disabled = !delayDay.rows.length;
-showDelayList();
 $('delayDlg').showModal();
-}
-function showDelayList() {
-const list = delays.filter(x => x.day === delayDay.date);
-$('delayList').innerHTML = list.map(x => `<div><span><b>+${x.minutes} Min.</b> ab ${esc(x.title || x.show)} · ${esc(x.reason)}</span><button type="button" class="pill" data-delay-remove="${esc(x.id)}" title="Verspätung entfernen" aria-label="Verspätung entfernen">✕</button></div>`).join('');
 }
 const delayMinutes = () => Number($('delayCustom').value) || Number($('delayMinutes').querySelector('[aria-pressed="true"]')?.dataset.min) || 0;
 $('delayMinutes').addEventListener('click', e => {
@@ -2324,14 +2325,11 @@ if (!b) return;
 for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', String(x === b));
 $('delayCustom').value = '';
 });
+$('delayCustom').addEventListener('input', () => {
+if ($('delayCustom').value) for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', 'false');
+});
 $('delayDice').onclick = () => { $('delayReason').value = randomReason(); };
-async function changeDelays(op) {
-if (movesKey) {
-const next = op.add ? delays.concat(op.add) : delays.filter(x => x.id !== op.remove);
-await saveMoves(moves, next);
-return;
-}
-if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
+async function postDelay(op) {
 const res = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) });
 const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
@@ -2339,16 +2337,26 @@ moves = body.moves || moves;
 delays = body.delays || [];
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
 }
-async function storeDelay(op, done) {
+async function changeDelays(day, add) {
+const old = delays.filter(x => x.day === day);
+if (movesKey) {
+await saveMoves(moves, delays.filter(x => x.day !== day).concat(add || []));
+return;
+}
+if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
+for (const x of old) await postDelay({ remove: x.id });
+if (add) await postDelay({ add });
+}
+async function storeDelay(add, done) {
 $('delayMsg').textContent = 'Speichert…';
-$('delaySave').disabled = true;
+$('delaySave').disabled = $('delayRemove').disabled = true;
 try {
-await changeDelays(op);
+await changeDelays(delayDay.date, add);
 $('delayDlg').close();
 notice(`${done} Alle sehen es in etwa einer Minute.`);
 if (lastWeekRender) render(...lastWeekRender);
 } catch (e) { $('delayMsg').textContent = `Nicht gespeichert: ${e.message}`; }
-finally { $('delaySave').disabled = false; }
+finally { $('delaySave').disabled = $('delayRemove').disabled = false; }
 }
 $('delaySave').onclick = () => {
 const minutes = Math.round(delayMinutes());
@@ -2357,12 +2365,10 @@ const from = delayDay.rows.find(r => r.key === $('delayFrom').value);
 if (!from) return;
 const reason = $('delayReason').value.trim() || $('delayReason').placeholder || randomReason();
 const id = Math.random().toString(36).slice(2, 10);
-storeDelay({ add: { id, day: delayDay.date, show: from.key, title: from.title, minutes, reason } }, `+${minutes} Min. ab ${from.title}.`);
+storeDelay({ id, day: delayDay.date, show: from.key, title: from.title, minutes, reason },
+`${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`);
 };
-$('delayList').addEventListener('click', e => {
-const b = e.target.closest('[data-delay-remove]');
-if (b) storeDelay({ remove: b.dataset.delayRemove }, 'Verspätung entfernt.');
-});
+$('delayRemove').onclick = () => storeDelay(null, 'Verspätung entfernt.');
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-delay]');
 if (b) openDelay(b.closest('.day').dataset.date);
