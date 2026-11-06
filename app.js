@@ -172,7 +172,6 @@ return true;
 const unreachable = name => navigator.onLine === false ? "Du bist offline" : `${name} antwortet nicht`;
 const DAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 const dayName = date => DAY_NAMES[date.getDay()];
-const discordDays = new Map();
 const DISCORD_PINGS = { sophie: '<@&1554739610628923452>' };
 const shortDayName = date => dayName(date).slice(0, 2);
 const germanDate = date => new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(date);
@@ -651,6 +650,15 @@ taken.add(r.watchAt);
 }
 day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
 }
+function applyDelays(day) {
+const list = delays.filter(x => x.day === isoDay(day.date));
+const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
+day.delayStarts = list.map(x => ({ ...x, at: day.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
+for (const r of day.rows) {
+const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => n + x.minutes, 0);
+if (minutes) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, watchAt: r.watchAt + minutes * 60000 });
+}
+}
 function nearDayName(date) {
 const start = new Date(); start.setHours(0, 0, 0, 0);
 const away = Math.round((new Date(date).setHours(0, 0, 0, 0) - start) / 86400000);
@@ -736,12 +744,12 @@ const top = today ? today.getBoundingClientRect().top + window.scrollY - documen
 window.scrollTo(0, Math.max(0, top));
 }
 const showScores = new WeakMap();
-function render(items, start, plans) {
-lastWeekRender = [items, start, plans];
-const restore = preserveListPosition();
-updateFallbackControls();
+function render(items, start, plans, everyone = false) {
+if (!everyone) lastWeekRender = [items, start, plans];
+const restore = everyone ? null : preserveListPosition();
+if (!everyone) updateFallbackControls();
 const fallback = fallbackWeeks.has(start.getTime());
-const people = activePeople();
+const people = everyone ? [...new Set([...plans.values()].flatMap(s => s.people))] : activePeople();
 if (!people.length) {
 $('list').innerHTML = '<div class="status">Keine Person ausgewählt.</div>';
 return;
@@ -767,7 +775,7 @@ const others = who => mode === 'solo' ? who?.filter(p => !activePeople().include
 const whoChips = all => { const who = others(all); return showWho && who?.length
 ? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
 const found = new Set();
-const droppedByMe = id => !!auth && mode === 'solo' && soloPerson === ownPerson() && knownEntries.get(Number(id))?.status === 'DROPPED';
+const droppedByMe = id => !everyone && !!auth && mode === 'solo' && soloPerson === ownPerson() && knownEntries.get(Number(id))?.status === 'DROPPED';
 const today = new Date().toDateString();
 const days = [];
 for (let i = 0; i < 7; i++) {
@@ -888,7 +896,8 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
-for (const d of days) assignWatchTimes(d);
+for (const d of days) { assignWatchTimes(d); applyDelays(d); }
+if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
 const picked = range === 'day' && !searching() && days.find(d => isoDay(d.date) === pickedDay);
 const ordered = picked ? [picked] : searching() || todayIndex < 0 || range === 'week' ? days
@@ -920,7 +929,14 @@ const rewatch = ({ m, links, watchAt, who, show, slot }) => `
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${checkSpace}${moveButton(show, slot)}
       </div>`;
-const row = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
+const plainRow = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const row = r => !r.delay ? plainRow(r) : plainRow(r)
+.replace(/data-watch-time="[^"]*"/, `data-watch-time="${hhmm(r.plannedAt)}"`)
+.replace('<div class="time">', `<div class="time late" title="Geplant ${hhmm(r.plannedAt)} · +${r.delay} Min.">`);
+const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
+.filter(x => g.some(r => r.plannedAt === x.at && norm(r.show?.romaji || r.show?.english || '') === x.show))
+.map(x => `<div class="delay-note" role="note"><b>+${x.minutes} Min.</b> · ${esc(x.reason)}</div>`).join('');
 const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
       ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
@@ -951,13 +967,12 @@ for (const r of rows) {
 if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
-discordDays.set(isoDay(date), { date, groups: groups.map(g => g.filter(r => !r.pause)).filter(g => g.length) });
 const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
 const body = ordered.length
-? ordered.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
+? ordered.map(g => delayNote(g) + (g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0]))).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay>Verspätung</button>` : ''}</h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -2073,6 +2088,9 @@ try { localStorage.removeItem('todayFirst'); } catch {}
 try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
+let delays = [];
+let delaysUrl = '';
+config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
 let movesKey = '';
 try { movesKey = localStorage.getItem('movesKey') || ''; } catch {}
 const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -2086,24 +2104,27 @@ setNote('moves', null);
 setNote('moves', `${unreachable('Die Seite')}: verschobene Serien konnten nicht geladen werden, daher stehen alle Serien in ihren Guckplan-Slots.`);
 }
 try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
-const newest = own && (!site || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
+const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
+delays = newest?.delays || [];
 }
 function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
-async function saveMoves(next) {
+async function saveMoves(next, nextDelays = delays) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 const current = await fetch(MOVES_API + '?ref=main', { headers, cache: 'no-store' });
 const sha = current.ok ? (await current.json()).sha : undefined;
-const file = { updated: new Date().toISOString(), moves: next };
+nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
+const file = { updated: new Date().toISOString(), moves: next, ...(nextDelays.length && { delays: nextDelays }) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: 'Move shows', content, branch: 'main', ...(sha && { sha }) }) });
 if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
 moves = next;
+delays = nextDelays;
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
 }
 $('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
@@ -2220,12 +2241,19 @@ const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.t
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
 });
-return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`;
+return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\nPasst?` : `${when} steht nichts an.`;
 }
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-discord]');
-const day = b && discordDays.get(b.closest('.day').dataset.date);
-if (!day) return;
+if (!b || !lastWeekRender) return;
+const found = render(...lastWeekRender, true).find(d => isoDay(d.date) === b.closest('.day').dataset.date);
+if (!found) return;
+const groups = [];
+for (const r of found.rows.filter(r => !r.pause)) {
+if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
+else groups.push([r]);
+}
+const day = { date: found.date, groups };
 $('discordName').textContent = b.closest('.day').querySelector('h2 > span').textContent.trim();
 $('discordText').value = discordMessage(day);
 $('discordMsg').textContent = '';
@@ -2239,6 +2267,87 @@ catch { $('discordText').select(); if (!document.execCommand?.('copy')) { $('dis
 $('discordDlg').close();
 notice('Für Discord kopiert.');
 };
+const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vorausfahrenden Zuschauers',
+'Reparatur an der Couch', 'Personen im Gleis (Küche)', 'Warten auf Anschlussreisende', 'Technische Störung am Fernseher',
+'Signalstörung im WLAN', 'Kurzfristiger Personalausfall', 'Unwetter: Pizza noch im Ofen', 'Notarzteinsatz am Snackregal',
+'Weichenstörung in der Mikrowelle', 'Polizeieinsatz: Fernbedienung vermisst', 'Bauarbeiten am Discord-Server',
+'Tiere auf der Strecke (Katze auf der Tastatur)', 'Hohes Reiseaufkommen im Bad', 'Geänderte Wagenreihung',
+'Stellwerksstörung am Router', 'Verspätete Bereitstellung des Zuschauers', 'Unerwartete Updates (Windows)',
+'Ein Zuschauer steckt noch im Bus fest', 'Kopfhörer werden noch geladen', 'Wartung des Snackvorrats'];
+const randomReason = () => DELAY_REASONS[Math.floor(Math.random() * DELAY_REASONS.length)];
+let delayDay = null;
+const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+function openDelay(date) {
+const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === date);
+if (!found) return;
+const rows = found.rows.filter(r => !r.pause && r.show);
+const keyOf = r => norm(r.show.romaji || r.show.english);
+delayDay = { date, rows: [...new Map(rows.map(r => [keyOf(r), r])).values()].map(r => ({ key: keyOf(r), title: r.show.english || r.show.romaji, at: r.plannedAt ?? r.watchAt, now: r.watchAt })) };
+$('delayName').textContent = `Verspätung · ${dayName(found.date)}, ${germanDate(found.date)}`;
+const next = delayDay.rows.find(r => r.now > Date.now()) || delayDay.rows[0];
+$('delayFrom').innerHTML = delayDay.rows.map(r => `<option value="${esc(r.key)}"${r === next ? ' selected' : ''}>ab ${hhmmOf(r.at)} ${esc(r.title)}</option>`).join('');
+$('delayCustom').value = '';
+$('delayReason').value = '';
+$('delayReason').placeholder = randomReason();
+$('delayMsg').textContent = delayDay.rows.length ? '' : 'An diesem Tag steht nichts an.';
+$('delaySave').disabled = !delayDay.rows.length;
+showDelayList();
+$('delayDlg').showModal();
+}
+function showDelayList() {
+const list = delays.filter(x => x.day === delayDay.date);
+$('delayList').innerHTML = list.map(x => `<div><span><b>+${x.minutes} Min.</b> ab ${esc(x.title || x.show)} · ${esc(x.reason)}</span><button type="button" class="pill" data-delay-remove="${esc(x.id)}" title="Verspätung entfernen" aria-label="Verspätung entfernen">✕</button></div>`).join('');
+}
+const delayMinutes = () => Number($('delayCustom').value) || Number($('delayMinutes').querySelector('[aria-pressed="true"]')?.dataset.min) || 0;
+$('delayMinutes').addEventListener('click', e => {
+const b = e.target.closest('[data-min]');
+if (!b) return;
+for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', String(x === b));
+$('delayCustom').value = '';
+});
+$('delayDice').onclick = () => { $('delayReason').value = randomReason(); };
+async function changeDelays(op) {
+if (movesKey) {
+const next = op.add ? delays.concat(op.add) : delays.filter(x => x.id !== op.remove);
+await saveMoves(moves, next);
+return;
+}
+if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
+const res = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) });
+const body = await res.json().catch(() => ({}));
+if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
+moves = body.moves || moves;
+delays = body.delays || [];
+try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
+}
+async function storeDelay(op, done) {
+$('delayMsg').textContent = 'Speichert…';
+$('delaySave').disabled = true;
+try {
+await changeDelays(op);
+$('delayDlg').close();
+notice(`${done} Alle sehen es in etwa einer Minute.`);
+if (lastWeekRender) render(...lastWeekRender);
+} catch (e) { $('delayMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+finally { $('delaySave').disabled = false; }
+}
+$('delaySave').onclick = () => {
+const minutes = Math.round(delayMinutes());
+if (!(minutes >= 1 && minutes <= 180)) { $('delayMsg').textContent = 'Zwischen 1 und 180 Minuten.'; return; }
+const from = delayDay.rows.find(r => r.key === $('delayFrom').value);
+if (!from) return;
+const reason = $('delayReason').value.trim() || $('delayReason').placeholder || randomReason();
+const id = Math.random().toString(36).slice(2, 10);
+storeDelay({ add: { id, day: delayDay.date, show: from.key, title: from.title, minutes, reason } }, `+${minutes} Min. ab ${from.title}.`);
+};
+$('delayList').addEventListener('click', e => {
+const b = e.target.closest('[data-delay-remove]');
+if (b) storeDelay({ remove: b.dataset.delayRemove }, 'Verspätung entfernt.');
+});
+$('list').addEventListener('click', e => {
+const b = e.target.closest('[data-day-delay]');
+if (b) openDelay(b.closest('.day').dataset.date);
+});
 let dayEdit = null;
 const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const clockOf = time => { const hm = parseTime(time); return hm ? `${String(hm[0]).padStart(2, '0')}:${String(hm[1]).padStart(2, '0')}` : ''; };
