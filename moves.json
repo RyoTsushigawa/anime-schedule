@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T21:08:07.606Z",
+ "updated": "2026-11-06T21:10:32.827Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -136,6 +136,17 @@
    "title": "The Exiled Heavy Knight Knows How to Game the System",
    "minutes": 30,
    "reason": "Ramen müssen noch drei Minuten ziehen"
+  },
+  {
+   "id": "s36bowge",
+   "day": "2026-11-06",
+   "show": "aokidenshouwelshshedar",
+   "title": "Welsh & Shedar",
+   "minutes": 60,
+   "reason": "Belly, Quecks und Marius sind dick"
   }
+ ],
+ "reasons": [
+  "Belly, Quecks und Marius sind dick"
  ]
 }
