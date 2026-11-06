@@ -978,7 +978,7 @@ const body = ordered.length
 ? ordered.map(g => delayNote(g) + (g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0]))).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay>Verspätung</button>` : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -1064,12 +1064,12 @@ button.removeAttribute('aria-busy');
 button.textContent = '↻';
 }
 };
-async function anilistAsMe(query, variables = {}) {
-if (auth?.provider === 'mal') throw new Error('Dafür brauchst du ein AniList-Konto.');
+async function anilistAsMe(query, variables = {}, account = auth) {
+if (!account || account.provider === 'mal') throw new Error('Dafür brauchst du ein AniList-Konto.');
 try {
-return await anilist(query, variables, auth.token);
+return await anilist(query, variables, account.token);
 } catch (e) {
-if (e.status === 401) disconnect();
+if (e.status === 401 && auth === account) disconnect();
 throw e;
 }
 }
@@ -1083,6 +1083,7 @@ function useAccount(account) {
 if (pendingChanges.size || bulkSaving || undoing) { notice('Bitte warte, bis die aktuelle Listenänderung fertig ist.'); return; }
 auth = account;
 myProgress.clear();
+$('catchupCount').hidden = true; $('catchupCount').textContent = ''; catchupMinutes = 0;
 knownEntries.clear(); notOnList.clear(); toScore = []; planShowsCache.time = 0; selecting = false; $('markAllStart').hidden = true;
 saveAccounts();
 if (auth?.name) {
@@ -1091,10 +1092,11 @@ try { localStorage.setItem('anilistUser', auth.name); } catch {}
 }
 updateConnect();
 if (auth) {
+const loadingFor = auth;
 accountLoading = true; syncSavingButtons();
-loadMe().catch(e => notice(e.message)).finally(() => { accountLoading = false; syncSavingButtons(); load(true); });
+loadMe().catch(e => { if (auth === loadingFor) notice(e.message); }).finally(() => { if (auth !== loadingFor) return; accountLoading = false; syncSavingButtons(); load(true); });
 }
-else load(true);
+else { accountLoading = false; syncSavingButtons(); load(true); }
 }
 const connect = () => {
 location.href = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
@@ -1816,45 +1818,53 @@ const m = Math.round(catchupMinutes / 5) * 5;
 if (!m) return '';
 return ' · ≈ ' + (m < 60 ? `${m} Min.` : `${Math.floor(m / 60)} Std.${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}`);
 }
-let countingCatchup = false;
+let countingCatchup = null;
 async function updateCatchupCount() {
 const user = $('anilistUser').value.trim();
-if (!user || countingCatchup) return;
-countingCatchup = true;
+if (!user || (countingCatchup?.user === user && countingCatchup.account === auth)) return;
+const job = {user, account:auth}; countingCatchup = job;
 try {
 const entries = await anilistList(user);
+if (countingCatchup !== job || auth !== job.account || $('anilistUser').value.trim() !== user) return;
 const plan = await sheetFor(tabFor(tabs, new Date()));
+if (countingCatchup !== job || auth !== job.account || $('anilistUser').value.trim() !== user) return;
 const { rows } = catchupRows(entries, await missingPlanShows(plan, entries), plan);
-if ($('anilistUser').value.trim() === user) showCatchupCount(rows);
-} catch {} finally { countingCatchup = false; }
+if (countingCatchup === job && auth === job.account && $('anilistUser').value.trim() === user) showCatchupCount(rows);
+} catch {} finally { if (countingCatchup === job) countingCatchup = null; }
 }
+let catchupGeneration = 0;
 async function loadCatchup(refresh = false) {
+const generation = ++catchupGeneration, account = auth;
 updateFallbackControls();
 const user = $('anilistUser').value.trim();
 const shown = view;
+const current = () => generation === catchupGeneration && auth === account && view === shown && $('anilistUser').value.trim() === user;
 const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
 $('tabName').textContent = user ? `${name} · ${user} auf ${listService()}` : name;
 if (!user) { $('list').innerHTML = '<div class="status">Kein AniList-Name eingetragen.</div>'; return; }
 if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
 await ready;
+if (!current()) return;
 let entries;
 try {
 entries = await anilistList(user);
 } catch (e) {
-if (refresh && view === shown && document.querySelector('#list .row')) {
+if (refresh && current() && document.querySelector('#list .row')) {
 notice(`${name} konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
 return;
 }
-if (view === shown) $('list').innerHTML = failed(navigator.onLine === false
+if (current()) $('list').innerHTML = failed(navigator.onLine === false
 ? `Du bist offline, und die AniList-Liste von ${user} ist in diesem Browser noch nicht gespeichert.` : `Die AniList-Liste von ${user} konnte nicht geladen werden (${e.message}).`);
 return;
 }
-if (view !== shown) return;
+if (!current()) return;
 let plan = null;
 try {
 plan = await sheetFor(tabFor(tabs, new Date()));
+if (!current()) return;
 setNote('catchup:plan', null);
 } catch (e) {
+if (!current()) return;
 setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehlen Guck-Slots und geplante Serien, die nicht auf der Liste sind.`);
 }
 const planShows = await missingPlanShows(plan, entries);
@@ -1955,6 +1965,8 @@ playEnter();
 let planShowsCache = { key: '', time: 0, media: [] };
 async function missingPlanShows(plan, entries) {
 if (!plan || !soloPerson) return [];
+const account = auth, person = soloPerson;
+const current = () => auth === account && soloPerson === person;
 const listed = new Set(entries.map(e => e.media.id));
 const ids = [];
 for (const show of picks(plan, soloPerson).keys()) {
@@ -1970,17 +1982,20 @@ const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type
     } } }`;
 try {
 let data;
-if (auth?.provider === 'mal') {
+if (account?.provider === 'mal') {
 data = await anilist(query.replace('mediaListEntry { progress status }', 'idMal'), { ids });
-for (const m of data.Page.media) { MAL.rememberMedia(m); m.mediaListEntry = await MAL.entry(auth, m.id); }
-} else data = auth ? await anilistAsMe(query, { ids }) : await anilist(query, { ids });
+for (const m of data.Page.media) { if (!current()) return []; MAL.rememberMedia(m); m.mediaListEntry = await MAL.entry(account, m.id); }
+} else data = auth ? await anilistAsMe(query, { ids }, account) : await anilist(query, { ids });
+if (!current()) return [];
 planShowsCache = { key, time: Date.now(), media: data.Page.media };
 setNote('catchup:missing', null);
 } catch {
+if (!current()) return [];
 setNote('catchup:missing', `${unreachable('AniList')}: geplante Serien, die nicht auf der AniList-Liste sind, konnten nicht geprüft werden.`);
 return [];
 }
 }
+if (!current()) return [];
 if (auth) for (const m of planShowsCache.media) {
 if (m.mediaListEntry) knownEntries.set(m.id, { progress: m.mediaListEntry.progress, status: m.mediaListEntry.status });
 else notOnList.add(m.id);
