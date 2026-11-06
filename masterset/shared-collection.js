@@ -9,8 +9,8 @@ const CollectionSharing = (() => {
       const card=select(c,['id','name','family','imgUrl','img','species','added','unchecked','verify']);
       card.added=true;
       if(card.imgUrl&&!/^https:\/\//i.test(card.imgUrl))delete card.imgUrl;
-      card.prints=c.prints.map(p=>select(p,['region','set','num','pid','low','trend','url','tid','tlang','prevLow']));
-      for(const p of card.prints)if(p.url&&!/^https:\/\//i.test(p.url))delete p.url;
+      card.prints=c.prints.map(p=>select(p,['region','set','num','pid','low','trend','url','tid','tlang','prevLow','pic','picTried']));
+      for(const p of card.prints){if(p.url&&!/^https:\/\//i.test(p.url))delete p.url;if(p.pic&&!/^https:\/\//i.test(p.pic))delete p.pic}
       return card;
     });
     return {owned,added:[...new Map(added.map(c=>[c.id,c])).values()]};

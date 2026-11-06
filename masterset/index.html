@@ -283,7 +283,7 @@ function cardHtml(c){
    :b?`<div class="price"><b>${eur(b.low)}</b>${delta}<small>about ${eur(b.low+shipFor(b.low))} delivered</small></div>`
    :`<div class="price"><small>No Cardmarket price. Prize or very rare card, watch auctions.</small></div>`;
   return `<article class="card${own?' own':''}" data-id="${c.id}">
-    ${c.imgUrl?`<img src="${esc(c.imgUrl)}/low.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134" onerror="this.style.visibility='hidden'">`:c.img?`<img src="thumbs/${c.id}.webp" alt="${esc(c.name)}" loading="lazy" width="96" height="134">`:`<div class="noimg">No image yet</div>`}
+    ${picHtml(c,`alt="${esc(c.name)}" width="96" height="134"`)}
     <div>
       <h2>${esc(c.name)}${c.family==='Cameo'?'<span class="tag">Cameo</span>':''}${c.verify?'<span class="tag warn">Check listing</span>':''}</h2>
       <div class="meta">${b?`${esc(b.set)} ${esc(b.num)} · ${esc(b.region)}`:`${esc(all[0].set)} ${esc(all[0].num)}`}${state.lang&&b&&!bestIn(c,state.lang)?`<span class="tag warn">No ${esc(state.lang)} price</span>`:''}</div>
@@ -439,6 +439,44 @@ function directLink(id,lang){
   const m=lang==='en'&&id.match(/^(base|gym|neo|ecard|ex|dp|pl|hgss|bw|xy|sm|swsh|sv)0*(\d+)(\.5)?-0*(\d+)$/);
   return m?`https://prices.pokemontcg.io/cardmarket/${m[1]}${m[2]}${m[3]?'pt5':''}-${m[4]}`:null;
 }
+// Limitless TCG keeps Japanese card scans under a predictable address, for prints TCGdex has no picture of.
+// Promo sets drop the hyphen there (SV-P is SVP), so both spellings are tried.
+function limitlessPics(tid){const m=String(tid||'').match(/^(.+)-0*(\d+)$/);if(!m)return [];
+  return [...new Set([m[1],m[1].replace(/-/g,'')])].map(s=>`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/${s}/${s}_${m[2]}_R_JP_SM.png`)}
+// pokemontcg.io keeps English scans under its own set codes, which mostly follow TCGdex's ids.
+function ptcgGuess(tid){const m=String(tid||'').match(/^(.+)-0*([A-Za-z]*\d+)$/);if(!m)return null;
+  const set=m[1].replace(/^\d{2}(\d{2})(sm|xy|swsh|sv|bw)$/,'mcd$1').replace(/\.5/,'pt5').replace(/^sv0(\d)/,'sv$1');
+  return `https://images.pokemontcg.io/${set}/${m[2]}.png`}
+function picsOf(c){
+  const list=[];
+  if(c.imgUrl)list.push(c.imgUrl+'/low.webp');
+  if(c.img&&!c.added)list.push('thumbs/'+c.id+'.webp');
+  for(const p of c.prints||[]){if(p.pic)list.push(p.pic);if(p.tlang==='ja')list.push(...limitlessPics(p.tid));if(p.tlang==='en'&&!c.imgUrl)list.push(ptcgGuess(p.tid))}
+  return [...new Set(list.filter(Boolean))];
+}
+function picHtml(c,attrs){
+  const [first,...rest]=picsOf(c);
+  return first?`<img src="${esc(first)}" data-pics="${esc(JSON.stringify(rest))}" ${attrs} loading="lazy" onerror="nextPic(this)">`:'<div class="noimg">No image yet</div>';
+}
+function nextPic(img){
+  const rest=JSON.parse(img.dataset.pics||'[]');
+  if(rest.length){img.dataset.pics=JSON.stringify(rest.slice(1));img.src=rest[0];return}
+  const box=document.createElement('div');box.className='noimg';box.textContent='No image yet';img.replaceWith(box);
+}
+// English prints TCGdex has no picture of: look the card up on pokemontcg.io by set name and number.
+async function ptcgPic(d){
+  const num=String(d.localId||'').replace(/^0+(?=\d)/,''),set=String(d.set?.name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(!num||!set)return null;
+  for(let tries=0;tries<3;tries++){
+    try{
+      const r=await fetch('https://api.pokemontcg.io/v2/cards?q='+encodeURIComponent('number:'+num)+'&select=set,images&pageSize=250');
+      if(!r.ok){await new Promise(ok=>setTimeout(ok,1200));continue}
+      const hit=(await r.json()).data.find(x=>x.set.name.toLowerCase().replace(/[^a-z0-9]/g,'')===set);
+      return hit?.images?.small||null;
+    }catch{await new Promise(ok=>setTimeout(ok,1200))}
+  }
+  return null;
+}
 function toPrint(d,lang){
   const pm=d.pricing?.cardmarket||{};
   return{region:REGION[lang],set:d.set?.name||'',num:d.localId,pid:pm.idProduct||null,low:pm.low??pm['low-holo']??null,trend:pm.trend??pm['trend-holo']??null,
@@ -478,6 +516,8 @@ async function searchCards(q,allLangs,status){
     const list=await getJson(TCG+lang+'/cards?dexId=eq:'+main).catch(()=>[]);
     if(list.length)await add(list,lang);
   }
+  status('Finding pictures…');
+  await pool(found.filter(x=>x.lang==='en'&&!x.d.image),2,async x=>{x.pic=await ptcgPic(x.d)});
   status('Comparing artwork…');
   await pool(found.filter(x=>x.d.image),8,async x=>{x.art=await artOf(x.d.image).catch(()=>null)});
   await new Promise(r=>setTimeout(r));
@@ -497,7 +537,7 @@ async function searchCards(q,allLangs,status){
   const idOwners={};for(const [k,g] of Object.entries(groups))for(const x of g){const id=x.d.pricing?.cardmarket?.idProduct;if(id)(idOwners[id]??=new Set()).add(k)}
   return Object.values(groups).map(g=>{
     g.sort((a,b)=>order.indexOf(a.lang)-order.indexOf(b.lang));
-    const prints=g.map(x=>toPrint(x.d,x.lang));
+    const prints=g.map(x=>x.pic?{...toPrint(x.d,x.lang),pic:x.pic}:toPrint(x.d,x.lang));
     return{id:'x'+g[0].lang+'-'+g[0].d.id,name:g[0].d.name,imgUrl:g.find(x=>x.d.image)?.d.image||null,prints,
       unchecked:!g.some(x=>x.art),verify:prints.some(p=>p.pid&&idOwners[p.pid]?.size>1)||undefined,
       species:dexOf(g[0]).length?species[0].toUpperCase()+species.slice(1).toLowerCase():null,
@@ -515,7 +555,7 @@ function renderFound(){
    </div>
    <div class="found">${f.map(g=>{const low=Math.min(...g.prints.map(p=>p.low??Infinity));return `<label>
      <input type="checkbox" data-found="${esc(g.id)}" ${ui.picked.has(g.id)?'checked':''}>
-     ${g.imgUrl?`<img src="${esc(g.imgUrl)}/low.webp" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:'<div class="noimg">No image</div>'}
+     ${picHtml(g,'alt=""')}
      <span><b>${esc(g.name)}</b><br>${esc(g.prints[0].set)} ${esc(g.prints[0].num)}${g.prints.length>1?` +${g.prints.length-1} more`:''}<br>
      ${[...new Set(g.prints.map(p=>LANGS.find(l=>l[0]===p.region)?.[1]))].join(', ')} · <span class="num">${isFinite(low)?eur(low):'no price'}</span>
      ${g.have?'<br><span class="tag" style="margin-left:0">Already in a list</span>':''}${g.unchecked?'<br><span class="tag warn" style="margin-left:0">May repeat a card</span>':''}${g.verify?'<br><span class="tag warn" style="margin-left:0">Price unsure</span>':''}</span></label>`}).join('')}</div>`;
@@ -547,10 +587,13 @@ async function refreshAdded(){
   const today=new Date().toISOString().slice(0,10);
   if(!state.added?.length||state.addedPriced===today)return;
   let changed=0;
-  await pool(state.added.flatMap(c=>c.prints.filter(p=>p.tid)),6,async p=>{
+  await pool(state.added.flatMap(c=>c.prints.filter(p=>p.tid).map(p=>[c,p])),6,async([c,p])=>{
     const d=await getJson(TCG+p.tlang+'/cards/'+encodeURIComponent(p.tid)).catch(()=>null);if(!d)return;
     const n=toPrint(d,p.tlang);if(n.low!==p.low)p.prevLow=p.low;
-    p.low=n.low;p.trend=n.trend;p.pid=n.pid;changed++});
+    p.low=n.low;p.trend=n.trend;p.pid=n.pid;changed++;
+    // Pictures: take one TCGdex has added since, and look up English ones elsewhere once.
+    if(d.image&&!c.imgUrl)c.imgUrl=d.image;
+    if(!d.image&&p.tlang==='en'&&!p.pic&&!p.picTried){p.picTried=true;p.pic=await ptcgPic(d)||undefined}});
   if(changed){state.addedPriced=today;save();renderAll()}
 }
 
