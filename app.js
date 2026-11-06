@@ -336,7 +336,8 @@ if (!data.Page.pageInfo.hasNextPage) return items;
 const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'kein Tag';
 const moveButton = (show, slot) => !movesKey || !show ? '' :
 `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
-    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben">⇄</button>`;
+    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}"
+    data-from-tag="${esc((slot?.from || slot)?.tag || '')}" data-from-time="${esc((slot?.from || slot)?.time || '')}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben">⇄</button>`;
 const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
 || note.text.replace(/\btoday\b/i, 'am ' + shortDayDate(new Date(note.at * 1000)));
 const reasonHtml = (note, news, none) => note
@@ -942,7 +943,7 @@ const body = ordered.length
 ? ordered.map(g => g.length > 1 ? `<div class="shared">${g.map(row).join('')}</div>` : row(g[0])).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span></h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit" data-day-edit>Bearbeiten</button>' : ''}</h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -1169,9 +1170,15 @@ document.body.classList.toggle(cls, !$(id).checked);
 if (id === 'moveButtons') syncMoveEditor();
 };
 }
+let editScope = 'week';
+for (const b of document.querySelectorAll('[data-edit-scope]')) b.onclick = () => {
+editScope = b.dataset.editScope;
+for (const x of document.querySelectorAll('[data-edit-scope]')) x.setAttribute('aria-pressed', String(x === b));
+};
 function syncMoveEditor() {
 $('editSchedule').hidden = $('editScheduleMenu').hidden = $('moveToggle').hidden;
 const on = $('moveButtons').checked;
+$('editScope').hidden = $('editSchedule').hidden || !on;
 $('editSchedule').innerHTML = on ? 'Fertig<span class="title-long"> mit Bearbeiten</span>' : 'Plan<span class="title-long"> bearbeiten</span>';
 $('editSchedule').setAttribute('aria-pressed', String(on));
 }
@@ -1514,13 +1521,14 @@ const n = Math.floor(aniLimit.remaining / requestsPerTick);
 return n > 5 ? '' : n > 0 ? ` · noch ${n} bis zur Pause` : ' · der nächste ✓ wartet kurz auf AniList';
 }
 function notice(text, withUndo = false) {
+movesUndo = null;
 $('noticeText').textContent = text;
 $('noticeUndo').hidden = !withUndo;
 $('notice').hidden = false;
 clearTimeout(noticeTimer);
 noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
 }
-$('noticeUndo').onclick = () => undo();
+$('noticeUndo').onclick = () => movesUndo ? undoMove() : undo();
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'Serie';
 const watchButton = (mediaId, episode, add = false) => !auth ? '' :
 `<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
@@ -2154,14 +2162,30 @@ $('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot 
 }
 $('moveDlg').showModal();
 }
-async function storeMoves(next, done) {
-$('moveMsg').textContent = 'Speichert…';
+let movesUndo = null;
+async function placeByDrag(b, to) {
+const key = norm(b.dataset.moveTitle), thisWeek = isoDay(weekStart(weekOffset)), before = moves;
+const week = editScope === 'week' ? thisWeek : '';
+const home = to.tag === b.dataset.fromTag && to.time === clockOf(b.dataset.fromTime);
+let next = moves.filter(m => !(m.show === key && (m.week === week || (!week && m.week === thisWeek))));
+if (!home || (week && next.some(m => m.show === key && !m.week))) next = next.concat({ show: key, title: b.dataset.moveTitle, tag: to.tag, time: to.time, week });
+try { await saveMoves(next); } catch (e) { notice(`Nicht verschoben: ${e.message}`); return; }
+notice(`${b.dataset.moveName}: ${slotLabel(to)}${to.parallel ? ' (daneben)' : ''}, ${week ? 'diese Woche' : 'ab jetzt'}.`, true);
+movesUndo = before;
+load(true);
+}
+async function undoMove() {
+const before = movesUndo;
+try { await saveMoves(before); notice('Rückgängig gemacht.'); load(true); } catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
+}
+async function storeMoves(next, done, dlg = 'moveDlg', msg = 'moveMsg') {
+$(msg).textContent = 'Speichert…';
 try {
 await saveMoves(next);
-$('moveDlg').close();
+$(dlg).close();
 notice(`${done} Alle sehen es in etwa einer Minute.`);
 load(true);
-} catch (e) { $('moveMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+} catch (e) { $(msg).textContent = `Nicht gespeichert: ${e.message}`; }
 }
 $('moveSave').onclick = () => {
 const time = $('moveTime').value.trim();
@@ -2174,6 +2198,136 @@ storeMoves(next, `${moving.name} verschoben auf ${slotLabel({ tag: $('moveTag').
 $('moveReset').onclick = () => {
 const week = isoDay(weekStart(weekOffset));
 storeMoves(moves.filter(m => !(m.show === moving.key && (m.week === week || !m.week))), `${moving.name} is back in its Guckplan slot.`);
+};
+let dayEdit = null;
+const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
+const clockOf = time => { const hm = parseTime(time); return hm ? `${String(hm[0]).padStart(2, '0')}:${String(hm[1]).padStart(2, '0')}` : ''; };
+function weekShows() {
+const shows = new Map();
+for (const b of document.querySelectorAll('#list .move')) {
+const key = norm(b.dataset.moveTitle);
+if (!shows.has(key)) shows.set(key, { key, title: b.dataset.moveTitle, name: b.dataset.moveName,
+tag: b.dataset.tag, time: clockOf(b.dataset.time), fromTag: b.dataset.fromTag, fromTime: clockOf(b.dataset.fromTime) });
+}
+return [...shows.values()];
+}
+const setDayScope = scope => {
+dayEdit.scope = scope;
+$('dayWeek').setAttribute('aria-pressed', scope === 'week');
+$('dayAlways').setAttribute('aria-pressed', scope === 'always');
+};
+$('dayWeek').onclick = () => setDayScope('week');
+$('dayAlways').onclick = () => setDayScope('always');
+$('list').addEventListener('click', e => {
+const b = e.target.closest('[data-day-edit]');
+if (!b || !movesKey) return;
+const section = b.closest('.day');
+const all = weekShows();
+const keys = new Set([...section.querySelectorAll('.move')].map(m => norm(m.dataset.moveTitle)));
+const order = s => { const hm = parseTime(s.time); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0]) * 60 + hm[1] : Infinity; };
+const shows = all.filter(s => keys.has(s.key)).sort((a, b) => order(a) - order(b));
+dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [] };
+$('dayName').textContent = dayEdit.label;
+$('dayText').value = shows.map(s => `${s.time ? s.time + ' ' : ''}${s.name}`).join('\n') + '\n';
+$('dayMissing').hidden = true; $('dayMissing').innerHTML = '';
+$('dayMsg').textContent = '';
+closeSuggest();
+setDayScope(editScope);
+$('dayDlg').showModal();
+const t = $('dayText'); t.focus(); t.setSelectionRange(t.value.length, t.value.length);
+});
+const parseLine = line => {
+const m = line.match(/^\s*(\d{1,2}[:.]\d{2})?\s*(.*?)\s*$/);
+return { time: m[1] ? clockOf(m[1]) : '', text: m[2] };
+};
+function findShow(text) {
+const q = norm(text);
+if (!q) return { none: true };
+const names = s => [s.name, s.title].map(norm);
+const exact = dayEdit.all.filter(s => names(s).includes(q));
+if (exact.length) return { show: exact[0] };
+const part = dayEdit.all.filter(s => names(s).some(n => n.includes(q)));
+return part.length === 1 ? { show: part[0] } : part.length ? { many: true } : { none: true };
+}
+let suggest = { items: [], active: 0, line: -1 };
+function closeSuggest() { suggest = { items: [], active: 0, line: -1 }; $('daySuggest').hidden = true; }
+function currentLine() {
+const t = $('dayText'), before = t.value.slice(0, t.selectionStart);
+return { index: before.split('\n').length - 1, lines: t.value.split('\n') };
+}
+function updateSuggest() {
+const { index, lines } = currentLine();
+const { text } = parseLine(lines[index] || '');
+const q = norm(text);
+const items = q.length < 2 ? [] : dayEdit.all.filter(s => [s.name, s.title].some(n => norm(n).includes(q)) && norm(s.name) !== q).slice(0, 6);
+if (!items.length) return closeSuggest();
+suggest = { items, active: 0, line: index };
+$('daySuggest').innerHTML = items.map((s, i) => `<button type="button" role="option" data-pick="${i}" aria-selected="${i === 0}">${esc(s.name)}<span>${esc(slotLabel(s))}</span></button>`).join('');
+$('daySuggest').hidden = false;
+}
+function pickSuggest(i) {
+const s = suggest.items[i];
+if (!s) return;
+const t = $('dayText'), lines = t.value.split('\n');
+const { time } = parseLine(lines[suggest.line]);
+lines[suggest.line] = `${time ? time + ' ' : ''}${s.name}`;
+t.value = lines.join('\n');
+const end = lines.slice(0, suggest.line + 1).join('\n').length;
+t.focus(); t.setSelectionRange(end, end);
+closeSuggest();
+}
+$('dayText').addEventListener('input', updateSuggest);
+$('dayText').addEventListener('click', updateSuggest);
+$('dayText').addEventListener('keydown', e => {
+if ($('daySuggest').hidden) return;
+if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+e.preventDefault();
+suggest.active = (suggest.active + (e.key === 'ArrowDown' ? 1 : suggest.items.length - 1)) % suggest.items.length;
+$('daySuggest').querySelectorAll('[data-pick]').forEach((b, i) => b.setAttribute('aria-selected', i === suggest.active));
+} else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickSuggest(suggest.active); }
+else if (e.key === 'Escape') { e.preventDefault(); closeSuggest(); }
+});
+$('daySuggest').addEventListener('mousedown', e => e.preventDefault());
+$('daySuggest').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) pickSuggest(Number(b.dataset.pick)); });
+function moveTo(next, s, tag, time) {
+const week = dayEdit.scope === 'week' ? isoDay(weekStart(weekOffset)) : '';
+if (tag === s.tag && time === s.time) return next;
+const home = tag === s.fromTag && time === s.fromTime;
+next = next.filter(m => !(m.show === s.key && (m.week === week || (!week && m.week === isoDay(weekStart(weekOffset))))));
+if (home && (!week || !next.some(m => m.show === s.key && !m.week))) return next;
+return next.concat({ show: s.key, title: s.title, tag, time, week });
+}
+$('daySave').onclick = () => {
+const placed = new Map(), problems = [];
+$('dayText').value.split('\n').forEach((line, i) => {
+const { time, text } = parseLine(line);
+if (!text) return;
+const found = findShow(text);
+if (!found.show) problems.push(`Zeile ${i + 1}: „${text}“ ${found.many ? 'passt zu mehreren Serien' : 'ist keine Serie dieser Woche'}`);
+else placed.set(found.show.key, { show: found.show, time });
+});
+if (problems.length) { $('dayMsg').textContent = problems.join('. ') + '.'; return; }
+const missing = dayEdit.shows.filter(s => !placed.has(s.key));
+const asked = new Set(dayEdit.missing.map(s => s.key));
+if (missing.some(s => !asked.has(s.key)) || missing.length !== asked.size) {
+dayEdit.missing = missing;
+$('dayMissing').innerHTML = missing.length ? `<div class="muted">Nicht mehr in der Liste. Wohin damit?</div>${missing.map(s => `
+      <div class="dlg-row day-missing" data-key="${esc(s.key)}"><span>${esc(s.name)}</span>
+        <select aria-label="Tag">${DAY_TAGS.map(t => `<option value="${t}"${t === dayEdit.tag ? ' selected' : ''}>${t.slice(0, 2)}</option>`).join('')}</select>
+        <input value="${esc(s.time)}" placeholder="Uhrzeit" inputmode="numeric" maxlength="5" aria-label="Uhrzeit"></div>`).join('')}` : '';
+$('dayMissing').hidden = !missing.length;
+if (missing.length) { $('dayMsg').textContent = ''; $('dayMissing').querySelector('select').focus(); return; }
+}
+let next = moves;
+for (const { show, time } of placed.values()) next = moveTo(next, show, dayEdit.tag, time);
+for (const row of $('dayMissing').querySelectorAll('.day-missing')) {
+const s = dayEdit.all.find(x => x.key === row.dataset.key);
+const time = row.querySelector('input').value.trim();
+if (time && !parseTime(time)) { $('dayMsg').textContent = `${s.name}: Uhrzeit wie 21:00, oder leer.`; return; }
+next = moveTo(next, s, row.querySelector('select').value, clockOf(time));
+}
+if (next === moves) { $('dayDlg').close(); return; }
+storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg');
 };
 const streamsReady = fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
 .then(json => { streamsDe = json; }, e => {
