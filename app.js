@@ -1837,8 +1837,7 @@ $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
 } else {
 $('markAllStart').hidden = !mine || !rows.length || selecting;
 const top = !mine || !rows.length || !selecting ? ''
-: `<div class="catchup-bar"><span class="hint">Klick auf ein ✓, um die Serie auszunehmen</span>
-          <button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`;
+: `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
 const listed = rows.filter(r => !r.missing), notListed = rows.filter(r => r.missing);
 $('list').innerHTML = rows.length ? top + listed.map(show).join('') + (notListed.length
@@ -1855,9 +1854,7 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
       </div>`).join('')}</section>`);
 }
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
-if (!mine && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', `<div class="notice">${auth
-? `Das ist die Liste von ${esc(user)}: ✓ und Droppen gehen nur auf deiner eigenen (${esc(auth.name)}).`
-: 'Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.'}</div>`);
+if (!mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.</div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 applySearch();
