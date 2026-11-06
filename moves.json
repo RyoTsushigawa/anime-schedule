@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T20:46:27.779Z",
+ "updated": "2026-11-06T20:46:44.774Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -126,6 +126,16 @@
    "tag": "Fr.",
    "time": "21:30",
    "week": ""
+  }
+ ],
+ "delays": [
+  {
+   "id": "bcf1ixox",
+   "day": "2026-11-06",
+   "show": "tsuihousaretatenseijuukishiwagamechishikidemusousuru",
+   "title": "The Exiled Heavy Knight Knows How to Game the System",
+   "minutes": 30,
+   "reason": "Ramen müssen noch drei Minuten ziehen"
   }
  ]
 }
