@@ -1,5 +1,6 @@
 // A separate read-only recap, so Wrapped never gets in the way of the schedule.
 let wrappedTabs = [], wrappedPlan = null, wrappedRecords = [], wrappedDelays = [], wrappedProfiles = {}, wrappedAccounts = [];
+let wrappedTabNote = '', wrappedPlanNote = '';
 let wrappedCards = [], wrappedIndex = 0, wrappedGeneration = 0, wrappedLoadGeneration = 0;
 try { wrappedProfiles = JSON.parse(localStorage.getItem('wrappedProfiles') || '{}') || {}; } catch {}
 for (const storage of ['anilistAccounts','malAccounts']) {
@@ -18,6 +19,62 @@ const wrappedQuery = `query ($user:String) { MediaListCollection(userName:$user,
   lists { entries { status progress score:score(format:POINT_100) completedAt { year month day }
     media { id episodes duration genres title { romaji english } } } }
 } }`;
+async function wrappedSheetApi(path) {
+  const {sheetsKey}=await config();if(!sheetsKey)throw new Error('kein Sheets-API-Schlüssel');
+  const response=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+path+(path.includes('?')?'&':'?')+'key='+encodeURIComponent(sheetsKey),{signal:AbortSignal.timeout(12000)});
+  if(!response.ok)throw new Error('Sheets-API antwortet '+response.status);
+  return response.json();
+}
+async function wrappedReadTabs() {
+  const cacheKey='wrappedTabs:'+SHEET_ID;wrappedTabNote='';
+  try {
+    const data=await wrappedSheetApi('?fields=sheets(properties(sheetId,title))');
+    const all=new Map(data.sheets.map(s=>[s.properties.title,String(s.properties.sheetId)]));
+    const tabs=[];
+    for(const [name,gid] of all){
+      const m=name.match(/^Guckplan\s+(\S+)\s+(\d{4})/i),month=m&&SEASON_MONTH[m[1].toLowerCase()];
+      if(month===undefined||month===null)continue;
+      tabs.push({name,gid,start:new Date(+m[2],month,1).getTime(),catalogGid:all.get(name.replace(/^Guckplan\s+/,''))});
+    }
+    if(!tabs.length)throw new Error('keine Guckplan-Tabs');
+    tabs.sort((a,b)=>b.start-a.start);try{localStorage.setItem(cacheKey,JSON.stringify(tabs));}catch{}return tabs;
+  }catch{}
+  try {
+    const tabs=await guckplanTabs();if(!tabs.length)throw new Error('keine Guckplan-Tabs');
+    try{localStorage.setItem(cacheKey,JSON.stringify(tabs));}catch{}return tabs;
+  }catch(error){
+    let cached=null;
+    try{cached=JSON.parse(localStorage.getItem(cacheKey)||'null');
+      if(!cached&&SHEET_ID==='1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ')cached=JSON.parse(localStorage.getItem('tabs')||'null');
+    }catch{}
+    if(Array.isArray(cached)&&cached.length){wrappedTabNote='Season-Auswahl aus der gespeicherten Kopie.';return cached;}
+    throw new Error('Die Season-Auswahl konnte nicht geladen werden. Bitte ↻ versuchen.');
+  }
+}
+async function wrappedReadPlan(tab) {
+  const key='wrappedPlan:'+SHEET_ID+':'+tab.gid+':'+(tab.catalogGid||'');wrappedPlanNote='';
+  const remember=plan=>{try{localStorage.setItem(key,JSON.stringify({time:Date.now(),plan}));}catch{}return plan;};
+  try{
+    const range=name=>'/values/'+encodeURIComponent("'"+name.replace(/'/g,"''")+"'!A1:AZ300");
+    const [data,hidden,colors,catalog]=await Promise.all([
+      wrappedSheetApi(range(tab.name)),hiddenRows(tab),headerColors(tab).catch(()=>({})),
+      tab.catalogGid?wrappedSheetApi(range(tab.name.replace(/^Guckplan\s+/,''))).catch(()=>null):null
+    ]);
+    if(!Array.isArray(data.values))throw new Error('keine Tabellenwerte');
+    const plan=sheetFromRows(data.values,hidden);plan.colors=colors;
+    plan.catalog=catalog?.values?sheetFromRows(catalog.values).shows:[];
+    return remember(plan);
+  }catch{}
+  try{return remember(await loadPlan(tab,true));}catch(error){
+    let snapshot=null;
+    try{snapshot=JSON.parse(localStorage.getItem(key)||'null');}catch{}
+    if(snapshot?.plan?.people&&snapshot.plan.shows){wrappedPlanNote='Gespeicherter Guckplan vom '+new Date(snapshot.time).toLocaleString('de-DE')+'.';return snapshot.plan;}
+    let saved=null;
+    if(SHEET_ID==='1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ')try{saved=JSON.parse(localStorage.getItem('sheet:'+tab.gid+':'+(tab.catalogGid||''))||'null');}catch{}
+    if(saved?.people&&saved.shows){wrappedPlanNote='Guckplan wie zuletzt im Zeitplan gespeichert; Live-Daten nicht erreichbar.';return saved;}
+    throw error;
+  }
+}
 async function wrappedList(profile, fresh) {
   const key='wrappedList:'+wrappedAccountKey(profile);
   let cached=null;
@@ -124,23 +181,23 @@ async function wrappedRender(fresh=false) {
   } else cards.push({kicker:'Noch mehr Wrapped?',title:'Dein Plan kennt nur die halbe Story.',color:'#f4a9d1',html:'<p>Ordne unter <button class="inline-action" data-open-profiles>Profile</button> einer Person ihre AniList- oder MAL-Konten zu. Dann kommen Abschlüsse, Favoriten und Genres dazu.</p>',note:'Persönliche Plan-Statistiken funktionieren auch ohne Konto. Gruppen-Listenstatistiken sind nur so vollständig wie die zugeordneten Konten.'});
   const index=wrappedIndex;
   wrappedDraw(cards);wrappedShow(index);
-  $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:'Dein Wrapped ist bereit.';
+  $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:(wrappedTabNote||wrappedPlanNote?'Gespeicherte Daten · ↻ versucht es erneut.':'Dein Wrapped ist bereit.');
   const stale=results.filter(r=>r.stale);
-  $('sources').textContent=`Guckplan-Snapshot: ${new Date().toLocaleDateString('de-DE')}. Season: ${season}. Plan-Daten sind keine Watch-Historie; temporäre Wochenverschiebungen sind nicht eingerechnet. ${person?'Persönliche Serienauswahl; Verspätungen bleiben gruppenweit.':'Konten zählen einmal; ausdrücklich gekoppelte AniList/MAL-Listen werden nicht doppelt gezählt.'} ${undated?undated+' undatierte Abschlüsse aus der gesamten Liste wurden nicht dieser Season zugeordnet. ':''}${stale.length?'Gespeicherte Listen statt Live-Daten: '+stale.map(r=>r.profile.name+' ('+new Date(r.time).toLocaleDateString('de-DE')+')').join(', '):''}`;
+  $('sources').textContent=`${wrappedTabNote} ${wrappedPlanNote} Guckplan-Snapshot: ${new Date().toLocaleDateString('de-DE')}. Season: ${season}. Plan-Daten sind keine Watch-Historie; temporäre Wochenverschiebungen sind nicht eingerechnet. ${person?'Persönliche Serienauswahl; Verspätungen bleiben gruppenweit.':'Konten zählen einmal; ausdrücklich gekoppelte AniList/MAL-Listen werden nicht doppelt gezählt.'} ${undated?undated+' undatierte Abschlüsse aus der gesamten Liste wurden nicht dieser Season zugeordnet. ':''}${stale.length?'Gespeicherte Listen statt Live-Daten: '+stale.map(r=>r.profile.name+' ('+new Date(r.time).toLocaleDateString('de-DE')+')').join(', '):''}`;
 }
-async function wrappedLoad() {
+async function wrappedLoad(fresh = false) {
   const loadGeneration=++wrappedLoadGeneration; ++wrappedGeneration;
   const previous=$('person').value;
   $('status').textContent='Guckplan wird geladen…';$('refresh').disabled=true;
   try {
     const tab=wrappedTabs.find(t=>t.gid===$('season').value);
-    const plan=await loadPlan(tab, true); if(loadGeneration!==wrappedLoadGeneration)return;
+    const plan=await wrappedReadPlan(tab); if(loadGeneration!==wrappedLoadGeneration)return;
     wrappedPlan=plan;wrappedRecords=[];
     for(const person of wrappedPlan.people)for(const [show,slot] of picks(wrappedPlan,person))wrappedRecords.push({person,key:WrappedStats.key(show.romaji||show.english),title:wrappedTitle(show),day:WrappedStats.days?.find(d=>norm(d).slice(0,2)===norm(slot.tag).slice(0,2))||slot.tag,time:parseTime(slot.time)?.join(':')||'',slot:slot.slot});
     $('person').replaceChildren(new Option('Die ganze Gruppe',''),...wrappedPlan.people.map(p=>new Option(p,p)));
     if(wrappedPlan.people.includes(previous))$('person').value=previous;
     $('profilePerson').replaceChildren(...wrappedPlan.people.map(p=>new Option(p,p)));
-    await wrappedRender();
+    await wrappedRender(fresh);
   }catch(error){$('status').textContent='Wrapped konnte nicht geladen werden: '+error.message;$('stories').hidden=$('actions').hidden=true;}
   finally{$('refresh').disabled=false;}
 }
@@ -174,7 +231,7 @@ $('saveProfiles').onclick=()=>{
 };
 $('season').onchange=wrappedLoad;
 $('person').onchange=()=>wrappedRender();
-$('refresh').onclick=async()=>{if($('refresh').disabled)return;$('refresh').disabled=true;try{await wrappedRender(true);}finally{$('refresh').disabled=false;}};
+$('refresh').onclick=async()=>{if($('refresh').disabled)return;await wrappedInitialize(true);};
 $('previous').onclick=()=>wrappedShow(wrappedIndex-1);
 $('next').onclick=()=>wrappedShow(wrappedIndex+1);
 document.addEventListener('keydown',e=>{
@@ -231,12 +288,16 @@ $('download').onclick=()=>{
   draw('Simulcast-Plan · '+$('season').selectedOptions[0].textContent,80,1290,920,22,false,1);
   canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='anime-wrapped.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');
 };
-(async()=>{
+async function wrappedInitialize(fresh = false){
+  const selectedTab=$('season').value;
+  $('refresh').disabled=true;
   try{
-    wrappedTabs=await guckplanTabs();if(!wrappedTabs.length)wrappedTabs=[{...FALLBACK_TAB,start:new Date(2026,9,1).getTime()}];
+    wrappedTabs=await wrappedReadTabs();
     $('season').replaceChildren(...wrappedTabs.map(t=>new Option(t.name.replace(/^Guckplan\s+/,''),t.gid)));
-    $('season').value=tabFor(wrappedTabs,new Date()).gid;
+    $('season').value=wrappedTabs.some(t=>t.gid===selectedTab)?selectedTab:tabFor(wrappedTabs,new Date()).gid;
     try{const response=await fetch('moves.json',{cache:'no-cache'});if(response.ok)wrappedDelays=(await response.json()).delays||[];}catch{}
-    await wrappedLoad();
+    await wrappedLoad(fresh);
   }catch(error){$('status').textContent='Wrapped konnte nicht geladen werden: '+error.message;}
-})();
+  finally{$('refresh').disabled=false;}
+}
+wrappedInitialize();
