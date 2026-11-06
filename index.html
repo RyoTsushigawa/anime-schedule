@@ -182,10 +182,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="segmented" id="delayMinutes" role="group" aria-label="Minuten später">
 <button type="button" data-min="5">+5</button><button type="button" data-min="10">+10</button><button type="button" data-min="15" aria-pressed="true">+15</button><button type="button" data-min="30">+30</button><button type="button" data-min="60">+60</button>
 </div>
-<input id="delayCustom" class="delay-custom" type="number" min="1" max="180" inputmode="numeric" placeholder="Min." aria-label="Andere Minutenzahl">
+<input id="delayCustom" class="delay-custom" type="number" min="1" inputmode="numeric" placeholder="Min." aria-label="Andere Minutenzahl">
 </div>
 <div class="dlg-row">
 <input id="delayReason" maxlength="80" placeholder="Grund" aria-label="Grund (leer = zufällig)">
+<label class="toggle" id="delayRememberBox" title="Diesen Grund für alle zu den zufälligen Gründen hinzufügen" hidden><input id="delayRemember" type="checkbox" checked>Merken</label>
 <button type="button" id="delayDice" class="pill" title="Zufälliger Grund" aria-label="Zufälliger Grund">↻</button>
 </div>
 <div class="muted" id="delayMsg"></div>
