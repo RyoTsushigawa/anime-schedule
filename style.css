@@ -138,7 +138,8 @@ img.avatar { object-fit: cover; }
 .field input { width: 100%; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; }
 .field input:focus { outline: none; border-color: var(--accent); }
 .field select { width: 100%; min-width: 0; font-size: 13px; padding: 6px 8px; }
-.sync-hint { font-size: 11px; color: var(--muted); margin: 0; padding: 0 10px 10px; }
+.sync-row { display: flex; gap: 8px; align-items: center; padding: 4px 10px 10px; }
+.sync-row select { flex: 1; min-width: 0; border-radius: 8px; font-size: 12px; padding: 6px 8px; }
 #settingsMenu .settings-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 #editScheduleMenu { grid-column: 1 / -1; }
 .menu .menu-label { padding-top: 6px; }
@@ -151,9 +152,6 @@ img.avatar { object-fit: cover; }
 .provider-badge { flex: none; font-size: 10px; line-height: 1.3; font-weight: 600; padding: 3px 5px; border-radius: 5px;
 color: var(--muted); background: var(--bg); }
 .current .provider-badge { color: inherit; background: rgba(255,255,255,.18); }
-#listSyncSection .field { padding-top: 4px; padding-bottom: 8px; gap: 4px; }
-#listSyncSection .field select { border-radius: 8px; font-size: 12px; }
-#listSyncSection .sync-hint { line-height: 1.45; }
 .site-tools { max-width: 1032px; margin: 0 auto; padding: 12px 16px 28px; display: flex; flex-wrap: wrap;
 justify-content: center; align-items: center; gap: 8px 20px; font-size: 12px; color: var(--muted); }
 .site-tools a, .site-tools button { color: inherit; text-decoration: none; font: inherit; background: none; border: 0; padding: 6px 0; }
@@ -170,7 +168,7 @@ justify-content: center; align-items: center; gap: 8px 20px; font-size: 12px; co
 .catchup-bar .pill { white-space: nowrap; }
 @media (pointer: coarse) {
 .menu .pills > button, .menu .pills > a, .menu .pill-row > button, .menu .toggle, #accountSection .account-choice { min-height: 44px; }
-#listSyncSection .field select { min-height: 40px; font-size: 16px; }
+.sync-row select { min-height: 40px; font-size: 16px; }
 }
 .chip { padding: 4px 10px; border-radius: 99px; color: var(--muted); font-size: 13px; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
