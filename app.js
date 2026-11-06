@@ -978,7 +978,7 @@ playEnter();
 const LIST_QUERY = `query ($user: String) {
   MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING]) {
     lists { entries { progress status media {
-      id status episodes siteUrl synonyms title { romaji english } coverImage { medium }
+      id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
       externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day }
     } } }
   }
@@ -1736,9 +1736,16 @@ return { rows, ownPace };
 }
 function showCatchupCount(rows) {
 const count = rows.filter(r => !r.missing).reduce((sum, r) => sum + r.out - r.first + 1, 0);
+catchupMinutes = rows.filter(r => !r.missing).reduce((sum, r) => sum + (r.out - r.first + 1) * (r.m.duration || 24), 0);
 $('catchupCount').textContent = count || '';
 $('catchupCount').hidden = !count;
 $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} für Catch-up` : '';
+}
+let catchupMinutes = 0;
+function catchupTime() {
+const m = Math.round(catchupMinutes / 5) * 5;
+if (!m) return '';
+return ' · ≈ ' + (m < 60 ? `${m} Min.` : `${Math.floor(m / 60)} Std.${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}`);
 }
 let countingCatchup = false;
 async function updateCatchupCount() {
@@ -1785,6 +1792,7 @@ const planShows = await missingPlanShows(plan, entries);
 if (view !== shown) return;
 const { rows, ownPace } = catchupRows(entries, planShows, plan);
 showCatchupCount(rows);
+if (shown === 'catchup') $('tabName').textContent = `${name} · ${user} auf ${listService()}${catchupTime()}`;
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
@@ -1888,7 +1896,7 @@ if (!ids.length) return [];
 const key = ids.join() + (auth ? ':' + (auth.provider || 'anilist') + ':' + auth.name : '');
 if (planShowsCache.key !== key || Date.now() - planShowsCache.time > LIST_CACHE_MS) {
 const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) {
-      id status episodes siteUrl synonyms title { romaji english } coverImage { medium }
+      id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
       externalLinks { site url } nextAiringEpisode { episode airingAt } ${auth ? 'mediaListEntry { progress status }' : ''}
     } } }`;
 try {
