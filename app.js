@@ -516,7 +516,7 @@ function linkButtons(links, mediaId, watchers) {
 const button = l => l.main
 ? `<a class="cr" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener">${serviceIcon(l.label)}${esc(l.label)}</a>`
 : `<a class="cr other" style="${serviceStyle(l.color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Verfügbar, aber kein Dienst, den wir haben">${serviceIcon(l.label)}${esc(l.label)}</a>`;
-const listed = links.filter(l => l.main || $('others').checked);
+const listed = links.filter(l => l.main);
 const people = watchers ? activePeople().filter(p => watchers.includes(p)) : activePeople();
 const isPrime = l => l.main && /^Prime\b/.test(l.label);
 const primeSwap = listed.some(isPrime) && people.some(p => primeChoice(p) === 'torrent');
@@ -1579,7 +1579,8 @@ showMenu('accountMenu', 'accountButton', false);
 const format = scoreFormat();
 const current = knownEntries.get(mediaId)?.score || 0;
 $('scoreName').textContent = title;
-$('scoreService').textContent = `Abgeschlossen. Deine Bewertung auf ${listService()}:`;
+$('scoreService').textContent = 'Bewertung';
+$('scoreService').title = `Abgeschlossen. Deine Bewertung auf ${listService()}`;
 $('scoreMsg').textContent = '';
 $('scoreClear').hidden = !current;
 $('scoreSave').hidden = !['POINT_100', 'POINT_10_DECIMAL'].includes(format);
@@ -1654,7 +1655,7 @@ let catchupTargets = [];
 let selecting = false;
 let revealMarkBar = false;
 const skipped = new Set();
-const markAllLabel = () => `${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} als gesehen markieren`;
+const markAllLabel = () => `${catchupTargets.filter(t => !skipped.has(t.mediaId)).length} ✓`;
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-select]');
 if (!b) return;
@@ -1814,7 +1815,7 @@ const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
 const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
 catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
-    title="Bei „Alle als gesehen markieren“ mitnehmen">✓</button>`;
+    title="Bei „Alle ✓“ mitnehmen">✓</button>`;
 const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
@@ -1862,19 +1863,19 @@ $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
 } else {
 $('markAllStart').hidden = !mine || !rows.length || selecting;
 const top = !mine || !rows.length || !selecting ? ''
-: `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure">${markAllLabel()}</button></div>`;
+: `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure" title="Als gesehen markieren">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
 const listed = rows.filter(r => !r.missing), notListed = rows.filter(r => r.missing);
 let unfolded = false;
 try { unfolded = localStorage.getItem('notListedOpen') === '1'; } catch {}
 $('list').innerHTML = rows.length ? top + listed.map(show).join('') + (notListed.length
-? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2>Noch nicht auf deiner ${listService()}-Liste · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '')
+? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '')
 : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
 $('list').querySelector('.not-listed > summary')?.addEventListener('click', e => {
 try { localStorage.setItem('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1'); } catch {}
 });
 const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
-if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2>Beendet · noch nicht bewertet</h2>${unscored.map(({ media: m, completed }) => `
+if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2 title="Beendet, noch nicht bewertet">Bewerten</h2>${unscored.map(({ media: m, completed }) => `
       <div class="row" ${searchKey(...mediaTitles(m))}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}
@@ -2058,11 +2059,7 @@ else $(dx < 0 ? 'next' : 'prev').click();
 }, { passive: true });
 }
 try { localStorage.removeItem('todayFirst'); } catch {}
-try { $('others').checked = localStorage.getItem('others') === '1'; } catch {}
-$('others').onchange = () => {
-try { localStorage.setItem('others', $('others').checked ? '1' : '0'); } catch {}
-redraw();
-};
+try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 let movesKey = '';
@@ -2343,7 +2340,7 @@ const missing = dayEdit.shows.filter(s => !placed.has(s.key));
 const asked = new Set(dayEdit.missing.map(s => s.key));
 if (missing.some(s => !asked.has(s.key)) || missing.length !== asked.size) {
 dayEdit.missing = missing;
-$('dayMissing').innerHTML = missing.length ? `<div class="muted">Nicht mehr in der Liste. Wohin damit?</div>${missing.map(s => `
+$('dayMissing').innerHTML = missing.length ? `<div class="muted" title="Nicht mehr in der Liste">Wohin?</div>${missing.map(s => `
       <div class="dlg-row day-missing" data-key="${esc(s.key)}"><span>${esc(s.name)}</span>
         <select aria-label="Tag">${DAY_TAGS.map(t => `<option value="${t}"${t === dayEdit.tag ? ' selected' : ''}>${t.slice(0, 2)}</option>`).join('')}</select>
         <input value="${esc(s.time)}" placeholder="Uhrzeit" inputmode="numeric" maxlength="5" aria-label="Uhrzeit"></div>`).join('')}` : '';
@@ -2531,7 +2528,7 @@ for (const [id, key, hint] of [
 ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
 ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
 ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Gruppe (G)'],
-['searchButton', '/', 'Serien suchen (/)'], ['helpButton', 'Shift+/', 'Anleitung und Kürzel (?)'],
+['searchButton', '/', 'Serien suchen (/)'], ['helpButton', 'Shift+/', 'Hilfe (?)'],
 ]) {
 $(id).setAttribute('aria-keyshortcuts', key);
 $(id).title = hint;
