@@ -1153,7 +1153,7 @@ updateSyncControls();
 }
 function showMenu(menu, button, open) {
 if (open) {
-for (const [other, trigger] of [['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
+for (const [other, trigger] of [['miscMenu', 'miscButton'], ['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
 if (other === menu) continue;
 $(other).hidden = true;
 $(trigger).setAttribute('aria-expanded', 'false');
@@ -1163,9 +1163,12 @@ $(menu).hidden = !open;
 $(button).setAttribute('aria-expanded', open);
 }
 const showSettings = open => showMenu('settingsMenu', 'settingsButton', open);
+$('miscButton').onclick = () => showMenu('miscMenu','miscButton',$('miscMenu').hidden);
+$('miscMenu').addEventListener('click',e=>{ if(e.target.closest('a,button')) showMenu('miscMenu','miscButton',false); });
 $('settingsButton').onclick = () => showSettings($('settingsMenu').hidden);
 $('accountButton').onclick = () => showMenu('accountMenu', 'accountButton', $('accountMenu').hidden);
 document.addEventListener('click', e => {
+if (!e.target.closest('#miscMenu, #miscButton')) showMenu('miscMenu','miscButton',false);
 if (!e.target.closest('#settingsMenu, #settingsButton')) showSettings(false);
 if (!e.target.closest('#accountMenu, #accountButton')) showMenu('accountMenu', 'accountButton', false);
 });
@@ -2692,7 +2695,7 @@ $('groupButton').onclick = () => showPeople($('people').hidden);
 document.addEventListener('click', e => { if (!e.target.closest('.picker')) showPeople(false); });
 document.addEventListener('keydown', e => {
 if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-for (const [menu, button] of [['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
+for (const [menu, button] of [['miscMenu', 'miscButton'], ['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
 if ($(menu).hidden) continue;
 showMenu(menu, button, false);
 $(button).focus();
@@ -2851,4 +2854,8 @@ syncPairs[key] = {target,enabled}; syncPairs[target] = {target:key,enabled};
 storeSyncPairs();
 notice(enabled ? `Änderungen von hier aktualisieren auch ${partner.name}. Bestehende Listeneinträge wurden nicht geändert.` : 'Listen-Abgleich ist aus.');
 };
+const updateWrappedBanner = () => { $('seasonWrapped').hidden = !isSeasonFinalWeek(); };
+updateWrappedBanner();
+setInterval(updateWrappedBanner,60000);
+document.addEventListener('visibilitychange',updateWrappedBanner);
 
