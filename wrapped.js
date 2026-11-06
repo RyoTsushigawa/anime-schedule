@@ -187,22 +187,48 @@ $('download').onclick=()=>{
   const card=$('stories').children[wrappedIndex],data=wrappedCards[wrappedIndex];if(!card||!data)return;
   const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
   const ctx=canvas.getContext('2d');ctx.fillStyle=data.color;ctx.fillRect(0,0,1080,1350);ctx.fillStyle=data.ink||'#20201c';
-  let y=90;
-  const text=(value,size,bold=false)=>{
-    ctx.font=`${bold?'700':'400'} ${size}px sans-serif`;
-    let line='';
+  const ink=data.ink||'#20201c';
+  ctx.save();ctx.globalAlpha=.07;ctx.strokeStyle=ink;ctx.lineWidth=100;ctx.beginPath();ctx.arc(1050,100,290,0,Math.PI*2);ctx.stroke();ctx.restore();
+  const draw=(value,x,y,width,size,bold=false,maxLines=4)=>{
+    ctx.font=(bold?'700':'400')+' '+size+'px sans-serif';
+    const lines=[];let line='';
     for(const word of String(value).split(/\s+/)){
-      if(ctx.measureText(line+' '+word).width>920&&line){ctx.fillText(line,80,y);y+=size*1.3;line=word;}else line+=(line?' ':'')+word;
-      if(y>1190)break;
+      if(ctx.measureText(line+' '+word).width>width&&line){lines.push(line);line=word;}else line+=(line?' ':'')+word;
     }
-    if(y<=1230){ctx.fillText(line,80,y);y+=size*1.45;}
+    if(line)lines.push(line);
+    const shown=lines.slice(0,maxLines);
+    if(lines.length>maxLines)shown[maxLines-1]=shown[maxLines-1].replace(/\s+\S*$/,'')+'…';
+    shown.forEach((line,i)=>ctx.fillText(line,x,y+i*size*1.25));
+    return y+shown.length*size*1.25;
   };
-  text('ANIME WRAPPED',25,true);text(data.kicker,22);y+=25;text(data.title,58,true);y+=20;
-  const number=card.querySelector('.big');if(number)text(number.textContent,120,true);
-  for(const p of card.querySelectorAll('p:not(.kicker):not(.caption)'))text(p.textContent,30);
-  for(const metric of card.querySelectorAll('.metric'))text(metric.textContent.replace(/\s+/g,' '),27,true);
-  for(const row of card.querySelectorAll('.rank li'))text(row.textContent,27);
-  text(data.note||'',20);ctx.font='22px sans-serif';ctx.fillText('Simulcast-Plan · '+$('season').selectedOptions[0].textContent,80,1290);
+  draw('ANIME WRAPPED',80,90,920,25,true,1);
+  draw(data.kicker,80,140,920,22,false,2);
+  let y=draw(data.title,80,240,920,62,true,4)+40;
+  const number=card.querySelector('.big');
+  if(number){y+=135;draw(number.textContent,75,y,940,170,true,1);y+=75;}
+  for(const p of card.querySelectorAll('p:not(.kicker):not(.caption)'))y=draw(p.textContent,80,y,920,32,false,4)+28;
+  const metrics=[...card.querySelectorAll('.metric')];
+  if(metrics.length){
+    const top=Math.max(800,y+30);
+    metrics.forEach((metric,i)=>{
+      const x=80+i*315;ctx.globalAlpha=.25;ctx.fillRect(x,top-25,275,2);ctx.globalAlpha=1;
+      draw(metric.querySelector('b').textContent,x,top+50,275,50,true,1);
+      draw(metric.querySelector('span').textContent,x,top+95,275,23,false,3);
+    });
+  }
+  const bars=[...card.querySelectorAll('.bar-item')];
+  if(bars.length){
+    const values=bars.map(b=>Number(b.querySelector('b').textContent));const max=Math.max(1,...values);
+    bars.forEach((bar,i)=>{const x=80+i*133,h=values[i]/max*230;ctx.globalAlpha=.7;ctx.fillRect(x,940-h,100,h||3);ctx.globalAlpha=1;draw(values[i],x,910-h,100,25,true,1);draw(bar.childNodes[bar.childNodes.length-1].textContent,x,985,110,25,false,1);});
+  }
+  for(const row of card.querySelectorAll('.rank li')){
+    y=Math.max(y,430);if(y>1020)break;
+    ctx.globalAlpha=.25;ctx.fillRect(80,y-25,920,2);ctx.globalAlpha=1;
+    draw(row.querySelector('span').textContent,80,y+22,700,29,false,2);
+    draw(row.querySelector('b').textContent,820,y+22,180,28,true,1);y+=115;
+  }
+  draw(data.note||'',80,1160,920,20,false,4);
+  draw('Simulcast-Plan · '+$('season').selectedOptions[0].textContent,80,1290,920,22,false,1);
   canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='anime-wrapped.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');
 };
 (async()=>{
