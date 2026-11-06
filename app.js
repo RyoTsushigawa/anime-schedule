@@ -2273,7 +2273,26 @@ const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vo
 'Weichenstörung in der Mikrowelle', 'Polizeieinsatz: Fernbedienung vermisst', 'Bauarbeiten am Discord-Server',
 'Tiere auf der Strecke (Katze auf der Tastatur)', 'Hohes Reiseaufkommen im Bad', 'Geänderte Wagenreihung',
 'Stellwerksstörung am Router', 'Verspätete Bereitstellung des Zuschauers', 'Unerwartete Updates (Windows)',
-'Ein Zuschauer steckt noch im Bus fest', 'Kopfhörer werden noch geladen', 'Wartung des Snackvorrats'];
+'Ein Zuschauer steckt noch im Bus fest', 'Kopfhörer werden noch geladen', 'Wartung des Snackvorrats',
+'Probleme bei der Parkplatzsuche',
+'Baum in der Internetleitung', 'Bagger hat das Glasfaserkabel gefunden', 'Router wird neu gestartet (zum dritten Mal)',
+'Ping-Stau auf der Datenautobahn', 'Buffering im Gegenverkehr', 'Paketverlust zwischen Router und Couch',
+'WLAN-Signal hängt im Treppenhaus fest', 'Discord-Update wird installiert', 'Discord-Stream ruckelt (Pixelbrei)',
+'Streamingdienst verlangt erneut das Passwort', 'Crunchyroll lädt nur in 240p', 'Bildschirmfreigabe zeigt nur Schwarz',
+'DNS-Störung im Stellwerk', 'Downloadgeschwindigkeit auf Bahn-WLAN-Niveau', 'Die Telekom ist informiert',
+'Mikrofon steht noch auf stumm', 'Mitbewohner zieht ein 80-GB-Update',
+'Eine Isekai-Reise dauert länger als geplant', 'Ein Truck-kun ist auf der Strecke liegen geblieben',
+'Opening wird noch ein letztes Mal angehört', 'Filler-Folge im Betriebsablauf', 'Recap-Folge blockiert das Gleis',
+'Animationsstudio hat die Folge verschoben', 'Ein Charakter hält noch seinen Power-up-Monolog',
+'Flashback auf der Strecke', 'Tsundere weigert sich zuzugeben, dass sie mitschauen will',
+'Training im Hyperbolischen Zeitraum dauert noch', 'Schlechte Untertitel-Synchronisation (Fansub-Störung)',
+'Beach-Folge: Zuschauer trocknen noch ab', 'Ein Zuschauer musste erst noch das Manga-Kapitel lesen',
+'Endlose Abspannszene: es kommt bestimmt noch was', 'Gruppenbild für die Season-Abschluss-Party',
+'Ein Zuschauer ist auf der Couch eingeschlafen', 'Ein Zuschauer schaut noch die Folge von letzter Woche nach',
+'Uneinigkeit über Sub oder Dub', 'Abstimmung über die Snackauswahl läuft', 'Zuschauer im Gleisbett des Kühlschranks',
+'Ein Zuschauer sucht noch seine Lieblingsdecke', 'Verspätete Ankunft aus dem Homeoffice', 'Ein Zuschauer hat Spoiler gelesen und muss sich erholen',
+'Ramen müssen noch drei Minuten ziehen', 'Bereitstellung des Lieferdienstes verzögert sich', 'Ein Zuschauer ist im Gacha-Spiel hängen geblieben',
+'Haustier fordert Aufmerksamkeit', 'Zuschauer im falschen Discord-Kanal', 'Ein Zuschauer muss noch „nur kurz“ etwas erledigen'];
 const randomReason = () => DELAY_REASONS[Math.floor(Math.random() * DELAY_REASONS.length)];
 let delayDay = null;
 const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
