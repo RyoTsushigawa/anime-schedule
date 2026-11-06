@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "updated": "2026-11-06T22:50:01.278Z",
+  "owned": {
+    "a57852": true
+  },
+  "added": [
+    {
+      "id": "xen-bw5-28",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/bw/bw5/28",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Dark Explorers",
+          "num": "28",
+          "pid": 280356,
+          "low": 0.02,
+          "trend": 0.15,
+          "url": "https://prices.pokemontcg.io/cardmarket/bw5-28",
+          "tid": "bw5-28",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-bw11-34",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/bw/bw11/34",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Legendary Treasures",
+          "num": "34",
+          "pid": 281185,
+          "low": 0.15,
+          "trend": 1.03,
+          "url": "https://prices.pokemontcg.io/cardmarket/bw11-34",
+          "tid": "bw11-34",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-me02-028",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/me/me02/028",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Phantasmal Flames",
+          "num": "028",
+          "pid": 857603,
+          "low": 0.02,
+          "trend": 0.03,
+          "url": null,
+          "tid": "me02-028",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-xy8-37",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/xy/xy8/37",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "BREAKthrough",
+          "num": "37",
+          "pid": 286283,
+          "low": 0.02,
+          "trend": 0.17,
+          "url": "https://prices.pokemontcg.io/cardmarket/xy8-37",
+          "tid": "xy8-37",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-dp5-44",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/dp/dp5/44",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Majestic Dawn",
+          "num": "44",
+          "pid": 278093,
+          "low": 0.02,
+          "trend": 0.22,
+          "url": "https://prices.pokemontcg.io/cardmarket/dp5-44",
+          "tid": "dp5-44",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-sm12-55",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/sm/sm12/55",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Cosmic Eclipse",
+          "num": "55",
+          "pid": 407924,
+          "low": 0.02,
+          "trend": 0.08,
+          "url": "https://prices.pokemontcg.io/cardmarket/sm12-55",
+          "tid": "sm12-55",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-sm5-33",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/sm/sm5/33",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Ultra Prism",
+          "num": "33",
+          "pid": 315964,
+          "low": 0.02,
+          "trend": 0.08,
+          "url": "https://prices.pokemontcg.io/cardmarket/sm5-33",
+          "tid": "sm5-33",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-pl1-59",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/pl/pl1/59",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Platinum",
+          "num": "59",
+          "pid": 278480,
+          "low": 0.03,
+          "trend": 0.58,
+          "url": "https://prices.pokemontcg.io/cardmarket/pl1-59",
+          "tid": "pl1-59",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-dp1-58",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/dp/dp1/58",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Diamond & Pearl",
+          "num": "58",
+          "pid": 277557,
+          "low": 0.02,
+          "trend": 0.32,
+          "url": "https://prices.pokemontcg.io/cardmarket/dp1-58",
+          "tid": "dp1-58",
+          "tlang": "en"
+        }
+      ]
+    },
+    {
+      "id": "xen-swsh9-036",
+      "name": "Prinplup",
+      "family": "Prinplup",
+      "imgUrl": "https://assets.tcgdex.net/en/swsh/swsh9/036",
+      "species": "Prinplup",
+      "added": true,
+      "prints": [
+        {
+          "region": "International",
+          "set": "Brilliant Stars",
+          "num": "036",
+          "pid": 608486,
+          "low": 0.02,
+          "trend": 0.05,
+          "url": "https://prices.pokemontcg.io/cardmarket/swsh9-36",
+          "tid": "swsh9-036",
+          "tlang": "en"
+        },
+        {
+          "region": "Japanese",
+          "set": "スターバース",
+          "num": "026",
+          "pid": 605877,
+          "low": 0.02,
+          "trend": 0.02,
+          "url": null,
+          "tid": "S9-026",
+          "tlang": "ja"
+        },
+        {
+          "region": "Chinese",
+          "set": "星星誕生",
+          "num": "026",
+          "pid": 605877,
+          "low": 0.02,
+          "trend": 0.02,
+          "url": null,
+          "tid": "S9-026",
+          "tlang": "zh-tw"
+        }
+      ]
+    }
+  ]
+}
