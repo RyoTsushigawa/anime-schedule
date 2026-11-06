@@ -217,6 +217,11 @@ main { padding: 16px; max-width: 1032px; margin: 0 auto; }
 .day h2 { position: sticky; top: var(--head, 0); z-index: 1; display: flex; align-items: center; gap: 12px; margin: 0 0 8px; padding: 9px 2px 7px; font-size: 14px; font-weight: 500; color: var(--muted); background: var(--bg); transition: top .2s ease; }
 .day h2 b { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -.005em; }
 .day h2::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.not-listed > summary { list-style: none; cursor: pointer; }
+.not-listed > summary::-webkit-details-marker { display: none; }
+.not-listed .fold { width: 7px; height: 7px; margin: -4px 0 0 -4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform .15s ease; }
+.not-listed[open] .fold { margin-top: -6px; transform: rotate(45deg); }
+@media (hover: hover) { .not-listed > summary:hover h2 { color: var(--text); } }
 header.away ~ main .day h2 { top: 0; }
 .toscore { margin-top: 30px; }
 .day.is-today h2 { color: color-mix(in srgb, var(--accent) 70%, var(--text)); }
