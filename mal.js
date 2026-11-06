@@ -5,13 +5,13 @@ const reverse = Object.fromEntries(Object.entries(statuses).map(([a, b]) => [b, 
 const metadata = new Map(), details = new Map(), flights = new Map();
 let rowsCache = new Map();
 try { for (const m of JSON.parse(localStorage.getItem('malMediaMap') || '[]')) if (m.idMal > 0 && m.id > 0) metadata.set(m.idMal, m); } catch {}
-const fields = 'id idMal status episodes siteUrl synonyms title { romaji english } coverImage { medium } externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } endDate { year month day }';
+const fields = 'id idMal status episodes duration siteUrl synonyms title { romaji english } coverImage { medium } externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } endDate { year month day }';
 const cacheKey = account => 'malList:' + account.name.toLowerCase();
 function rememberMedia(media) {
 if (!(media?.id > 0 && media.idMal > 0)) return;
 const before = metadata.get(media.idMal) || {};
 const clean = { ...before, id: media.id, idMal: media.idMal };
-for (const k of ['title','status','episodes','siteUrl','synonyms','coverImage','externalLinks','nextAiringEpisode','startDate','endDate'])
+for (const k of ['title','status','episodes','duration','siteUrl','synonyms','coverImage','externalLinks','nextAiringEpisode','startDate','endDate'])
 if (media[k] !== undefined) clean[k] = media[k];
 if (JSON.stringify(before) === JSON.stringify(clean)) return;
 metadata.set(media.idMal, clean);
