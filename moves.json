@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T21:10:32.827Z",
+ "updated": "2026-11-06T21:10:50.586Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -130,23 +130,12 @@
  ],
  "delays": [
   {
-   "id": "bcf1ixox",
+   "id": "pvlwiuzu",
    "day": "2026-11-06",
    "show": "tsuihousaretatenseijuukishiwagamechishikidemusousuru",
    "title": "The Exiled Heavy Knight Knows How to Game the System",
    "minutes": 30,
-   "reason": "Ramen müssen noch drei Minuten ziehen"
-  },
-  {
-   "id": "s36bowge",
-   "day": "2026-11-06",
-   "show": "aokidenshouwelshshedar",
-   "title": "Welsh & Shedar",
-   "minutes": 60,
-   "reason": "Belly, Quecks und Marius sind dick"
+   "reason": "WLAN-Signal hängt im Treppenhaus fest"
   }
- ],
- "reasons": [
-  "Belly, Quecks und Marius sind dick"
  ]
 }
