@@ -651,7 +651,7 @@ taken.add(r.watchAt);
 day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
 }
 function applyDelays(day) {
-const list = [delayOf(isoDay(day.date))].filter(Boolean);
+const list = delaysOf(isoDay(day.date));
 const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
 day.delayStarts = list.map(x => ({ ...x, at: day.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
 for (const r of day.rows) {
@@ -936,7 +936,7 @@ const row = r => !r.delay ? plainRow(r) : plainRow(r)
 .replace('<div class="time">', `<div class="time late" title="Geplant ${hhmm(r.plannedAt)} · +${r.delay} Min.">`);
 const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
 .filter(x => g.some(r => r.plannedAt === x.at && norm(r.show?.romaji || r.show?.english || '') === x.show))
-.map(x => `<div class="delay-note" role="note"><b>+${x.minutes} Min.</b> · ${esc(x.reason)}</div>`).join('');
+.map(x => `<div class="delay-note" role="note"><span><b>+${x.minutes} Min.</b> · ${esc(x.reason)}</span>${movesKey || delaysUrl ? `<button class="pill" data-delay-edit="${esc(x.show)}" title="Diese Verspätung ändern">Edit</button>` : ''}</div>`).join('');
 const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
       <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
       ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
@@ -2089,6 +2089,7 @@ try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 let delays = [];
+let sharedReasons = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
 let movesKey = '';
@@ -2107,24 +2108,26 @@ try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 delays = newest?.delays || [];
+sharedReasons = newest?.reasons || [];
 }
 function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
-async function saveMoves(next, nextDelays = delays) {
+async function saveMoves(next, nextDelays = delays, nextReasons = sharedReasons) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 const current = await fetch(MOVES_API + '?ref=main', { headers, cache: 'no-store' });
 const sha = current.ok ? (await current.json()).sha : undefined;
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
-const file = { updated: new Date().toISOString(), moves: next, ...(nextDelays.length && { delays: nextDelays }) };
+const file = { updated: new Date().toISOString(), moves: next, ...(nextDelays.length && { delays: nextDelays }), ...(nextReasons.length && { reasons: nextReasons }) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: 'Move shows', content, branch: 'main', ...(sha && { sha }) }) });
 if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
 moves = next;
 delays = nextDelays;
+sharedReasons = nextReasons;
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
 }
 $('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
@@ -2291,22 +2294,32 @@ const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vo
 'Ein Zuschauer ist am Schreibtisch eingeschlafen', 'Ein Zuschauer schaut noch die Folge von letzter Woche nach',
 'Uneinigkeit über Sub oder Dub', 'Abstimmung über die Snackauswahl läuft', 'Zuschauer im Gleisbett des Kühlschranks',
 'Ein Zuschauer sucht noch seine Lieblingsdecke', 'Verspätete Ankunft aus dem Homeoffice', 'Ein Zuschauer hat Spoiler gelesen und muss sich erholen',
-'Ramen müssen noch drei Minuten ziehen', 'Bereitstellung des Lieferdienstes verzögert sich', 'Ein Zuschauer ist im Gacha-Spiel hängen geblieben',
-'Haustier fordert Aufmerksamkeit', 'Zuschauer im falschen Discord-Kanal', 'Ein Zuschauer muss noch „nur kurz“ etwas erledigen'];
-const randomReason = () => DELAY_REASONS[Math.floor(Math.random() * DELAY_REASONS.length)];
+'Bereitstellung des Lieferdienstes verzögert sich', 'Ein Zuschauer ist im Gacha-Spiel hängen geblieben',
+'Haustier fordert Aufmerksamkeit', 'Zuschauer im falschen Discord-Kanal', 'Ein Zuschauer muss noch „nur kurz“ etwas erledigen', 'Escanor'];
+const reasonPool = () => [...new Set([...DELAY_REASONS, ...sharedReasons])];
+const randomReason = () => { const pool = reasonPool(); return pool[Math.floor(Math.random() * pool.length)]; };
+const syncRemember = () => { const typed = $('delayReason').value.trim(); $('delayRememberBox').hidden = !typed || reasonPool().includes(typed); };
 let delayDay = null;
 const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-const delayOf = date => delays.filter(x => x.day === date).at(-1) || null;
-function openDelay(date) {
+const delaysOf = date => [...new Map(delays.filter(x => x.day === date).map(x => [x.show, x])).values()];
+function openDelay(date, show) {
 const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === date);
 if (!found) return;
 const rows = found.rows.filter(r => !r.pause && r.show);
 const keyOf = r => norm(r.show.romaji || r.show.english);
-const current = delayOf(date);
-delayDay = { date, current, rows: [...new Map(rows.map(r => [keyOf(r), r])).values()].map(r => ({ key: keyOf(r), title: r.show.english || r.show.romaji, at: r.plannedAt ?? r.watchAt, now: r.watchAt })) };
+delayDay = { date, rows: [...new Map(rows.map(r => [keyOf(r), r])).values()].map(r => ({ key: keyOf(r), title: r.show.english || r.show.romaji, at: r.plannedAt ?? r.watchAt, now: r.watchAt })) };
 $('delayName').textContent = `Verspätung · ${dayName(found.date)}, ${germanDate(found.date)}`;
-const from = current && delayDay.rows.find(r => r.key === current.show) || delayDay.rows.find(r => r.now > Date.now()) || delayDay.rows[0];
-$('delayFrom').innerHTML = delayDay.rows.map(r => `<option value="${esc(r.key)}"${r === from ? ' selected' : ''}>ab ${hhmmOf(r.at)} ${esc(r.title)}</option>`).join('');
+const has = new Map(delaysOf(date).map(x => [x.show, x]));
+const from = show && delayDay.rows.find(r => r.key === show) || delayDay.rows.find(r => r.now > Date.now()) || delayDay.rows[0];
+$('delayFrom').innerHTML = delayDay.rows.map(r => `<option value="${esc(r.key)}"${r === from ? ' selected' : ''}>ab ${hhmmOf(r.at)} ${esc(r.title)}${has.get(r.key) ? ` · +${has.get(r.key).minutes}` : ''}</option>`).join('');
+$('delayMsg').textContent = delayDay.rows.length ? '' : 'An diesem Tag steht nichts an.';
+$('delaySave').disabled = !delayDay.rows.length;
+fillDelay();
+$('delayDlg').showModal();
+}
+function fillDelay() {
+const current = delayDay && delaysOf(delayDay.date).find(x => x.show === $('delayFrom').value) || null;
+delayDay.current = current;
 const minutes = current?.minutes || 15;
 const chip = $('delayMinutes').querySelector(`[data-min="${minutes}"]`);
 for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', String(x === chip));
@@ -2314,10 +2327,11 @@ $('delayCustom').value = chip ? '' : minutes;
 $('delayReason').value = current?.reason || '';
 $('delayReason').placeholder = randomReason();
 $('delayRemove').hidden = !current;
-$('delayMsg').textContent = delayDay.rows.length ? '' : 'An diesem Tag steht nichts an.';
-$('delaySave').disabled = !delayDay.rows.length;
-$('delayDlg').showModal();
+$('delayRemember').checked = true;
+syncRemember();
 }
+$('delayReason').addEventListener('input', syncRemember);
+$('delayFrom').addEventListener('change', fillDelay);
 const delayMinutes = () => Number($('delayCustom').value) || Number($('delayMinutes').querySelector('[aria-pressed="true"]')?.dataset.min) || 0;
 $('delayMinutes').addEventListener('click', e => {
 const b = e.target.closest('[data-min]');
@@ -2328,30 +2342,37 @@ $('delayCustom').value = '';
 $('delayCustom').addEventListener('input', () => {
 if ($('delayCustom').value) for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', 'false');
 });
-$('delayDice').onclick = () => { $('delayReason').value = randomReason(); };
+$('delayDice').onclick = () => { $('delayReason').value = randomReason(); syncRemember(); };
 async function postDelay(op) {
-const res = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) });
+const send = () => fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) });
+let res;
+try { res = await send(); } catch {
+await new Promise(r => setTimeout(r, 1500));
+try { res = await send(); } catch { throw new Error('der Speicherdienst (workers.dev) ist nicht erreichbar. Blockt ein Adblocker oder das Netzwerk ihn?'); }
+}
 const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
 moves = body.moves || moves;
 delays = body.delays || [];
+sharedReasons = body.reasons || sharedReasons;
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
 }
-async function changeDelays(day, add) {
-const old = delays.filter(x => x.day === day);
+async function changeDelays(day, show, add, remember) {
+const mine = x => x.day === day && x.show === show;
+const old = delays.filter(mine);
 if (movesKey) {
-await saveMoves(moves, delays.filter(x => x.day !== day).concat(add || []));
+await saveMoves(moves, delays.filter(x => !mine(x)).concat(add || []), remember ? [...new Set([...sharedReasons, add.reason])] : sharedReasons);
 return;
 }
 if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
 for (const x of old) await postDelay({ remove: x.id });
-if (add) await postDelay({ add });
+if (add) await postDelay({ add, ...(remember && { remember: true }) });
 }
-async function storeDelay(add, done) {
+async function storeDelay(add, done, remember = false) {
 $('delayMsg').textContent = 'Speichert…';
 $('delaySave').disabled = $('delayRemove').disabled = true;
 try {
-await changeDelays(delayDay.date, add);
+await changeDelays(delayDay.date, $('delayFrom').value, add, remember);
 $('delayDlg').close();
 notice(`${done} Alle sehen es in etwa einer Minute.`);
 if (lastWeekRender) render(...lastWeekRender);
@@ -2360,18 +2381,22 @@ finally { $('delaySave').disabled = $('delayRemove').disabled = false; }
 }
 $('delaySave').onclick = () => {
 const minutes = Math.round(delayMinutes());
-if (!(minutes >= 1 && minutes <= 180)) { $('delayMsg').textContent = 'Zwischen 1 und 180 Minuten.'; return; }
+if (!(minutes >= 1)) { $('delayMsg').textContent = 'Wie viele Minuten?'; return; }
 const from = delayDay.rows.find(r => r.key === $('delayFrom').value);
 if (!from) return;
-const reason = $('delayReason').value.trim() || $('delayReason').placeholder || randomReason();
+const typed = $('delayReason').value.trim();
+const reason = typed || $('delayReason').placeholder || randomReason();
+const remember = !$('delayRememberBox').hidden && $('delayRemember').checked && typed === reason;
 const id = Math.random().toString(36).slice(2, 10);
 storeDelay({ id, day: delayDay.date, show: from.key, title: from.title, minutes, reason },
-`${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`);
+`${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`, remember);
 };
 $('delayRemove').onclick = () => storeDelay(null, 'Verspätung entfernt.');
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-delay]');
 if (b) openDelay(b.closest('.day').dataset.date);
+const edit = e.target.closest('[data-delay-edit]');
+if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 });
 let dayEdit = null;
 const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
