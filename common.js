@@ -171,7 +171,9 @@ const text = String(s || '');
 let out = normalized.get(text);
 if (out === undefined) {
 out = text.normalize('NFKD').toLowerCase()
-.replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1').replace(/[^a-z0-9]/g, '');
+.replace(/½/g, '12').replace(/\b(\d+)(st|nd|rd|th) season\b/g, 'season $1')
+.replace(/\b(\d+)(st|nd|rd|th) cour\b|\bcour (\d+)\b/g, (m, a, b, c) => `part ${a || c}`)
+.replace(/[^a-z0-9]/g, '');
 normalized.set(text, out);
 }
 return out;
