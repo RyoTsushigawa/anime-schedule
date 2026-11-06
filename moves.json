@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T18:44:24.115Z",
+ "updated": "2026-11-06T18:45:42.449Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -83,6 +83,48 @@
    "title": "Please Excuse My Younger Brothers",
    "tag": "Fr.",
    "time": "19:00",
+   "week": ""
+  },
+  {
+   "show": "sasakitopiichanseason2",
+   "title": "Sasaki to Pii-chan Season 2",
+   "tag": "Fr.",
+   "time": "19:30",
+   "week": ""
+  },
+  {
+   "show": "tsuihousaretatenseijuukishiwagamechishikidemusousuru",
+   "title": "Tsuihou sareta Tensei Juukishi wa Game Chishiki de Musou suru",
+   "tag": "Fr.",
+   "time": "20:00",
+   "week": ""
+  },
+  {
+   "show": "hotarunoyomeiri",
+   "title": "Hotaru no Yomeiri",
+   "tag": "Fr.",
+   "time": "20:30",
+   "week": ""
+  },
+  {
+   "show": "kusuriyanohitorigotoseason3",
+   "title": "Kusuriya no Hitorigoto 3rd Season",
+   "tag": "Fr.",
+   "time": "21:00",
+   "week": ""
+  },
+  {
+   "show": "tougenankinikkokegonnotakihen",
+   "title": "TOUGEN ANKI ~Nikko Kegon no Taki-hen~",
+   "tag": "Fr.",
+   "time": "21:00",
+   "week": ""
+  },
+  {
+   "show": "aokidenshouwelshshedar",
+   "title": "Aoki Denshou: Welsh & Shedar",
+   "tag": "Fr.",
+   "time": "21:30",
    "week": ""
   }
  ]
