@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T20:44:11.720Z",
+ "updated": "2026-11-06T20:44:40.025Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -136,6 +136,14 @@
    "title": "Firefly Wedding",
    "minutes": 25,
    "reason": "Zuschauer im falschen Discord-Kanal"
+  },
+  {
+   "id": "0fep8j9c",
+   "day": "2026-11-06",
+   "show": "hotarunoyomeiri",
+   "title": "Firefly Wedding",
+   "minutes": 30,
+   "reason": "Probleme bei der Parkplatzsuche"
   }
  ]
 }
