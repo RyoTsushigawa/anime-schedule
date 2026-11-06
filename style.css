@@ -315,7 +315,14 @@ background: color-mix(in srgb, var(--late) 12%, transparent); font-size: 13px; c
 .delay-list > div { display: flex; align-items: center; gap: 8px; }
 .delay-list > div > span { flex: 1; min-width: 0; }
 .delay-list b { color: var(--late); }
-.dlg .delay-custom { flex: 0 0 72px; }
+.dlg .delay-custom { flex: 0 0 64px; }
+#delayDlg { width: min(440px, 92vw); overflow-x: hidden; }
+#delayDlg form { grid-template-columns: minmax(0, 1fr); }
+#delayDlg form > * { min-width: 0; }
+#delayDlg select { width: 100%; }
+#delayMinutes { flex: 1 1 auto; min-width: 0; }
+#delayMinutes button { flex: 1; padding: 4px 6px; }
+.delay-list > div > span { overflow-wrap: anywhere; }
 #delayFrom { flex: 1; min-width: 0; }
 .day-text { position: relative; }
 .day-text textarea, .discord-text { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
