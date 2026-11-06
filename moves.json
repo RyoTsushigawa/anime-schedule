@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T21:10:50.586Z",
+ "updated": "2026-11-06T21:10:52.721Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -136,6 +136,14 @@
    "title": "The Exiled Heavy Knight Knows How to Game the System",
    "minutes": 30,
    "reason": "WLAN-Signal hängt im Treppenhaus fest"
+  },
+  {
+   "id": "nbd67uwo",
+   "day": "2026-11-06",
+   "show": "kusuriyanohitorigotoseason3",
+   "title": "The Apothecary Diaries Season 3",
+   "minutes": 60,
+   "reason": "Uneinigkeit über Sub oder Dub"
   }
  ]
 }
