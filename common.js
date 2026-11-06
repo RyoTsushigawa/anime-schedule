@@ -237,4 +237,9 @@ const NIGHT_UNTIL = 6;
 const parseTime = time => (time || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).map(Number);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => esc(/^https:\/\/[^\s"'<>]+$/i.test(String(u || '')) ? u : '#');
+function isSeasonFinalWeek(now = new Date()) {
+const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(now).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
+const last=new Date(Date.UTC(parts.year,parts.month,0)).getUTCDate();
+return parts.month%3===0 && parts.day>last-7;
+}
 
