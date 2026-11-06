@@ -11,7 +11,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseSubsPlease, matchSubsPlease, parseAniWorld, matchAniWorld } from './fallback-links.mjs';
-import { parseSeason, parseStreams, parseSchedules, parseHeadlines, parseTimetableNotes, norm, titleScore, searchVariants, pickCard } from './livechart-pages.mjs';
+import { parseSeason, parseStreams, parseSchedules, parseHeadlines, parseTimetableNotes, norm, titleScore, searchVariants, pickCard, parseYouTube, episodeStem, newestEpisode } from './livechart-pages.mjs';
 
 const SHEET = 'https://docs.google.com/spreadsheets/d/1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ';
 const FALLBACK_TAB = { name: 'Guckplan Herbst 2026', gid: '488548700' };
@@ -28,6 +28,25 @@ async function livechart(path) {
   const res = await fetch('https://www.livechart.me' + path, { headers: HEADERS });
   if (!res.ok) throw new Error(`LiveChart ${path} returned ${res.status}`);
   return res.text();
+}
+
+// A show on a YouTube channel: link its newest (subtitled) episode instead of the whole playlist.
+// The playlist page names the series' uploads; a search sorted by upload date finds the newest,
+// since the playlist page only lists its first videos.
+async function youtube(url) {
+  await sleep(CRAWL_DELAY);
+  const res = await fetch(url, { headers: { ...HEADERS, 'Accept-Language': 'en' } });
+  if (!res.ok) throw new Error(`YouTube returned ${res.status}`);
+  return res.text();
+}
+async function newestVideo(playlistUrl) {
+  const list = new URL(playlistUrl).searchParams.get('list');
+  const listed = parseYouTube(await youtube(playlistUrl));
+  if (!listed.length) return null;
+  const stem = episodeStem(listed[0].title);
+  const searched = parseYouTube(await youtube('https://www.youtube.com/results?sp=CAI%253D&search_query=' + encodeURIComponent(stem)));
+  const v = newestEpisode([...listed, ...searched], stem);
+  return v && { episode: v.episode, title: v.title, url: `https://www.youtube.com/watch?v=${v.id}&list=${list}` };
 }
 
 function seasons() {
@@ -286,6 +305,10 @@ for (const t of titles) {
   // From outside Germany the next episode keeps the offset found from home (not a foreign service's)
   if (statusOnly && next) next.at += (previous?.release?.[card.anilist]?.offset || 0) - (offset?.offset || 0);
   const news = await breakNews(card.id);
+  const playlist = (statusOnly ? previous?.byAnilist?.[card.anilist] || [] : byAnilist[card.anilist]).find(s => /youtube\.com\/playlist\?list=/.test(s.url));
+  let video = null;
+  if (playlist) try { video = await newestVideo(playlist.url); } catch (e) { console.log(`    YouTube not read: ${e.message}`); }
+  video ||= playlist && previous?.status?.[card.anilist]?.video || null;
   const notes = slotNotes[card.id] || [];
   // Keep observed releases, not extrapolated weekly dates: delays and batches must stay exact.
   // New observations replace the old date for that episode if LiveChart reschedules it.
@@ -294,10 +317,10 @@ for (const t of titles) {
     .filter(a => Number.isInteger(a.episode) && a.at > Date.now() / 1000 - 42 * 86400)
     .map(a => [a.episode, a]));
   status[card.anilist] = { titles: t, url: `https://www.livechart.me/anime/${card.id}`, next,
-    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(notes.length && { notes }) };
+    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(notes.length && { notes }), ...(video && { video }) };
   console.log(`${t[1] || t[0]}: ${byAnilist[card.anilist].map(s => s.name + (s.extra ? ` (+${s.extra})` : '')).join(', ') || '(none)'}` +
     (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min${offset.lag ? `, ${offset.lag} weeks behind` : ''}` : '') +
-    (next ? '' : ' · nothing scheduled') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
+    (next ? '' : ' · nothing scheduled') + (video ? `\n    newest on YouTube: Episode ${video.episode}` : '') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
 }
 
 // Explicit media status is independent of a missing next-episode date. Keep the last confirmed
