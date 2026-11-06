@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-06T21:10:52.721Z",
+ "updated": "2026-11-06T21:20:46.455Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -144,6 +144,14 @@
    "title": "The Apothecary Diaries Season 3",
    "minutes": 60,
    "reason": "Uneinigkeit über Sub oder Dub"
+  },
+  {
+   "id": "s36bowge",
+   "day": "2026-11-06",
+   "show": "aokidenshouwelshshedar",
+   "title": "Welsh & Shedar",
+   "minutes": 60,
+   "reason": "Belly, Quecks und Marius sind dick"
   }
  ]
 }
