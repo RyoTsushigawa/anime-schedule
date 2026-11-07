@@ -577,3 +577,29 @@ text-decoration: line-through; }
 .row.pause .title { font-size: 14px; }
 .fallback-prime [data-prime-choice="prime"] { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .prime-mark { flex: none; width: 16px; height: 16px; background: currentColor; -webkit-mask: url(services/prime-video.svg) center / contain no-repeat; mask: url(services/prime-video.svg) center / contain no-repeat; }
+.daystrip {
+gap: 4px;
+padding: 4px;
+border: 1px solid var(--line);
+border-radius: 14px;
+background: var(--card);
+}
+.daystrip button {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 5px;
+min-height: 34px;
+border-radius: 9px;
+}
+.daystrip button:hover:not(.picked) { background: var(--today); }
+.daystrip button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.daystrip b { font-size: 14px; }
+.day h2 { gap: 10px; padding-block: 10px; }
+.day h2 b { font-size: 17px; letter-spacing: -.02em; }
+.day .row { border-radius: 14px; }
+.day .row .title { line-height: 1.3; }
+@media (max-width: 560px) {
+.daystrip button { flex-direction: column; gap: 0; min-height: 44px; line-height: 1.15; }
+.daystrip button span { font-size: 11px; }
+}
