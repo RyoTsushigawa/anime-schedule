@@ -88,7 +88,9 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `seasons.json`, `fallback-links.json` | Season index and the alternative show links (daily GitHub run) |
 | `moves.json` | Moves, delays and kept delay reasons (only on GitHub, written by the page and the delay helper) |
 | `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany) |
-| `tools/publish.mjs` | Runs the tests, then uploads the changed files to GitHub |
+| `tools/publish.mjs` | Runs the tests and the secret guard, then uploads the changed files to GitHub |
+| `tools/secret-scan.mjs` | The secret guard: stops a publish or a bot zip that contains a GitHub key, Discord webhook address or bot token |
+| `tools/live-check.mjs` | Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo |
 | `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
 | `tools/delay-check.mjs` | Weekly, read-only: the helper answers, refuses strangers and is the current version |
 | `tabs.json`, `tools/tab-list.mjs` | The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
