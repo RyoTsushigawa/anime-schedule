@@ -194,10 +194,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <input id="delayCustom" class="delay-custom" type="number" min="1" inputmode="numeric" placeholder="Min." aria-label="Andere Minutenzahl">
 </div>
 <div class="dlg-row">
-<input id="delayReason" maxlength="80" placeholder="Grund" aria-label="Grund (leer = zufällig)">
-<label class="toggle" id="delayRememberBox" title="Diesen Grund für alle zu den zufälligen Gründen hinzufügen" hidden><input id="delayRemember" type="checkbox" checked>Merken</label>
-<button type="button" id="delayForget" class="pill" title="Aus den gemerkten Gründen entfernen" aria-label="Aus den gemerkten Gründen entfernen" hidden>×</button>
-<datalist id="delayKept"></datalist>
+<select id="delayReason" aria-label="Grund"></select>
 <button type="button" id="delayDice" class="pill" title="Zufälliger Grund" aria-label="Zufälliger Grund">↻</button>
 </div>
 <div class="muted" id="delayMsg"></div>
