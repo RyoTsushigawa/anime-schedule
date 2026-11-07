@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T20:39:31.082Z",
+ "updated": "2026-11-07T20:56:03.645Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -138,6 +138,22 @@
   {
    "show": "vertexforce",
    "title": "VERTEX FORCE",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-02",
+   "skip": true
+  },
+  {
+   "show": "hyoukennomajutsushigasekaiwosuberuii",
+   "title": "The Iceblade Sorcerer Shall Rule the World II",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-02",
+   "skip": true
+  },
+  {
+   "show": "kerorogunsou",
+   "title": "Keroro Gunsou☆",
    "tag": "",
    "time": "",
    "week": "2026-11-02",
