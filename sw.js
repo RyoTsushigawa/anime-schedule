@@ -3,8 +3,8 @@
 // is fetched as a whole and offers "Reload" (app.js). Data files still come fresh, with the saved copy
 // standing in when the network is slow or down. AniList, Google and LiveChart requests aren't touched:
 // the page keeps its own copies.
-const CACHE = 'schedule-v181';
-const FILES = ['./', 'wrapped-profiles.json', 'wrapped.html', 'wrapped.css', 'wrapped-data.js', 'wrapped.js', 'index.html', 'services/crunchyroll.svg', 'services/netflix.svg', 'services/prime-video.svg', 'services/disney.svg', 'services/adn.svg', 'services/youtube.svg', 'services/akiba.svg', 'services/hidive.svg', 'services/aniworld.png', 'services/subsplease.png', 'services/nyaa.png', 'services/0neko.ico', 'style.css', 'early.js', 'common.js', 'mal.js', 'app.js', 'drag-moves.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'manifest.webmanifest', 'icon-72.png'];
+const CACHE = 'schedule-v184';
+const FILES = ['./', 'index.html', 'services/crunchyroll.svg', 'services/netflix.svg', 'services/prime-video.svg', 'services/disney.svg', 'services/adn.svg', 'services/youtube.svg', 'services/akiba.svg', 'services/hidive.svg', 'services/aniworld.png', 'services/subsplease.png', 'services/nyaa.png', 'services/0neko.ico', 'style.css', 'early.js', 'common.js', 'mal.js', 'app.js', 'drag-moves.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'manifest.webmanifest', 'icon-72.png'];
 
 self.addEventListener('install', event => {
   // 'reload' skips the browser's HTTP cache, so the offline copy is this version and not the one
@@ -16,20 +16,22 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => /^schedule-v\d+$/.test(k) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
 const SLOW_NETWORK_MS = 1500;
+const SCOPE = new URL('./', location);
 const isPageFile = (request, url) => request.mode === 'navigate' || /\.(html|css|js|webmanifest|png)$/.test(url.pathname);
 
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== location.origin) return;
+  if (request.method !== 'GET' || url.origin !== SCOPE.origin || !url.pathname.startsWith(SCOPE.pathname)) return;
   // Saved without the query, so "?v=2" can't leave an older copy behind and nothing from a login link is kept
   const key = url.origin + url.pathname;
-  const fresh = () => fetch(request, { cache: 'no-cache' }).then(async response => {
+  const pageFile = isPageFile(request, url);
+  const fresh = () => fetch(request, { cache: pageFile ? 'default' : 'no-cache' }).then(async response => {
     if (response.ok && !response.redirected) await (await caches.open(CACHE)).put(key, response.clone());
     return response;
   });
@@ -37,7 +39,7 @@ self.addEventListener('fetch', event => {
   const network = fresh();
   event.waitUntil(network.catch(() => {})); // finishes saving even after the page has its answer
   event.respondWith(saved.then(cached => {
-    if (isPageFile(request, url)) {
+    if (pageFile) {
       if (cached) return cached;
       return network.catch(async () => (request.mode === 'navigate' && await (await caches.open(CACHE)).match(new URL('./', location).href)) || Response.error());
     }
