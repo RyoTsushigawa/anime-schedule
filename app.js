@@ -994,7 +994,7 @@ const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
 const long = `${dayName(date)}, ${germanDate(date)}`;
 const alone = !searching() && (range === 'day' ? isoDay(date) === pickedDay : range === 'today' && date.toDateString() === today);
-const late = delays.some(x => x.day === isoDay(date));
+const late = date >= nowDay && delays.some(x => x.day === isoDay(date));
 const state = [date.toDateString() === today ? 'today' : date < nowDay ? 'past' : '', rows.length ? '' : 'free', alone ? 'picked' : '', late ? 'late' : ''].filter(Boolean).join(' ');
 return `<button data-jump="${isoDay(date)}"${state ? ` class="${state}"` : ''}${date.toDateString() === today ? ' aria-current="date"' : ''} aria-pressed="${alone}" aria-label="${esc(long)}: ${rows.length} ${rows.length === 1 ? 'Serie' : 'Serien'}${late ? ', mit Verspätung' : ''}"${late ? ' title="Mit Verspätung"' : ''}><span>${esc(shortDayName(date))}</span> <b>${date.getDate()}</b></button>`;
 }).join('')}</nav>`;
