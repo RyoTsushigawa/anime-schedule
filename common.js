@@ -83,6 +83,11 @@ const hex = c => '#' + ['red', 'green', 'blue'].map(k => Math.round((c[k] || 0) 
 return Object.fromEntries(header.flatMap(v => v.formattedValue?.trim() && v.effectiveFormat?.backgroundColor
 ? [[v.formattedValue.trim(), hex(v.effectiveFormat.backgroundColor)]] : []));
 }
+function accentText(r, g, b) {
+const lin = v => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+const l = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+return (l + 0.05) / 0.0556 > 1.05 / (l + 0.05) ? '#111' : '#fff';
+}
 const personColor = new Map();
 const rememberColors = plans => {
 for (const plan of plans) for (const [name, c] of Object.entries(plan?.colors || {})) personColor.set(name, c);
@@ -91,7 +96,7 @@ function personStyle(name) {
 const c = personColor.get(name);
 if (!/^#[0-9a-f]{6}$/.test(c || '')) return '';
 const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
-const text = 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#111' : '#fff';
+const text = accentText(r, g, b);
 return `--person:${c};--person-text:${text}`;
 }
 const SHEET_ID = SHEET.split('/d/')[1];
