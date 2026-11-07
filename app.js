@@ -102,6 +102,7 @@ view = ['catchup', 'pace'].includes(localStorage.getItem('view')) ? localStorage
 $('anilistUser').value = localStorage.getItem('anilistUser') ?? DEFAULT_ANILIST;
 } catch {}
 let streamsDe = null;
+titleSource = id => streamsDe?.status?.[id]?.titles;
 let fallbackLinks = { byAnilist: {} };
 let sourceHealth = null;
 fetch('source-health.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : null).then(data => {
@@ -1583,13 +1584,14 @@ return n > 5 ? '' : n > 0 ? ` · noch ${n} bis zur Pause` : ' · der nächste �
 }
 function notice(text, withUndo = false) {
 movesUndo = null;
+delayUndo = null;
 $('noticeText').textContent = text;
 $('noticeUndo').hidden = !withUndo;
 $('notice').hidden = false;
 clearTimeout(noticeTimer);
 noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
 }
-$('noticeUndo').onclick = () => movesUndo ? undoMove() : undo();
+$('noticeUndo').onclick = () => delayUndo ? undoDelay() : movesUndo ? undoMove() : undo();
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'Serie';
 const watchButton = (mediaId, episode, add = false) => !auth ? '' :
 `<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
@@ -1885,18 +1887,20 @@ const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" 
 const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
-const grouped = ({ m, first, out, nextAt, missing, links }) => `
+const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
+const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
+      <div class="time"><span class="time-day">Folge</span> ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${out > first ? `${out - first + 1} Folgen · ${first}–${out}` : `Folge ${first}`}${nextHint(nextAt, out)}</div>
+        <div class="ep">${seen(progress, m)} · ${out - first + 1} offen${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
     </div>`;
-const perEpisode = ({ m, first, out, nextAt, missing, links }) => {
+const perEpisode = ({ m, first, out, nextAt, missing, links, progress }) => {
 const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
-if (eps.length === 1) return grouped({m,first,out,nextAt,missing,links});
+if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, progress });
 return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
@@ -2268,7 +2272,7 @@ $('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot 
 }
 $('moveDlg').showModal();
 }
-let movesUndo = null;
+let movesUndo = null, delayUndo = null;
 async function placeByDrag(b, to) {
 const key = norm(b.dataset.moveTitle), thisWeek = isoDay(weekStart(weekOffset)), before = moves;
 const week = editScope === 'week' ? thisWeek : '';
@@ -2469,13 +2473,19 @@ if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet
 if (add) await postDelay({ add, ...(remember && { remember: true }) });
 for (const x of old) await postDelay({ remove: x.id });
 }
-async function storeDelay(add, done, remember = false) {
+async function undoDelay() {
+const { day, show, add } = delayUndo;
+try { await changeDelays(day, show, add, false); notice('Verspätung wieder da.'); if (lastWeekRender) render(...lastWeekRender); }
+catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
+}
+async function storeDelay(add, done, remember = false, undo = null) {
 $('delayMsg').textContent = 'Speichert…';
 $('delaySave').disabled = $('delayRemove').disabled = true;
 try {
 await changeDelays(delayDay.date, $('delayFrom').value, add, remember);
 $('delayDlg').close();
-notice(`${done} Alle sehen es in etwa einer Minute.`);
+notice(`${done} Alle sehen es in etwa einer Minute.`, !!undo);
+delayUndo = undo;
 if (lastWeekRender) render(...lastWeekRender);
 } catch (e) { $('delayMsg').textContent = `Nicht gespeichert: ${e.message}`; }
 finally { $('delaySave').disabled = $('delayRemove').disabled = false; }
@@ -2492,7 +2502,10 @@ const id = Math.random().toString(36).slice(2, 10);
 storeDelay({ id, day: delayDay.date, show: from.key, title: from.title, minutes, reason },
 `${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`, remember);
 };
-$('delayRemove').onclick = () => storeDelay(null, 'Verspätung entfernt.');
+$('delayRemove').onclick = () => {
+const removed = delayDay.current;
+storeDelay(null, 'Verspätung entfernt.', false, removed && { day: delayDay.date, show: removed.show, add: removed });
+};
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-delay]');
 if (b) openDelay(b.closest('.day').dataset.date);
