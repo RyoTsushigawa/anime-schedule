@@ -1902,6 +1902,10 @@ if (refresh && current() && document.querySelector('#list .row')) {
 notice(`${name} konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
 return;
 }
+if (current() && friend && [403, 404].includes(e.status)) {
+$('list').innerHTML = '<div class="status">Diese AniList-Liste ist privat oder wurde nicht gefunden.</div>';
+return;
+}
 if (current()) $('list').innerHTML = failed(navigator.onLine === false
 ? `Du bist offline, und die AniList-Liste von ${user} ist in diesem Browser noch nicht gespeichert.` : `Die AniList-Liste von ${user} konnte nicht geladen werden (${e.message}).`);
 return;
@@ -2003,6 +2007,7 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
       </div>`).join('')}</section>`);
 }
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
+if (friend) $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(friendList.selectedOptions[0].textContent)}</strong><span class="catchup-count">Nur lesen</span></div>`);
 if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.</div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
@@ -2059,14 +2064,19 @@ async function load(refresh = false) {
 if (listView()) return loadCatchup(refresh);
 const start = weekStart(weekOffset);
 const end = new Date(start); end.setDate(end.getDate() + 6);
+const currentWeek = () => view === 'week' && start.getTime() === weekStart(weekOffset).getTime();
 const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
 const fmt = d => d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
-$('week').textContent = $('weekSub').textContent = `${fmt(start)} – ${fmt(end)}`;
+const dates = `${fmt(start)} – ${fmt(end)}`;
+const selectedDay = range === 'today' ? new Date() : range === 'day' && pickedDay ? new Date(pickedDay + 'T12:00:00') : null;
+$('week').textContent = $('weekSub').textContent = selectedDay ? `${shortDayName(selectedDay)} ${fmt(selectedDay)}` : dates;
+$('week').title = dates;
 if (!weekCached(start) && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 const airings = Promise.all([fetchWeek(lastWeek), fetchWeek(start)]);
 airings.catch(() => {});
 await tabsReady;
+if (!currentWeek()) return;
 const needed = new Map();
 for (const date of [lastWeek, start, end]) for (const t of activeTabs(tabs, date)) needed.set(t.gid, t);
 const plans = new Map();
@@ -2078,7 +2088,7 @@ problems.push(`${t.name}: ${e.message}`);
 setNote('missing ' + t.gid, `${unreachable('Google Sheets')}: „${t.name}“ konnte nicht gelesen werden, seine Serien fehlen.`);
 })));
 const weekTabs = [...new Set([tabFor(tabs, start), tabFor(tabs, end)])];
-if (view !== 'week') return;
+if (!currentWeek()) return;
 if (!weekTabs.some(t => plans.has(t.gid))) {
 if (refresh && document.querySelector('#list .row')) {
 notice("Der Guckplan konnte nicht aktualisiert werden. Es werden weiter die bisherigen Daten angezeigt.");
@@ -2093,14 +2103,15 @@ rememberColors(plans.values());
 fillPeople([...new Set(weekTabs.flatMap(t => plans.get(t.gid)?.people || []))]);
 try {
 const items = (await airings).flat();
-if (view !== 'week') return;
-if (start.getTime() === weekStart(weekOffset).getTime()) render(items, start, plans);
+if (!currentWeek()) return;
+render(items, start, plans);
 chaseLookups();
 if (!refresh) scrollToStart();
 resumeScroll();
 updateCatchupCount();
 readyNeighbours(start);
 } catch (e) {
+if (!currentWeek()) return;
 if (refresh && document.querySelector('#list .row')) {
 notice(`Der Zeitplan konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
 return;
@@ -2242,6 +2253,7 @@ const movesStamp = () => JSON.stringify([moves, delays, sharedReasons]);
 let movesSeen = '';
 let followingMoves = false;
 const canFollowMoves = () => document.visibilityState === 'visible' && view === 'week' && lastWeekRender &&
+lastWeekRender[1].getTime() === weekStart(weekOffset).getTime() &&
 !document.querySelector('dialog[open]') && !document.body.classList.contains('dnd-moving');
 async function followMoves() {
 if (followingMoves || !canFollowMoves()) return;
@@ -2901,6 +2913,10 @@ if (atShortcuts) $('helpKeys').scrollIntoView?.({ block: 'start' });
 }
 $('helpButton').onclick = () => openHelp();
 $('helpClose').onclick = () => $('helpDialog').close();
+$('helpDialog').addEventListener('click', event => {
+const topic = event.target.closest('[data-help-topic]');
+if (topic) $(topic.dataset.helpTopic).focus();
+});
 $('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
 for (const [id, key, hint] of [
 ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
