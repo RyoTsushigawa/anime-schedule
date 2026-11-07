@@ -1049,7 +1049,7 @@ const body = ordered.length
 : row(g[0]))).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}<button type="button" class="pill day-share" data-share-day aria-label="Link zu diesem Tag oder einer Serie teilen" title="Plan teilen"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 12 12 4m-6 0h6v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -1081,6 +1081,20 @@ document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.
 applySearch();
 syncSavingButtons();
 restore();
+if (sharedShowKey) {
+const show = [...$('list').querySelectorAll('.row[data-search]')].find(row => row.dataset.search === sharedShowKey && !row.closest('.hidden-by-search'));
+if (show) {
+show.classList.add('stream-return');
+if (!sharedShowShown) {
+sharedShowShown = true;
+show.scrollIntoView?.({ block: 'center' });
+setTimeout(() => {
+sharedShowKey = '';
+$('list').querySelector('.stream-return')?.classList.remove('stream-return');
+}, 3500);
+}
+}
+}
 playEnter();
 }
 const LIST_QUERY = `query ($user: String) {
@@ -1751,31 +1765,47 @@ noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 
 }
 $('noticeUndo').onclick = () => delayUndo ? undoDelay() : movesUndo ? undoMove() : undo();
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'Serie';
+const failedTicks = new Map();
+const tickKey = (mediaId, episode) => JSON.stringify([accountKey(auth), mediaId, episode]);
 const watchButton = (mediaId, episode, add = false) => !auth ? '' :
-`<button class="watch${(myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
-    title="Folge ${episode} gesehen (${listService()})">✓</button>`;
+`<button class="watch${failedTicks.has(tickKey(mediaId, episode)) ? ' save-failed' : (myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
+    title="${failedTicks.has(tickKey(mediaId, episode)) ? 'Nicht gespeichert · Nochmal versuchen' : `Folge ${episode} gesehen (${listService()})`}">${failedTicks.has(tickKey(mediaId, episode)) ? '↻' : '✓'}</button>`;
 const before = new Map();
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('.watch');
 if (!b || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
 const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
+const key = tickKey(mediaId, episode);
 const current = myProgress.get(mediaId) || 0;
+const retry = failedTicks.get(key);
+if (retry && retry.current !== current) {
+failedTicks.delete(key);
+notice('Fortschritt hat sich geändert. Bitte prüfe die Folge erneut.');
+load(true);
+return;
+}
 let progress;
-if (current >= episode) progress = before.has(mediaId) ? before.get(mediaId) : episode - 1;
+if (retry) progress = retry.progress;
+else if (current >= episode) progress = before.has(mediaId) ? before.get(mediaId) : episode - 1;
 else { before.set(mediaId, current); progress = episode; }
 b.disabled = true;
 const title = rowTitle(b);
 try {
 const sent = aniLimit.count;
 const record = await change(mediaId, { progress, status: b.dataset.add ? 'CURRENT' : undefined });
+failedTicks.delete(key);
 if (aniLimit.count > sent) requestsPerTick = aniLimit.count - sent;
 clearInterval(pauseTimer);
-remember([record], `${title}: Folge ${progress} gesehen${ticksLeft()}`);
+const first = (record.before.progress || 0) + 1;
+const result = progress > first ? `Folgen ${first}–${progress} als gesehen markiert`
+: progress >= first ? `Folge ${progress} gesehen` : `Fortschritt auf ${progress} gesetzt`;
+remember([record], `${title}: ${result}${ticksLeft()}`);
 if (record.after.status === 'COMPLETED' && record.before.status !== 'COMPLETED' && !record.after.score) {
 openScore(mediaId, title);
 loadToScore().then(() => load(true));
 }
 } catch (err) {
+failedTicks.set(key, { current, progress });
 b.title = `Nicht gespeichert: ${err.message}`;
 notice(`${title} nicht gespeichert: ${err.message}. Du kannst es nochmal versuchen.`);
 }
@@ -2121,9 +2151,11 @@ $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase
 const listName = friend ? friendList.selectedOptions[0].textContent : user;
 const readOnly = friend ? '<span class="catchup-count">Nur lesen</span>' : '';
 if (shown === 'catchup') {
+const fromPlan = rows.filter(row => row.missing).length;
+const onList = rows.length - fromPlan;
 $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend ? ' friend-summary' : ''}">
       <div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>
-      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}</span>
+      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}${onList ? ` · ${onList} ${onList === 1 ? 'Serie' : 'Serien'}` : ''}${fromPlan ? ` · ${fromPlan} aus dem Guckplan` : ''}</span>
       ${friend ? '<button type="button" class="pill" data-own-list>Eigene Liste</button>' : ''}
     </div>`);
 } else if (friend) {
@@ -2284,6 +2316,24 @@ const place = JSON.parse(sessionStorage.getItem('resumePlace'));
 sessionStorage.removeItem('resumePlace');
 if (place) { weekOffset = place.weekOffset; setRange(place.range); pickedDay = place.pickedDay; resumeY = place.y; }
 } catch {}
+let sharedShowKey = '';
+let sharedShowShown = false;
+{
+const params = new URLSearchParams(location.search);
+const date = params.get('day');
+if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
+const picked = new Date(date + 'T12:00:00');
+if (isoDay(picked) === date) {
+const today = weekStart(0);
+weekOffset = Math.floor(Math.round((Date.UTC(picked.getFullYear(), picked.getMonth(), picked.getDate()) -
+Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000) / 7);
+view = 'week';
+setRange('day');
+pickedDay = date;
+sharedShowKey = params.get('show') || '';
+}
+}
+}
 function resumeScroll() {
 if (resumeY !== null) scrollTo(0, resumeY);
 resumeY = null;
@@ -2300,7 +2350,31 @@ $('list').addEventListener('click', e => {
 if (e.target.closest('[data-rest-of-week]')) { setRange('rest'); enter = { y: 4 }; load(); }
 const jump = e.target.closest('[data-jump]');
 if (jump) pickDay(jump.dataset.jump);
+const share = e.target.closest('[data-share-day]');
+if (!share) return;
+const day = share.closest('.day');
+const selector = $('shareShow');
+selector.dataset.day = day.dataset.date;
+selector.replaceChildren(new Option('Ganzer Tag', ''), ...[...day.querySelectorAll('.row[data-search]')].map(row =>
+new Option(row.querySelector('.title').textContent.trim(), row.dataset.search)));
+selector.onchange();
+$('shareDay').showModal();
 });
+$('shareShow').onchange = () => {
+const url = new URL(location.href);
+url.hash = '';
+url.searchParams.set('day', $('shareShow').dataset.day);
+url.searchParams.delete('show');
+if ($('shareShow').value) url.searchParams.set('show', $('shareShow').value);
+$('shareUrl').value = url.href;
+};
+$('shareClose').onclick = () => $('shareDay').close();
+$('shareCopy').onclick = async () => {
+try { await navigator.clipboard.writeText($('shareUrl').value); }
+catch { $('shareUrl').select(); return; }
+$('shareDay').close();
+notice('Link kopiert.');
+};
 {
 let from = null;
 $('list').addEventListener('touchstart', e => {
@@ -2327,7 +2401,9 @@ let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
 let movesKey = '';
 try { movesKey = localStorage.getItem('movesKey') || ''; } catch {}
-const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function isoDay(d) {
+return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 async function loadMoves() {
 let site = null, own = null;
 try {
