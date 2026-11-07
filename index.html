@@ -156,7 +156,6 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <select id="moveTag" aria-label="Tag">
 <option value="Mo.">Mo</option><option value="Di.">Di</option><option value="Mi.">Mi</option><option value="Do.">Do</option>
 <option value="Fr.">Fr</option><option value="Sa.">Sa</option><option value="So.">So</option>
-<option value="skip">Skip</option>
 </select>
 <input id="moveTime" placeholder="Uhrzeit, z. B. 21:00" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (leer = nächster freier Slot)">
 </div>
@@ -169,6 +168,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="muted" id="moveMsg"></div>
 <div class="dlg-row">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
+<button type="button" id="moveSkip" class="pill" title="Diese Woche nicht schauen; sie bleibt durchgestrichen an ihrem Platz, die späteren Slots rücken 30 Min. vor">Skip</button>
+<button type="button" id="moveSkipAll" class="pill" hidden>Beide</button>
 <button type="button" id="moveReset" class="pill" title="Zurück in den Guckplan-Slot">Zurücksetzen</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
