@@ -685,3 +685,21 @@ background: var(--card);
 .help-sections section:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .friend-view { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--text); }
 .tool-back { display: inline-flex; align-items: center; min-height: 36px; text-decoration: none; white-space: nowrap; }
+.controls-left > .segmented:first-child { border-radius: 12px; }
+.controls-left > .segmented:first-child button { border-radius: 9px; }
+.list-controls { display: inline-flex; align-items: center; min-width: 0; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.list-controls > .pill { border-radius: 8px; }
+.list-controls > select { min-width: 0; max-width: min(42vw, 215px); }
+.list-controls > button { flex: none; }
+.day .row:not(.pause) > .info > .ep { line-height: 1.45; }
+.day .row > .links > .cr { min-height: 34px; }
+.day .row > .watch { flex: none; }
+@media (max-width: 560px) {
+body:not(.catchup) .weeknav { justify-content: space-between; flex: 1 1 100%; }
+body:not(.catchup) .weeknav #week { display: block; flex: 1; min-width: 0; font-size: 13px; }
+body:not(.catchup) .week-sub { display: none; }
+body:not(.catchup) #tabName:has(+ .week-sub) { display: block; }
+}
+@media (pointer: coarse) {
+.day .row > .links > .cr { min-height: 36px; }
+}
