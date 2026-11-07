@@ -1035,6 +1035,13 @@ const LIST_QUERY = `query ($user: String) {
 const LIST_CACHE_MS = 10 * 60 * 1000;
 const friendList = $('friendList');
 const listUser = () => friendList.value || $('anilistUser').value.trim();
+function updateFriendOptions() {
+const ownName = auth?.provider !== 'mal' ? auth?.name?.toLowerCase() : null;
+for (const option of friendList.options) {
+option.hidden = option.disabled = option.value.toLowerCase() === ownName;
+if (option.hidden && option.selected) friendList.value = '';
+}
+}
 fetch('wrapped-profiles.json').then(r => r.ok ? r.json() : {}).then(profiles => {
 for (const [person, accounts] of Object.entries(profiles)) {
 const ani = accounts.filter(account => account.provider === 'anilist');
@@ -1044,6 +1051,7 @@ option.dataset.person = person;
 friendList.add(option);
 }
 }
+updateFriendOptions();
 }).catch(() => {});
 async function anilistList(user, fresh = false, publicOnly = false) {
 if (!publicOnly && auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
@@ -1144,6 +1152,7 @@ const loginEndingSoon = account => !!account?.expires && account.expires - Date.
 const loginDate = date => new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short', ...(date.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }) }).format(date);
 const PERSON_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 function updateConnect() {
+updateFriendOptions();
 const button = $('accountButton');
 button.classList.toggle('empty', !auth);
 if (auth) button.replaceChildren(avatarOf(auth));
