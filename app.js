@@ -2447,13 +2447,13 @@ const before = { moves, absent };
 if (!changeDelays) {
 moves = next;
 if (absentNext) absent = absentNext;
-if (lastWeekRender) render(...lastWeekRender, false, true);
+if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true);
 }
 movesPending++;
 const job = movesQueue.catch(() => {}).then(() => saveMovesNow(next, changeDelays, reasons, absentNext)).finally(() => movesPending--);
 movesQueue = job;
 return job.catch(e => {
-if (!changeDelays) { moves = before.moves; absent = before.absent; if (lastWeekRender) render(...lastWeekRender, false, true); }
+if (!changeDelays) { moves = before.moves; absent = before.absent; if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); }
 throw e;
 });
 }
