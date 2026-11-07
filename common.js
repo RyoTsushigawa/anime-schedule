@@ -203,14 +203,36 @@ const TITLE_FIXES = {
 207191: 'Hello, I Am a Witch and My Crush Wants Me to Make a Love Potion!', 172192: "A Returner's Magic Should Be Special Season 2",
 213658: 'Ace of Diamond Act II Season 2 Part 2', 198727: 'Chitose Is in the Ramune Bottle Part 2',
 };
+let titleSource = null;
+const TITLE_KEEP = new Set([204011, 209562]);
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'and', 'or', 'nor', 'but', 'of', 'in', 'on', 'to', 'with', 'for', 'at', 'by', 'from', 'as', 'is', 'vs', 'via', 'under', 'into', 'over',
+'no', 'wa', 'ga', 'ni', 'wo', 'de', 'mo', 'ka', 'na', 'e', 'to']);
+function titleFlaws(title) {
+let flaws = 0;
+for (const word of String(title).split(/\s+/)) {
+if (/^\d/.test(word)) continue;
+const letters = word.replace(/[^\p{L}]/gu, '');
+if (letters.length >= 4 && letters === letters.toUpperCase() && letters !== letters.toLowerCase()) flaws += 10;
+else if (letters.length >= 2 && /^\p{Ll}/u.test(letters) && !SMALL_WORDS.has(letters)) flaws += 1;
+if (/\p{Ll}{3}\p{Lu}/u.test(word)) flaws += 1;
+}
+return flaws;
+}
+const looseTitle = t => String(t).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+function betterTitle(title, candidates) {
+if (!title) return null;
+const flaws = titleFlaws(title);
+return (candidates || []).filter(c => c && c !== title && looseTitle(c) === looseTitle(title) && titleFlaws(c) < flaws)
+.sort((a, b) => titleFlaws(a) - titleFlaws(b))[0] || null;
+}
 function fixTitles(data) {
 const seen = new Set();
 const walk = v => {
 if (!v || typeof v !== 'object' || seen.has(v)) return;
 seen.add(v);
 if (Array.isArray(v)) { v.forEach(walk); return; }
-const fix = TITLE_FIXES[v.id];
-if (fix && v.title && typeof v.title === 'object' && v.title.english !== fix) {
+const fix = v.title && typeof v.title === 'object' && (TITLE_FIXES[v.id] || titleSource && betterTitle(v.title.english, titleSource(v.id)));
+if (fix && v.title.english !== fix) {
 if (v.title.english) v.synonyms = [...(v.synonyms || []), v.title.english];
 v.title.english = fix;
 }
