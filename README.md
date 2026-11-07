@@ -91,7 +91,9 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `tools/publish.mjs` | Runs the tests and the secret guard, then uploads the changed files to GitHub |
 | `tools/secret-scan.mjs` | The secret guard: stops a publish or a bot zip that contains a GitHub key, Discord webhook address or bot token |
 | `tools/mal-check.mjs` | Weekly, read-only: the MyAnimeList helper answers, asks for a login, turns strangers away and is the current version |
-| `tools/live-check.mjs` | Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo |
+| `tools/key-check.mjs` | Weekly, read-only: warns three weeks before the publish key (`tools/github-token.txt`) runs out |
+| `tools/weekly-alert.mjs` | End of the weekly run: anything that needs a look goes to the bot test channel through the webhook in `tools/alert-webhook.txt` (this PC only; `--test` sends one test line) |
+| `tools/live-check.mjs` | Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo, GitHub Pages shows the latest upload |
 | `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
 | `tools/delay-check.mjs` | Weekly, read-only: the helper answers, refuses strangers and is the current version |
 | `tabs.json`, `tools/tab-list.mjs` | The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
