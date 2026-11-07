@@ -134,6 +134,17 @@ a small helper on Cloudflare saves it: it holds its own GitHub token and only ch
 4. Put the Worker's address (e.g. `https://schedule-delays.<name>.workers.dev/`) into
    `tools/delays-url.txt` and run `node tools/publish.mjs`. From then on everyone gets the button.
 
+Optional, both as **Secret** in the Worker's Variables and Secrets:
+
+- `DISCORD_WEBHOOK`: a channel's webhook address (Discord: channel settings → Integrations → Webhooks →
+  New Webhook → Copy Webhook URL). Every saved, changed or removed Verspätung is posted there as one line,
+  without pings. With the helper set up, the key holder's delays go through it too, so they're posted as well.
+- `BOT_KEY`: a long random password (16+ characters). The Discord bot sends it for `/delay`; the bot's
+  `.env` needs the same value as `DELAYS_KEY`, plus `DELAYS_URL` = the Worker's address.
+
+Each delay stores its planned start (`at`, "20:00"); the bot's status shifts its times by it. Delays
+from the bot are stored by time (`show: "@20:00"`) and count from the first show at or after it.
+
 ## Trying it locally
 
 Open it through a small web server (browsers block `fetch()` from `file://`), for example `npx serve .` in this folder.
