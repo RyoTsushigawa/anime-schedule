@@ -1903,7 +1903,7 @@ const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
       <div class="time"><span class="time-day">Folge</span> ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${seen(progress, m)} · ${out - first + 1} offen${nextHint(nextAt, out)}</div>
+        <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
@@ -1914,7 +1914,7 @@ if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, pr
 return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep">${eps.length} Folgen · ${first}–${out}${nextHint(nextAt, out)}</div></div>
+        <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
         ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
       </div>${eps.map(ep => `
