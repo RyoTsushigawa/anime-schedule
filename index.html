@@ -156,11 +156,15 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <select id="moveTag" aria-label="Tag">
 <option value="Mo.">Mo</option><option value="Di.">Di</option><option value="Mi.">Mi</option><option value="Do.">Do</option>
 <option value="Fr.">Fr</option><option value="Sa.">Sa</option><option value="So.">So</option>
+<option value="skip">Aussetzen</option>
 </select>
 <input id="moveTime" placeholder="Uhrzeit, z. B. 21:00" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (leer = nächster freier Slot)">
 </div>
+<div class="dlg-row">
 <div class="segmented" role="group" aria-label="Für">
 <button type="button" id="moveWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="moveAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
+</div>
+<button type="button" id="moveDouble" class="pill" aria-pressed="false" title="Diese Woche zwei Folgen (die vorige kommt dazu)">Doppelt</button>
 </div>
 <div class="muted" id="moveMsg"></div>
 <div class="dlg-row">
@@ -226,6 +230,9 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="daySuggest" class="day-suggest" role="listbox" hidden></div>
 </div>
 <div id="dayMissing" class="day-missing-list" hidden></div>
+<div class="dlg-row" id="dayAbsentRow" title="Wer an diesem Tag fehlt: Serien, bei denen höchstens eine Person übrig bleibt, setzen aus" hidden>
+<span class="muted">Abwesend</span><div id="dayAbsent" class="day-absent"></div>
+</div>
 <div class="segmented" role="group" aria-label="Für">
 <button type="button" id="dayWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="dayAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
 </div>
