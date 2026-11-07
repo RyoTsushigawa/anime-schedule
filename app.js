@@ -551,8 +551,24 @@ if (q) for (const fold of document.querySelectorAll('#list details.not-listed:no
 if (fold.querySelector('[data-search]:not(.hidden-by-search)')) fold.open = true;
 let none = $('noMatch');
 if (q && items.length && !document.querySelector('#list [data-search]:not(.hidden-by-search)')) {
-if (!none) { none = document.createElement('div'); none.id = 'noMatch'; none.className = 'nomatch'; }
-none.textContent = `Keine Serie passt zu „${$('search').value.trim()}“${view === 'week' ? ' in dieser Woche' : ''}.`;
+if (!none) {
+none = document.createElement('div');
+none.id = 'noMatch';
+none.className = 'nomatch';
+const message = document.createElement('span');
+message.setAttribute('role', 'status');
+const clear = document.createElement('button');
+clear.type = 'button';
+clear.className = 'pill';
+clear.textContent = 'Suche leeren';
+clear.onclick = () => {
+$('search').value = '';
+$('search').focus();
+searchChanged();
+};
+none.append(message, clear);
+}
+none.firstElementChild.textContent = `Keine Serie passt zu „${$('search').value.trim()}“${view === 'week' ? ' in dieser Woche' : ''}.`;
 if (!none.isConnected) $('list').prepend(none);
 } else none?.remove();
 }
