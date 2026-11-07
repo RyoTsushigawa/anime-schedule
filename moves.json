@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T11:46:07.696Z",
+ "updated": "2026-11-07T11:56:19.243Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -160,6 +160,15 @@
    "title": "The Exiled Heavy Knight Knows How to Game the System",
    "minutes": 30,
    "reason": "DIESE VERSPÄTUNG IST GESPONSERT VON HOLY"
+  },
+  {
+   "id": "e2emok3kv",
+   "day": "2026-11-14",
+   "show": "@20:00",
+   "title": "Verbindungstest",
+   "minutes": 5,
+   "reason": "Test, wird gleich wieder entfernt",
+   "at": "20:00"
   }
  ]
 }
