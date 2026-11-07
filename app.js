@@ -1223,7 +1223,7 @@ try { if (known) localStorage.setItem('accentNow', known); else last = hex(local
 const c = known || last || '#f47521';
 const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
 root.setProperty('--accent', c);
-root.setProperty('--accent-text', 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#111' : '#fff');
+root.setProperty('--accent-text', accentText(r, g, b));
 root.setProperty('--today', `color-mix(in srgb, ${c} 14%, var(--bg))`);
 }
 for (const name of Object.keys(choices)) setChoice(name, choices[name]);
