@@ -1033,8 +1033,20 @@ const LIST_QUERY = `query ($user: String) {
   }
 }`;
 const LIST_CACHE_MS = 10 * 60 * 1000;
-async function anilistList(user, fresh = false) {
-if (auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
+const friendList = $('friendList');
+const listUser = () => friendList.value || $('anilistUser').value.trim();
+fetch('wrapped-profiles.json').then(r => r.ok ? r.json() : {}).then(profiles => {
+for (const [person, accounts] of Object.entries(profiles)) {
+const ani = accounts.filter(account => account.provider === 'anilist');
+for (const { name } of ani) {
+const option = new Option(ani.length > 1 ? `${person} · ${name}` : person, name);
+option.dataset.person = person;
+friendList.add(option);
+}
+}
+}).catch(() => {});
+async function anilistList(user, fresh = false, publicOnly = false) {
+if (!publicOnly && auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
 const result = await MAL.list(auth, fresh);
 if (fresh && result.stale) throw new Error('MyAnimeList ist gerade nicht erreichbar; die gespeicherte Liste bleibt erhalten.');
 setNote('list:' + user.toLowerCase(), result.stale ? `MyAnimeList antwortet nicht: Liste vom ${savedAt(result.stale)}.` : null);
@@ -1058,15 +1070,15 @@ return saved.entries;
 $('refreshCatchup').onclick = async () => {
 const button = $('refreshCatchup');
 if (button.disabled || !listView()) return;
-const user = $('anilistUser').value.trim();
+const user = listUser(), friend = friendList.value;
 if (!user) return;
 button.disabled = true;
 button.setAttribute('aria-busy', 'true');
 button.textContent = 'Lädt…';
 try {
-await anilistList(user, true);
+await anilistList(user, true, !!friend);
 planShowsCache.time = 0;
-if (auth && auth.name.toLowerCase() === user.toLowerCase()) await loadMe();
+if (!friend && auth && auth.name.toLowerCase() === user.toLowerCase()) await loadMe();
 if (listView()) await loadCatchup(true);
 notice('Liste aktualisiert.');
 } catch (error) {
@@ -1126,13 +1138,18 @@ if (className) img.className = className;
 img.onerror = () => img.replaceWith(span);
 return img;
 }
+const LOGIN_SOON_MS = 7 * 86400000;
+const loginEnds = account => account?.expires ? new Date(account.expires) : null;
+const loginEndingSoon = account => !!account?.expires && account.expires - Date.now() < LOGIN_SOON_MS;
+const loginDate = date => new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short', ...(date.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }) }).format(date);
 const PERSON_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 function updateConnect() {
 const button = $('accountButton');
 button.classList.toggle('empty', !auth);
 if (auth) button.replaceChildren(avatarOf(auth));
 else button.innerHTML = PERSON_ICON;
-button.title = auth?.name ? `${listService()}: ${auth.name}` : 'Listen-Konten';
+button.classList.toggle('expiring', loginEndingSoon(auth));
+button.title = auth?.name ? `${listService()}: ${auth.name}${loginEndingSoon(auth) ? ' · Login läuft bald ab' : ''}` : 'Listen-Konten';
 button.setAttribute('aria-label', 'Listen-Konten');
 $('anilistUser').readOnly = auth?.provider === 'mal';
 $('anilistUser').placeholder = auth?.provider === 'mal' ? 'MyAnimeList-Konto' : 'AniList-Name';
@@ -1146,7 +1163,7 @@ const provider = account.provider === 'mal' ? 'MAL' : 'AniList';
 const name = document.createElement('span'); name.className = 'account-name'; name.textContent = account.name || 'Konto';
 const badge = document.createElement('span'); badge.className = 'provider-badge'; badge.textContent = provider;
 b.append(avatarOf(account, 'avatar'), name, badge);
-b.title = `${provider}: ${account.name || 'Konto'}`;
+b.title = `${provider}: ${account.name || 'Konto'}${loginEnds(account) ? ` · Login bis ${loginDate(loginEnds(account))}` : ''}`;
 b.setAttribute('aria-label', b.title);
 } else b.append(text);
 if (label) { b.setAttribute('aria-label', label); b.title = label; }
@@ -1163,6 +1180,14 @@ $('accountSection').replaceChildren(
 ...accounts.map(a => item(`${a.provider === 'mal' ? 'MAL' : 'AniList'} · ${a.name || 'Konto'}`, () => a !== auth && useAccount(a), { account: a, current: a === auth })),
 row(item('+ AniList', connect, { muted: true, label:'AniList verbinden' }), item('+ MAL', MAL.connect, { muted: true, label:'MyAnimeList verbinden' })),
 ...(auth ? [row(item('Abmelden', disconnect, { muted: true }))] : []),
+...accounts.filter(loginEndingSoon).map(a => {
+const line = document.createElement('div');
+line.className = 'login-ending';
+const text = document.createElement('span');
+text.textContent = `${accounts.length > 1 ? `${a.name || 'Konto'}: ` : ''}Login bis ${loginDate(loginEnds(a))}`;
+line.append(text, item('Erneuern', a.provider === 'mal' ? MAL.connect : connect, { muted: true, label: `${a.provider === 'mal' ? 'MyAnimeList' : 'AniList'}-Login von ${a.name || 'Konto'} erneuern` }));
+return line;
+}),
 );
 updateSyncControls();
 }
@@ -1790,10 +1815,10 @@ if (hm) day.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
 else day.setDate(day.getDate() + 1);
 return Math.max(released, day.getTime() / 1000);
 }
-function catchupRows(entries, planShows, plan) {
+function catchupRows(entries, planShows, plan, person = soloPerson) {
 const now = Date.now() / 1000;
 const week = 7 * 86400;
-const mySlots = plan && soloPerson ? [...picks(plan, soloPerson)] : [];
+const mySlots = plan && person ? [...picks(plan, person)] : [];
 const recent = m => {
 const s = m.startDate;
 if (!s?.year) return m.status !== 'FINISHED';
@@ -1850,18 +1875,19 @@ let catchupGeneration = 0;
 async function loadCatchup(refresh = false) {
 const generation = ++catchupGeneration, account = auth;
 updateFallbackControls();
-const user = $('anilistUser').value.trim();
+const user = listUser(), friend = friendList.value;
+const provider = friend ? 'AniList' : listService();
 const shown = view;
-const current = () => generation === catchupGeneration && auth === account && view === shown && $('anilistUser').value.trim() === user;
+const current = () => generation === catchupGeneration && auth === account && view === shown && listUser() === user && friendList.value === friend;
 const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
-$('tabName').textContent = user ? `${name} · ${user} auf ${listService()}` : name;
+$('tabName').textContent = user ? `${name} · ${user} auf ${provider}${friend ? ' · Nur lesen' : ''}` : name;
 if (!user) { $('list').innerHTML = '<div class="status">Kein AniList-Name eingetragen.</div>'; return; }
 if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
 await ready;
 if (!current()) return;
 let entries;
 try {
-entries = await anilistList(user);
+entries = await anilistList(user, false, !!friend);
 } catch (e) {
 if (refresh && current() && document.querySelector('#list .row')) {
 notice(`${name} konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
@@ -1881,11 +1907,11 @@ setNote('catchup:plan', null);
 if (!current()) return;
 setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehlen Guck-Slots und geplante Serien, die nicht auf der Liste sind.`);
 }
-const planShows = await missingPlanShows(plan, entries);
-if (view !== shown) return;
-const { rows, ownPace } = catchupRows(entries, planShows, plan);
+const planShows = friend ? [] : await missingPlanShows(plan, entries);
+if (!current()) return;
+const { rows, ownPace } = catchupRows(entries, planShows, plan, friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
 showCatchupCount(rows);
-if (shown === 'catchup') $('tabName').textContent = `${name} · ${user} auf ${listService()}${catchupTime()}`;
+if (shown === 'catchup') $('tabName').textContent += catchupTime();
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
@@ -1893,7 +1919,7 @@ rows.sort(choices.sort === 'az' ? byTitle
 : (a, b) => a.since - b.since);
 const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
 : `<span class="next-hint"> · ${nextAt * 1000 <= Date.now() ? `Folge ${out + 1} schon da` : 'neu ' + (new Date(nextAt * 1000).toDateString() === new Date().toDateString() ? 'heute' + savedAt(nextAt * 1000).slice(2) : savedAt(nextAt * 1000))}</span>`;
-const mine = auth?.name && user.toLowerCase() === auth.name.toLowerCase();
+const mine = !friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase();
 catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Bei „Alle ✓“ mitnehmen">✓</button>`;
@@ -1968,7 +1994,7 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
       </div>`).join('')}</section>`);
 }
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
-if (!mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.</div>');
+if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.</div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 applySearch();
@@ -2777,7 +2803,15 @@ setSingleEpisodes(singleEpisodes);
 $('perShow').onclick = () => { setSingleEpisodes(false); load(true); };
 $('perEpisode').onclick = () => { setSingleEpisodes(true); load(true); };
 $('anilistUser').onchange = () => {
+friendList.value = '';
 try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catch {}
+load();
+};
+friendList.onchange = () => {
+selecting = false;
+catchupTargets = [];
+$('markAllStart').hidden = true;
+$('list').innerHTML = '';
 load();
 };
 $('modeSolo').onclick = () => { setMode('solo'); redraw(); };
