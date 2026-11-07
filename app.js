@@ -2152,6 +2152,8 @@ function setRange(next) {
 range = next;
 if (next !== 'day') pickedDay = null;
 $('fullWeek').setAttribute('aria-pressed', range === 'week');
+$('fullWeek').textContent = range === 'week' ? 'Ab heute' : 'Woche';
+$('fullWeek').title = range === 'week' ? 'Zur aktuellen Woche ab heute' : 'Alle sieben Tage anzeigen';
 }
 setRange('rest');
 let resumeY = null;
