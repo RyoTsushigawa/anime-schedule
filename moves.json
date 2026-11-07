@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T20:59:01.368Z",
+ "updated": "2026-11-07T20:59:10.906Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -152,17 +152,17 @@
    "skip": true
   },
   {
-   "show": "kerorogunsou",
-   "title": "Keroro Gunsou☆",
-   "tag": "Sa.",
-   "time": "22:00",
-   "week": "2026-11-02"
-  },
-  {
    "show": "yaseinolastbossgaarawaretaseason2",
    "title": "A Wild Last Boss Appeared! Season 2",
    "tag": "Sa.",
    "time": "21:30",
+   "week": "2026-11-02"
+  },
+  {
+   "show": "kerorogunsou",
+   "title": "Keroro Gunsou☆",
+   "tag": "Sa.",
+   "time": "22:00",
    "week": "2026-11-02"
   }
  ],
