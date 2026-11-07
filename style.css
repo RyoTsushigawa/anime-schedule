@@ -694,11 +694,19 @@ background: var(--card);
 .day .row:not(.pause) > .info > .ep { line-height: 1.45; }
 .day .row > .links > .cr { min-height: 34px; }
 .day .row > .watch { flex: none; }
+@media (max-width: 920px) {
+header { padding-block: 8px; }
+body:not(.catchup) .controls { gap: 6px; justify-content: flex-start; }
+body:not(.catchup) .controls-left { display: contents; }
+body:not(.catchup) .controls-left > .segmented:first-child { flex: 1 1 100%; }
+body:not(.catchup) .controls-left > .segmented:first-child button { flex: 1; }
+body:not(.catchup) .weeknav { margin-left: auto; }
+main { padding-top: 10px; }
+.day h2 { padding-block: 7px; }
+}
 @media (max-width: 560px) {
-body:not(.catchup) .weeknav { justify-content: space-between; flex: 1 1 100%; }
-body:not(.catchup) .weeknav #week { display: block; flex: 1; min-width: 0; font-size: 13px; }
-body:not(.catchup) .week-sub { display: none; }
-body:not(.catchup) #tabName:has(+ .week-sub) { display: block; }
+.weeknav { padding: 0; border: 0; background: transparent; }
+.weeknav .icon { width: 30px; }
 }
 @media (pointer: coarse) {
 .day .row > .links > .cr { min-height: 36px; }
