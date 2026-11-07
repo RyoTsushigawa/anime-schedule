@@ -684,11 +684,16 @@ const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
 const startOf = x => x.show[0] === '@' ? delayClock(day.date, x.show.slice(1))
 : timeline.rows.find(r => keyOf(r) === x.show)?.plannedAt ?? timeline.rows.find(r => keyOf(r) === x.show)?.watchAt;
 day.delayStarts = list.map(x => ({ ...x, at: startOf(x) })).filter(x => x.at != null);
+const planned = r => r.plannedAt ?? r.watchAt;
+const slots = new Map();
+for (const r of timeline.rows) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
+const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause) && rs.some(r => r.skipped)).map(([at]) => at);
 for (const r of day.rows) {
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
-if (shared && timeline !== day) r.watchAt = shared.plannedAt ?? shared.watchAt;
+if (shared && timeline !== day) r.watchAt = planned(shared);
 const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => n + x.minutes, 0);
-if (minutes) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, watchAt: r.watchAt + minutes * 60000 });
+const earlier = r.skipped ? 0 : freed.filter(at => at < r.watchAt).length * SLOT_MINUTES;
+if (minutes || earlier) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, earlier, watchAt: r.watchAt + (minutes - earlier) * 60000 });
 }
 }
 function nearDayName(date) {
@@ -984,7 +989,7 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
-const fullDays = !everyone && delays.length ? render(items, start, plans, true) : null;
+const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip)) ? render(items, start, plans, true) : null;
 for (const d of days) { assignWatchTimes(d); applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d); }
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
@@ -1019,9 +1024,9 @@ const rewatch = ({ m, links, watchAt, who, show, slot }) => `
       </div>`;
 const plainRow = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
 const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-const row = r => !r.delay ? plainRow(r) : plainRow(r)
+const row = r => !r.delay && !r.earlier ? plainRow(r) : plainRow(r)
 .replace(/data-watch-time="[^"]*"/, `data-watch-time="${hhmm(r.plannedAt)}"`)
-.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time late" title="Unser Plan, geplant ${hhmm(r.plannedAt)} · +${r.delay} Min.">`);
+.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time${r.delay ? ' late' : ''}" title="Unser Plan, geplant ${hhmm(r.plannedAt)}${r.delay ? ` · +${r.delay} Min.` : ''}${r.earlier ? ` · ${r.earlier} Min. früher (Skip)` : ''}">`);
 const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
 .filter(x => {
 const first = Math.min(...rows.map(r => r.plannedAt ?? r.watchAt).filter(at => at >= x.at));
@@ -2509,12 +2514,9 @@ load(true);
 };
 let moving = null, moveScope = 'week';
 const syncMoveDialog = () => {
-const skip = $('moveTag').value === 'skip', double = $('moveDouble').getAttribute('aria-pressed') === 'true';
-$('moveTime').hidden = skip;
-$('moveDouble').hidden = skip;
-if (skip || double) setMoveScope('week');
-$('moveAlways').disabled = skip || double;
-$('moveSave').textContent = skip ? 'Skip' : 'Verschieben';
+const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
+if (double) setMoveScope('week');
+$('moveAlways').disabled = double;
 };
 const setMoveScope = scope => {
 moveScope = scope;
@@ -2534,14 +2536,20 @@ moving = { key: norm(b.dataset.moveTitle), name: b.dataset.moveName };
 const week = isoDay(weekStart(weekOffset));
 const mv = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
 $('moveName').textContent = moving.name;
-$('moveFrom').textContent = mv ? `Verschoben ${mv.week ? 'für diese Woche' : 'ab jetzt immer'}; „Zurück“ setzt sie in den Guckplan-Slot zurück.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
+const thisWeek = moves.find(m => m.show === moving.key && m.week === week);
+$('moveFrom').textContent = thisWeek?.skip ? 'Diese Woche geskippt; „Zurücksetzen“ holt sie zurück.'
+: mv ? `Verschoben ${mv.week ? 'für diese Woche' : 'ab jetzt immer'}; „Zurücksetzen“ setzt sie in den Guckplan-Slot zurück.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
 $('moveTag').value = b.dataset.tag || 'Mo.';
 $('moveTime').value = b.dataset.time || '';
 setMoveScope(mv && !mv.week ? 'always' : 'week');
 $('moveReset').hidden = !mv;
 $('moveMsg').textContent = '';
-const thisWeek = moves.find(m => m.show === moving.key && m.week === week);
-if (thisWeek?.skip) { $('moveTag').value = 'skip'; $('moveTime').value = ''; }
+$('moveSkip').hidden = !!thisWeek?.skip;
+moving.mates = [...b.closest('.parallel-slot')?.querySelectorAll('.move') || []].filter(x => x !== b)
+.map(x => ({ key: norm(x.dataset.moveTitle), name: x.dataset.moveName }));
+$('moveSkipAll').hidden = !!thisWeek?.skip || !moving.mates.length;
+$('moveSkipAll').textContent = moving.mates.length > 1 ? 'Alle' : 'Beide';
+$('moveSkipAll').title = `Den ganzen Slot skippen: ${[moving.name, ...moving.mates.map(m => m.name)].join(', ')}`;
 $('moveDouble').setAttribute('aria-pressed', String(!!thisWeek?.double));
 syncMoveDialog();
 if (destination) {
@@ -2583,16 +2591,22 @@ $('moveDouble').setAttribute('aria-pressed', String($('moveDouble').getAttribute
 syncMoveDialog();
 };
 $('moveSave').onclick = () => {
-const skip = $('moveTag').value === 'skip', double = !skip && $('moveDouble').getAttribute('aria-pressed') === 'true';
-const time = skip ? '' : $('moveTime').value.trim();
+const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
+const time = $('moveTime').value.trim();
 if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
-const week = moveScope === 'week' || skip || double ? isoDay(weekStart(weekOffset)) : '';
-const entry = skip ? { show: moving.key, title: moving.name, tag: '', time: '', week, skip: true }
-: { show: moving.key, title: moving.name, tag: $('moveTag').value, time, week, ...(double && { double: true }) };
+const week = moveScope === 'week' || double ? isoDay(weekStart(weekOffset)) : '';
+const entry = { show: moving.key, title: moving.name, tag: $('moveTag').value, time, week, ...(double && { double: true }) };
 const next = moves.filter(m => !(m.show === moving.key && m.week === week)).concat(entry);
-storeMoves(next, skip ? `${moving.name} setzt diese Woche aus.`
-: `${moving.name}${double ? ' mit Doppelfolge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
+storeMoves(next, `${moving.name}${double ? ' mit Doppelfolge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
 };
+const skipShows = shows => {
+const week = isoDay(weekStart(weekOffset)), keys = shows.map(s => s.key);
+const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
+.concat(shows.map(s => ({ show: s.key, title: s.name, tag: '', time: '', week, skip: true })));
+storeMoves(next, `${shows.map(s => s.name).join(' und ')} ${shows.length > 1 ? 'werden' : 'wird'} diese Woche geskippt.`);
+};
+$('moveSkip').onclick = () => skipShows([moving]);
+$('moveSkipAll').onclick = () => skipShows([moving, ...moving.mates]);
 $('moveReset').onclick = () => {
 const week = isoDay(weekStart(weekOffset));
 storeMoves(moves.filter(m => !(m.show === moving.key && (m.week === week || !m.week))), `${moving.name} is back in its Guckplan slot.`);
