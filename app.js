@@ -283,7 +283,7 @@ return cache.get(key);
 async function downloadWeek(start, ids) {
 const storeKey = 'week:' + start.getTime();
 let saved = null;
-try { saved = JSON.parse(localStorage.getItem(storeKey)); } catch {}
+try { saved = fixTitles(JSON.parse(localStorage.getItem(storeKey))); } catch {}
 if (saved && saved.ids && (!ids || ids.some(id => !saved.ids.includes(id)))) saved = null;
 if (saved && Date.now() - saved.time < WEEK_CACHE_MS) return saved.items;
 if (saved) {
@@ -427,7 +427,7 @@ const key = 'rewatch:' + norm(show.romaji || show.english);
 if (!rewatchMedia.has(key)) {
 try {
 const saved = JSON.parse(localStorage.getItem(key));
-if (saved && Date.now() - saved.time < WEEK_KEEP_MS) rewatchMedia.set(key, saved.media);
+if (saved && Date.now() - saved.time < WEEK_KEEP_MS) rewatchMedia.set(key, fixTitles(saved.media));
 } catch {}
 }
 if (!rewatchMedia.has(key)) pendingRewatch.add(show);
@@ -1029,7 +1029,7 @@ return result.entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status));
 const key = 'list:' + user.toLowerCase();
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
-if (!fresh && saved && Date.now() - saved.time < LIST_CACHE_MS) return saved.entries;
+if (!fresh && saved && Date.now() - saved.time < LIST_CACHE_MS) return fixTitles(saved.entries);
 try {
 const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
 try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
