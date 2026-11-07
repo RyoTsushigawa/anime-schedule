@@ -2369,7 +2369,16 @@ const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vo
 'Haustier fordert Aufmerksamkeit', 'Zuschauer im falschen Discord-Kanal', 'Ein Zuschauer muss noch „nur kurz“ etwas erledigen', 'Escanor'];
 const reasonPool = () => [...new Set([...DELAY_REASONS, ...sharedReasons])];
 const randomReason = () => { const pool = reasonPool(); return pool[Math.floor(Math.random() * pool.length)]; };
-const syncRemember = () => { const typed = $('delayReason').value.trim(); $('delayRememberBox').hidden = !typed || reasonPool().includes(typed); };
+const keptReasons = () => movesKey ? sharedReasons.filter(r => !DELAY_REASONS.includes(r)) : [];
+const syncRemember = () => {
+const typed = $('delayReason').value.trim();
+$('delayRememberBox').hidden = !typed || reasonPool().includes(typed);
+$('delayForget').hidden = !typed || !keptReasons().includes(typed);
+};
+function fillKept() {
+$('delayKept').innerHTML = keptReasons().map(r => `<option value="${esc(r)}">`).join('');
+if (movesKey) $('delayReason').setAttribute('list', 'delayKept'); else $('delayReason').removeAttribute('list');
+}
 let delayDay = null;
 const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const delaysOf = date => [...new Map(delays.filter(x => x.day === date).map(x => [x.show, x])).values()];
@@ -2399,6 +2408,7 @@ $('delayReason').value = current?.reason || '';
 $('delayReason').placeholder = randomReason();
 $('delayRemove').hidden = !current;
 $('delayRemember').checked = true;
+fillKept();
 syncRemember();
 }
 $('delayReason').addEventListener('input', syncRemember);
@@ -2413,6 +2423,19 @@ $('delayCustom').value = '';
 $('delayCustom').addEventListener('input', () => {
 if ($('delayCustom').value) for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', 'false');
 });
+$('delayForget').onclick = async () => {
+const reason = $('delayReason').value.trim();
+$('delayMsg').textContent = 'Speichert…';
+$('delayForget').disabled = true;
+try {
+await saveMoves(moves, (d, r) => ({ delays: d, reasons: r.filter(x => x !== reason) }));
+$('delayReason').value = '';
+$('delayMsg').textContent = `„${reason}“ ist nicht mehr gemerkt.`;
+fillKept();
+syncRemember();
+} catch (e) { $('delayMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+finally { $('delayForget').disabled = false; }
+};
 $('delayDice').onclick = () => { $('delayReason').value = randomReason(); syncRemember(); };
 async function postDelay(op) {
 const send = async () => {
@@ -2841,6 +2864,11 @@ if (tick) action = () => tick.click();
 else if (key === '/') action = () => openSearch(true);
 else if (key === '?') action = () => openHelp(true);
 else if (key === 't') action = () => { setView('week'); weekOffset = 0; setRange('today'); load(); };
+else if (key === 'v' && (movesKey || delaysUrl)) action = async () => {
+const todayButton = () => document.querySelector('#list .day.is-today [data-day-delay]');
+if (!todayButton()) { setView('week'); weekOffset = 0; await load(); }
+todayButton()?.click();
+};
 else if (['1', '2', '3'].includes(key)) action = () => $({ 1: 'viewWeek', 2: 'viewCatchup', 3: 'viewPace' }[key]).click();
 if (!action) return;
 event.preventDefault();
