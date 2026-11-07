@@ -848,3 +848,8 @@ text-align: center;
 .day .row > img { box-shadow: 0 2px 7px #0003; }
 .catchup-show .row.compact { padding-inline: 14px 12px; }
 .catchup-show .row.compact > .time { color: var(--text); }
+.row.skipped .time s { text-decoration-thickness: 1.5px; }
+.day-absent { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-absent .pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+#moveTime[hidden], #moveDouble[hidden] { display: none; }
+#moveDouble[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
