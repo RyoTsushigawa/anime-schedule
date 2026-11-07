@@ -1907,6 +1907,7 @@ catchupMinutes = rows.filter(r => !r.missing).reduce((sum, r) => sum + (r.out - 
 $('catchupCount').textContent = count || '';
 $('catchupCount').hidden = !count;
 $('catchupCount').title = count ? `${count} ${count === 1 ? 'Folge' : 'Folgen'} für Catch-up` : '';
+return count;
 }
 let catchupMinutes = 0;
 function catchupTime() {
@@ -1971,8 +1972,7 @@ setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehl
 const planShows = friend ? [] : await missingPlanShows(plan, entries);
 if (!current()) return;
 const { rows, ownPace } = catchupRows(entries, planShows, plan, friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
-showCatchupCount(rows);
-if (shown === 'catchup') $('tabName').textContent += catchupTime();
+const openEpisodes = showCatchupCount(rows);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
@@ -2055,7 +2055,16 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
       </div>`).join('')}</section>`);
 }
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
-if (friend) $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(friendList.selectedOptions[0].textContent)}</strong><span class="catchup-count">Nur lesen</span></div>`);
+const listName = friend ? friendList.selectedOptions[0].textContent : user;
+const readOnly = friend ? '<span class="catchup-count">Nur lesen</span>' : '';
+if (shown === 'catchup') {
+$('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary">
+      <div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>
+      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}</span>
+    </div>`);
+} else if (friend) {
+$('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
+}
 if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.</div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
