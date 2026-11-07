@@ -319,7 +319,7 @@ border-left: 2px solid var(--late); font-size: 12.5px; color: var(--muted); }
 #delayMinutes button { flex: 1; padding: 4px 6px; }
 #delayFrom { flex: 1; min-width: 0; }
 #delayRememberBox { flex: none; padding: 4px 10px; font-size: 12px; }
-#delayRememberBox[hidden] { display: none; }
+#delayRememberBox[hidden], #delayForget[hidden] { display: none; }
 .day-text { position: relative; }
 .day-text textarea, .discord-text { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
 .day-suggest { display: grid; margin-top: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
