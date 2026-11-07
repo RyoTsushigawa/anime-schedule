@@ -15,7 +15,7 @@ const allowed = () => !!movesKey && view === 'week' && !document.body.classList.
 function prepareCards() {
 if (!globalThis.document?.documentElement) { observer.disconnect(); return; }
 for (const row of document.querySelectorAll('#list .row')) {
-const on = allowed() && !!row.querySelector('button.move');
+const on = allowed() && !!row.querySelector('button.move:not([data-extra])');
 row.draggable = on; row.classList.toggle('move-card',on);
 }
 }
@@ -25,7 +25,7 @@ observer.observe(document.body,{attributes:true,attributeFilter:['class']});
 prepareCards();
 function cardSource(element) {
 if (element?.closest?.('button:not(.move), input, select, textarea, .links a')) return null;
-return element?.closest?.('#list .row')?.querySelector('button.move') || null;
+return element?.closest?.('#list .row')?.querySelector('button.move:not([data-extra])') || null;
 }
 function clean(suppress = false) {
 clearTimeout(holdTimer); holdTimer = null; cardTouch = null;
@@ -100,7 +100,7 @@ $('list').addEventListener('drop',event=>{if (!source) return;event.preventDefau
 document.addEventListener('dragend',()=>{if (source) clean(true);});
 $('list').addEventListener('pointerdown',event=>{
 if (event.pointerType === 'mouse' || !allowed()) return;
-const button = event.target.closest?.('button.move');
+const button = event.target.closest?.('button.move:not([data-extra])');
 if (!button || button.disabled) return;
 touch = {button,x:event.clientX,y:event.clientY,id:event.pointerId,active:false};
 button.setPointerCapture?.(event.pointerId);
