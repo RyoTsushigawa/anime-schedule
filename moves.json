@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T20:56:03.645Z",
+ "updated": "2026-11-07T20:56:14.567Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -154,10 +154,9 @@
   {
    "show": "kerorogunsou",
    "title": "Keroro Gunsou☆",
-   "tag": "",
-   "time": "",
-   "week": "2026-11-02",
-   "skip": true
+   "tag": "Sa.",
+   "time": "22:00",
+   "week": "2026-11-02"
   }
  ],
  "delays": [
