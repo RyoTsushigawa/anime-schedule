@@ -2547,10 +2547,11 @@ $('moveMsg').textContent = '';
 $('moveSkip').hidden = !!thisWeek?.skip;
 moving.mates = [...b.closest('.parallel-slot')?.querySelectorAll('.move') || []].filter(x => x !== b)
 .map(x => ({ key: norm(x.dataset.moveTitle), name: x.dataset.moveName }));
-$('moveAll').hidden = !moving.mates.length;
-$('moveAll').setAttribute('aria-pressed', 'false');
-$('moveAll').textContent = 'Parallel';
-$('moveAll').title = `Die parallelen Serien mitnehmen (verschieben, skippen, zurücksetzen): ${[moving.name, ...moving.mates.map(m => m.name)].join(', ')}`;
+const all = [moving.name, ...moving.mates.map(m => m.name)].join(', ');
+$('moveBoth').hidden = !moving.mates.length;
+$('moveBoth').title = `Zusammen verschieben: ${all}`;
+$('skipBoth').hidden = !moving.mates.length || !!thisWeek?.skip;
+$('skipBoth').title = `Zusammen skippen: ${all}`;
 $('moveDouble').setAttribute('aria-pressed', String(!!thisWeek?.double));
 syncMoveDialog();
 if (destination) {
@@ -2591,28 +2592,34 @@ $('moveDouble').onclick = () => {
 $('moveDouble').setAttribute('aria-pressed', String($('moveDouble').getAttribute('aria-pressed') !== 'true'));
 syncMoveDialog();
 };
-const movingShows = () => $('moveAll').getAttribute('aria-pressed') === 'true' ? [moving, ...moving.mates] : [moving];
 const namesOf = shows => shows.map(s => s.name).join(' und ');
-$('moveAll').onclick = () => $('moveAll').setAttribute('aria-pressed', String($('moveAll').getAttribute('aria-pressed') !== 'true'));
-$('moveSave').onclick = () => {
+const moveShows = shows => {
 const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
 const time = $('moveTime').value.trim();
 if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
 const week = moveScope === 'week' || double ? isoDay(weekStart(weekOffset)) : '';
-const shows = movingShows(), keys = shows.map(s => s.key);
+const keys = shows.map(s => s.key);
 const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
 .concat(shows.map(s => ({ show: s.key, title: s.name, tag: $('moveTag').value, time, week, ...(double && { double: true }) })));
 storeMoves(next, `${namesOf(shows)}${double ? ' mit Doppelfolge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
 };
-$('moveSkip').onclick = () => {
-const week = isoDay(weekStart(weekOffset)), shows = movingShows(), keys = shows.map(s => s.key);
+$('moveSave').onclick = () => moveShows([moving]);
+$('moveBoth').onclick = () => moveShows([moving, ...moving.mates]);
+const skipShows = shows => {
+const week = isoDay(weekStart(weekOffset)), keys = shows.map(s => s.key);
 const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
 .concat(shows.map(s => ({ show: s.key, title: s.name, tag: '', time: '', week, skip: true })));
 storeMoves(next, `${namesOf(shows)} ${shows.length > 1 ? 'werden' : 'wird'} diese Woche geskippt.`);
 };
+$('moveSkip').onclick = () => skipShows([moving]);
+$('skipBoth').onclick = () => skipShows([moving, ...moving.mates]);
 $('moveReset').onclick = () => {
-const week = isoDay(weekStart(weekOffset)), shows = movingShows(), keys = shows.map(s => s.key);
-storeMoves(moves.filter(m => !(keys.includes(m.show) && (m.week === week || !m.week))), `${namesOf(shows)}: zurück im Guckplan-Slot.`);
+const week = isoDay(weekStart(weekOffset));
+const own = m => m.week === week || !m.week;
+const mine = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
+const same = m => mine && m.week === mine.week && m.tag === mine.tag && m.time === mine.time && !!m.skip === !!mine.skip;
+const shows = [moving, ...moving.mates.filter(s => moves.some(m => m.show === s.key && same(m)))], keys = shows.map(s => s.key);
+storeMoves(moves.filter(m => !(keys.includes(m.show) && own(m))), `${namesOf(shows)}: zurück im Guckplan-Slot.`);
 };
 function discordMessage({ date, groups }) {
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
