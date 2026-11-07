@@ -176,6 +176,23 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 </form>
 </dialog>
+<dialog id="planDlg" class="dlg">
+<form method="dialog">
+<b id="planName"></b>
+<div class="muted" id="planFrom"></div>
+<div class="dlg-row">
+<select id="planDay" aria-label="Tag"></select>
+<input id="planTime" placeholder="Uhrzeit, z. B. 21:00" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (leer = nächster freier Slot)">
+</div>
+<div class="dlg-row"><select id="planCount" aria-label="Folgen"></select></div>
+<div class="muted" id="planMsg"></div>
+<div class="dlg-row">
+<button type="button" id="planSave" class="pill primary">Einplanen</button>
+<button type="button" id="planRemove" class="pill" hidden>Entfernen</button>
+<button value="cancel" class="pill">Abbrechen</button>
+</div>
+</form>
+</dialog>
 <dialog id="discordDlg" class="dlg day-dlg">
 <form method="dialog">
 <b id="discordName"></b>
