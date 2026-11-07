@@ -261,7 +261,7 @@ background: color-mix(in srgb, var(--card) 45%, var(--bg));
 .row { position: relative; isolation: isolate; overflow: hidden; display: flex; gap: 14px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 8px 8px; margin-bottom: 8px;
 box-shadow: var(--raise); transition: border-color .15s ease; }
 .row[style*="--art"]::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--art) center / cover no-repeat; opacity: var(--art-strength);
--webkit-mask-image: linear-gradient(90deg, #000, transparent 72%); mask-image: linear-gradient(90deg, #000, transparent 72%); transition: opacity .15s ease; }
+-webkit-mask-image: linear-gradient(90deg, #000 4%, transparent 52%); mask-image: linear-gradient(90deg, #000 4%, transparent 52%); transition: opacity .15s ease; }
 .row.aired::before { opacity: calc(var(--art-strength) * .35) !important; }
 @media (hover: hover) { .row:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); } .row[style*="--art"]:hover::before { opacity: calc(var(--art-strength) * 1.4); } }
 .row.aired, .row.pause { background: transparent; box-shadow: none; }
@@ -282,7 +282,7 @@ font-weight: 650;
 .row.aired .time, .row.aired .title, .row.pause .time, .row.pause .title { color: var(--muted); }
 .row.aired img, .row.pause img { opacity: .7; }
 .row.aired:not(:hover) .cr:not(:focus-visible) { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
-.row.pause { border-style: dashed; }
+.row.pause { border-style: dashed; background-color: color-mix(in srgb, var(--card) 55%, transparent); }
 .row.pause .time { font-weight: 500; }
 .row.pause .ep a { color: inherit; text-decoration: underline dotted; }
 .cr.news { background: transparent; color: var(--text); border: 1px solid var(--line); }
@@ -348,7 +348,7 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .day h2 .day-delay.on { border-color: var(--late); color: var(--late); }
 .time.late, .time.late * { color: var(--late) !important; }
 .delay-note { display: flex; align-items: center; gap: 8px; min-height: 24px; margin: 0 0 4px; padding: 0 0 0 10px;
-border-left: 2px solid var(--late); font-size: 12.5px; color: var(--muted); }
+border-left: 2px solid var(--late); border-radius: 5px; background: color-mix(in srgb, var(--late) 9%, var(--bg)); font-size: 12.5px; color: var(--muted); }
 .delay-note > span { flex: 1; min-width: 0; }
 .delay-note b { color: var(--late); font-weight: 600; }
 .delay-note .pill { flex: none; padding: 1px 10px; font-size: 12px; opacity: 0; transition: opacity .15s; }
@@ -664,7 +664,8 @@ border-radius: 9px;
 .day .row {
 background-color: color-mix(in srgb, var(--card) 94%, var(--accent));
 }
-.day .row:is(.aired, .pause) { background-color: transparent; }
+.day .row.aired:not(.pause) { background-color: transparent; }
+.day .row.pause { background-color: color-mix(in srgb, var(--card) 55%, var(--bg)); }
 .day .row .title { font-size: 16px; }
 .day .row.pause .title { font-size: 14px; }
 .day .row .ep { margin-top: 5px; }
@@ -713,6 +714,21 @@ background: var(--card);
 .help-topics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .help-sections section:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .friend-view { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--text); }
+.catchup-summary {
+display: flex;
+align-items: center;
+justify-content: space-between;
+flex-wrap: wrap;
+gap: 4px 14px;
+margin-bottom: 10px;
+padding: 9px 12px;
+border: 1px solid var(--line);
+border-radius: 12px;
+background: var(--card);
+color: var(--muted);
+font-size: 13px;
+}
+.catchup-summary .friend-view { margin: 0; }
 .tool-back { display: inline-flex; align-items: center; min-height: 36px; text-decoration: none; white-space: nowrap; }
 .controls-left > .segmented:first-child { border-radius: 12px; }
 .controls-left > .segmented:first-child button { border-radius: 9px; }
