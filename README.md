@@ -99,6 +99,11 @@ A Windows scheduled task, **Anime Schedule - German streams**, runs both scripts
 It runs on this PC rather than on GitHub because LiveChart shows the streams for the visitor's country,
 and GitHub's servers are in the US.
 
+**Titles:** where LiveChart writes a show's title with the same letters but more cleanly ("TANK CHAIR" →
+"Tank Chair"), the page uses LiveChart's by itself. Word changes ("KERORO☆" → "Keroro Gunsou☆") go into
+`TITLE_FIXES` in `common.js` by hand. The weekly run's title check (`tools/title-check.mjs`) lists
+candidates in `tools/last-run.log` as `check:` lines; a title that's fine as it is goes into `TITLE_KEEP`.
+
 ## Putting it online (one time)
 
 1. On GitHub, create a new **public** repository named `anime-schedule` (leave it empty).
