@@ -651,10 +651,19 @@ taken.add(r.watchAt);
 }
 day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
 }
+function delayClock(date, clock) {
+const hm = parseTime(clock);
+if (!hm) return null;
+const at = new Date(date);
+at.setHours(hm[0] + (hm[0] < NIGHT_UNTIL ? 24 : 0), hm[1], 0, 0);
+return at.getTime();
+}
 function applyDelays(day, timeline = day) {
 const list = delaysOf(isoDay(day.date));
 const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
-day.delayStarts = list.map(x => ({ ...x, at: timeline.rows.find(r => keyOf(r) === x.show)?.plannedAt ?? timeline.rows.find(r => keyOf(r) === x.show)?.watchAt })).filter(x => x.at != null);
+const startOf = x => x.show[0] === '@' ? delayClock(day.date, x.show.slice(1))
+: timeline.rows.find(r => keyOf(r) === x.show)?.plannedAt ?? timeline.rows.find(r => keyOf(r) === x.show)?.watchAt;
+day.delayStarts = list.map(x => ({ ...x, at: startOf(x) })).filter(x => x.at != null);
 for (const r of day.rows) {
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
 if (shared && timeline !== day) r.watchAt = shared.plannedAt ?? shared.watchAt;
@@ -2392,8 +2401,14 @@ if (!found) return;
 const rows = found.rows.filter(r => !r.pause && r.show);
 const keyOf = r => norm(r.show.romaji || r.show.english);
 delayDay = { date, rows: [...new Map(rows.map(r => [keyOf(r), r])).values()].map(r => ({ key: keyOf(r), title: r.show.english || r.show.romaji, at: r.plannedAt ?? r.watchAt, now: r.watchAt })) };
+delayDay.keyFor = x => {
+if (x.show[0] !== '@') return x.show;
+const at = delayClock(found.date, x.show.slice(1));
+return delayDay.rows.filter(r => r.at >= at).sort((p, q) => p.at - q.at)[0]?.key;
+};
+if (show?.[0] === '@') show = delayDay.keyFor({ show });
 $('delayName').textContent = `Verspätung · ${dayName(found.date)}, ${germanDate(found.date)}`;
-const has = new Map(delaysOf(date).map(x => [x.show, x]));
+const has = new Map(delaysOf(date).map(x => [delayDay.keyFor(x), x]));
 const from = show && delayDay.rows.find(r => r.key === show) || delayDay.rows.find(r => r.now > Date.now()) || delayDay.rows[0];
 $('delayFrom').innerHTML = delayDay.rows.map(r => `<option value="${esc(r.key)}"${r === from ? ' selected' : ''}>ab ${hhmmOf(r.at)} ${esc(r.title)}${has.get(r.key) ? ` · +${has.get(r.key).minutes}` : ''}</option>`).join('');
 $('delayMsg').textContent = delayDay.rows.length ? '' : 'An diesem Tag steht nichts an.';
@@ -2402,7 +2417,7 @@ fillDelay();
 $('delayDlg').showModal();
 }
 function fillDelay() {
-const current = delayDay && delaysOf(delayDay.date).find(x => x.show === $('delayFrom').value) || null;
+const current = delayDay && delaysOf(delayDay.date).find(x => delayDay.keyFor(x) === $('delayFrom').value) || null;
 delayDay.current = current;
 const minutes = current?.minutes || 15;
 const chip = $('delayMinutes').querySelector(`[data-min="${minutes}"]`);
@@ -2462,10 +2477,10 @@ sharedReasons = body.reasons || sharedReasons;
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
 }
-async function changeDelays(day, show, add, remember) {
-const mine = x => x.day === day && x.show === show;
+async function changeDelays(day, show, add, remember, oldShow = show) {
+const mine = x => x.day === day && (x.show === show || x.show === oldShow);
 const old = delays.filter(mine);
-if (movesKey) {
+if (movesKey && !delaysUrl) {
 await saveMoves(moves, (d, r) => ({ delays: d.filter(x => !mine(x)).concat(add || []), reasons: remember ? [...new Set([...r, add.reason])] : r }));
 return;
 }
@@ -2482,7 +2497,7 @@ async function storeDelay(add, done, remember = false, undo = null) {
 $('delayMsg').textContent = 'Speichert…';
 $('delaySave').disabled = $('delayRemove').disabled = true;
 try {
-await changeDelays(delayDay.date, $('delayFrom').value, add, remember);
+await changeDelays(delayDay.date, $('delayFrom').value, add, remember, delayDay.current?.show);
 $('delayDlg').close();
 notice(`${done} Alle sehen es in etwa einer Minute.`, !!undo);
 delayUndo = undo;
@@ -2499,7 +2514,7 @@ const typed = $('delayReason').value.trim();
 const reason = typed || $('delayReason').placeholder || randomReason();
 const remember = !$('delayRememberBox').hidden && $('delayRemember').checked && typed === reason;
 const id = Math.random().toString(36).slice(2, 10);
-storeDelay({ id, day: delayDay.date, show: from.key, title: from.title, minutes, reason },
+storeDelay({ id, day: delayDay.date, show: from.key, at: hhmmOf(from.at), title: from.title, minutes, reason },
 `${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`, remember);
 };
 $('delayRemove').onclick = () => {
