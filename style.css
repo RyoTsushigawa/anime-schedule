@@ -71,7 +71,7 @@ body.catchup .controls-left { flex: 1 1 auto; }
 .round[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
 .search { display: flex; align-items: center; gap: 8px; }
 #search { display: none; width: 210px; height: 36px; background: var(--card); border: 1px solid var(--line); }
-#search:focus { outline: none; border-color: var(--accent); }
+#search:focus { border-color: var(--accent); }
 .search.open #search { display: block; }
 .search.open #searchButton { color: var(--accent); border-color: var(--accent); }
 .picker { position: relative; }
@@ -140,7 +140,7 @@ img.avatar { object-fit: cover; }
 .login-ending > button { flex: none; min-height: 30px; padding: 3px 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; font-size: 12px; color: var(--muted); }
 .field input { width: 100%; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg); font-size: 14px; }
-.field input:focus { outline: none; border-color: var(--accent); }
+.field input:focus { border-color: var(--accent); }
 .field select { width: 100%; min-width: 0; font-size: 13px; padding: 6px 8px; }
 .sync-row { display: flex; gap: 8px; align-items: center; padding: 4px 10px 10px; }
 .sync-row select { flex: 1; min-width: 0; border-radius: 8px; font-size: 12px; padding: 6px 8px; }
@@ -545,7 +545,7 @@ background: var(--person, var(--line)); color: var(--person-text, var(--text)); 
 .avail-head { text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; }
 .avail-start { width: 100%; min-width: 0; padding: 3px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
 color: var(--text); font-size: 12px; text-align: center; }
-.avail-start:focus { outline: none; border-color: var(--accent); }
+.avail-start:focus { border-color: var(--accent); }
 .busy-list { display: flex; flex-direction: column; gap: 6px; padding: 0 10px; }
 .busy-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .busy-row .pill { padding: 4px 10px; font-size: 13px; background: var(--card); border: 1px solid var(--line); color: var(--text); }
@@ -756,3 +756,8 @@ main { padding-top: 10px; }
 @media (pointer: coarse) {
 .day .row > .links > .cr { min-height: 36px; }
 }
+.crash-note { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 10px;
+padding: 8px 8px 8px 14px; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; max-width: calc(100vw - 32px); }
+.crash-note .crash-reload { background: var(--accent); color: var(--accent-text, #fff); border-color: transparent; }
+.crash-note .crash-close { background: none; border: 0; color: var(--muted); padding: 4px 8px; }
