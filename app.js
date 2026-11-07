@@ -1131,6 +1131,7 @@ loadMe().catch(e => { if (auth === loadingFor) notice(e.message); }).finally(() 
 }
 else { accountLoading = false; syncSavingButtons(); load(true); }
 }
+addEventListener('mal-session-renewed', () => { saveAccounts(); updateConnect(); });
 const connect = () => {
 location.href = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_CLIENT_ID}&response_type=token`;
 };
