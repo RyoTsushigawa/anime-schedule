@@ -3030,11 +3030,29 @@ select.value = soloPerson;
 }
 colorSolo();
 const box = $('people');
-if ([...box.children].map(b => b.dataset.name).join() === people.join()) {
-for (const b of box.children) b.style.cssText = personStyle(b.dataset.name);
+const chips = () => [...box.querySelectorAll('[data-name]')];
+if (chips().map(b => b.dataset.name).join() === people.join()) {
+for (const b of chips()) b.style.cssText = personStyle(b.dataset.name);
 return;
 }
-box.replaceChildren(...people.map(name => {
+const all = document.createElement('button');
+all.className = 'chip';
+all.textContent = 'Alle';
+all.setAttribute('aria-label', 'Alle Personen auswählen');
+const saveSelection = () => {
+for (const b of chips()) b.setAttribute('aria-pressed', selectedPeople.has(b.dataset.name));
+all.setAttribute('aria-pressed', people.every(name => selectedPeople.has(name)));
+try { localStorage.setItem('people', JSON.stringify([...selectedPeople])); } catch {}
+updateGroupButton();
+redraw();
+};
+all.setAttribute('aria-pressed', people.every(name => selectedPeople.has(name)));
+all.onclick = () => {
+selectedPeople.clear();
+for (const name of people) selectedPeople.add(name);
+saveSelection();
+};
+box.replaceChildren(all, ...people.map(name => {
 const b = document.createElement('button');
 b.className = 'chip';
 b.dataset.name = name;
@@ -3043,10 +3061,7 @@ b.style.cssText = personStyle(name);
 b.setAttribute('aria-pressed', selectedPeople.has(name));
 b.onclick = () => {
 selectedPeople.has(name) ? selectedPeople.delete(name) : selectedPeople.add(name);
-b.setAttribute('aria-pressed', selectedPeople.has(name));
-try { localStorage.setItem('people', JSON.stringify([...selectedPeople])); } catch {}
-updateGroupButton();
-redraw();
+saveSelection();
 };
 return b;
 }));
