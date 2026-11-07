@@ -1,0 +1,2009 @@
+// The ranker's script (kept out of index.html so the page's security rules can forbid inline scripts)
+(() => {
+const LEVELS = [10,9.5,9,8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,3.5,3,2.5,2,1.5,1,0.5];
+const MIN_SCORE = 0.5; // lowest site median / imported score kept
+const KEY = 'hl-ranker-v2';
+// How fine scores go (←/→ and the ± buttons move by one step): 1, 0.5 or 0.1 points, shown on the
+// 10-point scale or the 100-point one (7.3 = 73), and whether the show you compare against changes
+// between shows that share its score. Kept in this browser, for every list.
+const PREFS_KEY = 'hl-prefs';
+let PREFS = {step:0.5, scale:10, vary:true};
+try{ PREFS = {...PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')}; }catch(e){}
+const savePrefs = () => { try{ localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); }catch(e){} };
+const STEP = () => PREFS.step;
+const MIN = () => PREFS.step===1 ? 1 : PREFS.step; // lowest score you can give
+const roundStep = v => Math.round(Math.round(v / STEP()) * STEP() * 10) / 10;
+const clampScore = v => Math.max(MIN(), Math.min(10, roundStep(v)));
+// Every score you can give, 10 first
+const scoreValues = () => { const out = []; for(let v = 100; v >= MIN()*10 - 1e-9; v -= STEP()*10) out.push(Math.round(v)/10); return out; };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = s => PREFS.scale===100 ? String(Math.round(+s*10)) : (+s).toFixed(1);
+// A step as a label: "1", "½", "0.1" (100-point scale: "10", "5", "1")
+const stepLabel = d => PREFS.scale===100 ? String(Math.round(Math.abs(d)*10)) : Math.abs(d)===0.5 ? '½' : String(Math.abs(d));
+// English titles, formats and episode counts by MAL id, built from db.json
+let showInfo = null;
+// Every anime on AniList (db.json, rebuilt weekly): {anilistId: [malId, median, english, romaji, format, episodes, status, sequels[], prequels[]]}
+let DB = null, malToAl = {};
+// Cover images load straight from AniList's image server (cover-urls.json: {anilistId: url}, plus covers from loaded lists)
+let coverUrls = {};
+const T = it => (showInfo && it.id && showInfo.titles[it.id]) || it.title;
+function coverFor(id){
+  const al = malToAl[id] || (showInfo && showInfo.anilist[id]);
+  return Promise.resolve((al && coverUrls[al]) || null);
+}
+function fillCovers(root){
+  root.querySelectorAll('img.cv[data-id]').forEach(img => coverFor(img.dataset.id).then(src => { if(src) img.src = src; else img.hidden = true; }));
+}
+const titleBlock = it => `<div class="title">${esc(T(it))}</div>${T(it)!==it.title?`<div class="orig">${esc(it.title)}</div>`:''}`;
+const half = v => Math.round(v*2)/2;
+const chipColor = s => `hsl(${Math.round(Math.max(0, s-1)/9*140)} 62% var(--chip-l))`;
+const scoreChip = s => s ? `<span class="score" style="background:${chipColor(s)}">${fmt(s)}</span>` : `<span class="score none">–</span>`;
+
+// Example list until the pool below has loaded (or if it can't). "site" is a made-up community
+// average for the demo only.
+const SAMPLE = [
+  ['1','Cowboy Bebop','TV',26,9],['5114','Fullmetal Alchemist: Brotherhood','TV',64,10],['9253','Steins;Gate','TV',24,9.5],
+  ['30','Neon Genesis Evangelion','TV',26,8],['199','Spirited Away','Movie',1,9],['16498','Attack on Titan','TV',25,8.5],
+  ['1535','Death Note','TV',37,8],['32281','Your Name.','Movie',1,0,8.5],['52991',"Frieren: Beyond Journey's End",'TV',28,9.5],
+  ['32182','Mob Psycho 100','TV',12,8.5],['11061','Hunter x Hunter (2011)','TV',148,9],['5680','K-On!','TV',13,7.5],
+  ['21','One Piece','TV',0,0,8.5],['20','Naruto','TV',220,7],
+  // one example show for each lower step, so every benchmark slot starts filled
+  ['11757','Sword Art Online','TV',25,6.5],['27899','Tokyo Ghoul √A','TV',12,6],['39617','The Promised Neverland Season 2','TV',11,5.5],
+  ['22199','Akame ga Kill!','TV',24,5],['32379','Berserk (2016)','TV',12,4.5],['32981','Hand Shakers','TV',12,4],
+  ['23079','Glasslip','TV',13,3.5],['34771','DYNAMIC CHORD','TV',12,3],['40074','GIBIATE','TV',12,2.5],
+  ['19315','Pupa','TV',12,2],['28929','VAMPIRE HOLMES','TV',12,1.5],['38853','EX-ARM','TV',12,1],['2476','School Days','TV',12,0.5],
+].map(([id,title,type,eps,old,site],e) => ({e,id,title,type,eps,old,site:site||0,status:'Completed'}));
+
+// A fresh example list on every load: well-known shows (sample-pool.json, sorted best first by
+// AniList average) cut into 20 slices, one random benchmark from each slice for 10 down to 0.5, so
+// each sits roughly where the community has it; plus a few more shows to rank, some with an old
+// score and some with only a site median. School Days (TV) only ever appears as the 10 or the 0.5.
+const SCHOOL_DAYS = '2476';
+async function rollSample(){
+  // Only formats the Skip settings allow (a skipped show couldn't be a benchmark)
+  const pool = (await (await fetch('sample-pool.json')).json()).shows
+    .filter(s => s[0]!==SCHOOL_DAYS && !tooShort({id:s[0], type:s[2]}));
+  const pick = list => list.splice(Math.floor(Math.random()*list.length), 1)[0];
+  const slices = LEVELS.map((L, i) => pool.slice(Math.floor(i*pool.length/LEVELS.length), Math.floor((i+1)*pool.length/LEVELS.length)));
+  const items = [];
+  const add = ([id, title, format, eps], old, site) => items.push({e:items.length, id, title, type:format==='MOVIE'?'Movie':format, eps, old, site, status:'Completed'});
+  const schoolDays = Math.random() < 0.35 ? (Math.random() < 0.5 ? 10 : 0.5) : null;
+  LEVELS.forEach((L, i) => {
+    if(L===schoolDays) add([SCHOOL_DAYS, 'School Days', 'TV', 12], L, 0);
+    else add(pick(slices[i]), L, 0);
+  });
+  // Shows to rank: an old score near their slice (±½), or only the site's average
+  for(let n = 0; n < 8; n++){
+    const i = Math.floor(Math.random()*LEVELS.length), show = slices[i].length ? pick(slices[i]) : null;
+    if(!show) continue;
+    const near = Math.max(0.5, Math.min(10, LEVELS[i] + (Math.floor(Math.random()*3) - 1)/2));
+    add(show, n < 6 ? near : 0, n < 6 ? 0 : Math.max(0.5, half(show[4]/10)));
+  }
+  return items;
+}
+
+let S = null, pending = null, undoStack = [];
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function autoBench(items){
+  const bench = {};
+  for(const L of LEVELS){
+    const c = items.map((it,i)=>[it,i]).filter(([it]) => it.old===L && !tooShort(it));
+    if(!c.length) continue;
+    c.sort((a,b) => (b[0].status==='Completed') - (a[0].status==='Completed'));
+    bench[L] = c[0][1];
+  }
+  return bench;
+}
+function newState({source,kind,xml,fileName,items,showOld=true}){
+  const bench = autoBench(items), used = new Set(Object.values(bench));
+  return {v:2,source,kind,xml,fileName,items,bench,results:{},
+    queue:shuffle(items.map((_,i)=>i).filter(i=>!used.has(i))),cur:null,skipped:[],compares:0,
+    hints:PREFS.hints ?? true, showOld:PREFS.old ?? showOld, fillGaps:PREFS.fill ?? true, skip:{...skipsOf()},
+    markDone:true, wholeNums:false};
+}
+function save(){
+  if(S.source==='sample') return;
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); document.getElementById('saveWarning')?.remove(); }
+  catch(e){
+    if(!document.getElementById('saveWarning')){
+      const warning = document.createElement('p'); warning.id = 'saveWarning'; warning.setAttribute('role','alert');
+      $('exportMenu').open = true;
+      warning.textContent = 'Your browser could not save progress. Keep this tab open and use Back up progress below before leaving.';
+      $('backupBtn').parentElement.prepend(warning);
+    }
+  }
+  syncRemoved();
+}
+// Copies what you marked "Didn't watch" or "Dropped" (and how each show got into the game) to the page database,
+// so Claude can read it and tune which seasons get added automatically. Writes only when the lists change.
+let removedTimer = null, removedSent = '';
+function syncRemoved(){ return; // only used by the Claude version (lets Claude read what you removed)
+}
+function syncRemovedUnused(){
+  clearTimeout(removedTimer);
+  removedTimer = setTimeout(async () => {
+    if(!S || S.source==='sample' || typeof followDb==='undefined' || !followDb) return;
+    const pick = i => { const it = S.items[i]; return {id:it.id||'', alId:it.alId||'', title:it.title, type:it.type||'', eps:it.eps||0, status:it.status, from:it.from||''}; };
+    const body = {notWatched:(S.removed||[]).map(pick), dropped:(S.dropped||[]).map(pick),
+      added:S.items.filter(it => it.added && it.status==='Missing season').length, updated:new Date().toISOString()};
+    const key = JSON.stringify([body.notWatched, body.dropped]);
+    if(key===removedSent) return;
+    try{ await followDb.doc('insights/removed').set(body); removedSent = key; }catch(e){}
+  }, 2000);
+}
+function load(){ try{ const raw = localStorage.getItem(KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===2) return s; } }catch(e){} return null; }
+
+/* ---------- engine ----------
+   1. The ladder: benchmarks at whole or half points (whole only with 1-point steps). The search
+      starts at the benchmark at or below your old score (or the site median) and moves out from
+      there one step, then two, three… while the answers point the same way; once they turn, it
+      halves the remaining gap. So "lower" on an 8 asks about 7.5 next, not 4.
+   2. With 0.1 steps, the show then gets sorted inside its tier (e.g. 7.0–7.4) against shows you
+      already scored there ("soft" benchmarks, not kept as benchmarks; a different one each time).
+   The show you compare against can be any show with the benchmark's exact score (PREFS.vary). */
+function benchList(){ return LEVELS.filter(L => S.bench[L]!=null && (STEP()<1 || L%1===0)).map(L => ({s:L, idx:S.bench[L]})); }
+function benchLevelOf(){ const m = {}; for(const L of LEVELS) if(S.bench[L]!=null) m[S.bench[L]] = L; return m; }
+// Starting guess: your old score, or the site's average if you never scored it
+function guessOf(it){ return it.old || it.site || 0; }
+function startIndex(idx){
+  const g = guessOf(S.items[idx]); if(!S.hints || !g) return -1;
+  const B = benchList(); const i = B.findIndex(b => b.s <= g);
+  return i<0 ? B.length-1 : i;
+}
+// The show standing in for a score: the benchmark, or (PREFS.vary) any show with exactly that score
+function standIn(L, benchIdx){
+  if(!PREFS.vary) return benchIdx;
+  const pool = [benchIdx, ...Object.keys(S.results).filter(k => S.results[k]===L).map(Number)];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+// A show that lands at position p sits below B[p-1] and at or above B[p].
+// If the score steps between those two benchmarks have no benchmark yet, the show
+// becomes the benchmark for the middle empty step, so half points fill in as you play.
+// Returns the tier [min, max] still open (for sorting with 0.1 steps), or null when placed.
+function place(idx, p, B){
+  const ladder = STEP()===1 ? 1 : 0.5;
+  const upper = p>0 ? B[p-1].s : 10 + ladder, lower = p<B.length ? B[p].s : ladder;
+  const gaps = LEVELS.filter(L => L<upper && L>lower && S.bench[L]==null && (ladder<1 || L%1===0));
+  if(S.fillGaps!==false && gaps.length){
+    const L = p===0 ? gaps[gaps.length-1] : p===B.length ? gaps[0] : gaps[Math.floor((gaps.length-1)/2)];
+    S.bench[L] = idx; S.lastNew = {idx, L};
+    return null;
+  }
+  const min = p<B.length ? lower : Math.max(MIN(), upper-ladder), max = Math.round((upper - STEP())*10)/10;
+  if(STEP()>=0.5 || max<=min){ S.results[idx] = min; return null; }
+  return {min, max};
+}
+// Soft benchmarks for a show inside [min, max]: scored shows there (not benchmarks), by score.
+// Picks the score nearest the middle, then one show with it at random.
+function softProbe(c){
+  const scores = [...new Set(Object.keys(S.results).filter(k => +k!==c.idx).map(k => S.results[k]).filter(v => v>=c.fine.min-1e-9 && v<=c.fine.max+1e-9))];
+  if(!scores.length) return null;
+  const mid = (c.fine.min + c.fine.max)/2;
+  scores.sort((a,b) => Math.abs(a-mid) - Math.abs(b-mid) || Math.random()-0.5);
+  const s = scores[0], shows = Object.keys(S.results).filter(k => +k!==c.idx && S.results[k]===s).map(Number);
+  return {s, idx: shows[Math.floor(Math.random()*shows.length)]};
+}
+function advance(){
+  if(!benchList().length) return;
+  for(;;){
+    const B = benchList();
+    if(!S.cur){
+      // The next show: the first in the queue, or the first in the slice you're ranking
+      const qi = S.focus ? S.queue.findIndex(inFocus) : S.queue.length ? 0 : -1;
+      if(qi<0) return;
+      const idx = S.queue.splice(qi, 1)[0];
+      if(tooShort(S.items[idx])){ S.short = S.short || []; if(!S.short.includes(idx)) S.short.push(idx); continue; }
+      // A show from a split score is only sorted inside its tier (no ladder)
+      const tier = S.split?.[idx];
+      if(tier){ delete S.split[idx]; S.cur = {idx, m:-1, fine:{min:tier[0], max:tier[1]}}; continue; }
+      const start = startIndex(idx);
+      S.cur = {idx, lo:0, hi:B.length, m:-1, start, gallop: start>=0 ? {dir:0, size:1} : null};
+    }
+    const c = S.cur;
+    if(c.m>=0 || c.soft) return;
+    // Sorting inside the tier
+    if(c.fine){
+      const probe = softProbe(c);
+      if(!probe){ S.results[c.idx] = roundStep((c.fine.min + c.fine.max)/2); S.cur = null; continue; }
+      c.soft = probe; return;
+    }
+    if(c.lo>=c.hi){
+      const tier = place(c.idx, c.lo, B);
+      if(tier){ c.fine = tier; continue; }
+      S.cur = null; continue;
+    }
+    let m;
+    if(c.start>=0 && c.start>=c.lo && c.start<c.hi && !c.asked) m = c.start;
+    else if(c.gallop && c.gallop.dir<0) m = Math.max(c.lo, c.hi - c.gallop.size);
+    else if(c.gallop && c.gallop.dir>0) m = Math.min(c.hi - 1, c.lo + c.gallop.size - 1);
+    else m = (c.lo+c.hi)>>1;
+    c.m = m; c.asked = true; c.show = standIn(B[m].s, B[m].idx); return;
+  }
+}
+function snap(){ undoStack.push(JSON.stringify({queue:S.queue,cur:S.cur,results:S.results,skipped:S.skipped,compares:S.compares,bench:S.bench,lastNew:S.lastNew||null,removed:S.removed||[],dropped:S.dropped||[],unsure:S.unsure||[],split:S.split||{},nItems:S.items.length})); if(undoStack.length>200) undoStack.shift(); }
+// Later seasons the page added by itself ("Missing season") that you haven't scored leave with a dropped show.
+// Follows AniList sequel links (db.json); a show from your own list ends the line.
+function dropSequels(idx){
+  if(typeof DB==='undefined' || !DB) return 0;
+  const alOf = x => +(x.alId || malToAl[x.id] || (showInfo && x.id && showInfo.anilist?.[x.id]) || 0);
+  const start = alOf(S.items[idx]); if(!start) return 0;
+  const byAl = new Map(); S.items.forEach((x,i) => { const a = alOf(x); if(a) byAl.set(a, i); });
+  const fs = finalScores(), gone = [], seen = new Set([start]);
+  let frontier = [start];
+  while(frontier.length){
+    const next = [];
+    for(const a of frontier) for(const n of (DB[a]?.[7] || [])){
+      if(seen.has(n)) continue; seen.add(n);
+      const i = byAl.get(n);
+      if(i==null){ next.push(n); continue; }                 // not in the game: keep following the line
+      const x = S.items[i];
+      if(!(x.added && x.status==='Missing season')) continue; // your own list: the line stops here
+      if(fs[i]==null){ gone.push(i); }
+      next.push(n);
+    }
+    frontier = next;
+  }
+  if(!gone.length) return 0;
+  S.removed = S.removed || [];
+  gone.forEach(i => { if(!S.removed.includes(i)) S.removed.push(i); });
+  S.queue = S.queue.filter(i => !gone.includes(i)); S.skipped = S.skipped.filter(i => !gone.includes(i));
+  if(S.cur && gone.includes(S.cur.idx)) S.cur = null;
+  return gone.length;
+}
+let stageNote = '';
+// "Dropped": out of the game, and exported with status Dropped (your old score, if any, is kept)
+function dropShow(idx){
+  if(idx==null){ if(!S.cur) return; idx = S.cur.idx; }
+  snap(); S.dropped = S.dropped || [];
+  if(!S.dropped.includes(idx)) S.dropped.push(idx);
+  delete S.results[idx];
+  const seq = dropSequels(idx);
+  stageNote = seq ? `Dropped ${T(S.items[idx])} and removed ${seq} later season${seq>1?'s':''} that were added automatically. Undo (Z) brings them back.` : '';
+  S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx);
+  if(S.cur && S.cur.idx===idx) S.cur = null;
+  advance(); save(); render();
+}
+// "Didn't watch": out of the game, and never written to the import file
+function notWatched(idx){
+  if(idx==null){ if(!S.cur) return; idx = S.cur.idx; }
+  snap(); S.removed = S.removed || [];
+  if(!S.removed.includes(idx)) S.removed.push(idx);
+  delete S.results[idx];
+  S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx);
+  if(S.cur && S.cur.idx===idx) S.cur = null;
+  advance(); save(); render();
+}
+// Formats you can leave out of the game (set up before you start). A left-out show isn't scored
+// and isn't used as a benchmark; unknown formats always stay in.
+const SKIPS = [['short','Shorts'], ['movie','Movies'], ['ova','OVAs'], ['special','Specials'], ['ona','ONAs'], ['music','Music videos']];
+const SKIP_DEFAULT = {short:true, music:true};
+const skipsOf = () => (S && S.skip) || PREFS.skip || SKIP_DEFAULT;
+function formatOf(it){
+  return String((showInfo && it.id && showInfo.formats?.[it.id]) || it.type || '').toUpperCase().replace(/\s+/g,'_');
+}
+function tooShort(it){
+  const f = formatOf(it), sk = skipsOf();
+  if(!f) return false;
+  return !!((sk.short && f==='TV_SHORT') || (sk.movie && f.includes('MOVIE')) || (sk.ova && f==='OVA')
+    || (sk.special && f.includes('SPECIAL')) || (sk.ona && f==='ONA') || (sk.music && f==='MUSIC'));
+}
+// After the skips changed: left-out shows that are allowed again rejoin the queue, newly skipped ones leave it
+function applySkips(){
+  S.short = S.short || [];
+  const back = S.short.filter(i => !tooShort(S.items[i]));
+  if(back.length){ S.short = S.short.filter(i => !back.includes(i)); S.queue.push(...back); }
+  const out = S.queue.filter(i => tooShort(S.items[i]));
+  if(S.cur && tooShort(S.items[S.cur.idx])){ out.push(S.cur.idx); S.cur = null; }
+  if(out.length){ S.queue = S.queue.filter(i => !out.includes(i)); S.short.push(...out); }
+  advance(); save(); render();
+}
+// The middle button: "Set" at the benchmark's score means "same level"; ±1/±½ adjust it first
+let direct = null; // {key, v}
+const directKey = () => S.cur.idx + ':' + S.cur.m + ':' + (S.cur.soft ? S.cur.soft.idx : '');
+function directFor(b){
+  const key = directKey();
+  if(!direct || direct.key!==key) direct = {key, v: clampScore(b.s)};
+  return direct.v;
+}
+// A score given by hand fills that step's benchmark if it has none yet (same rule as "Fill empty steps")
+function giveScore(idx, v){
+  if(S.fillGaps!==false && LEVELS.includes(v) && (STEP()<1 || v%1===0) && S.bench[v]==null && !tooShort(S.items[idx])){
+    delete S.results[idx]; S.bench[v] = idx; S.lastNew = {idx, L:v};
+    return true;
+  }
+  S.results[idx] = v; return false;
+}
+// Steps still empty but with shows already scored there (e.g. set by hand before this rule): promote one
+function backfillBench(){
+  if(S.fillGaps===false) return false;
+  let changed = false;
+  for(const L of LEVELS){
+    if(S.bench[L]!=null) continue;
+    const k = Object.keys(S.results).find(k => S.results[k]===L && !tooShort(S.items[k]));
+    if(k!=null){ delete S.results[k]; S.bench[L] = +k; changed = true; }
+  }
+  return changed;
+}
+// Take the compared person's score, rounded to your half-point scale
+let agreeKeys = []; // the agree buttons on screen, in order: [{v, ps:[[person, index]]}]
+function agreeRef(pi){
+  if(!S.cur) return;
+  const it = S.items[S.cur.idx];
+  if(pi==null) pi = agreeKeys.length ? agreeKeys[0].ps[0][1] : -1; // A key: the first agree button
+  const r = refScore(it, REFS[pi]); if(!r) return;
+  snap(); S.lastNew = null; giveScore(S.cur.idx, clampScore(r)); S.cur = null; direct = null;
+  advance(); save(); render();
+}
+function stepDirect(d){
+  if(!S.cur || !direct) return;
+  direct.v = clampScore(direct.v + d);
+  $('directSet').innerHTML = `Set ${fmt(direct.v)}<span class="kbd">E</span>`;
+}
+function setDirect(){
+  if(!S.cur || !direct || direct.key!==directKey()) return;
+  // "Set" at the benchmark's own score is a "same" answer for the benchmark check
+  if(!S.cur.soft && S.cur.m>=0){ const b = benchList()[S.cur.m]; if(b) benchNote(b.s, direct.v===b.s ? 'same' : 'set'); }
+  snap(); S.lastNew = null; giveScore(S.cur.idx, direct.v); S.cur = null; direct = null;
+  advance(); save(); render();
+}
+function restoreRemoved(){ if(!(S.removed||[]).length) return; snap(); S.queue.push(...S.removed); S.removed = []; advance(); save(); render(); }
+function undo(){
+  const u = undoStack.pop(); if(!u) return;
+  const {nItems, ...rest} = JSON.parse(u);
+  Object.assign(S, rest);
+  if(nItems!=null && S.items.length > nItems) S.items.length = nItems; // drops shows added since then
+  save(); render();
+}
+function answer(d){
+  const c = S.cur; if(!c || (c.m<0 && !c.soft)) return;
+  snap(); S.compares++; S.lastNew = null; direct = null;
+  if(c.soft){
+    // Inside the tier: the soft benchmark's score splits what's left
+    const s = c.soft.s; c.soft = null;
+    if(d==='same'){ S.results[c.idx] = s; S.cur = null; }
+    else if(d==='higher') c.fine.min = Math.round((s + STEP())*10)/10;
+    else c.fine.max = Math.round((s - STEP())*10)/10;
+    if(S.cur && c.fine.min>c.fine.max){ S.results[c.idx] = d==='higher' ? c.fine.max : c.fine.min; S.cur = null; }
+    if(S.cur && c.fine.min===c.fine.max){ S.results[c.idx] = c.fine.min; S.cur = null; }
+  } else {
+    const B = benchList();
+    benchNote(B[c.m].s, d);
+    if(d==='same'){ S.results[c.idx] = B[c.m].s; S.cur = null; }
+    else {
+      const dir = d==='higher' ? -1 : 1;
+      if(d==='higher') c.hi = c.m; else c.lo = c.m+1;
+      // Same way as before: go a little further out each time (1, 2, 3… steps); turned around: halve from here on
+      if(c.gallop){ if(c.gallop.dir===0 || c.gallop.dir===dir){ c.gallop.size = c.gallop.dir===0 ? 1 : c.gallop.size+1; c.gallop.dir = dir; } else c.gallop = null; }
+      c.m = -1;
+    }
+  }
+  advance(); save(); render();
+}
+function skip(){ if(!S.cur) return; snap(); S.skipped.push(S.cur.idx); S.cur = null; advance(); save(); render(); }
+function unskip(){ snap(); S.queue.push(...S.skipped); S.skipped = []; advance(); save(); render(); }
+function rescore(idx){ snap(); delete S.results[idx]; if(S.cur) S.queue.unshift(S.cur.idx); S.cur = null; S.queue.unshift(idx); advance(); save(); render(); $('stage').scrollIntoView({behavior:'smooth',block:'start'}); }
+/* ---------- consistency check ----------
+   Asks about pairs of shows you scored the same or close (within a point), without showing the
+   scores: which one did you like more? An answer that goes against the scores gets a fix offered
+   (raise one, lower the other, swap them, or keep). Benchmarks can be asked about but are never
+   changed here, since their score is the ladder. A pair once asked isn't asked again. */
+const CHECK_ROUND = 10;
+const pairKey = (a, b) => a<b ? a+'-'+b : b+'-'+a;
+function checkable(){
+  const fs = finalScores(), out = new Set([...(S.removed||[]), ...(S.dropped||[]), ...(S.short||[])]);
+  return Object.keys(fs).map(Number).filter(i => !out.has(i)).map(i => ({i, s:fs[i]}));
+}
+function checkPairs(n){
+  // Two benchmarks together couldn't be fixed here, so every pair has at least one other show
+  const bl = benchLevelOf(), list = shuffle(checkable()), seen = new Set(S.checked || []), pairs = [];
+  for(const a of list){
+    if(pairs.length>=n) break;
+    const near = list.filter(b => b.i!==a.i && Math.abs(b.s - a.s) <= 1 && !seen.has(pairKey(a.i, b.i)) && (bl[a.i]==null || bl[b.i]==null));
+    if(!near.length) continue;
+    const b = near[Math.floor(Math.random()*near.length)];
+    seen.add(pairKey(a.i, b.i)); pairs.push(Math.random()<0.5 ? [a.i, b.i] : [b.i, a.i]);
+  }
+  return pairs;
+}
+function startCheck(){
+  const pairs = checkPairs(CHECK_ROUND);
+  if(!pairs.length){ stageNote = 'No new pairs to check: every close pair has been asked already.'; render(); return; }
+  if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+  S.check = {pairs, n:pairs.length, asked:0, flagged:0, fixed:0, issue:null};
+  save(); render(); $('stage').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function endCheck(){ S.check = null; advance(); save(); render(); }
+// a: 'left' | 'right' | 'same' | 'skip'
+function checkAnswer(a){
+  const c = S.check; if(!c || c.issue || !c.pairs.length) return;
+  const [x, y] = c.pairs.shift(), fs = finalScores();
+  S.checked = [...(S.checked||[]), pairKey(x, y)];
+  if(a!=='skip'){
+    c.asked++; S.compares++;
+    const sx = fs[x], sy = fs[y];
+    if(a==='left' && sx<=sy) c.issue = {better:x, worse:y, kind: sx<sy ? 'against' : 'tie'};
+    if(a==='right' && sy<=sx) c.issue = {better:y, worse:x, kind: sy<sx ? 'against' : 'tie'};
+    if(a==='same' && Math.abs(sx - sy)>=1) c.issue = {a:x, b:y, kind:'equal'};
+    if(c.issue) c.flagged++;
+  }
+  save(); render();
+}
+// The fixes for the open issue, as score changes; benchmarks keep their score
+function checkFixes(){
+  const is = S.check.issue, fs = finalScores(), bl = benchLevelOf(), name = i => T(S.items[i]);
+  const free = i => bl[i]==null, fixes = [];
+  if(is.kind==='equal'){
+    if(free(is.a)) fixes.push({label:`Give ${name(is.a)} ${fmt(fs[is.b])}`, set:[[is.a, fs[is.b]]]});
+    if(free(is.b)) fixes.push({label:`Give ${name(is.b)} ${fmt(fs[is.a])}`, set:[[is.b, fs[is.a]]]});
+  } else {
+    const up = clampScore(fs[is.worse] + STEP()), down = clampScore(fs[is.better] - STEP());
+    if(free(is.better) && up>fs[is.better]) fixes.push({label:`Raise ${name(is.better)} to ${fmt(up)}`, set:[[is.better, up]]});
+    if(free(is.worse) && down<fs[is.worse]) fixes.push({label:`Lower ${name(is.worse)} to ${fmt(down)}`, set:[[is.worse, down]]});
+    if(is.kind==='against' && free(is.better) && free(is.worse)) fixes.push({label:'Swap their scores', set:[[is.better, fs[is.worse]], [is.worse, fs[is.better]]]});
+  }
+  return fixes;
+}
+// n: the fix to apply, or -1 to keep the scores as they are
+function checkFix(n){
+  const c = S.check; if(!c || !c.issue) return;
+  if(n>=0){
+    const f = checkFixes()[n]; if(!f) return;
+    snap(); for(const [i, v] of f.set) S.results[i] = v; c.fixed++;
+  }
+  c.issue = null; save(); render();
+}
+function renderCheck(st, statsHtml){
+  const c = S.check, fs = finalScores(), name = i => esc(T(S.items[i]));
+  const card = (i, side) => { const it = S.items[i]; return `<button class="card pick" data-check="${side}">
+      <div class="cardrow">${showInfo&&it.id?`<img class="cv" data-id="${esc(it.id)}" alt="">`:''}<div><div>${titleBlock(it)}</div>
+      <div class="meta">${[it.type, it.eps ? it.eps + ' eps' : ''].filter(Boolean).map(esc).join(' · ')}</div></div></div></button>`; };
+  let body;
+  if(c.issue){
+    const is = c.issue, fixes = checkFixes();
+    const why = is.kind==='equal' ? `You called <b>${name(is.a)}</b> and <b>${name(is.b)}</b> about the same, but they're ${fmt(Math.abs(fs[is.a]-fs[is.b]))} apart (${fmt(fs[is.a])} and ${fmt(fs[is.b])}).`
+      : is.kind==='tie' ? `You liked <b>${name(is.better)}</b> more, but both have ${fmt(fs[is.better])}.`
+      : `You liked <b>${name(is.better)}</b> more, but it has ${fmt(fs[is.better])} and <b>${name(is.worse)}</b> has ${fmt(fs[is.worse])}.`;
+    body = `<div class="prompt">${why}</div>
+      <div class="direct">${fixes.map((f, n) => `<button class="btn${n?'':' primary'}" data-fix="${n}">${esc(f.label)}<span class="kbd">${n+1}</span></button>`).join('')}
+        <button class="btn" data-fix="-1">Keep as is<span class="kbd">K</span></button></div>
+      ${fixes.length ? '' : '<div class="muted" style="text-align:center;font-size:.88rem">Both are benchmarks or at the edge of the scale; change a benchmark in the Benchmarks list if needed.</div>'}`;
+  } else if(c.pairs.length){
+    const [x, y] = c.pairs[0];
+    body = `<div class="prompt">Which did you like more? <span class="muted">Pair ${c.n - c.pairs.length + 1} of ${c.n}</span></div>
+      <div class="duel">${card(x, 'left')}<div class="vs" aria-hidden="true">VS</div>${card(y, 'right')}</div>
+      <div class="answers">
+        <button class="ans hi" data-check="left">← This one<span class="kbd">←</span></button>
+        <div class="direct"><button class="btn" data-check="same">About the same<span class="kbd">↓</span></button>
+          <button class="btn" data-check="skip">Skip pair<span class="kbd">K</span></button></div>
+        <button class="ans hi" data-check="right">This one →<span class="kbd">→</span></button>
+      </div>
+      <div class="swipehint">Swipe left or right toward the one you liked more, down for about the same</div>`;
+  } else {
+    body = `<div class="done"><div class="big">Check done</div>
+      <div class="muted">${c.asked} pair${c.asked===1?'':'s'} compared · ${c.flagged} didn't match your scores · ${c.fixed} fixed</div>
+      <div class="substrip" style="justify-content:center"><button class="btn primary" id="checkMore">Check ${CHECK_ROUND} more</button></div></div>`;
+  }
+  st.innerHTML = `<div class="eyebrow" style="text-align:center">Consistency check · scores hidden</div>${body}
+    <div class="minor"><button class="btn" id="checkEnd">Back to ranking<span class="kbd">Esc</span></button>
+      <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button></div>${statsHtml}`;
+  fillCovers(st);
+  st.querySelectorAll('[data-check]').forEach(b => b.onclick = () => checkAnswer(b.dataset.check));
+  st.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => checkFix(+b.dataset.fix));
+  $('checkEnd').onclick = endCheck;
+  $('undoBtn').onclick = undo;
+  const more = $('checkMore'); if(more) more.onclick = startCheck;
+}
+/* ---------- slices: rank one season, year or format at a time ----------
+   S.focus = {kind:'season'|'year'|'format', value}. While it's set, only shows in that slice come
+   up; the others wait in the queue. Seasons come from AniList on demand (cached in this browser). */
+const SEASON_KEY = 'hl-seasons';
+let seasonOf = {}; try{ seasonOf = JSON.parse(localStorage.getItem(SEASON_KEY) || '{}') || {}; }catch(e){}
+const SEASON_NAMES = {WINTER:'Winter', SPRING:'Spring', SUMMER:'Summer', FALL:'Fall'};
+const SEASON_ORDER = ['FALL', 'SUMMER', 'SPRING', 'WINTER'];
+const FORMAT_LABEL = {TV:'TV', TV_SHORT:'Shorts', MOVIE:'Movies', OVA:'OVAs', ONA:'ONAs', SPECIAL:'Specials', TV_SPECIAL:'Specials', MUSIC:'Music videos'};
+const alOf = it => +(it.alId || malToAl[it.id] || (showInfo && it.id && showInfo.anilist?.[it.id]) || 0);
+// Runs after every render: fetches seasons for shows that don't have one yet, in the background
+let seasonsLoading = false, seasonsFailed = false;
+async function loadSeasons(){
+  if(seasonsLoading || seasonsFailed || !S) return;
+  const ids = [...new Set(S.items.map(alOf).filter(a => a && !(a in seasonOf)))];
+  if(!ids.length) return;
+  seasonsLoading = true;
+  try{
+    for(let i = 0; i < ids.length; i += 50){
+      const batch = ids.slice(i, i + 50);
+      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids){id season seasonYear startDate{year}}}}`, {ids:batch});
+      for(const m of d.Page.media) seasonOf[m.id] = [m.seasonYear || m.startDate?.year || 0, m.season || ''];
+      for(const a of batch) if(!(a in seasonOf)) seasonOf[a] = [0, ''];
+      try{ localStorage.setItem(SEASON_KEY, JSON.stringify(seasonOf)); }catch(e){}
+    }
+  }catch(e){ seasonsFailed = true; }
+  seasonsLoading = false;
+  if(document.activeElement?.id!=='focusSel') renderStage();
+}
+// The slices a show belongs to: {season:'FALL 2025', year:'2025', format:'TV'}
+function sliceKeys(i){
+  const it = S.items[i], [y, s] = seasonOf[alOf(it)] || [0, ''];
+  return {season: y && s ? `${s} ${y}` : '', year: y ? String(y) : '', format: formatOf(it)};
+}
+const inSlice = (f, i) => !f || sliceKeys(i)[f.kind]===f.value;
+const inFocus = i => inSlice(S.focus, i);
+function sliceLabel(f){
+  if(!f) return 'Everything';
+  if(f.kind==='season'){ const [s, y] = f.value.split(' '); return `${SEASON_NAMES[s] || s} ${y}`; }
+  return f.kind==='format' ? (FORMAT_LABEL[f.value] || f.value) : f.value;
+}
+const activeShows = () => { const out = new Set([...(S.removed||[]), ...(S.dropped||[]), ...(S.short||[])]); return S.items.map((_, i) => i).filter(i => !out.has(i)); };
+// The picker: seasons and years you have shows from (newest first), then formats; with what's left to rank
+function focusPicker(){
+  const shows = activeShows(), queued = new Set([...S.queue, ...(S.cur ? [S.cur.idx] : [])]);
+  const group = kind => {
+    const m = new Map();
+    for(const i of shows){ const k = sliceKeys(i)[kind]; if(!k) continue; const e = m.get(k) || {n:0, left:0}; e.n++; if(queued.has(i)) e.left++; m.set(k, e); }
+    const order = kind==='season' ? ([a], [b]) => (+b.split(' ')[1] - +a.split(' ')[1]) || SEASON_ORDER.indexOf(a.split(' ')[0]) - SEASON_ORDER.indexOf(b.split(' ')[0])
+      : kind==='year' ? ([a], [b]) => +b - +a : ([, a], [, b]) => b.n - a.n;
+    return [...m].sort(order).map(([value, e]) => `<option value="${kind}|${esc(value)}" ${S.focus && S.focus.kind===kind && S.focus.value===value ? 'selected' : ''}>${esc(sliceLabel({kind, value}))} · ${e.left ? e.left + ' to rank' : 'done'}</option>`).join('');
+  };
+  return `<div class="focusrow"><span class="lbl">Ranking</span>
+    <select id="focusSel" aria-label="What to rank"><option value="">Everything</option>
+      <optgroup label="Season">${group('season')}</optgroup><optgroup label="Year">${group('year')}</optgroup><optgroup label="Format">${group('format')}</optgroup></select>
+    ${seasonsLoading ? '<span class="muted">loading seasons…</span>' : ''}</div>`;
+}
+function setFocus(f){
+  S.focus = f;
+  if(S.cur && !inFocus(S.cur.idx)){ S.queue.unshift(S.cur.idx); S.cur = null; direct = null; }
+  advance(); save(); render();
+}
+// Puts every show of the slice you already scored back into the queue (benchmarks stay)
+function rerankSlice(){
+  const ids = Object.keys(S.results).map(Number).filter(inFocus);
+  if(!ids.length) return;
+  snap(); for(const i of ids) delete S.results[i];
+  S.queue.unshift(...ids); advance(); save(); render();
+}
+
+/* ---------- tier list picture ----------
+   Covers in rows by whole points (10, 9, 8 …), each with its score, for the slice or everything.
+   Drawn on a canvas (AniList's image server allows it), to save or copy into Discord. */
+async function tierCanvas(ids, title){
+  const fs = finalScores();
+  const shows = ids.filter(i => fs[i]!=null).sort((a, b) => fs[b] - fs[a] || T(S.items[a]).localeCompare(T(S.items[b])));
+  const rows = [];
+  for(const i of shows){ const t = Math.floor(fs[i]); let r = rows.find(r => r.t===t); if(!r) rows.push(r = {t, items:[]}); r.items.push(i); }
+  const W = 1240, PAD = 20, LBL = 96, CW = 92, CH = 130, GAP = 6, HEAD = 76, FOOT = 34;
+  const perLine = Math.floor((W - PAD*2 - LBL - GAP) / (CW + GAP));
+  const rowH = r => Math.ceil(r.items.length / perLine) * (CH + GAP) - GAP;
+  const H = HEAD + rows.reduce((h, r) => h + rowH(r) + GAP*2, 0) + FOOT;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  // Covers (medium size), each loaded once; a missing one becomes a title card
+  const img = src => new Promise(res => { if(!src) return res(null); const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => res(im); im.onerror = () => res(null); im.src = src; setTimeout(() => res(null), 8000); });
+  const covers = await Promise.all(shows.map(i => img((coverUrls[alOf(S.items[i])] || '').replace('/small/', '/medium/'))));
+  const coverOf = new Map(shows.map((i, n) => [i, covers[n]]));
+  g.fillStyle = '#12151d'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#eceef6'; g.font = '600 30px system-ui, sans-serif'; g.textBaseline = 'middle';
+  g.fillText(title, PAD, HEAD/2);
+  g.fillStyle = '#9aa1b9'; g.font = '15px system-ui, sans-serif'; g.textAlign = 'right';
+  g.fillText(`${shows.length} shows`, W - PAD, HEAD/2); g.textAlign = 'left';
+  let y = HEAD;
+  for(const r of rows){
+    const h = rowH(r);
+    g.fillStyle = `hsl(${Math.round(Math.max(0, r.t - 1)/9*140)} 62% 40%)`; g.fillRect(PAD, y, LBL, h);
+    g.fillStyle = '#fff'; g.font = '600 34px system-ui, sans-serif'; g.textAlign = 'center';
+    g.fillText(PREFS.scale===100 ? String(r.t*10) : String(r.t), PAD + LBL/2, y + h/2); g.textAlign = 'left';
+    r.items.forEach((i, n) => {
+      const x = PAD + LBL + GAP + (n % perLine) * (CW + GAP), yy = y + Math.floor(n / perLine) * (CH + GAP), im = coverOf.get(i);
+      g.fillStyle = '#222738'; g.fillRect(x, yy, CW, CH);
+      if(im){ const s = Math.max(CW/im.width, CH/im.height), w = im.width*s, hh = im.height*s; g.save(); g.beginPath(); g.rect(x, yy, CW, CH); g.clip(); g.drawImage(im, x + (CW - w)/2, yy + (CH - hh)/2, w, hh); g.restore(); }
+      else { g.fillStyle = '#eceef6'; g.font = '12px system-ui, sans-serif'; const words = T(S.items[i]).split(' '); let line = '', ly = yy + 16;
+        for(const wd of words){ if(g.measureText(line + wd).width > CW - 10 && line){ g.fillText(line, x + 5, ly); ly += 15; line = ''; if(ly > yy + CH - 30) break; } line += wd + ' '; }
+        if(ly <= yy + CH - 30) g.fillText(line, x + 5, ly); }
+      g.fillStyle = 'rgba(0,0,0,.72)'; g.fillRect(x, yy + CH - 22, 44, 22);
+      g.fillStyle = '#fff'; g.font = '600 13px system-ui, sans-serif'; g.fillText(fmt(fs[i]), x + 5, yy + CH - 11);
+    });
+    y += h + GAP*2;
+  }
+  g.fillStyle = '#6b7290'; g.font = '13px system-ui, sans-serif';
+  g.fillText('Higher or Lower Ranker · ryotsushigawa.github.io/anime-schedule/ranker', PAD, H - FOOT/2);
+  return c;
+}
+async function showTierList(){
+  const ids = activeShows().filter(inFocus), title = S.focus ? `${sliceLabel(S.focus)} tier list` : 'My anime tier list';
+  const dlg = $('tierDlg');
+  $('tierImg').hidden = true; $('tierMsg').textContent = 'Drawing…'; dlg.showModal();
+  try{
+    const c = await tierCanvas(ids, title);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    $('tierImg').src = URL.createObjectURL(blob); $('tierImg').hidden = false; $('tierMsg').textContent = '';
+    $('tierSave').onclick = () => { const a = document.createElement('a'); a.href = $('tierImg').src; a.download = title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.png'; a.click(); };
+    $('tierCopy').onclick = async () => {
+      try{ await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]); $('tierMsg').textContent = 'Copied: paste it into Discord with Ctrl+V.'; }
+      catch(e){ $('tierMsg').textContent = "Your browser didn't allow copying; use Save instead."; }
+    };
+  }catch(e){ $('tierMsg').textContent = 'Couldn’t draw the picture: ' + e.message; }
+}
+/* ---------- crowded scores ----------
+   A score that six or more of your shows share (benchmarks aside) can be split with 0.1 steps: its
+   shows are sorted against each other inside the half point (8.0–8.4), skipping the ladder. */
+const CROWDED = 6;
+function crowdedScores(){
+  const n = new Map();
+  for(const k in S.results){ if(!inFocus(+k)) continue; const v = S.results[k]; n.set(v, (n.get(v)||0) + 1); }
+  return [...n].filter(([, c]) => c>=CROWDED).sort((a, b) => b[1] - a[1]).map(([s, c]) => ({s, n:c}));
+}
+function splitScore(s){
+  if(STEP()!==0.1) return;
+  const ids = Object.keys(S.results).map(Number).filter(i => S.results[i]===s && inFocus(i));
+  if(ids.length<2) return;
+  snap();
+  const lo = Math.floor(s*2)/2, hi = Math.round((lo + 0.5 - STEP())*10)/10;
+  S.split = S.split || {};
+  for(const i of ids){ delete S.results[i]; S.split[i] = [lo, hi]; }
+  if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+  S.queue.unshift(...shuffle(ids)); advance(); save(); render();
+}
+function crowdedHtml(){
+  const list = crowdedScores().slice(0, 4); if(!list.length) return '';
+  return `<div class="crowded"><span class="lbl">Crowded</span>${list.map(c => STEP()===0.1
+      ? `<button class="pill" data-split="${c.s}" title="Sort these ${c.n} shows against each other inside the half point">${fmt(c.s)} · ${c.n} shows · split</button>`
+      : `<span class="pill" title="Switch to 0.1 steps (Your list & setup) to split them">${fmt(c.s)} · ${c.n} shows</span>`).join('')}
+    ${STEP()===0.1 ? '' : '<span class="muted">0.1 steps can split these</span>'}</div>`;
+}
+
+/* ---------- "not sure" ----------
+   Out of the queue for now, kept in S.unsure until you rank them (e.g. after a rewatch). */
+function notSure(){
+  if(!S.cur) return;
+  snap(); S.unsure = S.unsure || [];
+  if(!S.unsure.includes(S.cur.idx)) S.unsure.push(S.cur.idx);
+  S.cur = null; direct = null; advance(); save(); render();
+}
+function rankUnsure(){ if(!(S.unsure||[]).length) return; snap(); S.queue.unshift(...S.unsure); S.unsure = []; advance(); save(); render(); }
+
+/* ---------- benchmark check ----------
+   Counts, per benchmark score, how often you were asked about it and answered "same". A benchmark
+   that gets "same" a lot covers too much; the Benchmarks list marks it so you can pick a show that
+   sits more clearly at that score. */
+function benchNote(L, idx){
+  S.benchStats = S.benchStats || {};
+  const st = S.benchStats[L] = S.benchStats[L] || [0, 0];
+  st[0]++; if(idx==='same') st[1]++;
+}
+const benchTooBroad = L => { const st = S.benchStats?.[L]; return !!st && st[0]>=8 && st[1]/st[0]>=0.35; };
+
+/* ---------- save straight to AniList ----------
+   Uses the AniList login of the schedule site (same address, so the same browser storage); "Connect
+   AniList" goes through the schedule's login and comes back here. Only changes are written: new
+   scores, shows not on the list yet, and drops. 20 entries per request. */
+function anilistLogin(){
+  let accounts = [], active = '';
+  try{ accounts = JSON.parse(localStorage.getItem('anilistAccounts')) || []; active = localStorage.getItem('anilistActive') || ''; }catch(e){}
+  accounts = accounts.filter(a => a.token && (!a.expires || a.expires > Date.now()));
+  return accounts.find(a => a.name===active) || accounts[accounts.length - 1] || null;
+}
+function connectAniList(){
+  try{ sessionStorage.setItem('anilistReturn', location.href.split('#')[0]); }catch(e){}
+  location.href = 'https://anilist.co/api/v2/oauth/authorize?client_id=54702&response_type=token';
+}
+// What saving would write: [{alId, score, status?, progress?, kind:'score'|'new'|'drop'}]
+function aniListChanges(){
+  const fs = finalScores(), out = [], round = v => S.wholeNums ? Math.round(v) : v;
+  for(const k in fs){
+    const it = S.items[k], al = alOf(it); if(!al) continue;
+    const score = round(fs[k]), isNew = !!it.added;
+    if(!isNew && Math.abs(score - (it.old || 0)) < 0.05 && !(S.markDone!==false && it.status!=='Completed')) continue;
+    const e = {alId:al, score, kind:isNew ? 'new' : 'score'};
+    if(isNew || S.markDone!==false){ e.status = 'COMPLETED'; if(it.eps) e.progress = it.eps; }
+    out.push(e);
+  }
+  for(const k of S.dropped || []){ const it = S.items[k], al = alOf(it); if(al && it.status!=='Dropped') out.push({alId:al, status:'DROPPED', kind:'drop'}); }
+  return out;
+}
+let alArmed = false;
+async function saveToAniList(){
+  const login = anilistLogin(), msg = $('alMsg'), btn = $('alSave');
+  if(S.source==='sample') return; // the example list is never saved anywhere
+  if(!login){ connectAniList(); return; }
+  const changes = aniListChanges();
+  if(!changes.length){ msg.textContent = 'Nothing to save: AniList already has these scores.'; return; }
+  if(!alArmed){
+    const n = k => changes.filter(c => c.kind===k).length;
+    msg.textContent = `Save ${n('score')} new score${n('score')===1?'':'s'}${n('new') ? `, ${n('new')} show${n('new')===1?'':'s'} not on your list yet` : ''}${n('drop') ? `, ${n('drop')} drop${n('drop')===1?'':'s'}` : ''} to ${login.name || 'your AniList'}${S.markDone!==false ? ', marked Completed (see the box above)' : ''}? Click again to save.`;
+    alArmed = true; btn.textContent = 'Yes, save to AniList'; setTimeout(() => { alArmed = false; btn.textContent = 'Save to AniList'; }, 8000);
+    return;
+  }
+  alArmed = false; btn.disabled = true;
+  let done = 0;
+  try{
+    for(let i = 0; i < changes.length; i += 20){
+      const part = changes.slice(i, i + 20);
+      const fields = part.map((c, n) => `e${n}: SaveMediaListEntry(mediaId: ${c.alId}${c.score!=null ? `, scoreRaw: ${Math.round(c.score*10)}` : ''}${c.status ? `, status: ${c.status}` : ''}${c.progress ? `, progress: ${c.progress}` : ''}) { id }`);
+      await anilist(`mutation { ${fields.join(' ')} }`, {}, login.token);
+      done += part.length; msg.textContent = `Saving… ${done} of ${changes.length}`;
+    }
+    // AniList has them now: they count as your old scores from here on
+    const fs = finalScores();
+    for(const k in fs){ const it = S.items[k]; if(alOf(it)){ it.old = fs[k]; it.added = false; if(S.markDone!==false) it.status = 'Completed'; } }
+    for(const k of S.dropped || []) S.items[k].status = 'Dropped';
+    save(); render();
+    msg.textContent = `Saved ${done} change${done===1?'':'s'} to AniList${login.name ? ` (${login.name})` : ''}.`;
+  }catch(e){
+    msg.textContent = `Stopped after ${done} of ${changes.length}: ${e.message}${/invalid token|unauthorized/i.test(e.message) ? ' (log in again with Connect AniList)' : ''}`;
+  }
+  btn.disabled = false; btn.textContent = 'Save to AniList';
+}
+function estLeft(){
+  const per = Math.ceil(Math.log2(benchList().length+1));
+  const each = S.hints ? Math.min(per, 2.5) : per;
+  return Math.round((S.cur && S.cur.hi!=null ? Math.ceil(Math.log2(S.cur.hi-S.cur.lo+1)) : S.cur ? 1 : 0) + S.queue.length*each);
+}
+function setBench(L, idx){
+  const prev = S.bench[L];
+  if(idx!=null){
+    for(const K of LEVELS) if(S.bench[K]===idx) delete S.bench[K];
+    S.queue = S.queue.filter(i => i!==idx); S.skipped = S.skipped.filter(i => i!==idx); delete S.results[idx];
+    S.removed = (S.removed||[]).filter(i => i!==idx); S.dropped = (S.dropped||[]).filter(i => i!==idx);
+    if(S.cur && S.cur.idx===idx) S.cur = null;
+    S.bench[L] = idx;
+  } else delete S.bench[L];
+  if(prev!=null && prev!==idx) S.results[prev] = L; // the old benchmark keeps that score
+  if(S.benchStats) delete S.benchStats[L];          // a new benchmark starts with a clean count
+  if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+  undoStack = [];
+  advance(); save(); render();
+}
+function finalScores(){
+  const m = {}, bl = benchLevelOf();
+  for(const k in S.results) m[k] = S.results[k];
+  for(const k in bl) m[k] = bl[k];
+  return m;
+}
+
+/* ---------- rendering ---------- */
+function itemUrl(it){
+  const k = S.kind==='manga'?'manga':'anime';
+  const al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]);
+  if(al) return `https://anilist.co/${k}/${encodeURIComponent(al)}`;
+  return it.id ? `https://myanimelist.net/${k}/${encodeURIComponent(it.id)}` : '';
+}
+function metaLine(it, mine){
+  const bits = [], scores = [];
+  if(it.type) bits.push(esc(it.type));
+  if(it.eps) bits.push(`${it.eps} ${S.kind==='manga'?'ch':(it.eps===1?'ep':'eps')}`);
+  const u = itemUrl(it); if(u) bits.push(`<a href="${u}" target="_blank" rel="noopener">${u.includes('anilist')?'AniList':'MAL'} ↗</a>`);
+  if(S.showOld){
+    if(mine && it.old) scores.push(`you before ${scoreChip(it.old)}`);
+    if(it.site) scores.push(`site median ${scoreChip(it.site)}`);
+    REFS.forEach(P => { const r = refScore(it, P); if(r) scores.push(`${esc(P.name)} ${scoreChip(r)}`); });
+  }
+  return bits.map(b => `<span>${b}</span>`).join('') + (scores.length ? `<span class="scoreline">${scores.map(s=>`<span>${s}</span>`).join('')}</span>` : '');
+}
+/* ---------- someone else's list to compare with ---------- */
+// Everyone you compare with: [{name, byMal:{id:score}, byAl:{id:score}, count, list}]
+const REF_KEY = 'hl-ranker-refs';
+let REFS = [];
+try{
+  REFS = JSON.parse(localStorage.getItem(REF_KEY) || '[]') || [];
+  const one = JSON.parse(localStorage.getItem('hl-ranker-ref') || 'null'); // from the single-person version
+  if(one && !REFS.length) REFS = [one];
+}catch(e){}
+// People followed on AniList (auto: true) are downloaded fresh on every visit, so only file-loaded people are saved
+const saveRefs = () => { try{ localStorage.setItem(REF_KEY, JSON.stringify(REFS.filter(P => !P.auto))); localStorage.removeItem('hl-ranker-ref'); }catch(e){} };
+let REF = null; // the person picked in the "only on their list" table
+let refPick = 0;
+function refScore(it, P){
+  if(!P) return 0;
+  const al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]);
+  return (it.id && P.byMal[it.id]) || (al && P.byAl[al]) || 0;
+}
+function refSummary(){
+  if(!REFS.length) return '';
+  const fs = finalScores();
+  return REFS.map(P => {
+    let n = 0, diff = 0, same = 0;
+    for(const k in fs){ const r = refScore(S.items[k], P); if(r){ n++; const d = Math.abs(fs[k]-r); diff += d; if(d<=0.5) same++; } }
+    return n ? `${P.name}: ${n} in common, ${fmt(diff/n)} points apart on average, ${Math.round(same/n*100)}% within half a point.` : `${P.name}: none of your scored shows yet.`;
+  }).join(' ');
+}
+function renderSource(){
+  const line = $('sourceLine');
+  if(S.source==='sample'){
+    line.innerHTML = `<span class="tag">Example list</span> <span class="muted">Below is an example to try. Start with your own list here.</span>`;
+  } else {
+    const what = S.source==='paste' ? 'Pasted titles' : `${esc(S.fileName||'List export')} · ${S.kind}`;
+    line.innerHTML = `<span class="tag">${what}</span> <span class="muted">${S.items.length} shows. Progress saves in this browser.</span>`;
+  }
+  $('resetBtn').hidden = S.source==='sample';
+}
+// The setup, part of the start box: chosen before loading a list (each new list takes it over) and
+// kept in this browser. Changing it later (Your list) applies to the list in play too.
+function renderSetup(){
+  const sk = skipsOf();
+  $('setup').innerHTML = `
+    <div class="setrow"><span class="lbl">Steps</span>
+      <div class="seg" role="group" aria-label="Score steps (← →)">${[1, 0.5, 0.1].map(v => `<button data-opt-step="${v}" aria-pressed="${PREFS.step===v}">${PREFS.scale===100 ? v*10 : v}</button>`).join('')}</div>
+      <span class="lbl">Scale</span>
+      <div class="seg" role="group" aria-label="Scale">${[10, 100].map(v => `<button data-opt-scale="${v}" aria-pressed="${PREFS.scale===v}">${v}</button>`).join('')}</div>
+    </div>
+    <div class="setrow"><span class="lbl">Skip</span>
+      ${SKIPS.map(([k, label]) => `<button class="pill" data-skip="${k}" aria-pressed="${!!sk[k]}">${label}</button>`).join('')}
+    </div>
+    <div class="setrow"><span class="lbl">Compare</span>
+      <button class="pill" data-opt="vary" aria-pressed="${PREFS.vary}" title="Compare against any show with the benchmark's exact score, not always the benchmark itself">Vary the shows</button>
+      <button class="pill" data-opt="hints" aria-pressed="${!!S.hints}" title="Starts each search at your old score, or the site median if you never scored it">Start near old score</button>
+      <button class="pill" data-opt="fill" aria-pressed="${S.fillGaps!==false}" title="A show landing between two benchmarks with an empty step between them becomes that step's benchmark">Fill empty steps</button>
+      <button class="pill" data-opt="old" aria-pressed="${!!S.showOld}" title="Your old score, the site median and followed people's scores on the cards">Show old &amp; others' scores</button>
+    </div>`;
+  const OPTS = {
+    old: on => { S.showOld = PREFS.old = on; },
+    hints: on => { S.hints = PREFS.hints = on; },
+    fill: on => { S.fillGaps = PREFS.fill = on; },
+    vary: on => { PREFS.vary = on; },
+  };
+  $('setup').querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
+    OPTS[b.dataset.opt](b.getAttribute('aria-pressed')!=='true'); savePrefs(); save(); render();
+  });
+  $('setup').querySelectorAll('[data-skip]').forEach(b => b.onclick = () => {
+    const skip = {...skipsOf(), [b.dataset.skip]: b.getAttribute('aria-pressed')!=='true'};
+    PREFS.skip = skip; S.skip = {...skip}; savePrefs();
+    if(S.source==='sample' && !S.compares) useRolledSample(); else applySkips();
+  });
+  // A new step size: the show on screen starts over with it (scores given so far stay)
+  $('setup').querySelectorAll('[data-opt-step]').forEach(b => b.onclick = () => {
+    PREFS.step = +b.dataset.optStep; savePrefs(); direct = null;
+    if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+    advance(); save(); render();
+  });
+  $('setup').querySelectorAll('[data-opt-scale]').forEach(b => b.onclick = () => { PREFS.scale = +b.dataset.optScale; savePrefs(); render(); });
+}
+let progressDetailsOpen = false;
+$('stage').addEventListener('toggle', e => { if(e.target.id==='progressDetails') progressDetailsOpen = e.target.open; }, true);
+function renderStage(){
+  const st = $('stage'), B = benchList();
+  const nRemoved = (S.removed||[]).length;
+  const nShort = (S.short||[]).length;
+  const nDropped = (S.dropped||[]).length, nUnsure = (S.unsure||[]).length;
+  const total = S.items.length - S.skipped.length - nRemoved - nShort - nDropped - nUnsure;
+  // On the finished screens: shows marked "not sure", and crowded scores to split
+  const unsureBtn = nUnsure ? `<button class="btn" id="unsureBtn">Rank the ${nUnsure} marked “not sure”</button>` : '';
+  const scored = Object.keys(finalScores()).length, pct = total ? Math.round(scored/total*100) : 0;
+  const statsHtml = `<div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="progress-summary"><span>${scored} scored · ${Math.max(0,total-scored)} left</span><details id="progressDetails" ${progressDetailsOpen?'open':''}><summary>Details</summary><div class="stats"><span>${B.length} benchmarks</span><span>${S.compares} comparisons</span>${S.cur||S.queue.length?`<span>about ${estLeft()} to go</span>`:''}${S.skipped.length?`<span>${S.skipped.length} skipped</span>`:''}${nShort?`<span>${nShort} left out by format</span>`:''}${nDropped?`<span>${nDropped} dropped</span>`:''}${nUnsure?`<span>${nUnsure} not sure</span>`:''}${nRemoved?`<span>${nRemoved} not watched · <button class="btn" id="restoreBtn" style="padding:0 8px;font-size:.78rem">Put them back</button></span>`:''}</div></details></div>`;
+  if(!B.length){
+    st.innerHTML = `<div class="done"><div class="big">Pick a benchmark to start</div><div class="muted">Choose at least one show in the Benchmarks list below. One per score works best.</div></div>${statsHtml}`;
+    $('benchPanel').open = true;
+    return;
+  }
+  if(S.check){ renderCheck(st, statsHtml); return; }
+  const canCheck = Object.keys(S.results).length >= 2;
+  const picker = focusPicker();
+  if(!S.cur && S.focus){
+    // The slice is done (the rest of the list may not be)
+    const inIt = activeShows().filter(inFocus).length, left = S.queue.length;
+    st.innerHTML = `${picker}<div class="done"><div class="big">${esc(sliceLabel(S.focus))} is done</div>
+      <div class="muted">${inIt} show${inIt===1?'':'s'} scored${left ? ` · ${left} more wait in the rest of your list` : ''}</div>
+      <div class="substrip" style="justify-content:center"><button class="btn primary" id="tierBtn">Tier list picture</button>
+      <button class="btn" id="rerankBtn" title="Put this slice's scored shows back in the queue (benchmarks stay)">Re-rank these</button>
+      <button class="btn" id="allBtn">Back to everything</button>${unsureBtn}</div>${crowdedHtml()}</div>${statsHtml}`;
+  } else if(!S.cur){
+    st.innerHTML = `${picker}<div class="done"><div class="big">All ${scored} scored</div>
+      <div class="muted">${S.compares} comparisons. Check the results below, then export.</div>
+      <div class="substrip" style="justify-content:center">${canCheck?`<button class="btn primary" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency</button>`:''}<button class="btn" id="tierBtn">Tier list picture</button>${S.skipped.length?`<button class="btn" id="unskipBtn">Score the ${S.skipped.length} skipped</button>`:''}
+      ${unsureBtn}<button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo last answer</button></div>${crowdedHtml()}</div>${statsHtml}`;
+  } else {
+    const a = S.items[S.cur.idx];
+    // Against: a soft benchmark inside the tier, or the benchmark (or a show with exactly its score)
+    const soft = S.cur.soft;
+    const b = soft ? {s: soft.s, idx: soft.idx} : B[S.cur.m];
+    const shown = soft ? soft.idx : (S.cur.show ?? b.idx), bi = S.items[shown];
+    const against = soft ? `Scored ${fmt(b.s)} · sorting inside ${fmt(S.cur.fine.min)}–${fmt(S.cur.fine.max)}`
+      : shown!==b.idx ? `Scored ${fmt(b.s)} · same as the benchmark` : `Benchmark for ${fmt(b.s)}`;
+    const steps = STEP()===1 ? [-1, 1] : [-1, -STEP(), STEP(), 1];
+    const g = S.hints && guessOf(a);
+    const ln = S.lastNew && S.bench[S.lastNew.L]===S.lastNew.idx ? S.lastNew : null;
+    const note = stageNote; stageNote = '';
+    st.innerHTML = `${picker}${note?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(note)}</div>`:''}${ln?`<div class="muted" style="text-align:center;font-size:.88rem">${esc(T(S.items[ln.idx]))} filled the empty ${fmt(ln.L)} step and is now its benchmark.</div>`:''}
+      <div class="prompt">Is <b>${esc(T(a))}</b> higher or lower than <b>${esc(T(bi))}</b>?</div>
+      <div class="duel">
+        <article class="card new"><div class="eyebrow">Scoring now${g?` · started near ${fmt(g)}`:''}${a.added?` · not in your list yet`:''}</div>
+          <div class="cardrow">${showInfo&&a.id?`<img class="cv" data-id="${esc(a.id)}" alt="">`:''}<div><div>${titleBlock(a)}</div><div class="meta">${metaLine(a,true)}</div>${a.added&&a.from?`<div class="muted" style="font-size:.84rem">Found through ${esc(a.from)}</div>`:''}</div></div></article>
+        <div class="vs" aria-hidden="true">VS</div>
+        <article class="card"><div class="benchscore">${scoreChip(b.s)}<span class="eyebrow">${against}</span></div>
+          <div class="cardrow">${showInfo&&bi.id?`<img class="cv" data-id="${esc(bi.id)}" alt="">`:''}<div><div>${titleBlock(bi)}</div><div class="meta">${metaLine(bi,false)}</div></div></div></article>
+      </div>
+      <div class="answers">
+        <button class="ans hi" data-a="higher">↑ Higher<span class="kbd">↑</span></button>
+        <div class="direct">
+          ${steps.filter(d => d<0).map(d => `<button class="btn step" data-step="${d}">−${stepLabel(d)}</button>`).join('')}
+          <button class="btn primary" id="directSet" title="Same level, or adjust first (← →)">Set ${fmt(directFor(b))}<span class="kbd">E</span></button>
+          ${steps.filter(d => d>0).map(d => `<button class="btn step" data-step="${d}">+${stepLabel(d)}</button>`).join('')}
+        </div>
+        <button class="ans lo" data-a="lower">↓ Lower<span class="kbd">↓</span></button>
+      </div>
+      <div class="swipehint">Swipe up for higher, down for lower</div>
+      ${(() => {
+        // One button per distinct score: people who'd give the same (rounded) score share a button
+        const groups = new Map();
+        REFS.forEach((P,pi) => { const r = refScore(a,P); if(!r) return; const v = clampScore(r); if(!groups.has(v)) groups.set(v, []); groups.get(v).push([P,pi]); });
+        // Keys 1, 2, 3... follow the button order
+        agreeKeys = [...groups].sort((x, y) => x[1][0][1] - y[1][0][1]).map(([v, ps]) => ({v, ps})); // fixed order: by who comes first in your people list
+        return agreeKeys.length ? `<div class="direct">${agreeKeys.map(({v, ps}, n) => `<button class="btn" data-agree="${ps[0][1]}">Agree with ${ps.map(([P]) => esc(P.name)).join(', ')} · ${fmt(v)}${n<9?`<span class="kbd">${n+1}</span>`:''}</button>`).join('')}</div>` : '';
+      })()}
+      <div class="minor">
+        <button class="btn" id="dropBtn">Dropped<span class="kbd">D</span></button>
+        <button class="btn" id="nwBtn">Didn't watch<span class="kbd">X</span></button>
+        <button class="btn" id="skipBtn">Skip for now<span class="kbd">K</span></button>
+        <button class="btn" id="notSureBtn" title="Set it aside until you're sure (e.g. after a rewatch)">Not sure<span class="kbd">N</span></button>
+        <button class="btn" id="undoBtn" ${undoStack.length?'':'disabled'}>Undo<span class="kbd">Z</span></button>
+        ${canCheck?`<button class="btn" id="checkBtn" title="Compare close pairs with the scores hidden, and fix what doesn't match">Check consistency<span class="kbd">C</span></button>`:''}
+      </div>${statsHtml}`;
+    fillCovers(st);
+    st.querySelectorAll('[data-a]').forEach(btn => btn.onclick = () => answer(btn.dataset.a));
+    $('skipBtn').onclick = skip;
+    $('nwBtn').onclick = () => notWatched();
+    $('dropBtn').onclick = () => dropShow();
+    st.querySelectorAll('[data-step]').forEach(btn => btn.onclick = () => { stepDirect(+btn.dataset.step); btn.blur(); });
+    $('directSet').onclick = setDirect;
+    st.querySelectorAll('[data-agree]').forEach(b => b.onclick = () => agreeRef(+b.dataset.agree));
+  }
+  const ub = $('undoBtn'); if(ub) ub.onclick = undo;
+  const cb = $('checkBtn'); if(cb) cb.onclick = startCheck;
+  const tb = $('tierBtn'); if(tb) tb.onclick = showTierList;
+  const ns = $('notSureBtn'); if(ns) ns.onclick = notSure;
+  const ub2 = $('unsureBtn'); if(ub2) ub2.onclick = rankUnsure;
+  st.querySelectorAll('[data-split]').forEach(b => b.onclick = () => splitScore(+b.dataset.split));
+  const rr = $('rerankBtn'); if(rr) rr.onclick = rerankSlice;
+  const ab = $('allBtn'); if(ab) ab.onclick = () => setFocus(null);
+  const fsel = $('focusSel');
+  if(fsel){
+    fsel.onchange = () => { const [kind, ...v] = fsel.value.split('|'); setFocus(kind ? {kind, value:v.join('|')} : null); };
+  }
+  const us = $('unskipBtn'); if(us) us.onclick = unskip;
+  const rb = $('restoreBtn'); if(rb) rb.onclick = restoreRemoved;
+}
+function renderLadder(){
+  const order = S.items.map((it,i)=>i).sort((a,b) => (S.items[b].old - S.items[a].old) || T(S.items[a]).localeCompare(T(S.items[b])));
+  const fs = finalScores(), countAt = {};
+  for(const k in fs) countAt[fs[k]] = (countAt[fs[k]]||0) + 1;
+  const removed = new Set([...(S.removed||[]), ...(S.dropped||[])]);
+  const scoreNow = i => fs[i]!=null ? fs[i] : (S.items[i].old || null);
+  // Each show gets one unique label to type or pick; repeated titles get their score or id added
+  const seen = {}, labelOf = {}, byLabel = new Map();
+  order.forEach(i => { const t = T(S.items[i]); seen[t] = (seen[t]||0) + 1; });
+  order.forEach(i => {
+    const it = S.items[i], t = T(it);
+    let lab = seen[t] > 1 ? `${t} (${it.type || 'id ' + (it.id || i)}${it.old ? ', ' + fmt(it.old) : ''})` : t;
+    while(byLabel.has(lab)) lab += ' ·';
+    labelOf[i] = lab; byLabel.set(lab, i);
+  });
+  // Type to search: the suggestion list puts shows already at that score first
+  const fillList = L => {
+    const at = order.filter(i => !removed.has(i) && scoreNow(i)===L), rest = order.filter(i => !removed.has(i) && scoreNow(i)!==L);
+    $('benchOptions').innerHTML = [...at, ...rest].map(i => `<option value="${esc(labelOf[i])}">${scoreNow(i)!=null ? fmt(scoreNow(i)) : ''}</option>`).join('');
+  };
+  // Benchmark check: one that got "same" in a third or more of 8+ answers covers too much
+  const broad = LEVELS.filter(L => S.bench[L]!=null && benchTooBroad(L));
+  $('benchCount').textContent = `· ${LEVELS.filter(L => S.bench[L]!=null).length} of ${LEVELS.length} set${broad.length ? ` · ⚠ ${broad.length} to look at` : ''}`;
+  const flag = L => { if(!broad.includes(L)) return ''; const [n, same] = S.benchStats[L];
+    return `<span class="flag" title="${same} of ${n} answers were “same”: this show may cover too much. A show that sits more clearly at ${fmt(L)} makes the answers easier.">⚠ </span>`; };
+  $('ladder').innerHTML = LEVELS.map(L => `<div class="rung${broad.includes(L) ? ' warn' : ''}">${scoreChip(L)}
+      <input type="text" list="benchOptions" id="bench-${L*10}" data-l="${L}" class="${S.bench[L]==null?'empty':''}" placeholder="Type a title…"
+        value="${S.bench[L]!=null ? esc(labelOf[S.bench[L]] || T(S.items[S.bench[L]])) : ''}" aria-label="Benchmark for ${fmt(L)}" autocomplete="off">
+      <span class="n" title="Shows with this score now">${flag(L)}${countAt[L]||0}</span></div>`).join('') + '<datalist id="benchOptions"></datalist>';
+  $('ladder').querySelectorAll('input[data-l]').forEach(inp => {
+    const L = +inp.dataset.l, was = inp.value;
+    inp.onfocus = () => { fillList(L); inp.select(); };
+    inp.onchange = () => {
+      const v = inp.value.trim();
+      if(!v){ if(S.bench[L]!=null) setBench(L, null); return; }
+      let i = byLabel.get(v);
+      if(i==null){ const low = v.toLowerCase(); const hits = order.filter(j => !removed.has(j) && labelOf[j].toLowerCase().includes(low)); if(hits.length===1) i = hits[0]; }
+      if(i==null){ inp.value = was; inp.setCustomValidity('Pick a show from the suggestions'); inp.reportValidity(); setTimeout(() => inp.setCustomValidity(''), 2000); return; }
+      if(i!==S.bench[L]) setBench(L, i);
+    };
+    inp.onkeydown = e => { if(e.key==='Escape'){ inp.value = was; inp.blur(); } };
+  });
+}
+// Click a column header to sort by it; click again to flip the direction
+let tSort = {key:'new', dir:-1};
+let lastView = null; // {cols, ids, fs} of the rows on screen, for "Export this view"
+function tableCols(fs){
+  const cols = [
+    {key:'title', label:'Title', text:true, val:i => T(S.items[i]).toLowerCase()},
+    {key:'old', label:'Old', val:i => S.items[i].old || null},
+    {key:'new', label:'New', val:i => fs[i]},
+    {key:'change', label:'Change', val:i => S.items[i].old ? fs[i]-S.items[i].old : null},
+    {key:'median', label:'Median', val:i => S.items[i].site || null},
+  ];
+  REFS.forEach((P,pi) => {
+    cols.push({key:'p'+pi, label:P.name, person:P, val:i => refScore(S.items[i], P) || null});
+    cols.push({key:'g'+pi, label:'Gap', title:`Your score minus ${P.name}'s. Sort to find where you disagree most.`, gapOf:P, val:i => { const r = refScore(S.items[i], P); return r ? fs[i]-r : null; }});
+  });
+  return cols;
+}
+// Agreement between you and everyone you compare with, and between them: average gap and shows in common
+function agreementTable(fs){
+  if(!REFS.length) return '';
+  const you = {}; for(const k in fs){ const id = S.items[k].id; if(id) you[id] = fs[k]; }
+  const people = [{name:'You', map:you}, ...REFS.map(P => ({name:P.name, map:P.byMal}))];
+  const pair = (A, B) => { let n = 0, d = 0; for(const id in A.map){ const b = B.map[id]; if(b){ n++; d += Math.abs(A.map[id]-b); } } return n ? `${fmt(d/n)}<span class="muted"> · ${n}</span>` : '<span class="muted">–</span>'; };
+  return `<div class="tablewrap" style="max-height:none;margin-top:6px"><table class="agree">
+    <thead><tr><th>Average gap · shows in common</th>${people.map(p => `<th class="num">${esc(p.name)}</th>`).join('')}</tr></thead>
+    <tbody>${people.map((A,ai) => `<tr><th>${esc(A.name)}</th>${people.map((B,bi) => `<td class="num">${ai===bi ? '' : pair(A,B)}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div><p class="note" style="margin-top:4px">Smaller gap means closer taste. "You" uses your new scores.</p>`;
+}
+/* ---------- score spread chart: your new scores as bars, smooth curves for you and everyone else ---------- */
+let chartOpts = {}; try{ chartOpts = JSON.parse(localStorage.getItem('hl-chart') || '{}') || {}; }catch(e){}
+const chartOn = key => chartOpts[key] !== false;
+// Kernel density: a smooth, bell-shaped version of a set of scores (as % of shows per half point)
+function smooth(vals, xs, bw = 0.6){
+  const n = vals.length, k = 1 / (bw * Math.sqrt(2 * Math.PI));
+  return xs.map(x => { let s = 0; for(const v of vals){ const z = (x - v) / bw; s += Math.exp(-0.5 * z * z); } return n ? s * k / n * 0.5 * 100 : 0; });
+}
+const avgOf = v => v.reduce((a,b) => a+b, 0) / v.length;
+const medianOf = v => { const s = [...v].sort((a,b) => a-b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
+function renderChart(fs){
+  const box = $('chartBox'); if(!box) return;
+  const mine = Object.values(fs).map(Number);
+  if(mine.length < 2){ box.hidden = true; return; }
+  box.hidden = false;
+  const series = [{key:'you', name:'You', vals:mine, color:'var(--s1)'}];
+  const old = Object.keys(fs).map(k => S.items[k].old).filter(v => v > 0);
+  if(old.length > 1) series.push({key:'old', name:'You before', vals:old, color:'var(--s2)'});
+  const people = REFS.slice(0, 5);
+  people.forEach((P, i) => { const v = Object.values(P.byMal || {}).map(Number).filter(x => x > 0); if(v.length > 1) series.push({key:'p:' + (P.user || P.name), name:P.name, vals:v, color:`var(--s${3+i})`}); });
+  // legend with on/off toggles and each series' average and median
+  $('chartLegend').innerHTML = series.map(s => `<label><input type="checkbox" data-series="${esc(s.key)}" ${chartOn(s.key)?'checked':''}>
+      <span class="sw ${s.key==='you'?'bar':''}" style="background:${s.color};opacity:${s.key==='you'?0.4:1}"></span>${esc(s.name)}
+      <span class="stat">avg ${fmt(avgOf(s.vals))} · median ${fmt(medianOf(s.vals))} · ${s.vals.length}</span></label>`).join('')
+    + (REFS.length > 5 ? `<span class="muted">+${REFS.length-5} more not drawn</span>` : '');
+  $('chartLegend').querySelectorAll('[data-series]').forEach(cb => cb.onchange = () => {
+    chartOpts[cb.dataset.series] = cb.checked; try{ localStorage.setItem('hl-chart', JSON.stringify(chartOpts)); }catch(e){}
+    renderChart(finalScores());
+  });
+  const W = 720, H = 230, L = 40, R = 10, T = 10, B = 26, pw = W - L - R, ph = H - T - B;
+  const bins = [...LEVELS].sort((a,b) => a-b); // 0.5 ... 10
+  const xOf = v => L + (v - 0.25) / 10 * pw, bw = pw / bins.length;
+  const share = (vals, b) => vals.filter(v => half(v)===b).length / vals.length * 100;
+  const youBars = bins.map(b => share(mine, b));
+  const xs = []; for(let x = 0.25; x <= 10.251; x += 0.05) xs.push(x);
+  const shown = series.filter(s => chartOn(s.key));
+  const curves = shown.map(s => ({s, ys:smooth(s.vals, xs)}));
+  const yMax = Math.max(1, ...(chartOn('you') ? youBars : []), ...curves.flatMap(c => c.ys)) * 1.1;
+  const step = [1,2,5,10,20,25,50].find(st => yMax / st <= 5) || 50;
+  const yOf = p => T + ph - p / yMax * ph;
+  let svg = '';
+  for(let t = 0; t <= yMax; t += step) svg += `<line x1="${L}" x2="${W-R}" y1="${yOf(t)}" y2="${yOf(t)}" stroke="var(--grid)" stroke-width="1"/><text x="${L-6}" y="${yOf(t)+4}" text-anchor="end">${t}%</text>`;
+  svg += `<line x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}" stroke="var(--axis)" stroke-width="1"/>`;
+  for(let v = 1; v <= 10; v++) svg += `<text x="${xOf(v)}" y="${H-8}" text-anchor="middle">${v}</text>`;
+  if(chartOn('you')) youBars.forEach((p, i) => {
+    if(!p) return;
+    const x = L + i*bw + 1, w = bw - 2, y = yOf(p), h = T + ph - y, r = Math.min(3, w/2, h);
+    svg += `<path d="M${x},${T+ph} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${T+ph} Z" fill="var(--s1)" fill-opacity="0.28"/>`;
+  });
+  // other curves first, yours on top; each gets a surface ring so crossings stay readable
+  [...curves].sort((a,b) => (a.s.key==='you') - (b.s.key==='you')).forEach(({s, ys}) => {
+    const d = ys.map((y, i) => `${i?'L':'M'}${xOf(xs[i]).toFixed(1)},${yOf(y).toFixed(1)}`).join(' ');
+    svg += `<path d="${d}" fill="none" stroke="var(--surface)" stroke-width="4" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+  });
+  // hover targets: one column per half point
+  bins.forEach((b, i) => svg += `<rect data-bin="${i}" x="${L + i*bw}" y="${T}" width="${bw}" height="${ph}" fill="transparent"/>`);
+  svg += `<line id="chartCursor" x1="0" x2="0" y1="${T}" y2="${T+ph}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>`;
+  const el = $('chartSvg'); el.innerHTML = svg;
+  const tip = $('chartTip'), wrap = $('chartWrap'), cur = $('chartCursor');
+  el.querySelectorAll('[data-bin]').forEach(rc => {
+    rc.onmouseenter = rc.onmousemove = ev => {
+      const i = +rc.dataset.bin, b = bins[i];
+      const rows = series.filter(s => chartOn(s.key)).map(s => { const n = s.vals.filter(v => half(v)===b).length;
+        return `<div class="row"><span><span class="sw ${s.key==='you'?'bar':''}" style="background:${s.color};display:inline-block;width:10px;height:${s.key==='you'?10:3}px;border-radius:2px"></span>${esc(s.name)}</span><span>${n} · ${fmt(n / s.vals.length * 100)}%</span></div>`; }).join('');
+      tip.innerHTML = `<b>Score ${fmt(b)}</b>${rows}`;
+      tip.hidden = false;
+      const box2 = wrap.getBoundingClientRect(), x = ev.clientX - box2.left;
+      tip.style.left = Math.min(Math.max(0, x + 12), box2.width - tip.offsetWidth) + 'px';
+      tip.style.top = '4px';
+      cur.setAttribute('x1', xOf(b)); cur.setAttribute('x2', xOf(b)); cur.setAttribute('visibility', 'visible');
+    };
+    rc.onmouseleave = () => { tip.hidden = true; cur.setAttribute('visibility', 'hidden'); };
+  });
+}
+function renderTable(){
+  const fs = finalScores(), bl = benchLevelOf(), body = $('rankBody');
+  const all = Object.keys(fs).map(Number);
+  // Person-specific filters
+  const kindSel = $('fKind'), keep = kindSel.value;
+  kindSel.querySelectorAll('.pf').forEach(o => o.remove());
+  REFS.forEach((P,pi) => kindSel.insertAdjacentHTML('beforeend', `<option class="pf" value="by${pi}">Scored by ${esc(P.name)}</option><option class="pf" value="apart${pi}">1+ points apart from ${esc(P.name)}</option>`));
+  kindSel.value = [...kindSel.options].some(o => o.value===keep) ? keep : '';
+  // Filters above the table
+  const q = $('fSearch').value.trim().toLowerCase(), letter = $('fLetter').value, fScore = $('fScore').value, kind = kindSel.value;
+  const first = i => { const c = T(S.items[i]).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(c) ? c : '#'; };
+  const delta = i => S.items[i].old ? fs[i] - S.items[i].old : 0;
+  const byTitle = (a,b) => T(S.items[a]).localeCompare(T(S.items[b]));
+  const cols = tableCols(fs);
+  if(!cols.some(c => c.key===tSort.key)) tSort = {key:'new', dir:-1};
+  const sc = cols.find(c => c.key===tSort.key);
+  const ids = all.filter(i => {
+    const pm = kind.match(/^(by|apart)(\d+)$/);
+    if(pm){ const r = refScore(S.items[i], REFS[+pm[2]]); if(!r) return false; if(pm[1]==='apart' && Math.abs(fs[i]-r) < 1) return false; }
+    const it = S.items[i];
+    if(q && !T(it).toLowerCase().includes(q) && !it.title.toLowerCase().includes(q)) return false;
+    if(letter && first(i)!==letter) return false;
+    if(fScore && fs[i]!==+fScore) return false;
+    if(kind==='bench' && bl[i]==null) return false;
+    if(kind==='changed' && !(it.old && delta(i)!==0)) return false;
+    if(kind==='up' && !(it.old && delta(i)>0)) return false;
+    if(kind==='down' && !(it.old && delta(i)<0)) return false;
+    if(kind==='added' && !it.added) return false;
+    return true;
+  }).sort((a,b) => {
+    const va = sc.val(a), vb = sc.val(b);
+    if(va==null && vb==null) return byTitle(a,b);
+    if(va==null) return 1; if(vb==null) return -1; // empty cells always last
+    const c = sc.text ? va.localeCompare(vb) : va - vb;
+    return c * tSort.dir || byTitle(a,b);
+  });
+  $('fCount').textContent = ids.length!==all.length ? `${ids.length} of ${all.length}` : '';
+  const done = !S.cur && !S.queue.length;
+  $('rankHead').textContent = done ? `Final scores (${all.length})` : `Scored so far (${all.length})`;
+  $('rankThead').innerHTML = `<tr>${cols.map(c => `<th class="${c.text?'':'num'} sortable" data-sort="${c.key}" ${c.title?`title="${esc(c.title)}"`:''} aria-sort="${tSort.key===c.key ? (tSort.dir>0?'ascending':'descending') : 'none'}">${esc(c.label)}${tSort.key===c.key ? (tSort.dir>0?' ▲':' ▼') : ''}</th>`).join('')}</tr>`;
+  $('rankThead').querySelectorAll('[data-sort]').forEach(th => th.onclick = () => {
+    const k = th.dataset.sort;
+    tSort = tSort.key===k ? {key:k, dir:-tSort.dir} : {key:k, dir: k==='title' ? 1 : -1};
+    renderTable();
+  });
+  $('refSummary').innerHTML = agreementTable(fs);
+  renderChart(fs);
+  lastView = {cols, ids, fs};
+  if(!ids.length){ body.innerHTML = `<tr><td colspan="${cols.length}" class="empty-row">${all.length ? 'No shows match these filters.' : 'Answer a few comparisons and your scores show up here.'}</td></tr>`; return; }
+  body.innerHTML = ids.map(idx => {
+    const it = S.items[idx], s = fs[idx], isB = bl[idx]!=null, d = it.old ? s - it.old : null;
+    const u = itemUrl(it);
+    const ctrl =
+      `${scoreChip(s)} <select data-i="${idx}" aria-label="Change score">${[...new Set([...scoreValues(), s])].sort((x,y) => y-x).map(v=>`<option value="${v}" ${v===s?'selected':''}>${fmt(v)}</option>`).join('')}<option value="redo">Redo…</option><option value="drop">Dropped</option><option value="nw">Didn't watch</option></select>`;
+    return `<tr><td class="t">${u?`<a href="${u}" target="_blank" rel="noopener">${esc(T(it))}</a>`:esc(T(it))}${isB?'<span class="star">benchmark</span>':''}</td>
+      <td class="num">${scoreChip(it.old)}</td>
+      <td class="num">${ctrl}</td>
+      <td class="num delta ${d>0?'up':d<0?'down':''}">${d===null?'':d>0?'+'+fmt(d):d===0?'·':fmt(d)}</td>
+      <td class="num">${it.site?fmt(it.site):''}</td>
+      ${REFS.map(P => { const r = refScore(it, P), g = r ? s - r : null;
+        return `<td class="num">${r?scoreChip(r):''}</td><td class="num delta ${g>0?'up':g<0?'down':''}">${g===null?'':g>0?'+'+fmt(g):g===0?'·':fmt(g)}</td>`; }).join('')}</tr>`;
+  }).join('');
+  body.querySelectorAll('select').forEach(sel => sel.onchange = () => {
+    const i = +sel.dataset.i;
+    // A benchmark being changed first gives up its step on the ladder. Its undo step is taken here, and the
+    // action below drops the extra one it takes, so one Undo puts everything back.
+    const benchL = LEVELS.find(L => S.bench[L]===i);
+    if(benchL!=null){
+      snap(); delete S.bench[benchL]; S.results[i] = benchL;
+      if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; }
+    }
+    const fixUndo = () => { if(benchL!=null) undoStack.splice(undoStack.length-1, 1); };
+    if(sel.value==='redo'){ rescore(i); fixUndo(); return; }
+    if(sel.value==='nw'){ notWatched(i); fixUndo(); return; }
+    if(sel.value==='drop'){ dropShow(i); fixUndo(); return; }
+    if(benchL==null) snap();
+    S.lastNew = null;
+    if(giveScore(i, +sel.value) && S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; } // new benchmark: restart the current search on the new ladder
+    advance(); save(); render();
+  });
+}
+function renderExport(){
+  const canImport = !!S.xml || S.source==='json';
+  const any = Object.keys(finalScores()).length > 0;
+  $('saveXml').disabled = !canImport || !any;
+  $('copyXml').disabled = !canImport || !any;
+  $('saveCsv').disabled = !any;
+  // The example list is never saved anywhere
+  $('alSave').hidden = S.source==='sample';
+  if(!alArmed && !$('alSave').disabled) $('alSave').textContent = anilistLogin() ? 'Save to AniList' : 'Connect AniList to save';
+  $('exportSteps').hidden = !canImport;
+  $('exportOpts').hidden = !canImport;
+  $('markDone').checked = S.markDone !== false;
+  $('wholeNums').checked = !!S.wholeNums;
+  if(!canImport) toast(S.source==='sample' ? 'Load your AniList or MAL list file to get an import file. The example list can only save a CSV.' : 'Pasted titles can be saved as CSV. Load a list file to get an import file.');
+}
+function render(){ setTimeout(loadSeasons); renderSource(); renderSetup(); renderStage(); renderLadder(); renderTable(); renderExport(); renderRefOnly(); }
+
+/* ---------- loading ---------- */
+function normStatus(s, kind){
+  const A = kind!=='manga', u = String(s||'').trim().toUpperCase().replace(/[\s_-]+/g,'');
+  const map = {CURRENT:A?'Watching':'Reading', WATCHING:'Watching', READING:'Reading', PLANNING:A?'Plan to Watch':'Plan to Read',
+    PLANTOWATCH:'Plan to Watch', PLANTOREAD:'Plan to Read', COMPLETED:'Completed', DROPPED:'Dropped', PAUSED:'On-Hold', ONHOLD:'On-Hold',
+    REPEATING:A?'Rewatching':'Rereading'};
+  return map[u] || (s ? String(s).trim() : 'Unknown');
+}
+// Your scores may be 10-point, decimal, or 100-point: bring them to 0-10 in half points
+let preciseScores = false; // true while reading someone else's list: keep their exact decimals
+function normScores(entries){
+  const max = Math.max(0, ...entries.map(x => x.old||0));
+  entries.forEach(x => { let v = +x.old||0; if(max>10) v = v/10; x.old = Math.max(0, Math.min(10, preciseScores || STEP()<0.5 ? Math.round(v*10)/10 : half(v))); });
+  return entries;
+}
+function parseJson(text){
+  let data; try{ data = JSON.parse(text); }catch(e){ throw new Error('That file is not readable JSON.'); }
+  const out = {anime:[], manga:[]}, seen = new Set();
+  const titleOf = t => typeof t==='string' ? t : t ? (t.userPreferred||t.english||t.romaji||t.native||'') : '';
+  const push = (o, m) => {
+    const kind = String(m.type||o.type||(m.chapters!=null||o.chapters!=null?'manga':'anime')).toLowerCase()==='manga' ? 'manga' : 'anime';
+    const title = titleOf(m.title) || titleOf(o.title) || '(untitled)';
+    const key = kind + ':' + (m.id ?? m.idMal ?? title);
+    if(seen.has(key)) return; seen.add(key); // AniList repeats entries that sit in custom lists
+    const score = o.scoreRaw!=null ? o.scoreRaw/10 : (o.score ?? 0);
+    // AniList gives averageScore / meanScore out of 100; it has no median, so the average is the closest
+    const siteRaw = m.averageScore ?? m.meanScore ?? o.averageScore ?? o.meanScore ?? 0;
+    out[kind].push({e:out[kind].length, id:String(m.idMal ?? o.idMal ?? ''), alId:m.id ?? o.mediaId ?? '', title,
+      type:String(m.format||o.format||'').replace(/_/g,' '), eps:+(kind==='manga' ? (m.chapters??o.chapters) : (m.episodes??o.episodes)) || 0,
+      progress:+o.progress || 0, old:+score || 0, site: siteRaw ? Math.max(MIN_SCORE, Math.min(10, half(+siteRaw > 10 ? siteRaw/10 : +siteRaw))) : 0,
+      status:normStatus(o.status, kind)});
+  };
+  (function walk(o){
+    if(!o || typeof o!=='object') return;
+    if(Array.isArray(o)){ o.forEach(walk); return; }
+    if(o.media && typeof o.media==='object' && o.media.title){ push(o, o.media); return; }
+    if(o.title && ('score' in o || 'status' in o)){ push(o, o); return; }
+    for(const k in o) walk(o[k]);
+  })(data);
+  if(!out.anime.length && !out.manga.length) throw new Error('No list entries found in that JSON file.');
+  normScores(out.anime); normScores(out.manga);
+  return out;
+}
+function parseXml(text){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('That file is not readable XML or JSON. Use the list file from your AniList or MAL export.');
+  let kind = 'anime', ents = [...doc.getElementsByTagName('anime')];
+  if(!ents.length){ kind = 'manga'; ents = [...doc.getElementsByTagName('manga')]; }
+  if(!ents.length) throw new Error('No anime or manga entries found in that file.');
+  const g = (el,t) => { const c = el.getElementsByTagName(t)[0]; return c ? c.textContent.trim() : ''; };
+  const A = kind==='anime';
+  return {kind, entries: normScores(ents.map((el,e) => {
+    const site = +(g(el,'series_score') || g(el,'average_score') || g(el,'mean_score')) || 0;
+    return {e,
+      id: g(el, A?'series_animedb_id':'manga_mangadb_id'),
+      title: g(el, A?'series_title':'manga_title') || '(untitled)',
+      type: g(el, 'series_type'),
+      eps: +g(el, A?'series_episodes':'manga_chapters') || 0,
+      old: +g(el, 'my_score') || 0,
+      site: site ? Math.max(MIN_SCORE, Math.min(10, half(site>10 ? site/10 : site))) : 0,
+      status: normStatus(g(el, 'my_status'), kind)};
+  }))};
+}
+async function readFile(file){
+  const head = new Uint8Array(await file.slice(0,2).arrayBuffer());
+  if(head[0]===0x1f && head[1]===0x8b){
+    if(typeof DecompressionStream==='undefined') throw new Error('This browser cannot unzip .gz files. Unzip it first and load the file inside.');
+    return await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+  return await file.text();
+}
+async function onFile(file){
+  showErr('');
+  try{
+    const text = (await readFile(file)).replace(/^﻿/, '');
+    if(/^\s*[\[{]/.test(text)){
+      const lists = parseJson(text);
+      await dbReady; lists.anime.push(...missingSeasons(lists.anime));
+      const kind = lists.anime.length >= lists.manga.length ? 'anime' : 'manga';
+      pending = {source:'json', kind, xml:null, fileName:file.name, lists, entries:lists[kind]};
+      applySite(lists.anime); applySite(lists.manga);
+    } else {
+      const {kind, entries} = parseXml(text);
+      if(kind==='anime'){ await dbReady; entries.push(...missingSeasons(entries)); }
+      pending = {source:'xml', kind, xml:text, fileName:file.name, entries};
+      applySite(entries);
+    }
+    renderPending();
+  }catch(e){ showErr(e.message || 'Could not read that file.'); }
+}
+function showErr(m){ $('loadErr').hidden = !m; $('loadErr').textContent = m; }
+function renderPending(){
+  const el = $('pending');
+  if(!pending){ el.hidden = true; return; }
+  const counts = {}; pending.entries.forEach(x => counts[x.status] = (counts[x.status]||0)+1);
+  const order = ['Completed','Rewatching','Rereading','Missing season','Watching','Reading','On-Hold','Dropped','Plan to Watch','Plan to Read','Listed'];
+  const rank = s => { const i = order.indexOf(s); return i<0 ? 99 : i; };
+  const sts = Object.keys(counts).sort((a,b)=>rank(a)-rank(b));
+  const def = s => ['Completed','Rewatching','Rereading','Missing season','Listed'].includes(s) || (!counts.Completed && !/^Plan/.test(s));
+  const L = pending.lists, both = L && L.anime.length && L.manga.length;
+  const scored = pending.entries.filter(x=>x.old).length, withSite = pending.entries.filter(x=>!x.old && x.site).length, unscored = pending.entries.filter(x=>!x.old).length;
+  const kindPick = both ? `<div class="chips">${['anime','manga'].map(k=>`<label class="chip"><input type="radio" name="kindPick" id="kp-${k}" value="${k}" ${pending.kind===k?'checked':''}> ${k==='anime'?'Anime':'Manga'} <span class="muted">${L[k].length}</span></label>`).join('')}</div>` : '';
+  const siteNote = unscored ? `<div class="muted" style="font-size:.88rem">${unscored} have no score from you. ${withSite ? `${withSite} of them start at the site's median score.` : `Load the site scores file above to start them at the site's median. Otherwise they start in the middle.`}</div>` : '';
+  el.innerHTML = `<div><b>${pending.entries.length} entries found</b>${pending.fileName?` in ${esc(pending.fileName)}`:''}, ${scored} with your scores. Which ones should be scored?</div>${kindPick}
+    <div class="chips">${sts.map((s,i)=>`<label class="chip"><input type="checkbox" id="st${i}" data-s="${esc(s)}" ${def(s)?'checked':''}> ${esc(s)} <span class="muted">${counts[s]}</span></label>`).join('')}</div>
+    ${siteNote}
+    <div class="opts"><label><input type="checkbox" id="pOld" checked> Show my old scores while comparing</label></div>
+    <div><button class="btn primary" id="startBtn">Start</button> <span class="muted" style="font-size:.85rem">${S.source!=='sample'?'This replaces your current progress.':''}</span></div>`;
+  el.hidden = false;
+  el.querySelectorAll('[name="kindPick"]').forEach(r => r.onchange = () => { pending.kind = r.value; pending.entries = L[r.value]; renderPending(); });
+  $('startBtn').onclick = () => {
+    const keep = new Set([...el.querySelectorAll('[data-s]')].filter(c=>c.checked).map(c=>c.dataset.s));
+    const items = pending.entries.filter(x => keep.has(x.status));
+    if(items.length < 2){ showErr('Pick at least two shows.'); return; }
+    S = newState({source:pending.source, kind:pending.kind, xml:pending.xml, fileName:pending.fileName, items, showOld:$('pOld').checked});
+    pending = null; undoStack = []; showErr(''); renderPending();
+    $('loadDetails').open = false; $('settingsPanel').open = false;
+    advance(); save(); render();
+    $('stage').scrollIntoView({behavior:'smooth', block:'start'});
+  };
+}
+
+$('fileIn').onchange = e => { const f = e.target.files[0]; if(f) onFile(f); };
+// site-scores.json from the helper: {byMal:{malId:score}, byAniList:{anilistId:score}}, scores 0-10
+let siteScores = null;
+function applySite(list){
+  if(!siteScores || !list) return 0;
+  let n = 0;
+  list.forEach(it => {
+    const v = (it.id && siteScores.byMal?.[it.id]) ?? (it.alId!=='' && it.alId!=null ? siteScores.byAniList?.[it.alId] : undefined);
+    if(v){ it.site = Math.max(MIN_SCORE, Math.min(10, half(+v > 10 ? v/10 : +v))); n++; }
+  });
+  return n;
+}
+function useSite(data, how){
+  if(!data || (!data.byMal && !data.byAniList)) throw new Error('not a site-scores file');
+  siteScores = data;
+  const nItems = S.source!=='sample' ? applySite(S.items) : 0;
+  if(pending){ applySite(pending.entries); if(pending.lists){ applySite(pending.lists.anime); applySite(pending.lists.manga); } renderPending(); }
+  save(); render();
+  const n = Object.keys(data.byMal||{}).length || Object.keys(data.byAniList||{}).length;
+  const when = data.made ? ` (looked up ${new Date(data.made).toLocaleDateString()})` : '';
+  $('siteMsg').textContent = `${how}: ${n} site medians from ${data.source==='myanimelist'?'MyAnimeList':'AniList'}${when}${S.source!=='sample'?`, ${nItems} match your current list`:''}.`;
+}
+function showRefState(){
+  $('tabCompareNote').textContent = REFS.length ? `· ${REFS.map(P => P.name).join(', ')}` : '';
+  $('refPeople').innerHTML = REFS.map((P,i) => P.auto ? '' : `<span class="chip"><b>${esc(P.name)}</b> <span class="muted">${P.count} scored</span>
+    <button class="btn" data-rename="${i}" style="padding:0 8px;font-size:.78rem">Rename</button>
+    <button class="btn" data-drop-ref="${i}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`).join('');
+  renderFollow();
+  $('refPeople').querySelectorAll('[data-drop-ref]').forEach(b => b.onclick = () => {
+    const P = REFS.splice(+b.dataset.dropRef, 1)[0]; saveRefs();
+    $('refMsg').textContent = `Removed ${P.name}.`; showRefState(); render();
+  });
+  $('refPeople').querySelectorAll('[data-rename]').forEach(b => b.onclick = () => {
+    const v = $('refName').value.trim();
+    if(!v){ $('refMsg').textContent = 'Type the new name in the Name box first, then click Rename.'; $('refName').focus(); return; }
+    REFS[+b.dataset.rename].name = v; saveRefs(); $('refName').value = '';
+    showRefState(); render();
+  });
+  $('refWho').innerHTML = REFS.map((P,i) => `<option value="${i}" ${i===refPick?'selected':''}>${esc(P.name)}'s list</option>`).join('');
+  $('refWho').hidden = REFS.length < 2;
+  renderRefOnly();
+}
+$('refWho').onchange = e => { refPick = +e.target.value; renderRefOnly(); };
+function refOnlyList(){
+  if(!REF || !REF.list || S.source==='sample') return [];
+  const mal = new Set(S.items.map(it => it.id).filter(Boolean)), al = new Set(S.items.map(it => String(it.alId || (showInfo && it.id && showInfo.anilist[it.id]) || '')).filter(Boolean));
+  return REF.list.filter(x => !(x.id && mal.has(x.id)) && !(x.alId && al.has(String(x.alId))));
+}
+function renderRefOnly(){
+  if(refPick >= REFS.length) refPick = 0;
+  REF = REFS[refPick] || null;
+  const box = $('refOnly');
+  if(!REF || !REF.list){ box.hidden = true; return; }
+  box.hidden = false;
+  if(S.source==='sample'){ $('refAddAll').hidden = true; $('refOnlyHead').textContent = 'Start your own list first to add shows from theirs.'; $('refOnlyBody').innerHTML = ''; return; }
+  const all = refOnlyList(), q = $('refSearch').value.trim().toLowerCase(), doneOnly = $('refDoneOnly').checked;
+  const rows = all.filter(x => !tooShort(x) && (!doneOnly || x.status==='Completed') && (!q || x.title.toLowerCase().includes(q) || T(x).toLowerCase().includes(q)))
+    .sort((a,b) => (b.score-a.score) || T(a).localeCompare(T(b)));
+  $('refOnlyHead').textContent = `On ${REF.name}'s list but not yours: ${all.length}`;
+  $('refOnlyBody').innerHTML = rows.length ? rows.slice(0,500).map(x => `<tr><td class="t">${esc(T(x))}</td><td class="num">${x.score?scoreChip(x.score):''}</td><td>${esc(x.status)}</td>
+    <td class="num">${x.id ? `<button class="btn" data-add="${esc(x.id)}" data-al="${esc(x.alId)}" style="padding:2px 10px">Add</button>` : `<span class="muted" title="No MyAnimeList id, so it can't go in the import file">no MAL id</span>`}</td></tr>`).join('')
+    + (rows.length>500 ? `<tr><td colspan="4" class="empty-row">Showing 500 of ${rows.length}. Search to narrow it down.</td></tr>` : '')
+    : `<tr><td colspan="4" class="empty-row">Nothing to show.</td></tr>`;
+  $('refOnlyBody').querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const x = REF.list.find(r => r.id===b.dataset.add); if(!x) return;
+    snap();
+    S.queue.unshift(addFromRef(x)); // next after the current comparison
+    advance(); save(); render();
+    $('refMsg').textContent = `Added ${x.title}. It's up next to rate.`;
+  });
+  // Add every show the current filter shows (that has a MAL id), after a second click to confirm
+  const addable = rows.filter(x => x.id), btn = $('refAddAll');
+  btn.hidden = !addable.length;
+  btn.textContent = refAddArmed ? `Click again to add ${addable.length}` : `Add all ${addable.length} shown`;
+  btn.onclick = () => {
+    if(!refAddArmed){ refAddArmed = setTimeout(() => { refAddArmed = null; renderRefOnly(); }, 4000); renderRefOnly(); return; }
+    clearTimeout(refAddArmed); refAddArmed = null;
+    snap();
+    addable.forEach(x => S.queue.push(addFromRef(x)));
+    advance(); save(); render();
+    $('refMsg').textContent = `Added ${addable.length} shows from ${REF.name}'s list to the end of your queue. Undo (Z) takes them all back out.`;
+  };
+}
+let refAddArmed = null;
+function addFromRef(x){
+  S.items.push({e:-1, added:true, id:x.id, alId:x.alId, title:x.title, type:x.type, eps:x.eps, old:0, site:0, from:`${REF.name}'s list`, status:`From ${REF.name}`});
+  applySite([S.items[S.items.length-1]]);
+  return S.items.length-1;
+}
+$('refSearch').oninput = renderRefOnly;
+$('refDoneOnly').onchange = renderRefOnly;
+$('refIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const text = (await readFile(f)).replace(/^﻿/, '');
+    let entries, name = '';
+    preciseScores = true;
+    try{
+      if(/^\s*[\[{]/.test(text)){
+        const lists = parseJson(text); entries = [...lists.anime, ...lists.manga];
+        name = (text.match(/"user"\s*:\s*\{[^{}]*?"name"\s*:\s*"([^"]+)"/) || [])[1] || '';
+      } else {
+        entries = parseXml(text).entries;
+        name = (text.match(/<user_name>\s*(?:<!\[CDATA\[)?([^<\]]+)/) || [])[1] || '';
+      }
+    } finally { preciseScores = false; }
+    const byMal = {}, byAl = {}; let count = 0;
+    entries.forEach(x => { if(!x.old) return; count++; if(x.id && x.id!=='0') byMal[x.id] = x.old; if(x.alId) byAl[x.alId] = x.old; });
+    if(!entries.length) throw new Error('No shows found in that list file.');
+    name = $('refName').value.trim() || name.trim() || f.name.replace(/\.(xml|json|gz)+$/i,'');
+    // Keep their whole list (small fields only) so shows you don't have can be added
+    const list = entries.map(x => ({id:x.id&&x.id!=='0'?x.id:'', alId:x.alId||'', title:x.title, type:x.type||'', eps:x.eps||0, status:x.status, score:x.old||0}));
+    const P = {name, byMal, byAl, count, list};
+    const same = REFS.findIndex(r => r.name.toLowerCase()===name.toLowerCase());
+    if(same>=0) REFS[same] = P; else REFS.push(P); // loading the same name again updates that person
+    refPick = same>=0 ? same : REFS.length-1;
+    saveRefs(); $('refName').value = '';
+    $('refMsg').textContent = `${same>=0 ? 'Updated' : 'Added'} ${name}: ${count} scored shows.`;
+    showRefState(); render();
+  }catch(err){ $('refMsg').textContent = err.message && !/JSON|XML/.test(err.message) ? err.message : 'Could not read that list file.'; }
+  e.target.value = '';
+};
+$('siteIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{ useSite(JSON.parse((await f.text()).replace(/^﻿/, '')), 'Loaded'); }
+  catch(err){ $('siteMsg').textContent = 'That file is not a site-scores file from the helper.'; }
+};
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if(f) onFile(f); });
+$('pasteBtn').onclick = () => {
+  const lines = [...new Set($('pasteIn').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
+  if(lines.length < 2){ showErr('Paste at least two titles, one per line.'); return; }
+  showErr('');
+  pending = {source:'paste', kind:'anime', xml:null, fileName:'', entries: lines.map((title,e)=>({e,id:'',title,type:'',eps:0,old:0,site:0,status:'Listed'}))};
+  renderPending();
+};
+
+let resetArmed = null;
+$('resetBtn').onclick = () => {
+  const b = $('resetBtn');
+  if(!resetArmed){ b.textContent = 'Click again to erase progress'; resetArmed = setTimeout(()=>{ resetArmed=null; b.textContent='Start over'; }, 3000); return; }
+  clearTimeout(resetArmed); resetArmed = null; b.textContent = 'Start over';
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  S = newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))}); undoStack = [];
+  advance(); render(); $('settingsPanel').open = true; $('loadDetails').open = true;
+  useRolledSample();
+};
+
+/* ---------- export ---------- */
+const outScore = s => S.wholeNums ? String(Math.round(s)) : (s%1 ? fmt(s) : String(s));
+function buildFreshXml(){
+  const fs = finalScores(), A = S.kind!=='manga', markDone = S.markDone !== false;
+  const cdata = s => '<![CDATA[' + String(s).replace(/]]>/g, ']]]]><![CDATA[>') + ']]>';
+  const toMal = s => s==='Rewatching'||s==='Rereading' ? 'Completed' : s;
+  let missing = 0; const rows = [];
+  Object.keys(fs).forEach(k => {
+    const it = S.items[k];
+    if(!it.id || it.id==='0'){ missing++; return; }
+    const status = markDone ? 'Completed' : toMal(it.status);
+    const prog = markDone && it.eps ? it.eps : (it.progress||0);
+    rows.push(A
+      ? `  <anime>\n    <series_animedb_id>${esc(it.id)}</series_animedb_id>\n    <series_title>${cdata(it.title)}</series_title>\n    <series_type>${esc(it.type)}</series_type>\n    <series_episodes>${it.eps}</series_episodes>\n    <my_watched_episodes>${prog}</my_watched_episodes>\n    <my_score>${outScore(fs[k])}</my_score>\n    <my_status>${esc(status)}</my_status>\n    <update_on_import>1</update_on_import>\n  </anime>`
+      : `  <manga>\n    <manga_mangadb_id>${esc(it.id)}</manga_mangadb_id>\n    <manga_title>${cdata(it.title)}</manga_title>\n    <manga_chapters>${it.eps}</manga_chapters>\n    <my_read_chapters>${prog}</my_read_chapters>\n    <my_score>${outScore(fs[k])}</my_score>\n    <my_status>${esc(status)}</my_status>\n    <update_on_import>1</update_on_import>\n  </manga>`);
+  });
+  (S.dropped||[]).forEach(k => {
+    const it = S.items[k];
+    if(!it.id || it.id==='0'){ missing++; return; }
+    rows.push(A
+      ? `  <anime>\n    <series_animedb_id>${esc(it.id)}</series_animedb_id>\n    <series_title>${cdata(it.title)}</series_title>\n    <series_type>${esc(it.type)}</series_type>\n    <series_episodes>${it.eps}</series_episodes>\n    <my_watched_episodes>${it.progress||0}</my_watched_episodes>\n    <my_score>${it.old?outScore(it.old):0}</my_score>\n    <my_status>Dropped</my_status>\n    <update_on_import>1</update_on_import>\n  </anime>`
+      : `  <manga>\n    <manga_mangadb_id>${esc(it.id)}</manga_mangadb_id>\n    <manga_title>${cdata(it.title)}</manga_title>\n    <manga_chapters>${it.eps}</manga_chapters>\n    <my_read_chapters>${it.progress||0}</my_read_chapters>\n    <my_score>${it.old?outScore(it.old):0}</my_score>\n    <my_status>Dropped</my_status>\n    <update_on_import>1</update_on_import>\n  </manga>`);
+  });
+  return {xml:`<?xml version="1.0" encoding="UTF-8" ?>\n<myanimelist>\n  <myinfo>\n    <user_export_type>${A?1:2}</user_export_type>\n  </myinfo>\n${rows.join('\n')}\n</myanimelist>\n`, missing};
+}
+function buildXml(){
+  if(S.source==='json') return buildFreshXml();
+  const doc = new DOMParser().parseFromString(S.xml, 'application/xml');
+  const ents = [...doc.getElementsByTagName(S.kind)], fs = finalScores();
+  const setChild = (el, tag, val) => {
+    let c = [...el.children].find(x => x.tagName===tag);
+    if(!c){ c = doc.createElement(tag); el.appendChild(c); }
+    c.textContent = String(val);
+  };
+  const getChild = (el, tag) => { const c = [...el.children].find(x => x.tagName===tag); return c ? c.textContent.trim() : ''; };
+  const markDone = S.markDone !== false;
+  // Seasons that weren't in the file get a new entry, marked Completed
+  const addEntry = it => {
+    const el = doc.createElement('anime'), add = (t, v, cd) => { const c = doc.createElement(t); if(cd) c.appendChild(doc.createCDATASection(v)); else c.textContent = String(v); el.appendChild(c); };
+    add('series_animedb_id', it.id); add('series_title', it.title, true); add('series_type', it.type||''); add('series_episodes', it.eps||0);
+    add('my_watched_episodes', it.eps||0); add('my_score', 0); add('my_status', 'Completed'); add('update_on_import', 1);
+    doc.documentElement.appendChild(el); return el;
+  };
+  Object.keys(fs).forEach(k => {
+    const it0 = S.items[k];
+    const el = it0.added ? addEntry(it0) : ents[it0.e]; if(!el) return;
+    setChild(el,'my_score',outScore(fs[k]));
+    if(markDone){
+      setChild(el,'my_status','Completed');
+      if(S.kind==='anime'){ const eps = +getChild(el,'series_episodes'); if(eps>0) setChild(el,'my_watched_episodes',eps); }
+      else {
+        const ch = +getChild(el,'manga_chapters'), vol = +getChild(el,'manga_volumes');
+        if(ch>0) setChild(el,'my_read_chapters',ch);
+        if(vol>0) setChild(el,'my_read_volumes',vol);
+      }
+    }
+    setChild(el,'update_on_import','1');
+  });
+  (S.dropped||[]).forEach(k => {
+    const it0 = S.items[k];
+    const el = it0.added ? addEntry(it0) : ents[it0.e]; if(!el) return;
+    setChild(el,'my_status','Dropped');
+    if(it0.added){ setChild(el,'my_watched_episodes',0); }
+    setChild(el,'update_on_import','1');
+  });
+  let out = new XMLSerializer().serializeToString(doc);
+  if(!/^<\?xml/.test(out)) out = '<?xml version="1.0" encoding="UTF-8" ?>\n' + out;
+  return {xml:out, missing:0};
+}
+const missingNote = m => m ? ` ${m} scored show${m>1?'s have':' has'} no MyAnimeList ID and can't go in this file.` : '';
+function buildCsv(){
+  const fs = finalScores(), bl = benchLevelOf(), q = v => /[",\n]/.test(v) ? `"${String(v).replace(/"/g,'""')}"` : v;
+  const ids = Object.keys(fs).sort((a,b)=>fs[b]-fs[a]);
+  return ['title,english_title,mal_id,anilist_id,old_score,new_score,benchmark', ...ids.map(k=>{ const it=S.items[k]; return [q(it.title),q(T(it)),it.id,it.alId||(showInfo?.anilist?.[it.id]??''),it.old||'',outScore(fs[k]),bl[k]!=null?'yes':''].join(','); })].join('\n');
+}
+function toast(m){ $('toast').textContent = m; }
+// A normal website can save any file type, so the import file downloads as a real .xml
+async function offer(filename, data, note=''){
+  try{
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], {type:'application/octet-stream'}));
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast(`Saved ${filename}.${note}`);
+    return true;
+  }catch(e){ return false; }
+}
+function showText(txt, msg){ const ta = $('xmlOut'); ta.value = txt; ta.hidden = false; ta.focus(); ta.select(); toast(msg); }
+$('saveXml').onclick = async () => {
+  const {xml, missing} = buildXml(), base = (S.fileName||'animelist').replace(/\.gz$/i,'').replace(/\.(xml|json)$/i,'').replace(/[^\w.-]+/g,'_');
+  if(!await offer(`${base}_rescored.xml`, xml, missingNote(missing))) showText(xml, 'Saving files is not available here. The XML is below: copy it into a text file and save it ending in .xml.' + missingNote(missing));
+};
+// Progress backup: everything this browser keeps (your game, people loaded from files, follows) in one .json file.
+// The Claude version of the ranker can make the same file, so progress moves over.
+$('backupBtn').onclick = async () => {
+  const payload = {kind:'higher-lower-ranker-backup', v:1, made:new Date().toISOString(), state:S,
+    refs:REFS.filter(P => !P.auto), follows:follows.map(f => ({...f})), me:myUser};
+  await offer(`ranker-progress-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload));
+};
+$('restoreIn').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const b = JSON.parse(await f.text());
+    if(b.kind!=='higher-lower-ranker-backup' || !b.state || !b.state.items) throw new Error();
+    localStorage.setItem(KEY, JSON.stringify(b.state));
+    localStorage.setItem(REF_KEY, JSON.stringify(b.refs || []));
+    const store = {};
+    (b.follows || []).forEach(x => { if(x && /^[A-Za-z0-9_-]{2,20}$/.test(x.name || x.id || '')) store['follows/' + (x.id || x.name).toLowerCase()] = {name:x.name || x.id, nick:x.nick || '', mirrorDrops:!!x.mirrorDrops, added:x.added || new Date().toISOString()}; });
+    if(b.me) store['settings/me'] = {username:b.me};
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    toast('Progress restored. Reloading…');
+    setTimeout(() => location.reload(), 600);
+  }catch(err){ toast('That file is not a ranker progress backup.'); }
+  e.target.value = '';
+};
+$('markDone').onchange = e => { S.markDone = e.target.checked; save(); };
+$('wholeNums').onchange = e => { S.wholeNums = e.target.checked; save(); };
+$('copyXml').onclick = () => {
+  const {xml, missing} = buildXml();
+  navigator.clipboard.writeText(xml).then(() => toast('Import XML copied. Paste it into a text file saved with a .xml ending.' + missingNote(missing)))
+    .catch(() => showText(xml, 'Copy blocked here. The XML is selected below: press Ctrl+C.' + missingNote(missing)));
+};
+$('saveCsv').onclick = async () => {
+  const csv = buildCsv();
+  if(!await offer('scores.csv', csv)) showText(csv, 'Saving files is not available here. The CSV is below to copy.');
+};
+
+document.addEventListener('keydown', e => {
+  if(e.target.closest('input,textarea,select,summary') || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  // Consistency check: ←/→ pick a side, ↓ about the same, K skip (or keep), 1–3 a fix, Esc back
+  if(S.check){
+    if(k==='escape'){ endCheck(); return; }
+    if(k==='z'){ undo(); return; }
+    if(S.check.issue){
+      if(/^[1-3]$/.test(k)){ checkFix(+k - 1); } else if(k==='k' || k==='enter'){ e.preventDefault(); checkFix(-1); }
+      return;
+    }
+    if(k==='arrowleft' || k==='a'){ e.preventDefault(); checkAnswer('left'); }
+    else if(k==='arrowright' || k==='d'){ e.preventDefault(); checkAnswer('right'); }
+    else if(k==='arrowdown' || k==='s' || k==='='){ e.preventDefault(); checkAnswer('same'); }
+    else if(k==='k'){ checkAnswer('skip'); }
+    return;
+  }
+  if(k==='c' && Object.keys(S.results).length >= 2){ startCheck(); return; }
+  if(k==='arrowup' || k==='w'){ e.preventDefault(); answer('higher'); }
+  else if(k==='arrowdown' || k==='s'){ e.preventDefault(); answer('lower'); }
+  else if(k==='e' || k==='='){ setDirect(); }
+  else if(k==='k'){ skip(); }
+  else if(k==='n'){ notSure(); }
+  else if(k==='x'){ notWatched(); }
+  else if(k==='d'){ dropShow(); }
+  else if(k==='a'){ agreeRef(); }
+  else if(/^[1-9]$/.test(e.key) && +e.key <= agreeKeys.length){ agreeRef(agreeKeys[+e.key - 1].ps[0][1]); } // 1 = first agree button, 2 = second, …
+  // ←/→ move by the chosen step (Settings); with Shift by a whole point
+  else if(k==='arrowright'){ e.preventDefault(); stepDirect(e.shiftKey ? 1 : STEP()); }
+  else if(k==='arrowleft'){ e.preventDefault(); stepDirect(e.shiftKey ? -1 : -STEP()); }
+  else if(k==='+'){ stepDirect(1); }
+  else if(k==='-'){ stepDirect(-1); }
+  else if(k==='enter' && !e.target.closest('button')){ setDirect(); }
+  else if(k==='z' || k==='backspace'){ e.preventDefault(); undo(); }
+});
+
+/* ---------- AniList, live ----------
+   This website talks to AniList directly (graphql.anilist.co, no login needed for public lists).
+   Lists are cached in this browser for 30 minutes so reloading the page doesn't hit AniList's rate limit. */
+const AL_STATUS = {CURRENT:'Watching', PLANNING:'Plan to Watch', COMPLETED:'Completed', DROPPED:'Dropped', PAUSED:'On-Hold', REPEATING:'Rewatching'};
+const LIST_CACHE = 'hl-lists', LIST_TTL = 30 * 60 * 1000;
+let lastAniListCall = 0;
+async function anilist(query, variables, token){
+  for(let tries = 0; tries < 4; tries++){
+    const wait = lastAniListCall + 800 - Date.now(); if(wait > 0) await new Promise(r => setTimeout(r, wait));
+    lastAniListCall = Date.now();
+    const headers = {'Content-Type':'application/json', Accept:'application/json', ...(token ? {Authorization:'Bearer ' + token} : {})};
+    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers, body:JSON.stringify({query, variables}), signal:AbortSignal.timeout(20000)});
+    if(res.status===429){ await new Promise(r => setTimeout(r, ((+res.headers.get('retry-after')) || 30) * 1000)); continue; }
+    const json = await res.json();
+    if(!res.ok || json.errors) throw new Error(json.errors?.[0]?.message || `AniList answered ${res.status}`);
+    return json.data;
+  }
+  throw new Error('AniList is busy, try again in a minute');
+}
+async function getList(userName, force = false){
+  const key = userName.toLowerCase();
+  let cache = {}; try{ cache = JSON.parse(localStorage.getItem(LIST_CACHE) || '{}') || {}; }catch(e){}
+  if(!force && cache[key] && Date.now() - new Date(cache[key].updated).getTime() < LIST_TTL) return cache[key];
+  let d;
+  try{ d = await anilist(`query($u:String){MediaListCollection(userName:$u,type:ANIME){user{name}
+    lists{entries{status progress score(format:POINT_10_DECIMAL) media{id idMal format episodes title{romaji english} coverImage{medium}}}}}}`, {u:userName}); }
+  catch(e){
+    if(cache[key]?.entries) return {...cache[key], stale:true};
+    throw e;
+  }
+  const c = d.MediaListCollection, seen = new Set(), entries = [];
+  for(const l of c.lists) for(const e of l.entries){
+    const m = e.media; if(seen.has(m.id)) continue; seen.add(m.id); // custom lists repeat entries
+    entries.push({id:m.idMal ? String(m.idMal) : '', alId:m.id, title:m.title.romaji || m.title.english || '', en:m.title.english || '',
+      type:(m.format || '').replace(/_/g,' '), eps:m.episodes || 0, status:AL_STATUS[e.status] || e.status, score:e.score || 0, progress:e.progress || 0, cover:m.coverImage?.medium || ''});
+  }
+  const L = {name:c.user.name, entries, updated:new Date().toISOString()};
+  // covers and English titles from lists help shows the weekly data file doesn't know yet
+  entries.forEach(e => { if(e.cover) coverUrls[e.alId] = e.cover; if(e.id){ if(!malToAl[e.id]) malToAl[e.id] = e.alId; if(showInfo && e.en && !showInfo.titles[e.id]) showInfo.titles[e.id] = e.en; } });
+  cache[key] = L;
+  try{ localStorage.setItem(LIST_CACHE, JSON.stringify(cache)); }catch(e){ try{ localStorage.removeItem(LIST_CACHE); }catch(_){} }
+  return L;
+}
+
+/* ---------- following people on AniList ----------
+   Who you follow (follows/<lowercase name>) and your own username (settings/me) are kept in this browser
+   with the same small store interface the Claude version uses for its page database. */
+const STORE_KEY = 'hl-store';
+function localStore(){
+  let data = {}; try{ data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }catch(e){}
+  const subs = [];
+  const persist = () => { try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }catch(e){} subs.forEach(f => f()); };
+  const snapOf = p => ({id:p.split('/').pop(), exists:p in data, data:() => data[p]});
+  return {
+    doc: p => ({
+      set: async v => { data[p] = v; persist(); },
+      delete: async () => { delete data[p]; persist(); },
+      onSnapshot: cb => { const f = () => cb(snapOf(p)); subs.push(f); f(); return () => {}; },
+    }),
+    collection: c => ({
+      onSnapshot: cb => { const f = () => cb({docs:Object.keys(data).filter(k => k.startsWith(c + '/') && k.split('/').length===2).map(snapOf)}); subs.push(f); f(); return () => {}; },
+    }),
+  };
+}
+let followDb = null, follows = [], myUser = '', listIndex = null, loadingLists = false;
+function toRef(L){
+  const byMal = {}, byAl = {}; let count = 0;
+  const list = L.entries.map(e => ({id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, status:e.status, score:e.score}));
+  list.forEach(x => { if(!x.score) return; count++; if(x.id) byMal[x.id] = x.score; if(x.alId) byAl[x.alId] = x.score; });
+  return {name:L.name, user:L.name.toLowerCase(), byMal, byAl, count, list, auto:true, updated:L.updated, stale:!!L.stale};
+}
+// Shows you completed on AniList that aren't in the game yet join the queue (anything already here, including removed or dropped, is left alone)
+function mergeMyEntries(entries){
+  if(!S || S.source==='sample') return 0;
+  const have = new Set(S.items.map(it => it.id).filter(Boolean));
+  const fresh = entries.filter(e => e.id && !have.has(e.id) && (e.status==='Completed' || e.status==='Rewatching'))
+    .map(e => ({e:-1, added:true, id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, old:e.score ? Math.max(MIN_SCORE, half(e.score)) : 0, site:0, progress:e.progress, status:'From your AniList'}));
+  if(!fresh.length) return 0;
+  applySite(fresh);
+  fresh.forEach(it => { S.items.push(it); S.queue.push(S.items.length-1); });
+  advance(); save();
+  return fresh.length;
+}
+// "Copy their drops": shows a followed person dropped are dropped for you too (skips anything you scored,
+// your benchmarks, and anything already handled; each show is only ever copied once, so Undo sticks)
+function followNamesMirroring(){ return follows.filter(f => f.mirrorDrops).map(f => f.nick || f.name || f.id).join(', '); }
+function applyMirroredDrops(){
+  if(!S || S.source==='sample') return 0;
+  const fs = finalScores(), bl = benchLevelOf();
+  S.mirrorDone = S.mirrorDone || [];
+  const byId = new Map(); S.items.forEach((it,i) => { if(it.id) byId.set(it.id, i); });
+  let n = 0, snapped = false;
+  for(const f of follows.filter(f => f.mirrorDrops)){
+    const P = REFS.find(P => P.auto && P.user===f.id); if(!P || !P.list) continue;
+    for(const e of P.list){
+      if(e.status!=='Dropped' || !e.id) continue;
+      const key = f.id + ':' + e.id; if(S.mirrorDone.includes(key)) continue;
+      const i = byId.get(e.id);
+      if(i==null) continue; // not in your game (yet): checked again next time
+      S.mirrorDone.push(key);
+      if(fs[i]!=null || bl[i]!=null || (S.dropped||[]).includes(i) || (S.removed||[]).includes(i)) continue;
+      if(!snapped){ snap(); snapped = true; }
+      S.dropped = S.dropped || []; S.dropped.push(i); delete S.results[i];
+      S.queue = S.queue.filter(x => x!==i); S.skipped = S.skipped.filter(x => x!==i);
+      if(S.cur && S.cur.idx===i) S.cur = null;
+      dropSequels(i); n++;
+    }
+  }
+  if(n){ advance(); save(); }
+  return n;
+}
+// Downloads everyone you follow (and your own list) from AniList, then applies sync and copied drops
+async function loadLiveLists(force = false){
+  if(loadingLists) return; loadingLists = true;
+  $('refreshLists').disabled = true; $('refreshLists').textContent = 'Refreshing…';
+  listIndex = {made:new Date().toISOString(), people:[], errors:[]};
+  const loaded = [];
+  $('followMsg').textContent = follows.length || myUser ? 'Loading lists from AniList…' : '';
+  for(const f of follows){
+    try{
+      const L = await getList(f.name || f.id, force), P = toRef(L);
+      if(f.nick) P.name = f.nick;
+      loaded.push(P); listIndex.people.push({name:L.name, count:P.count, updated:L.updated, stale:!!L.stale});
+    }catch(e){ listIndex.errors.push({name:f.id, error:e.message}); }
+    renderFollow();
+  }
+  // a followed person replaces a file-loaded copy of the same name
+  REFS = [...REFS.filter(P => !P.auto && !loaded.some(L => L.user===P.name.toLowerCase() || L.name.toLowerCase()===P.name.toLowerCase())), ...loaded];
+  let added = 0, meErr = '', meStale = false;
+  if(myUser){ try{ const L = await getList(myUser, force); meStale = !!L.stale; added = mergeMyEntries(L.entries); }catch(e){ meErr = e.message; } }
+  const copied = applyMirroredDrops();
+  const msgs = [];
+  if(added) msgs.push(`${added} show${added>1?'s':''} you completed on AniList joined your queue.`);
+  if(copied) msgs.push(`${copied} show${copied>1?'s':''} dropped because ${followNamesMirroring()} dropped ${copied>1?'them':'it'}. Undo (Z) brings ${copied>1?'them':'it'} back.`);
+  if(meErr) msgs.push(`Couldn't load your own list (${myUser}): ${meErr}`);
+  if(meStale || listIndex.people.some(p => p.stale)) msgs.push('AniList is unavailable. Using saved lists; try Reload lists now later.');
+  if(!msgs.length && (myUser || follows.length)) msgs.push('Lists are up to date.');
+  $('followMsg').textContent = msgs.join(' ');
+  loadingLists = false;
+  $('refreshLists').disabled = false; $('refreshLists').textContent = 'Reload lists now';
+  showRefState(); render();
+}
+function renderFollow(){
+  const box = $('followList'); if(!box) return;
+  const inIndex = name => listIndex?.people.find(p => p.name.toLowerCase()===name);
+  const failed = name => listIndex?.errors?.find(e => e.name.toLowerCase()===name);
+  box.innerHTML = follows.map(f => {
+    const p = inIndex(f.id), err = failed(f.id);
+    const state = p ? `${p.count} scored · ${p.stale ? 'saved copy from ' + new Date(p.updated).toLocaleDateString() : 'updated ' + new Date(p.updated).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}` : err ? `couldn't load: ${esc(err.error)}` : 'loading…';
+    return `<span class="chip"><input class="field nick" data-nick="${esc(f.id)}" value="${esc(f.nick || f.name || f.id)}" title="Nickname shown on the page (AniList: ${esc(f.name || f.id)})" aria-label="Nickname for ${esc(f.name || f.id)}" style="width:8em;padding:1px 6px"> <span class="muted">${f.nick ? `@${esc(f.name || f.id)} · ` : ''}${state}</span>
+      <label title="Shows they dropped are dropped for you too" style="display:inline-flex;gap:4px;align-items:center;font-size:.8rem"><input type="checkbox" data-mirror="${esc(f.id)}" ${f.mirrorDrops?'checked':''}> copy their drops</label>
+      <button class="btn" data-unfollow="${esc(f.id)}" style="padding:0 8px;font-size:.78rem">Remove</button></span>`;
+  }).join('');
+  // Nicknames: saved with the follow, used everywhere the person's name shows
+  box.querySelectorAll('[data-nick]').forEach(inp => inp.onchange = async () => {
+    const f = follows.find(x => x.id===inp.dataset.nick); if(!f) return;
+    const v = inp.value.trim().slice(0, 30);
+    const nick = v && v.toLowerCase()!==(f.name || f.id).toLowerCase() ? v : '';
+    await followDb.doc('follows/' + f.id).set({name:f.name || f.id, added:f.added || new Date().toISOString(), nick, mirrorDrops:!!f.mirrorDrops});
+  });
+  box.querySelectorAll('[data-mirror]').forEach(cb => cb.onchange = async () => {
+    const f = follows.find(x => x.id===cb.dataset.mirror); if(!f) return;
+    await followDb.doc('follows/' + f.id).set({name:f.name || f.id, added:f.added || new Date().toISOString(), nick:f.nick || '', mirrorDrops:cb.checked});
+  });
+  box.querySelectorAll('[data-unfollow]').forEach(b => b.onclick = async () => { await followDb.doc('follows/' + b.dataset.unfollow).delete(); });
+  if(document.activeElement !== $('meUser')) $('meUser').value = myUser;
+}
+$('followBtn').onclick = async () => {
+  const name = $('followIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
+  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username (letters, numbers, - and _).'; return; }
+  await followDb.doc('follows/' + name.toLowerCase()).set({name, added:new Date().toISOString()});
+  $('followIn').value = '';
+};
+$('followIn').addEventListener('keydown', e => { if(e.key==='Enter') $('followBtn').click(); });
+$('meSave').onclick = async () => {
+  const name = $('meUser').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
+  if(name && !/^[A-Za-z0-9_-]{2,20}$/.test(name)){ $('followMsg').textContent = 'That doesn\'t look like an AniList username.'; return; }
+  await followDb.doc('settings/me').set({username:name});
+};
+$('refreshLists').onclick = () => loadLiveLists(true);
+$('meUser').addEventListener('keydown', e => { if(e.key==='Enter') $('meSave').click(); });
+function startFollowing(){
+  followDb = localStore();
+  let firstMe = true;
+  followDb.doc('settings/me').onSnapshot(s => {
+    const was = myUser; myUser = s.exists ? (s.data().username || '') : '';
+    if(firstMe){ firstMe = false; return; }
+    if(myUser !== was) loadLiveLists();
+    renderFollow();
+  });
+  let first = true;
+  followDb.collection('follows').onSnapshot(s => {
+    follows = s.docs.map(d => ({id:d.id, ...d.data()}));
+    if(first){ first = false; loadLiveLists(); return; }
+    // removed people drop out right away; newly followed people get downloaded
+    const before = REFS.length; let changed = false;
+    REFS = REFS.filter(P => !P.auto || follows.some(f => f.id===P.user));
+    REFS.forEach(P => { if(!P.auto) return; const f = follows.find(x => x.id===P.user); const nm = (f && (f.nick || f.name)) || P.name; if(nm !== P.name){ P.name = nm; changed = true; } });
+    if(follows.some(f => !REFS.some(P => P.auto && P.user===f.id) && !listIndex?.errors?.some(e => e.name===f.id))){ loadLiveLists(); return; }
+    const copied = applyMirroredDrops();
+    if(copied) $('followMsg').textContent = `Dropped ${copied} show${copied>1?'s':''} that ${followNamesMirroring()} dropped. Undo (Z) brings them back.`;
+    if(copied || changed || REFS.length !== before){ showRefState(); render(); } else renderFollow();
+  });
+}
+
+// Light / dark toggle: remembers your choice; until you pick one, it follows your system setting
+(() => {
+  const root = document.documentElement, btn = $('themeBtn');
+  const current = () => root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const show = () => { btn.textContent = current()==='dark' ? '☀' : '☾'; btn.title = current()==='dark' ? 'Light mode' : 'Dark mode'; };
+  try{ const saved = localStorage.getItem('theme'); if(saved === 'light' || saved === 'dark') root.dataset.theme = saved;
+    const accent = localStorage.getItem('accent'); if(/^#[0-9a-f]{6}$/i.test(accent || '')) root.style.setProperty('--accent', accent); }catch(e){}
+  show();
+  btn.onclick = () => { const next = current()==='dark' ? 'light' : 'dark'; root.dataset.theme = next; try{ localStorage.setItem('theme', next); }catch(e){} show(); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', show);
+})();
+// Results filters
+$('fLetter').insertAdjacentHTML('beforeend', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => `<option value="${c}">${c}</option>`).join(''));
+$('fScore').insertAdjacentHTML('beforeend', LEVELS.map(v => `<option value="${v}">${fmt(v)}</option>`).join(''));
+// Exports exactly the rows and order on screen, with every column
+$('fExport').onclick = async () => {
+  if(!lastView || !lastView.ids.length){ toast('Nothing to export with these filters.'); return; }
+  const {ids, fs} = lastView, q = v => v==null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
+  const num = v => v==null ? '' : (+v).toFixed(1);
+  const head = ['title','english_title','mal_id','anilist_id','old','new','change','median', ...REFS.flatMap(P => [P.name, `gap_${P.name}`])];
+  const lines = ids.map(i => {
+    const it = S.items[i], al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]) || '';
+    return [it.title, T(it), it.id, al, it.old ? num(it.old) : '', num(fs[i]), it.old ? num(fs[i]-it.old) : '', it.site ? num(it.site) : '',
+      ...REFS.flatMap(P => { const r = refScore(it, P); return [r ? num(r) : '', r ? num(fs[i]-r) : '']; })].map(q).join(',');
+  });
+  const csv = [head.map(q).join(','), ...lines].join('\n');
+  if(!await offer('results.csv', csv)) showText(csv, 'Saving files is not available here. The CSV is below to copy.');
+  else toast(`Saved ${ids.length} rows to results.csv.`);
+};
+['fSearch','fLetter','fScore','fKind'].forEach(id => $(id).addEventListener(id==='fSearch' ? 'input' : 'change', () => renderTable()));
+
+// The two tab buttons open one panel at a time; clicking the open one closes it
+const panes = {tabLoad:'loadDetails', tabCompare:'compareDetails'};
+const syncTabs = () => { for(const t in panes) $(t).setAttribute('aria-expanded', String($(panes[t]).open)); };
+for(const t in panes){
+  $(t).onclick = () => { const d = $(panes[t]), open = !d.open; for(const u in panes) $(panes[u]).open = false; d.open = open; syncTabs(); };
+  $(panes[t]).addEventListener('toggle', syncTabs);
+}
+
+S = load() || newState({source:'sample', kind:'anime', xml:null, items:SAMPLE.map(x=>({...x}))});
+if(S.source==='sample'){ $('settingsPanel').open = true; $('loadDetails').open = true; }
+if(S.source!=='sample' && backfillBench()){ if(S.cur){ S.queue.unshift(S.cur.idx); S.cur = null; } save(); }
+advance(); render(); showRefState();
+// The example list rolls new shows each load (unless you already started playing it)
+function useRolledSample(){
+  rollSample().then(items => {
+    if(S.source!=='sample' || S.compares) return;
+    S = newState({source:'sample', kind:'anime', xml:null, items}); undoStack = [];
+    advance(); render();
+  }).catch(() => {});
+}
+if(S.source==='sample') useRolledSample();
+// Swiping on phones (on the comparison): up = higher, down = lower; in the consistency check
+// left/right picks that side and down means about the same. Short or diagonal moves are ignored.
+{
+  let start = null;
+  $('stage').addEventListener('touchstart', e => {
+    start = e.touches.length===1 && !e.target.closest('select,input,textarea') ? {x:e.touches[0].clientX, y:e.touches[0].clientY} : null;
+  }, {passive:true});
+  $('stage').addEventListener('touchend', e => {
+    if(!start) return;
+    const t = e.changedTouches[0], dx = t.clientX - start.x, dy = t.clientY - start.y; start = null;
+    const vertical = Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx)*1.5, sideways = Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)*1.5;
+    if(S.check && !S.check.issue && S.check.pairs.length){
+      if(sideways) checkAnswer(dx < 0 ? 'left' : 'right'); else if(vertical && dy > 0) checkAnswer('same');
+    } else if(!S.check && S.cur && vertical) answer(dy < 0 ? 'higher' : 'lower');
+  }, {passive:true});
+}
+$('tierBtn2').onclick = showTierList;
+$('alSave').onclick = saveToAniList;
+$('tierClose').onclick = () => $('tierDlg').close();
+// Data from the anime-ranker site: db.json (every anime on AniList: medians, titles, formats, episodes,
+// status, sequel/prequel links) and cover-urls.json (AniList cover image addresses). Both are rebuilt
+// weekly there by its GitHub Action; this page is the schedule site's copy of the ranker.
+const DATA_URL = 'https://ryotsushigawa.github.io/anime-ranker/';
+let dbReadyResolve; const dbReady = new Promise(r => dbReadyResolve = r);
+(async () => {
+  try{
+    // Optional covers must not hold up list syncing or starting a game.
+    fetch(DATA_URL + 'cover-urls.json', {signal:AbortSignal.timeout(15000)})
+      .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+      .then(covers => { Object.assign(coverUrls, covers); render(); }).catch(() => {});
+    const dbr = await fetch(DATA_URL + 'db.json', {signal:AbortSignal.timeout(15000)});
+    if(dbr.ok){
+      DB = (await dbr.json()).rows || {};
+      showInfo = {titles:{}, anilist:{}, formats:{}, episodes:{}};
+      siteScores = {source:'anilist', byMal:{}, byAniList:{}};
+      for(const al in DB){
+        const [mal, med, en, , form, eps] = DB[al];
+        if(med) siteScores.byAniList[al] = med;
+        if(!mal) continue;
+        malToAl[mal] = +al;
+        if(med) siteScores.byMal[mal] = med;
+        if(en) showInfo.titles[mal] = en;
+        if(form) showInfo.formats[mal] = form;
+        if(eps) showInfo.episodes[mal] = eps;
+        showInfo.anilist[mal] = +al;
+      }
+      if(pending){ applySite(pending.entries); if(pending.lists){ applySite(pending.lists.anime); applySite(pending.lists.manga); } renderPending(); }
+      if(S.source!=='sample'){ applySite(S.items); applySkips(); } else render();
+      showRefState();
+    }
+  }catch(e){}
+  dbReadyResolve();
+  startFollowing();
+})();
+
+// Seasons missing from someone's list, found through AniList's sequel/prequel links:
+// prequels of anything they started, sequels of anything they completed; a line stops at any show
+// already in the list (so nothing after a dropped or unfinished show); only finished TV, TV short,
+// ONA, OVA and movies with a MAL id are added.
+function missingSeasons(entries){
+  if(!DB) return [];
+  const inList = new Map();
+  entries.forEach(x => { const al = +(x.alId || malToAl[x.id] || 0); if(al) inList.set(al, x.status); });
+  const addable = r => r && r[0] && r[6]==='FINISHED' && ['TV','TV_SHORT','ONA','OVA','MOVIE'].includes(r[4]);
+  const found = new Map();
+  const walk = (start, slot, from) => {
+    const seen = new Set([start]); let frontier = [start];
+    while(frontier.length){
+      const next = [];
+      for(const al of frontier) for(const n of (DB[al]?.[slot] || [])){
+        if(seen.has(n)) continue; seen.add(n);
+        if(inList.has(n) || !DB[n]) continue;
+        if(!addable(DB[n])) continue;
+        if(!found.has(n)) found.set(n, from);
+        next.push(n);
+      }
+      frontier = next;
+    }
+  };
+  for(const [al, st] of inList){
+    const r = DB[al]; if(!r) continue;
+    const from = r[2] || r[3];
+    if(st!=='Plan to Watch') walk(al, 8, from);
+    if(st==='Completed' || st==='Rewatching') walk(al, 7, from);
+  }
+  return [...found].map(([al, from]) => { const r = DB[al];
+    return {e:-1, added:true, id:String(r[0]), alId:al, title:r[3] || r[2], type:(r[4]||'').replace(/_/g,' '), eps:r[5]||0, old:0, site:0, from, status:'Missing season'}; });
+}
+
+// Start from an AniList username: no export file needed
+$('userLoadBtn').onclick = async () => {
+  const name = $('userLoadIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/anilist\.co\/user\/([^/]+).*$/i, '$1');
+  if(!/^[A-Za-z0-9_-]{2,20}$/.test(name)){ showErr('That doesn\'t look like an AniList username (letters, numbers, - and _).'); return; }
+  showErr(''); $('userLoadBtn').disabled = true; $('userLoadBtn').textContent = 'Loading…';
+  try{
+    const L = await getList(name, true);
+    if(L.stale) showErr('AniList is unavailable. Loaded your saved list from ' + new Date(L.updated).toLocaleDateString() + '.');
+    const entries = normScores(L.entries.map((e, i) => ({e:i, id:e.id, alId:e.alId, title:e.title, type:e.type, eps:e.eps, old:e.score, site:0, progress:e.progress, status:e.status})));
+    await dbReady; entries.push(...missingSeasons(entries));
+    pending = {source:'json', kind:'anime', xml:null, fileName:`${L.name} (AniList)`, lists:{anime:entries, manga:[]}, entries};
+    applySite(entries); renderPending();
+    if(!myUser && followDb) await followDb.doc('settings/me').set({username:L.name}); // keeps your list in sync from now on
+  }catch(e){ showErr(`Couldn't load that list: ${e.message}. Is the username right and the list public?`); }
+  $('userLoadBtn').disabled = false; $('userLoadBtn').textContent = 'Load my list';
+};
+$('userLoadIn').addEventListener('keydown', e => { if(e.key==='Enter') $('userLoadBtn').click(); });
+})();
