@@ -803,19 +803,21 @@ border-radius: 12px;
 background: var(--card);
 }
 .stream-return { outline: 2px solid var(--accent); outline-offset: -2px; }
-.next-watch-slot { position: relative; }
-.next-watch-slot::after {
+.row.next-watch-slot > .info > .ep::before,
+.next-watch-slot:not(:has(> .parallel-heading)) > .row:first-child > .info > .ep::before,
+.next-watch-slot > .parallel-heading::after {
 content: 'Als Nächstes';
-position: absolute;
-inset-block-start: 4px;
-inset-inline-end: 8px;
+display: inline-block;
+margin-inline-end: 6px;
+padding: 1px 6px;
+border-radius: 99px;
+background: var(--today);
 color: var(--muted);
 font-size: 10px;
-pointer-events: none;
+white-space: nowrap;
 }
 .friend-summary { position: sticky; top: var(--head, 0); z-index: 2; }
 header.away ~ main .friend-summary { top: 0; }
-.day > .row.next-watch-slot, .day > .shared.next-watch-slot { padding-top: 19px; }
 .watch.save-failed { border-color: var(--late); color: var(--late); }
 @media (min-width: 720px) {
 .day .row:not(.compact) > .time {
