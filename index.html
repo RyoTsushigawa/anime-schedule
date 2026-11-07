@@ -245,15 +245,21 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeUndo">Rückgängig</button></div>
 <dialog id="helpDialog" class="dlg quick-guide" aria-labelledby="helpTitle">
 <h2 id="helpTitle">Kurzanleitung</h2>
+<nav class="help-topics" aria-label="Hilfethemen">
+<button class="pill" data-help-topic="helpCatchup">Catch-up</button>
+<button class="pill" data-help-topic="helpAccounts">Konten</button>
+<button class="pill" data-help-topic="helpDelays">Verspätung</button>
+<button class="pill" data-help-topic="helpMoves">Verschieben</button>
+</nav>
 <div class="help-sections">
 <section><h3>Plan wählen</h3><p><b>Solo</b> zeigt den Plan einer Person. <b>Gruppe</b> kombiniert die Leute, die du auswählst. Wählst du niemanden, wird nichts angezeigt.</p></section>
 <section><h3>Ansicht wählen</h3><p><b>Zeitplan</b> folgt den Gucktagen der Gruppe. <b>Catch-up</b> listet verpasste Folgen der Season. <b>Non-seasonal</b> sammelt ältere Serien für dein eigenes Tempo. Am Handy wechselst du die Woche durch Wischen nach links oder rechts.</p></section>
 <section><h3>Schauen, dann ✓ setzen</h3><p>Die Dienst-Buttons öffnen die Serie. Verbinde ein Konto, um ✓, Droppen und Bewertungen zu nutzen. Ein ✓ setzt deinen Fortschritt bis zu dieser Folge, auch für frühere Folgen. Bei Fehlern hilft <b>Rückgängig</b> oder Strg/⌘+Z.</p></section>
-<section><h3>Catch-up, wie du willst</h3><p><b>Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle gesehen</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
-<section><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle unter <b>Sync</b> das andere Konto und schalte <b>An</b> ein, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
+<section id="helpCatchup" tabindex="-1"><h3>Catch-up, wie du willst</h3><p><b>Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle gesehen</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
+<section id="helpAccounts" tabindex="-1"><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle unter <b>Sync</b> das andere Konto und schalte <b>An</b> ein, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
 <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> gelten, wenn kein Dienst angezeigt wird: AniWorld oder Torrents, und bei Prime-Serien Prime oder Torrents. Unter <b>Misc.</b> findest du Watch planner, Higher / Lower, Anime Wrapped und den Masterset Tracker.</p></section>
-<section><h3>Verspätung</h3><p>Die Uhr neben <b>Heute</b> trägt eine Verspätung ab einer Serie ein: sie und alle späteren rücken nach, mehrere Verspätungen zählen zusammen. <b>Edit</b> an der Zeile ändert oder entfernt sie. Alle sehen sie nach spätestens einer halben Minute.</p></section>
-<section><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang ziehst du unter <b>Edit</b> eine Serie an ihren neuen Platz: auf die Mitte einer anderen, um daneben zu laufen, oder an ihren Rand, um davor oder danach zu kommen. Am Handy hältst du die Karte erst kurz gedrückt. <b>Woche</b> oder <b>Immer</b> sagt, wie lange es gilt, <b>Rückgängig</b> nimmt es zurück. Mit ⇄ gibst du das Ziel von Hand ein, <b>Edit</b> an einem Tag schreibt den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server.</p></section>
+<section id="helpDelays" tabindex="-1"><h3>Verspätung</h3><p>Die Uhr neben <b>Heute</b> trägt eine Verspätung ab einer Serie ein: sie und alle späteren rücken nach, mehrere Verspätungen zählen zusammen. <b>Edit</b> an der Zeile ändert oder entfernt sie. Alle sehen sie nach spätestens einer halben Minute.</p></section>
+<section id="helpMoves" tabindex="-1"><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang ziehst du unter <b>Edit</b> eine Serie an ihren neuen Platz: auf die Mitte einer anderen, um daneben zu laufen, oder an ihren Rand, um davor oder danach zu kommen. Am Handy hältst du die Karte erst kurz gedrückt. <b>Woche</b> oder <b>Immer</b> sagt, wie lange es gilt, <b>Rückgängig</b> nimmt es zurück. Mit ⇄ gibst du das Ziel von Hand ein, <b>Edit</b> an einem Tag schreibt den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server.</p></section>
 <section id="helpKeys"><h3>Tastenkürzel</h3>
 <dl class="keyboard-guide">
 <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
