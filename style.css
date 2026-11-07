@@ -763,3 +763,26 @@ box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; max-width: calc(100vw - 
 .crash-note .crash-close { background: none; border: 0; color: var(--muted); padding: 4px 8px; }
 .help-topics [aria-pressed="true"] { background: var(--today); border-color: var(--accent); }
 .help-steps { flex-wrap: wrap; align-items: center; } .help-steps span { color: var(--muted); font-size: 12px; }
+#settingsMenu .settings-options { display: flex; gap: 2px; }
+#settingsMenu .settings-options .toggle {
+justify-content: space-between;
+padding-inline: 10px;
+border-color: transparent;
+background: var(--bg);
+color: var(--text);
+text-align: start;
+}
+#settingsMenu .settings-options .toggle::after {
+content: '';
+flex: none;
+width: 28px;
+height: 16px;
+border: 1px solid var(--muted);
+border-radius: 99px;
+background: radial-gradient(circle at 7px 50%, var(--muted) 4px, transparent 4.5px);
+}
+#settingsMenu .settings-options .toggle:has(input:checked)::after {
+border-color: var(--accent);
+background: radial-gradient(circle at calc(100% - 7px) 50%, var(--accent-text) 4px, transparent 4.5px), var(--accent);
+}
+.settings-caption { padding: 2px 8px 0; color: var(--muted); font-size: 11px; }
