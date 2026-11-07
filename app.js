@@ -508,13 +508,7 @@ const icon = SERVICE_ICONS.find(([match]) => match.test(label))?.[1];
 return icon ? `<span class="svc-icon" style="-webkit-mask-image:url(services/${icon}.svg);mask-image:url(services/${icon}.svg)"></span>` : '';
 };
 const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplease/i, 'subsplease.png', 'var(--text)'],
-[/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)'], [/^AnimeNexus$/, null, 'var(--accent)']];
-const NEXUS_SERIES = {
-160803: '99916ae3-76b5-4017-b7b0-e0941e61af70/magical-girl-raising-project-restart-c9a736fb7ad91507d038',
-191656: '9ede626f-a7c2-4eea-8cc1-1d308d67bffe/even-the-student-council-has-its-holes-60cd8b59afb268109295',
-206949: '019cb2e6-a4cd-7330-a252-ea5b67aba882/nia-liston-the-merciless-maiden-95d9fff97287ba9be932',
-208025: '019cb2e6-ef8d-733b-b5f8-98e324f9992c/im-dating-a-dark-summoner-9045cf44117b62401cfc',
-};
+[/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)']];
 function alternativeButton(l) {
 const [, icon, color] = ALTERNATIVE_LOOK.find(([match]) => match.test(l.label));
 return `<a class="cr none" style="${serviceStyle(color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative Quelle${l.label.endsWith('Suche') ? ': keine genaue Serienseite gefunden' : ''}">${icon ? `<img class="site-icon" src="services/${icon}" alt="" width="18" height="18">` : ''}${esc(l.label)}</a>`;
@@ -538,9 +532,7 @@ const alternatives = [];
 if (primeSwap || (torrent && !listed.length)) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
 ? { label: 'SubsPlease', url: source.subsplease }
 : { label: 'Nyaa-Suche', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(nyaaQuery([...(links.names || [title]), source.title])) });
-const nexus = NEXUS_SERIES[Number(mediaId)];
-if (streaming && !listed.length && nexus) alternatives.push({ label: 'AnimeNexus', url: 'https://anime.nexus/series/' + nexus });
-else if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
+if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
 else if (streaming && !listed.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
 ? { label: 'AniWorld', url: source.aniworld }
 : { label: 'AniWorld-Suche', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
@@ -993,7 +985,7 @@ const plainRow = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewat
 const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const row = r => !r.delay ? plainRow(r) : plainRow(r)
 .replace(/data-watch-time="[^"]*"/, `data-watch-time="${hhmm(r.plannedAt)}"`)
-.replace('<div class="time">', `<div class="time late" title="Geplant ${hhmm(r.plannedAt)} · +${r.delay} Min.">`);
+.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time late" title="Unser Plan, geplant ${hhmm(r.plannedAt)} · +${r.delay} Min.">`);
 const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
 .filter(x => {
 const first = Math.min(...rows.map(r => r.plannedAt ?? r.watchAt).filter(at => at >= x.at));
@@ -1001,7 +993,7 @@ return g.some(r => (r.plannedAt ?? r.watchAt) === first);
 })
 .map(x => `<div class="delay-note" role="note"><span><b>+${x.minutes} Min.</b> · ${esc(x.reason)}</span>${movesKey || delaysUrl ? `<button class="pill" data-delay-edit="${esc(x.show)}" title="Diese Verspätung ändern">Edit</button>` : ''}</div>`).join('');
 const fallbackRow = ({ show, slot, watchAt, m, links, who }) => `<div class="row" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
-      <div class="time">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
+      <div class="time" title="Unser Plan">${parseTime(slot.time) ? new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : esc(slot.tag)}</div>
       ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
       <div class="info"><div class="title">${esc(show.english || show.romaji)}</div><div class="ep">Folge nicht bestätigt${whoChips(who)}</div></div>
       <div class="links">${linkButtons(links, m.id, who)}</div>${checkSpace}${moveButton(show, slot)}</div>`;
@@ -1014,9 +1006,10 @@ const watch = hm(new Date(watchAt));
 return choices.time === 'watch' ? watch
 : choices.time === 'both' ? `${watch}<small><span class="out">ab </span>${release}</small>` : releaseCell;
 };
+const timeHint = { watch: 'Unser Plan', release: 'Release', both: 'Unser Plan, darunter Release' }[choices.time] || 'Release';
 const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
       <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
-        <div class="time">${timeCell(when, watchAt)}</div>
+        <div class="time" title="${timeHint}">${timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
