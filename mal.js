@@ -4,7 +4,7 @@ const statuses = { watching: 'CURRENT', completed: 'COMPLETED', on_hold: 'PAUSED
 const reverse = Object.fromEntries(Object.entries(statuses).map(([a, b]) => [b, a]));
 const metadata = new Map(), details = new Map(), flights = new Map();
 let rowsCache = new Map();
-try { for (const m of JSON.parse(localStorage.getItem('malMediaMap') || '[]')) if (m.idMal > 0 && m.id > 0) metadata.set(m.idMal, m); } catch {}
+try { for (const m of fixTitles(JSON.parse(localStorage.getItem('malMediaMap') || '[]'))) if (m.idMal > 0 && m.id > 0) metadata.set(m.idMal, m); } catch {}
 const fields = 'id idMal status episodes duration siteUrl synonyms title { romaji english } coverImage { medium } externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } endDate { year month day }';
 const cacheKey = account => 'malList:' + account.name.toLowerCase();
 function rememberMedia(media) {
