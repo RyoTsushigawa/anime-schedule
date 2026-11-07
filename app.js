@@ -757,7 +757,46 @@ const top = today ? today.getBoundingClientRect().top + window.scrollY - documen
 window.scrollTo(0, Math.max(0, top));
 }
 const showScores = new WeakMap();
-function render(items, start, plans, everyone = false) {
+const renderedDayHtml = new WeakMap();
+function updateWeekMarkup(html, keepDays) {
+const list = $('list');
+if (!keepDays) {
+list.innerHTML = html;
+for (const day of list.querySelectorAll(':scope > .day[data-date]')) renderedDayHtml.set(day, day.outerHTML);
+return;
+}
+const template = document.createElement('template');
+template.innerHTML = html;
+const nextDays = new Set([...template.content.querySelectorAll('.day[data-date]')].map(day => day.dataset.date));
+const days = new Map();
+for (const day of list.querySelectorAll(':scope > .day[data-date]')) {
+if (nextDays.has(day.dataset.date)) days.set(day.dataset.date, day);
+else day.remove();
+}
+let cursor = list.firstElementChild;
+for (const next of [...template.content.children]) {
+while (next.dataset.date && cursor && !cursor.dataset.date) {
+const extra = cursor;
+cursor = cursor.nextElementSibling;
+extra.remove();
+}
+const old = days.get(next.dataset.date);
+const markup = next.outerHTML;
+const node = old && renderedDayHtml.get(old) === markup ? old : cursor?.isEqualNode(next) ? cursor : next;
+if (node !== cursor) {
+if (cursor && (next.dataset.date ? cursor === old : !cursor.dataset.date)) cursor.replaceWith(node);
+else list.insertBefore(node, cursor);
+}
+cursor = node.nextElementSibling;
+if (next.dataset.date) renderedDayHtml.set(node, markup);
+}
+while (cursor) {
+const next = cursor.nextElementSibling;
+cursor.remove();
+cursor = next;
+}
+}
+function render(items, start, plans, everyone = false, keepDays = false) {
 if (!everyone) lastWeekRender = [items, start, plans];
 const restore = everyone ? null : preserveListPosition();
 if (!everyone) updateFallbackControls();
@@ -1015,7 +1054,7 @@ html = `${staleNotice}<div class="weekline">${alerts}${strip}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
-$('list').innerHTML = html;
+updateWeekMarkup(html, keepDays);
 tick();
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
@@ -2272,7 +2311,7 @@ const stamp = movesStamp();
 if (stamp === movesSeen) return;
 const fresh = movesSeen && delays.filter(d => !known.has(d.id) && d.day === isoDay(new Date()));
 movesSeen = stamp;
-render(...lastWeekRender);
+render(...lastWeekRender, false, true);
 if (fresh?.length) notice(fresh.map(d => `Verspätung: +${d.minutes} Min. ab ${d.title || d.show}`).join(' · '));
 }
 setInterval(followMoves, 30000);
