@@ -59,7 +59,8 @@ const WrappedStats = (() => {
     return {rated:rated.length,mean,finishDay:top(dates)[0]||null,debate:debates[0]||null,completed:completed.length, minutes:completed.reduce((n,e)=>n+(e.media.episodes||0)*(e.media.duration||24),0),
       durationEstimated:completed.some(e=>!e.media.duration), current:current.length,
       episodes:completed.reduce((n,e)=>n+(e.media.episodes||0),0), genre:top(genres)[0]||null,
-      favourites:completed.filter(e=>e.score>0).sort((a,b)=>b.score-a.score).slice(0,3).map(e=>({title:e.media.title.english||e.media.title.romaji,score:e.score})),
+      // The same show from several accounts is one row, with their average rating
+      favourites:[...ratings.values()].map(es=>({title:es[0].media.title.english||es[0].media.title.romaji,score:Math.round(es.reduce((n,e)=>n+e.score,0)/es.length)})).sort((a,b)=>b.score-a.score).slice(0,3),
       undated:entries.filter(e=>e.status==='COMPLETED'&&!Number.isFinite(from(e.completedAt))).length};
   }
   const shared = name => key(name) === 'maryo';
