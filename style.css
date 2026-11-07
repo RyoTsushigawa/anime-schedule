@@ -648,6 +648,24 @@ color: var(--muted);
 font-size: 12px;
 }
 .parallel-heading b { color: var(--text); font-variant-numeric: tabular-nums; }
+@media (min-width: 800px) {
+.day .parallel-slot {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+gap: 1px;
+background: var(--line);
+}
+.parallel-slot .parallel-heading { grid-column: 1 / -1; border-bottom: 0; }
+.day .parallel-slot > .row {
+flex-wrap: wrap;
+align-content: center;
+border-top: 0;
+min-width: 0;
+}
+.day .parallel-slot > .row:is(.aired, .pause) { background: var(--bg); }
+.parallel-slot > .row > .info { min-width: 100px; }
+.parallel-slot > .row > .links { max-width: 100%; }
+}
 @media (max-width: 560px) {
 .day .row .title { font-size: 15px; }
 .day .row.pause .title { font-size: 14px; }
