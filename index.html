@@ -17,7 +17,13 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Plan">
 <link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://docs.google.com" crossorigin>
+<link rel="preconnect" href="https://sheets.googleapis.com" crossorigin>
 <script src="early.js"></script>
+<script defer src="common.js"></script>
+<script defer src="mal.js"></script>
+<script defer src="app.js"></script>
+<script defer src="drag-moves.js"></script>
 </head>
 <body>
 <header>
@@ -282,9 +288,5 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <div class="dlg-row"><button id="helpClose" class="pill">Schließen</button></div>
 </dialog>
 <div id="dragHint" class="drag-hint" role="status" hidden></div>
-<script src="common.js"></script>
-<script src="mal.js"></script>
-<script src="app.js"></script>
-<script src="drag-moves.js"></script>
 </body>
 </html>
