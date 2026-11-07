@@ -244,7 +244,7 @@ kbd{font:inherit;font-family:var(--mono)}
 #exportMenu > summary{align-items:center}
 #toast:empty{display:none}
 @media(max-width:520px){.settings > summary span{display:none}.lower{gap:10px}.rank-help{font-size:.78rem}}
-</style>
+.ranker-nav { margin: 0 0 12px; } .ranker-nav .tool-back { display: inline-flex; align-items: center; min-height: 36px; text-decoration: none; white-space: nowrap; }</style>
 
 <div class="wrap">
   <header class="top">
@@ -255,6 +255,7 @@ kbd{font:inherit;font-family:var(--mono)}
       <p class="muted">Rescore your list one show at a time: higher or lower than a show you already scored?</p>
     </div>
   </header>
+  <nav class="ranker-nav" aria-label="Simulcast-Plan"><a class="btn tool-back" href="../">← Zum Plan</a></nav>
 
   <section class="panel" id="loadPanel">
     <details class="settings" id="settingsPanel">
