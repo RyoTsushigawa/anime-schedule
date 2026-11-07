@@ -896,13 +896,15 @@ const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
 if (existing) existing.episodes.push(episode);
 else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show) });
 }
+const heads = p => p === 'MaRyo' ? 2 : 1;
 for (const day of days) {
 const away = absentOn(isoDay(day.date));
 day.rows = day.rows.map(r => {
 if (r.pause || !r.episodes) return r;
 if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r.episodes.includes(first - 1)) r.episodes.unshift(first - 1); }
 const missing = (r.who || []).filter(p => away.includes(p));
-if (!missing.length || (r.who || []).length - missing.length > 1) return r;
+const left = (r.who || []).filter(p => !away.includes(p)).reduce((n, p) => n + heads(p), 0);
+if (!missing.length || left > 1) return r;
 return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing };
 });
 }
@@ -1064,7 +1066,7 @@ const body = ordered.length
 : row(g[0]))).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${movesKey && isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${absentOn(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${absentOn(isoDay(date)).length ? esc('Abwesend: ' + absentOn(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -2433,7 +2435,7 @@ const nextAbsent = (absentNext || (Array.isArray(remote.absent) ? remote.absent 
 const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
-body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
+body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : absentNext ? 'Abwesend' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
 if (res.ok) {
 moves = file.moves;
 delays = nextDelays;
@@ -2566,10 +2568,10 @@ async function undoMove() {
 const before = movesUndo;
 try { await saveMoves(before); notice('Rückgängig gemacht.'); load(true); } catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
 }
-async function storeMoves(next, done, dlg = 'moveDlg', msg = 'moveMsg', absentNext = null) {
+async function storeMoves(next, done, dlg = 'moveDlg', msg = 'moveMsg') {
 $(msg).textContent = 'Speichert…';
 try {
-await saveMoves(next, null, null, absentNext);
+await saveMoves(next);
 $(dlg).close();
 notice(`${done} Alle sehen es in etwa einer Minute.`);
 load(true);
@@ -2817,6 +2819,37 @@ if (b) openDelay(b.closest('.day').dataset.date);
 const edit = e.target.closest('[data-delay-edit]');
 if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 });
+let absentDay = null;
+$('list').addEventListener('click', e => {
+const b = e.target.closest('[data-day-absent]');
+if (!b || !movesKey) return;
+const section = b.closest('.day');
+absentDay = section.dataset.date;
+const everybody = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
+const away = absentOn(absentDay);
+$('absentName').textContent = `Abwesend · ${section.querySelector('h2 > span').textContent.trim()}`;
+$('absentPeople').innerHTML = everybody.map(p => `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${away.includes(p)}">${esc(p)}</button>`).join('');
+$('absentMsg').textContent = '';
+$('absentDlg').showModal();
+});
+$('absentPeople').addEventListener('click', e => {
+const b = e.target.closest('[data-away]');
+if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+});
+$('absentSave').onclick = async () => {
+const away = [...$('absentPeople').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.away);
+if (away.join('|') === absentOn(absentDay).join('|')) { $('absentDlg').close(); return; }
+const absentNext = absent.filter(x => x.day !== absentDay).concat(away.length ? [{ day: absentDay, people: away }] : []);
+$('absentMsg').textContent = 'Speichert…';
+$('absentSave').disabled = true;
+try {
+await saveMoves(moves, d => d, null, absentNext);
+$('absentDlg').close();
+notice(`${away.length ? `Abwesend: ${away.join(', ')}.` : 'Niemand mehr abwesend.'} Alle sehen es in etwa einer Minute.`);
+load(true);
+} catch (e) { $('absentMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+finally { $('absentSave').disabled = false; }
+};
 let dayEdit = null;
 const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const clockOf = time => { const hm = parseTime(time); return hm ? `${String(hm[0]).padStart(2, '0')}:${String(hm[1]).padStart(2, '0')}` : ''; };
@@ -2834,10 +2867,6 @@ dayEdit.scope = scope;
 $('dayWeek').setAttribute('aria-pressed', scope === 'week');
 $('dayAlways').setAttribute('aria-pressed', scope === 'always');
 };
-$('dayAbsent').addEventListener('click', e => {
-const b = e.target.closest('[data-away]');
-if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
-});
 $('dayWeek').onclick = () => setDayScope('week');
 $('dayAlways').onclick = () => setDayScope('always');
 $('list').addEventListener('click', e => {
@@ -2848,11 +2877,7 @@ const all = weekShows();
 const keys = new Set([...section.querySelectorAll('.move')].map(m => norm(m.dataset.moveTitle)));
 const order = s => { const hm = parseTime(s.time); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0]) * 60 + hm[1] : Infinity; };
 const shows = all.filter(s => keys.has(s.key)).sort((a, b) => order(a) - order(b));
-dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [], date: section.dataset.date };
-const everybody = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
-const away = absentOn(dayEdit.date);
-$('dayAbsent').innerHTML = everybody.map(p => `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${away.includes(p)}">${esc(p)}</button>`).join('');
-$('dayAbsentRow').hidden = !everybody.length;
+dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [] };
 $('dayName').textContent = dayEdit.label;
 $('dayText').value = shows.map(s => `${s.time ? s.time + ' ' : ''}${s.name}`).join('\n') + '\n';
 $('dayMissing').hidden = true; $('dayMissing').innerHTML = '';
@@ -2952,11 +2977,8 @@ const time = row.querySelector('input').value.trim();
 if (time && !parseTime(time)) { $('dayMsg').textContent = `${s.name}: Uhrzeit wie 21:00, oder leer.`; return; }
 next = moveTo(next, s, row.querySelector('select').value, clockOf(time));
 }
-const away = [...$('dayAbsent').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.away);
-const awayChanged = away.join('|') !== absentOn(dayEdit.date).join('|');
-if (next === moves && !awayChanged) { $('dayDlg').close(); return; }
-const absentNext = awayChanged ? absent.filter(x => x.day !== dayEdit.date).concat(away.length ? [{ day: dayEdit.date, people: away }] : []) : null;
-storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' && next !== moves ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg', absentNext);
+if (next === moves) { $('dayDlg').close(); return; }
+storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg');
 };
 async function firstTabs() {
 try {
