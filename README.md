@@ -141,6 +141,9 @@ Optional, both as **Secret** in the Worker's Variables and Secrets:
 - `DISCORD_WEBHOOK`: a channel's webhook address (Discord: channel settings → Integrations → Webhooks →
   New Webhook → Copy Webhook URL). Every saved, changed or removed Verspätung is posted there as one line,
   without pings. With the helper set up, the key holder's delays go through it too, so they're posted as well.
+- `DISCORD_TEST_WEBHOOK`: the bot test channel's webhook. `node tools/delay-e2e.mjs` checks the whole path
+  once (a test delay a week ahead, in and out again); its two lines go only there, never into the real
+  channel, and without this secret they aren't posted at all.
 - `BOT_KEY`: a long random password (16+ characters, 32+ is better). The Discord bot signs its `/delay` requests with it (the key itself never travels); the bot's
   `.env` needs the same value as `DELAYS_KEY`, plus `DELAYS_URL` = the Worker's address.
 
