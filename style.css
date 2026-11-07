@@ -674,3 +674,13 @@ min-width: 0;
 .day .row .title { font-size: 15px; }
 .day .row.pause .title { font-size: 14px; }
 }
+.weeknav {
+padding: 3px;
+border: 1px solid var(--line);
+border-radius: 99px;
+background: var(--card);
+}
+.weeknav .range { margin-left: 2px; }
+.help-topics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.help-sections section:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.friend-view { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--text); }
