@@ -761,3 +761,5 @@ padding: 8px 8px 8px 14px; background: var(--card); color: var(--text); border: 
 box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; max-width: calc(100vw - 32px); }
 .crash-note .crash-reload { background: var(--accent); color: var(--accent-text, #fff); border-color: transparent; }
 .crash-note .crash-close { background: none; border: 0; color: var(--muted); padding: 4px 8px; }
+.help-topics [aria-pressed="true"] { background: var(--today); border-color: var(--accent); }
+.help-steps { flex-wrap: wrap; align-items: center; } .help-steps span { color: var(--muted); font-size: 12px; }
