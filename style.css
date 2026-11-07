@@ -49,9 +49,9 @@ button:disabled { opacity: .55; cursor: default; }
 .segmented { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
 .segmented button { border: 0; border-radius: 99px; padding: 4px 14px; background: transparent; color: var(--muted); font-size: 13px; }
 .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .22); }
-.segmented.soft button[aria-pressed="true"] { box-shadow: none; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+.segmented.soft button[aria-pressed="true"] { box-shadow: none; background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
 .count { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 99px; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
-background: color-mix(in srgb, var(--accent) 22%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); font-variant-numeric: tabular-nums; }
+background: color-mix(in srgb, var(--accent) 22%, transparent); color: color-mix(in srgb, var(--accent) 60%, var(--text)); font-variant-numeric: tabular-nums; }
 [aria-pressed="true"] > .count { background: rgba(255,255,255,.25); color: inherit; }
 .pill { border-radius: 99px; padding: 5px 14px; font-size: 13px; }
 body.solo .picker, body.group #soloPerson { display: none; }
@@ -218,8 +218,8 @@ main { padding: 16px; max-width: 1032px; margin: 0 auto; }
 @media (hover: hover) { .not-listed > summary:hover h2 { color: var(--text); } }
 header.away ~ main .day h2 { top: 0; }
 .toscore { margin-top: 30px; }
-.day.is-today h2 { color: color-mix(in srgb, var(--accent) 70%, var(--text)); }
-.day.is-today h2 b { color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+.day.is-today h2 { color: color-mix(in srgb, var(--accent) 55%, var(--text)); }
+.day.is-today h2 b { color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
 .day.is-today h2::after { background: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .empty-day { padding: 2px 10px 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .row { position: relative; isolation: isolate; overflow: hidden; display: flex; gap: 14px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 8px 8px; margin-bottom: 8px;
@@ -262,7 +262,7 @@ background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix
 .daystrip button { padding: 3px 0; border: 0; border-radius: 99px; background: transparent; font-size: 12px; line-height: 18px; white-space: nowrap; color: var(--muted); }
 .daystrip b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .daystrip .past, .daystrip .free { opacity: .55; }
-.daystrip .today { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1.5px var(--accent); color: color-mix(in srgb, var(--accent) 70%, var(--text)); }
+.daystrip .today { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1.5px var(--accent); color: color-mix(in srgb, var(--accent) 55%, var(--text)); }
 .daystrip .picked { opacity: 1; font-weight: 600; background: var(--accent); color: var(--accent-text); }
 @media (hover: hover) { .daystrip button:not(.picked):hover { color: var(--text); opacity: 1; } }
 @media (pointer: coarse) { .daystrip button { min-height: 30px; } }
