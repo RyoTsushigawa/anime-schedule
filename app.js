@@ -2431,6 +2431,12 @@ fillKept();
 syncRemember();
 }
 $('delayReason').addEventListener('input', syncRemember);
+for (const id of ['delayReason', 'delayCustom'])
+$(id).addEventListener('keydown', e => {
+if (e.key !== 'Enter' || e.isComposing || $('delaySave').disabled) return;
+e.preventDefault();
+$('delaySave').click();
+});
 $('delayFrom').addEventListener('change', fillDelay);
 const delayMinutes = () => Number($('delayCustom').value) || Number($('delayMinutes').querySelector('[aria-pressed="true"]')?.dataset.min) || 0;
 $('delayMinutes').addEventListener('click', e => {
