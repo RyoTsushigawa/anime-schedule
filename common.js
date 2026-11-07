@@ -195,6 +195,30 @@ const now = Date.now();
 aniLimit.sent = aniLimit.sent.filter(t => now - t < 60000);
 return (aniLimit.sent[0] || now) + 60000;
 }
+const TITLE_FIXES = {
+209872: 'Ranma ½ (2024) Season 3', 216557: 'Keroro Gunsou☆', 209032: 'Magical Sisters Lulutto Lilly Part 2',
+160803: 'Magical Girl Raising Project: Restart', 179876: 'Dark Machine: The Animation', 199426: 'Hotel Inhumans Season 2',
+203473: 'Horror Collector', 209499: 'Tank Chair', 204650: 'Tougen Anki: Nikko Kegon Falls Arc',
+199594: 'Tetsuryo! Meet with Railroad Girls', 187990: 'Battle Spirits [Re]: Zekkai no Kuu', 187316: 'Suikoden: The Anime',
+207191: 'Hello, I Am a Witch and My Crush Wants Me to Make a Love Potion!', 172192: "A Returner's Magic Should Be Special Season 2",
+213658: 'Ace of Diamond Act II Season 2 Part 2', 198727: 'Chitose Is in the Ramune Bottle Part 2',
+};
+function fixTitles(data) {
+const seen = new Set();
+const walk = v => {
+if (!v || typeof v !== 'object' || seen.has(v)) return;
+seen.add(v);
+if (Array.isArray(v)) { v.forEach(walk); return; }
+const fix = TITLE_FIXES[v.id];
+if (fix && v.title && typeof v.title === 'object' && v.title.english !== fix) {
+if (v.title.english) v.synonyms = [...(v.synonyms || []), v.title.english];
+v.title.english = fix;
+}
+for (const k in v) walk(v[k]);
+};
+walk(data);
+return data;
+}
 async function anilist(query, variables = {}, token, options = {}) {
 for (let attempt = 0; ; attempt++) {
 if (aniLimit.until > Date.now()) {
@@ -223,7 +247,7 @@ if (res && res.status !== 429 && res.status < 500) {
 if (res.status === 401) throw Object.assign(new Error('AniList-Anmeldung abgelaufen, bitte neu verbinden'), { status: 401 });
 const json = await res.json().catch(() => ({}));
 if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { status: res.status });
-return json.data;
+return fixTitles(json.data);
 }
 if (attempt >= (options.retries ?? RETRY_WAITS.length) || (!res && navigator.onLine === false)) throw new Error("AniList antwortet gerade nicht (es begrenzt, wie oft man fragen darf). Versuch es in einer Minute nochmal");
 if (res?.status === 429 || (!res && aniLimit.remaining <= 2)) { aniLimit.until = Math.max(aniLimit.until, aniMinuteEnd()); continue; }
