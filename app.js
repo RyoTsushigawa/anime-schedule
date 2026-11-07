@@ -2514,7 +2514,7 @@ $('moveTime').hidden = skip;
 $('moveDouble').hidden = skip;
 if (skip || double) setMoveScope('week');
 $('moveAlways').disabled = skip || double;
-$('moveSave').textContent = skip ? 'Aussetzen' : 'Verschieben';
+$('moveSave').textContent = skip ? 'Skip' : 'Verschieben';
 };
 const setMoveScope = scope => {
 moveScope = scope;
