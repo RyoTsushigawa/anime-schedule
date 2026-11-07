@@ -210,6 +210,18 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 </form>
 </dialog>
+<dialog id="absentDlg" class="dlg day-dlg">
+<form method="dialog">
+<b id="absentName"></b>
+<div class="muted">Serien, bei denen höchstens eine Person übrig bleibt, setzen aus.</div>
+<div id="absentPeople" class="day-absent"></div>
+<div class="muted" id="absentMsg"></div>
+<div class="dlg-row">
+<button type="button" id="absentSave" class="pill primary">Speichern</button>
+<button value="cancel" class="pill">Schließen</button>
+</div>
+</form>
+</dialog>
 <dialog id="reasonsDlg" class="dlg day-dlg">
 <form method="dialog">
 <b>Gründe</b>
@@ -230,9 +242,6 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="daySuggest" class="day-suggest" role="listbox" hidden></div>
 </div>
 <div id="dayMissing" class="day-missing-list" hidden></div>
-<div class="dlg-row" id="dayAbsentRow" title="Wer an diesem Tag fehlt: Serien, bei denen höchstens eine Person übrig bleibt, setzen aus" hidden>
-<span class="muted">Abwesend</span><div id="dayAbsent" class="day-absent"></div>
-</div>
 <div class="segmented" role="group" aria-label="Für">
 <button type="button" id="dayWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="dayAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
 </div>
