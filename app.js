@@ -1381,12 +1381,20 @@ scrollTo(0, a.y);
 function preserveListPosition() {
 const anchor = scrollAnchor();
 const focused = document.activeElement;
+const streamRow = focused?.matches('#list a.cr') ? focused.closest('.row[data-search]') : null;
+const focusStream = streamRow && { show: streamRow.dataset.search, href: focused.href };
 const focusMedia = focused?.closest('#list button[data-media]') ? { media: focused.dataset.media, ep: focused.dataset.ep,
 kind: ['watch', 'drop', 'score', 'move'].find(c => focused.classList.contains(c)) } : null;
 const focusedRow = focused?.matches?.('#list .row') ? keyRows().indexOf(focused) : -1;
 const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.id || d.querySelector('summary')?.textContent));
 return () => {
 for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(d.id || d.querySelector('summary')?.textContent);
+if (focusStream && !focused.isConnected && !document.querySelector('dialog[open]')) {
+const next = [...document.querySelectorAll('#list .row[data-search] a.cr')].find(link =>
+link.href === focusStream.href && link.closest('.row').dataset.search === focusStream.show &&
+!link.closest('.hidden-by-search, details:not([open])'));
+next?.focus({ preventScroll: true });
+}
 if (focusMedia && !focused.isConnected && !document.querySelector('dialog[open]')) {
 const next = [...document.querySelectorAll('#list button[data-media]')].find(b => !b.disabled && b.dataset.media === focusMedia.media
 && b.dataset.ep === focusMedia.ep && b.classList.contains(focusMedia.kind));
@@ -2109,7 +2117,8 @@ const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !=
 const fmt = d => d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
 const dates = `${fmt(start)} – ${fmt(end)}`;
 const selectedDay = range === 'today' ? new Date() : range === 'day' && pickedDay ? new Date(pickedDay + 'T12:00:00') : null;
-$('week').textContent = $('weekSub').textContent = selectedDay ? `${shortDayName(selectedDay)} ${fmt(selectedDay)}` : dates;
+$('week').textContent = selectedDay ? `${shortDayName(selectedDay)} ${fmt(selectedDay)}` : dates;
+$('weekSub').textContent = selectedDay ? `${$('week').textContent} · Einzelansicht` : dates;
 $('week').title = dates;
 if (!weekCached(start) && !(refresh && document.querySelector('#list .row'))) $('list').innerHTML = LOADING_HTML;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
@@ -2193,6 +2202,7 @@ if (next !== 'day') pickedDay = null;
 $('fullWeek').setAttribute('aria-pressed', range === 'week');
 $('fullWeek').textContent = range === 'week' ? 'Ab heute' : 'Woche';
 $('fullWeek').title = range === 'week' ? 'Zur aktuellen Woche ab heute' : 'Alle sieben Tage anzeigen';
+$('fullWeek').setAttribute('aria-label', $('fullWeek').title);
 }
 setRange('rest');
 let resumeY = null;
