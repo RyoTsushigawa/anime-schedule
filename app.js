@@ -508,10 +508,16 @@ const icon = SERVICE_ICONS.find(([match]) => match.test(label))?.[1];
 return icon ? `<span class="svc-icon" style="-webkit-mask-image:url(services/${icon}.svg);mask-image:url(services/${icon}.svg)"></span>` : '';
 };
 const ALTERNATIVE_LOOK = [[/^aniworld/i, 'aniworld.png', '#657efa'], [/^subsplease/i, 'subsplease.png', 'var(--text)'],
-[/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)']];
+[/^nyaa/i, 'nyaa.png', '#3582f7'], [/^0neko/i, '0neko.ico', 'var(--text)'], [/^AnimeNexus$/, null, 'var(--accent)']];
+const NEXUS_SERIES = {
+160803: '99916ae3-76b5-4017-b7b0-e0941e61af70/magical-girl-raising-project-restart-c9a736fb7ad91507d038',
+191656: '9ede626f-a7c2-4eea-8cc1-1d308d67bffe/even-the-student-council-has-its-holes-60cd8b59afb268109295',
+206949: '019cb2e6-a4cd-7330-a252-ea5b67aba882/nia-liston-the-merciless-maiden-95d9fff97287ba9be932',
+208025: '019cb2e6-ef8d-733b-b5f8-98e324f9992c/im-dating-a-dark-summoner-9045cf44117b62401cfc',
+};
 function alternativeButton(l) {
 const [, icon, color] = ALTERNATIVE_LOOK.find(([match]) => match.test(l.label));
-return `<a class="cr none" style="${serviceStyle(color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative Quelle${l.label.endsWith('Suche') ? ': keine genaue Serienseite gefunden' : ''}"><img class="site-icon" src="services/${icon}" alt="" width="18" height="18">${esc(l.label)}</a>`;
+return `<a class="cr none" style="${serviceStyle(color)}" href="${safeUrl(l.url)}" target="_blank" rel="noopener" title="Alternative Quelle${l.label.endsWith('Suche') ? ': keine genaue Serienseite gefunden' : ''}">${icon ? `<img class="site-icon" src="services/${icon}" alt="" width="18" height="18">` : ''}${esc(l.label)}</a>`;
 }
 const TEXT_LIFT = { '#e50914': '30%', '#0578ff': '12%', '#ff0000': '25%', '#ff1a00': '15%', '#657efa': '8%', '#3582f7': '8%' };
 const serviceStyle = color => `--svc:${color}${TEXT_LIFT[color] ? ';--text-lift:' + TEXT_LIFT[color] : ''}`;
@@ -532,7 +538,9 @@ const alternatives = [];
 if (primeSwap || (torrent && !listed.length)) alternatives.push(/^https:\/\/subsplease\.org\/shows\/[^\s"<>]+$/.test(source.subsplease || '')
 ? { label: 'SubsPlease', url: source.subsplease }
 : { label: 'Nyaa-Suche', url: 'https://nyaa.si/?f=0&c=1_2&q=' + encodeURIComponent(nyaaQuery([...(links.names || [title]), source.title])) });
-if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
+const nexus = NEXUS_SERIES[Number(mediaId)];
+if (streaming && !listed.length && nexus) alternatives.push({ label: 'AnimeNexus', url: 'https://anime.nexus/series/' + nexus });
+else if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) alternatives.push({ label: '0neko', url: 'https://0neko.cc/#/anime/' + Number(mediaId) });
 else if (streaming && !listed.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
 ? { label: 'AniWorld', url: source.aniworld }
 : { label: 'AniWorld-Suche', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
