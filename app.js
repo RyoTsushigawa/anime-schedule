@@ -836,7 +836,8 @@ who.set(show, [...who.get(show) || [], p]);
 }
 for (const [show, slot] of merged) {
 const mv = moveFor(show, start);
-if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot });
+if (mv?.skip) merged.set(show, { ...slot, skip: true, from: slot });
+else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot, ...(mv.double && { double: true }) });
 }
 whoBySheet.set(s, who);
 return [s, merged];
@@ -887,9 +888,23 @@ const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag, sl
 if (!day) continue;
 found.add(show);
 if (droppedByMe(m.id)) continue;
-const existing = days.flatMap(d => d.rows).find(r => r.m.id === m.id);
+if (slot.skip) {
+if (!day.rows.some(r => r.skipped && r.show === show)) day.rows.push({ pause: true, skipped: true, show, slot, when, episode });
+continue;
+}
+const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
 if (existing) existing.episodes.push(episode);
 else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show) });
+}
+for (const day of days) {
+const away = absentOn(isoDay(day.date));
+day.rows = day.rows.map(r => {
+if (r.pause || !r.episodes) return r;
+if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r.episodes.includes(first - 1)) r.episodes.unshift(first - 1); }
+const missing = (r.who || []).filter(p => away.includes(p));
+if (!missing.length || (r.who || []).length - missing.length > 1) return r;
+return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing };
+});
 }
 const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
 const weekEnd = days[6].date.getTime() + 86400000;
@@ -979,12 +994,12 @@ const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [`Zurück am ${shortDayDate(when)}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
-const pause = ({ show, slot, when, episode, note, news, watchAt }) => `
-      <div class="row pause" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
-        <div class="time">Pause</div>
+const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing }) => `
+      <div class="row pause${skipped ? ' skipped' : ''}" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
+        <div class="time"${skipped ? ' title="Ausgesetzt"' : ''}>${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s>` : 'Pause'}</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
-          <div class="ep">${backLine(when, note, news)}</div>
+          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}` : backLine(when, note, news)}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
@@ -1039,7 +1054,7 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) 
       </div>`;
 const groups = [];
 for (const r of rows) {
-if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
+if (!r.skipped && !groups.at(-1)?.[0].skipped && groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
 const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
@@ -1958,7 +1973,7 @@ const monday = new Date(released * 1000);
 monday.setHours(0, 0, 0, 0);
 monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
 const mv = show && moveFor(show, monday);
-if (mv) slot = { tag: mv.tag, time: mv.time };
+if (mv && !mv.skip) slot = { tag: mv.tag, time: mv.time };
 const day = watchDay(new Date(released * 1000), slot?.tag, slot?.time);
 const hm = parseTime(slot?.time);
 if (hm) day.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
@@ -2372,6 +2387,8 @@ try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 let delays = [];
+let absent = [];
+const absentOn = date => absent.find(x => x.day === date)?.people || [];
 let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
@@ -2393,13 +2410,14 @@ try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 delays = newest?.delays || [];
+absent = Array.isArray(newest?.absent) ? newest.absent : [];
 reasonList = goodReasons(newest?.reasons);
 }
 function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
-async function saveMoves(next, changeDelays = null, reasons = null) {
+async function saveMoves(next, changeDelays = null, reasons = null, absentNext = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 for (let attempt = 0; attempt < 3; attempt++) {
@@ -2411,13 +2429,15 @@ let nextDelays = remote.delays || [];
 if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
 const remoteReasons = goodReasons(remote.reasons);
-const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
+const nextAbsent = (absentNext || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
 if (res.ok) {
 moves = file.moves;
 delays = nextDelays;
+absent = nextAbsent;
 reasonList = file.reasons;
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
@@ -2427,7 +2447,7 @@ if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401
 }
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
-const movesStamp = () => JSON.stringify([moves, delays]);
+const movesStamp = () => JSON.stringify([moves, delays, absent]);
 let movesSeen = '';
 let followingMoves = false;
 const canFollowMoves = () => document.visibilityState === 'visible' && view === 'week' && lastWeekRender &&
@@ -2486,6 +2506,14 @@ $('keyMsg').textContent = 'Aus diesem Browser entfernt.';
 load(true);
 };
 let moving = null, moveScope = 'week';
+const syncMoveDialog = () => {
+const skip = $('moveTag').value === 'skip', double = $('moveDouble').getAttribute('aria-pressed') === 'true';
+$('moveTime').hidden = skip;
+$('moveDouble').hidden = skip;
+if (skip || double) setMoveScope('week');
+$('moveAlways').disabled = skip || double;
+$('moveSave').textContent = skip ? 'Aussetzen' : 'Verschieben';
+};
 const setMoveScope = scope => {
 moveScope = scope;
 $('moveWeek').setAttribute('aria-pressed', scope === 'week');
@@ -2510,6 +2538,10 @@ $('moveTime').value = b.dataset.time || '';
 setMoveScope(mv && !mv.week ? 'always' : 'week');
 $('moveReset').hidden = !mv;
 $('moveMsg').textContent = '';
+const thisWeek = moves.find(m => m.show === moving.key && m.week === week);
+if (thisWeek?.skip) { $('moveTag').value = 'skip'; $('moveTime').value = ''; }
+$('moveDouble').setAttribute('aria-pressed', String(!!thisWeek?.double));
+syncMoveDialog();
 if (destination) {
 $('moveTag').value = destination.tag;
 $('moveTime').value = destination.time;
@@ -2534,22 +2566,30 @@ async function undoMove() {
 const before = movesUndo;
 try { await saveMoves(before); notice('Rückgängig gemacht.'); load(true); } catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
 }
-async function storeMoves(next, done, dlg = 'moveDlg', msg = 'moveMsg') {
+async function storeMoves(next, done, dlg = 'moveDlg', msg = 'moveMsg', absentNext = null) {
 $(msg).textContent = 'Speichert…';
 try {
-await saveMoves(next);
+await saveMoves(next, null, null, absentNext);
 $(dlg).close();
 notice(`${done} Alle sehen es in etwa einer Minute.`);
 load(true);
 } catch (e) { $(msg).textContent = `Nicht gespeichert: ${e.message}`; }
 }
+$('moveTag').addEventListener('change', syncMoveDialog);
+$('moveDouble').onclick = () => {
+$('moveDouble').setAttribute('aria-pressed', String($('moveDouble').getAttribute('aria-pressed') !== 'true'));
+syncMoveDialog();
+};
 $('moveSave').onclick = () => {
-const time = $('moveTime').value.trim();
+const skip = $('moveTag').value === 'skip', double = !skip && $('moveDouble').getAttribute('aria-pressed') === 'true';
+const time = skip ? '' : $('moveTime').value.trim();
 if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
-const week = moveScope === 'week' ? isoDay(weekStart(weekOffset)) : '';
-const next = moves.filter(m => !(m.show === moving.key && m.week === week))
-.concat({ show: moving.key, title: moving.name, tag: $('moveTag').value, time, week });
-storeMoves(next, `${moving.name} verschoben auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
+const week = moveScope === 'week' || skip || double ? isoDay(weekStart(weekOffset)) : '';
+const entry = skip ? { show: moving.key, title: moving.name, tag: '', time: '', week, skip: true }
+: { show: moving.key, title: moving.name, tag: $('moveTag').value, time, week, ...(double && { double: true }) };
+const next = moves.filter(m => !(m.show === moving.key && m.week === week)).concat(entry);
+storeMoves(next, skip ? `${moving.name} setzt diese Woche aus.`
+: `${moving.name}${double ? ' mit Doppelfolge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
 };
 $('moveReset').onclick = () => {
 const week = isoDay(weekStart(weekOffset));
@@ -2724,6 +2764,7 @@ const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
 moves = body.moves || moves;
 delays = body.delays || [];
+absent = Array.isArray(body.absent) ? body.absent : absent;
 if (body.reasons) reasonList = goodReasons(body.reasons);
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
@@ -2793,6 +2834,10 @@ dayEdit.scope = scope;
 $('dayWeek').setAttribute('aria-pressed', scope === 'week');
 $('dayAlways').setAttribute('aria-pressed', scope === 'always');
 };
+$('dayAbsent').addEventListener('click', e => {
+const b = e.target.closest('[data-away]');
+if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+});
 $('dayWeek').onclick = () => setDayScope('week');
 $('dayAlways').onclick = () => setDayScope('always');
 $('list').addEventListener('click', e => {
@@ -2803,7 +2848,11 @@ const all = weekShows();
 const keys = new Set([...section.querySelectorAll('.move')].map(m => norm(m.dataset.moveTitle)));
 const order = s => { const hm = parseTime(s.time); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0]) * 60 + hm[1] : Infinity; };
 const shows = all.filter(s => keys.has(s.key)).sort((a, b) => order(a) - order(b));
-dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [] };
+dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [], date: section.dataset.date };
+const everybody = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
+const away = absentOn(dayEdit.date);
+$('dayAbsent').innerHTML = everybody.map(p => `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${away.includes(p)}">${esc(p)}</button>`).join('');
+$('dayAbsentRow').hidden = !everybody.length;
 $('dayName').textContent = dayEdit.label;
 $('dayText').value = shows.map(s => `${s.time ? s.time + ' ' : ''}${s.name}`).join('\n') + '\n';
 $('dayMissing').hidden = true; $('dayMissing').innerHTML = '';
@@ -2903,8 +2952,11 @@ const time = row.querySelector('input').value.trim();
 if (time && !parseTime(time)) { $('dayMsg').textContent = `${s.name}: Uhrzeit wie 21:00, oder leer.`; return; }
 next = moveTo(next, s, row.querySelector('select').value, clockOf(time));
 }
-if (next === moves) { $('dayDlg').close(); return; }
-storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg');
+const away = [...$('dayAbsent').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.away);
+const awayChanged = away.join('|') !== absentOn(dayEdit.date).join('|');
+if (next === moves && !awayChanged) { $('dayDlg').close(); return; }
+const absentNext = awayChanged ? absent.filter(x => x.day !== dayEdit.date).concat(away.length ? [{ day: dayEdit.date, people: away }] : []) : null;
+storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' && next !== moves ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg', absentNext);
 };
 async function firstTabs() {
 try {
