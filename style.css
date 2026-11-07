@@ -628,3 +628,27 @@ border-radius: 9px;
 .daystrip button { flex-direction: column; gap: 0; min-height: 44px; line-height: 1.15; }
 .daystrip button span { font-size: 11px; }
 }
+.day .row {
+background-color: color-mix(in srgb, var(--card) 94%, var(--accent));
+}
+.day .row:is(.aired, .pause) { background-color: transparent; }
+.day .row .title { font-size: 16px; }
+.day .row.pause .title { font-size: 14px; }
+.day .row .ep { margin-top: 5px; }
+.day .row > img { border-radius: 9px; }
+.day .parallel-slot { border-radius: 14px; }
+.parallel-heading {
+display: flex;
+align-items: center;
+gap: 9px;
+padding: 6px 12px;
+border-bottom: 1px solid var(--line);
+background: var(--today);
+color: var(--muted);
+font-size: 12px;
+}
+.parallel-heading b { color: var(--text); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+.day .row .title { font-size: 15px; }
+.day .row.pause .title { font-size: 14px; }
+}
