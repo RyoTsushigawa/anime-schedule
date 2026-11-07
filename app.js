@@ -627,6 +627,8 @@ const past = el => [...el.matches('.row') ? [el] : el.querySelectorAll('.row[dat
 const next = items.findIndex(el => !past(el));
 if (next !== 0 && items.length)
 (next > 0 ? items[next] : items.at(-1)).insertAdjacentHTML(next > 0 ? 'beforebegin' : 'afterend', '<div class="now-line" aria-hidden="true"><span>Jetzt</span></div>');
+document.querySelector('.next-watch-slot')?.classList.remove('next-watch-slot');
+if (!byRelease && next >= 0) items[next].classList.add('next-watch-slot');
 if (document.visibilityState !== 'hidden' && new Date().toDateString() !== shownDay) freshen();
 }
 setInterval(tick, 30000);
@@ -643,12 +645,13 @@ forgetWeek(start); forgetWeek(lastWeek);
 sheets.clear();
 if (auth) await loadMe().catch(() => {});
 }
-load(true);
+return load(true);
 }
 document.addEventListener('visibilitychange', () => {
 if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
 const away = hiddenAt && Date.now() - hiddenAt >= COME_BACK_MS;
-if (away || new Date().toDateString() !== shownDay) freshen(away);
+if (away || new Date().toDateString() !== shownDay) freshen(away).finally(restoreOpenedShow);
+else restoreOpenedShow();
 hiddenAt = 0;
 });
 const FIRST_SLOT = [19, 0];
@@ -1579,20 +1582,35 @@ myProgress.set(mediaId, saved.progress);
 listChanged(mediaId, saved.progress, !!status);
 const record = { mediaId, before, after: { progress: saved.progress, status: saved.status, score: saved.score }, entryId: saved.id, account:sourceAccount };
 if (targetAccount) {
-try {
+let attemptedBefore;
+const sync = async () => {
 const targetId = targetAccount.provider === 'mal' ? mediaId : await MAL.anilistId(mediaId);
 const targetBefore = await entryForAccount(targetAccount, targetId);
+if (attemptedBefore && ['onList', 'progress', 'status', 'score'].some(key => attemptedBefore[key] !== targetBefore[key]))
+throw new Error('Die Zielliste wurde inzwischen geändert.');
 const synced = { ...vars };
 if (vars.score !== undefined) synced.score = await convertSyncScore(vars.score, sourceAccount, targetAccount);
 if (vars.progress !== undefined && !vars.status && !ON_WATCHING_LIST.includes(targetBefore.status)) synced.status = 'CURRENT';
 if (vars.progress !== undefined && vars.progress > (before.progress || 0) && targetBefore.progress > vars.progress) {
 record.syncMessage = `${targetAccount.name} ist schon weiter; der Fortschritt dort bleibt.`;
 } else {
+attemptedBefore = targetBefore;
 const second = await saveForAccount(targetAccount, targetId, synced, true);
 invalidateAccount(targetAccount);
 record.linked = [{mediaId:targetId,before:targetBefore,after:{progress:second.progress,status:second.status,score:second.score},entryId:second.id,account:targetAccount}];
 }
-} catch (error) { record.syncMessage = `Abgleich unvollständig für ${targetAccount.name}: ${error.message}`; }
+};
+try { await sync(); }
+catch (error) {
+record.syncMessage = `Abgleich unvollständig für ${targetAccount.name}: ${error.message}`;
+record.retrySync = async () => {
+const current = await entryForAccount(sourceAccount, mediaId);
+if (!current.onList || ['progress', 'status', 'score'].some(key => current[key] !== record.after[key]))
+throw new Error('Die ursprüngliche Liste wurde inzwischen geändert.');
+await sync();
+delete record.retrySync;
+};
+}
 }
 return record;
 } finally {
@@ -1617,9 +1635,36 @@ function remember(records, text) {
 if (!records.length || !auth) return;
 const messages = [...new Set(records.map(r => r.syncMessage).filter(Boolean))];
 const flattened = records.flatMap(r => [r, ...(r.linked || [])]);
-undoSteps.push({ records:flattened, time: Date.now(), token: auth.token, name: auth.name || 'dem anderen Konto' });
+const step = { records:flattened, time: Date.now(), token: auth.token, name: auth.name || 'dem anderen Konto' };
+undoSteps.push(step);
 if (messages.length) text += ' · ' + messages.join(' · ');
 notice(text, true);
+offerSyncRetry(step, records.filter(r => r.retrySync));
+}
+function offerSyncRetry(step, records) {
+if (!records.length) return;
+const button = $('noticeRetry');
+button.hidden = false;
+button.onclick = async () => {
+if (undoSteps.at(-1) !== step || auth?.token !== step.token || Date.now() - step.time > UNDO_MS || pendingChanges.size || bulkSaving || undoing) return;
+button.disabled = true;
+records.forEach(r => pendingChanges.add(r.mediaId));
+syncSavingButtons();
+try {
+for (const record of records) {
+await record.retrySync();
+if (record.linked) step.records.push(...record.linked);
+}
+notice('Listen-Abgleich abgeschlossen.', true);
+} catch (error) {
+notice('Abgleich weiterhin unvollständig: ' + error.message, true);
+offerSyncRetry(step, records.filter(r => r.retrySync));
+} finally {
+records.forEach(r => pendingChanges.delete(r.mediaId));
+button.disabled = false;
+syncSavingButtons();
+}
+};
 }
 let undoing = false;
 async function undo() {
@@ -1699,6 +1744,7 @@ movesUndo = null;
 delayUndo = null;
 $('noticeText').textContent = text;
 $('noticeUndo').hidden = !withUndo;
+$('noticeRetry').hidden = true;
 $('notice').hidden = false;
 clearTimeout(noticeTimer);
 noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
@@ -2075,9 +2121,10 @@ $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase
 const listName = friend ? friendList.selectedOptions[0].textContent : user;
 const readOnly = friend ? '<span class="catchup-count">Nur lesen</span>' : '';
 if (shown === 'catchup') {
-$('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary">
+$('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend ? ' friend-summary' : ''}">
       <div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>
       <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}</span>
+      ${friend ? '<button type="button" class="pill" data-own-list>Eigene Liste</button>' : ''}
     </div>`);
 } else if (friend) {
 $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
@@ -2913,6 +2960,12 @@ $('markAllStart').hidden = true;
 $('list').innerHTML = '';
 load();
 };
+$('list').addEventListener('click', event => {
+if (!event.target.closest('[data-own-list]')) return;
+friendList.value = '';
+friendList.onchange();
+friendList.focus();
+});
 $('modeSolo').onclick = () => { setMode('solo'); redraw(); };
 $('modeGroup').onclick = () => { setMode('group'); redraw(); };
 function updateGroupButton() {
@@ -3059,11 +3112,28 @@ const clear = headerBottom + (row.closest('.day')?.querySelector('h2')?.offsetHe
 if (box.top < clear) scrollTo(0, scrollY + box.top - clear);
 else if (box.bottom > innerHeight - 8) scrollTo(0, scrollY + box.bottom - innerHeight + 8);
 }
+let openedShow = null;
+function restoreOpenedShow() {
+const opened = openedShow;
+openedShow = null;
+if (!opened || opened.view !== view || Date.now() - opened.time > 4 * 3600000 || document.querySelector('dialog[open]')) return;
+const row = [...document.querySelectorAll('#list .row')].find(r => r.closest('[data-search]')?.dataset.search === opened.key &&
+!r.closest('.hidden-by-search, details:not([open])'));
+if (!row) return;
+row.classList.add('stream-return');
+setTimeout(() => row.classList.remove('stream-return'), 3500);
+const bounds = row.getBoundingClientRect();
+if (bounds.bottom <= document.querySelector('header').getBoundingClientRect().bottom || bounds.top >= innerHeight)
+row.scrollIntoView?.({ block: 'center' });
+}
 try { $('markOnOpen').checked = localStorage.getItem('markOnOpen') === '1'; } catch {}
 $('markOnOpen').onchange = () => { try { localStorage.setItem('markOnOpen', $('markOnOpen').checked ? '1' : '0'); } catch {} };
 document.addEventListener('click', event => {
 const row = event.target.closest?.('#list .row .links a')?.closest('.row');
-if (!row || !keyRows().includes(row)) return;
+if (!row) return;
+const key = row.closest('[data-search]')?.dataset.search;
+if (key) openedShow = { key, view, time: Date.now() };
+if (!keyRows().includes(row)) return;
 selectRow(row);
 if ($('markOnOpen').checked && !(Number(row.dataset.at) > Date.now())) row.querySelector('.watch:not(.done):not(:disabled):not([data-select])')?.click();
 });
