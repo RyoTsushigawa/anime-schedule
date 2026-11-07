@@ -90,6 +90,8 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany) |
 | `tools/publish.mjs` | Runs the tests, then uploads the changed files to GitHub |
 | `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
+| `tools/delay-check.mjs` | Weekly, read-only: the helper answers, refuses strangers and is the current version |
+| `tabs.json`, `tools/tab-list.mjs` | The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
 | `tests/` | The page clicked through in a simulated browser (`node --test` there) |
 
 ## Weekly refresh
@@ -141,6 +143,10 @@ Optional, both as **Secret** in the Worker's Variables and Secrets:
   without pings. With the helper set up, the key holder's delays go through it too, so they're posted as well.
 - `BOT_KEY`: a long random password (16+ characters). The Discord bot sends it for `/delay`; the bot's
   `.env` needs the same value as `DELAYS_KEY`, plus `DELAYS_URL` = the Worker's address.
+
+Safety: the helper takes no links in titles or reasons (they'd land in Discord), nothing over 4 KB,
+and at most 30 changes in 10 minutes from one address (the bot is exempt). The weekly run's
+`tools/delay-check.mjs` says when the code on Cloudflare is older than `tools/delays-worker.js`.
 
 Each delay stores its planned start (`at`, "20:00"); the bot's status shifts its times by it. Delays
 from the bot are stored by time (`show: "@20:00"`) and count from the first show at or after it.
