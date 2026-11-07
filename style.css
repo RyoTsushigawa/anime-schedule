@@ -158,10 +158,21 @@ justify-content: center; align-items: center; gap: 8px 20px; font-size: 12px; co
 .edit-schedule { color: var(--muted); }
 .edit-schedule[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--today); }
 .catchup-single img, .catchup-show .show-head img { width: 36px; height: 50px; }
-.catchup-single { padding: 10px; }
-.catchup-show .row.show-head { padding: 10px; }
-.catchup-show .row.compact { padding: 7px 12px; gap: 10px; background: color-mix(in srgb, var(--bg) 35%, var(--card)); }
-.catchup-show .row.compact .time { width: auto; color: var(--muted); font-size: 13px; font-weight: 500; }
+.row.catchup-single, .shared.catchup-show { border-radius: 14px; }
+.row.catchup-single, .catchup-show .row.show-head { padding: 10px 12px 10px 8px; }
+.catchup-show .row.compact { padding: 6px 12px 6px 14px; gap: 10px; border-top-style: solid; background: color-mix(in srgb, var(--bg) 45%, var(--card)); }
+.catchup-show .row.compact .time { width: auto; color: var(--muted); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.catchup-count {
+display: inline-block;
+margin-inline-end: 4px;
+padding: 1px 7px;
+border-radius: 99px;
+background: var(--today);
+color: color-mix(in srgb, var(--accent) 40%, var(--text));
+font-size: 11px;
+font-weight: 650;
+white-space: nowrap;
+}
 .catchup-bar { margin-bottom: 12px; }
 .catchup-bar .pill { white-space: nowrap; }
 @media (pointer: coarse) {
