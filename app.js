@@ -2974,11 +2974,38 @@ if (atShortcuts) $('helpKeys').scrollIntoView?.({ block: 'start' });
 }
 $('helpButton').onclick = () => openHelp();
 $('helpClose').onclick = () => $('helpDialog').close();
+const helpTopics = [...$('helpDialog').querySelectorAll('[data-help-topic]')];
+let helpStep = -1;
+function showHelpStep(index) {
+helpStep = index;
+const section = index < 0 ? null : $(helpTopics[index].dataset.helpTopic);
+for (const item of $('helpDialog').querySelectorAll('.help-sections > section')) item.hidden = !!section && item !== section;
+$('helpSteps').hidden = !section;
+for (const [i, topic] of helpTopics.entries()) topic.setAttribute('aria-pressed', String(i === index));
+if (!section) return;
+$('helpPrevious').disabled = index === 0;
+$('helpNext').textContent = index === helpTopics.length - 1 ? 'Fertig' : 'Weiter';
+$('helpProgress').textContent = `${index + 1} / ${helpTopics.length}`;
+section.focus();
+}
 $('helpDialog').addEventListener('click', event => {
 const topic = event.target.closest('[data-help-topic]');
-if (topic) $(topic.dataset.helpTopic).focus();
+if (topic) showHelpStep(helpTopics.indexOf(topic));
 });
-$('helpDialog').addEventListener('close', () => helpReturnFocus?.focus({ preventScroll: true }));
+$('helpOverview').onclick = () => {
+const previous = helpTopics[helpStep];
+showHelpStep(-1);
+previous?.focus();
+};
+$('helpPrevious').onclick = () => showHelpStep(helpStep - 1);
+$('helpNext').onclick = () => {
+if (helpStep === helpTopics.length - 1) $('helpOverview').click();
+else showHelpStep(helpStep + 1);
+};
+$('helpDialog').addEventListener('close', () => {
+showHelpStep(-1);
+helpReturnFocus?.focus({ preventScroll: true });
+});
 for (const [id, key, hint] of [
 ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
 ['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
