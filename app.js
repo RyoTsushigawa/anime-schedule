@@ -2424,14 +2424,33 @@ function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
-async function saveMoves(next, changeDelays = null, reasons = null, absentNext = null) {
+let movesQueue = Promise.resolve(), movesPending = 0;
+function saveMoves(next, changeDelays = null, reasons = null, absentNext = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
+const before = { moves, absent };
+if (!changeDelays) {
+moves = next;
+if (absentNext) absent = absentNext;
+if (lastWeekRender) render(...lastWeekRender, false, true);
+}
+movesPending++;
+const job = movesQueue.catch(() => {}).then(() => saveMovesNow(next, changeDelays, reasons, absentNext)).finally(() => movesPending--);
+movesQueue = job;
+return job.catch(e => {
+if (!changeDelays) { moves = before.moves; absent = before.absent; if (lastWeekRender) render(...lastWeekRender, false, true); }
+throw e;
+});
+}
+let movesWritten = null;
+async function saveMovesNow(next, changeDelays, reasons, absentNext) {
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
-for (let attempt = 0; attempt < 3; attempt++) {
+for (let attempt = 0; attempt < 4; attempt++) {
+if (attempt) await new Promise(r => setTimeout(r, 800 * attempt));
 const current = await fetch(MOVES_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
-const meta = current.ok ? await current.json() : null;
+let meta = current.ok ? await current.json() : null;
 let remote = {};
 try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
+if (meta?.sha && movesWritten && meta.sha === movesWritten.replaced) { remote = movesWritten.file; meta = { sha: movesWritten.sha }; }
 let nextDelays = remote.delays || [];
 if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
@@ -2442,9 +2461,11 @@ const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) +
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : absentNext ? 'Abwesend' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
 if (res.ok) {
-moves = file.moves;
+const sha = (await res.json().catch(() => null))?.content?.sha;
+movesWritten = sha && meta?.sha ? { replaced: meta.sha, sha, file } : null;
+const later = movesPending > 1;
+if (!later) { moves = file.moves; absent = nextAbsent; }
 delays = nextDelays;
-absent = nextAbsent;
 reasonList = file.reasons;
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
@@ -2459,7 +2480,7 @@ let movesSeen = '';
 let followingMoves = false;
 const canFollowMoves = () => document.visibilityState === 'visible' && view === 'week' && lastWeekRender &&
 lastWeekRender[1].getTime() === weekStart(weekOffset).getTime() &&
-!document.querySelector('dialog[open]') && !document.body.classList.contains('dnd-moving');
+!movesPending && !document.querySelector('dialog[open]') && !document.body.classList.contains('dnd-moving');
 async function followMoves() {
 if (followingMoves || !canFollowMoves()) return;
 const known = new Set(delays.map(d => d.id));
