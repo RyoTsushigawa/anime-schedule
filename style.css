@@ -816,4 +816,23 @@ pointer-events: none;
 .friend-summary { position: sticky; top: var(--head, 0); z-index: 2; }
 header.away ~ main .friend-summary { top: 0; }
 .day > .row.next-watch-slot, .day > .shared.next-watch-slot { padding-top: 19px; }
-.day h2 .day-share { order: 1; padding: 3px 9px; } .watch.save-failed { border-color: var(--late); color: var(--late); }
+.watch.save-failed { border-color: var(--late); color: var(--late); }
+@media (min-width: 720px) {
+.day .row:not(.compact) > .time {
+position: static;
+transform: none;
+flex: 0 0 72px;
+width: 72px;
+padding: 0 6px;
+color: var(--text);
+font-size: 14px;
+text-align: center;
+}
+.day .row:not(.compact) > .time::before { content: none; }
+.day .row:not(.compact) > .time :is(.time-day, small) { color: var(--muted); }
+.day .row.aired > .time, .day .row.pause > .time { color: var(--muted); }
+.parallel-plan:has(> .parallel-heading) > .row[data-at] > .time { display: none; }
+}
+.day .row > img { box-shadow: 0 2px 7px #0003; }
+.catchup-show .row.compact { padding-inline: 14px 12px; }
+.catchup-show .row.compact > .time { color: var(--text); }
