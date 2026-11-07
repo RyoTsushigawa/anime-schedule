@@ -43,7 +43,7 @@ return true;
 }
 const minutes = row => { const hm = parseTime(row?.dataset.watchTime); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0]+24 : hm[0])*60+hm[1] : null; };
 const clock = n => n === null || n < 0 || n >= 30*60 ? '' : `${String(Math.floor(n/60)%24).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-const between = (a, b) => a === null && b === null ? 19*60 : a === null ? b-30 : b === null || b-a >= 60 ? a+30 : Math.round((a+b)/10)*5;
+const between = (a, b, before) => a === null && b === null ? 19*60 : before ? (b ?? a+60)-30 : (a ?? b+60)+30;
 function destination(element, y) {
 const day = element?.closest?.('#list .day[data-move-day]');
 if (!day) return null;
@@ -55,11 +55,12 @@ if (row) {
 const box = row.getBoundingClientRect(), f = box.height && y !== undefined ? (y-box.top)/box.height : .5;
 if (f > .25 && f < .75) return {day,row,tag,time:row.dataset.watchTime,parallel:true,mark:'drop-slot'};
 const i = rows.indexOf(row), before = f <= .25;
-const time = clock(before ? between(minutes(rows[i-1]), minutes(row)) : between(minutes(row), minutes(rows[i+1])));
-return {day,row,tag,time,parallel:false,mark:before ? 'drop-before' : 'drop-after'};
+const at = before ? between(minutes(rows[i-1]), minutes(row), true) : between(minutes(row), minutes(rows[i+1]), false);
+const time = clock(at), shared = rows.some(r => minutes(r) === at);
+return {day,row,tag,time,parallel:shared,mark:before ? 'drop-before' : 'drop-after'};
 }
 const times = rows.map(minutes).filter(n=>n!==null);
-return {day,row:null,tag,time:clock(between(times.length ? Math.max(...times) : null, null)),parallel:false,mark:'drop-day'};
+return {day,row:null,tag,time:clock(between(times.length ? Math.max(...times) : null, null, false)),parallel:false,mark:'drop-day'};
 }
 function hover(element, y) {
 document.querySelectorAll('.drop-day,.drop-slot,.drop-before,.drop-after').forEach(el=>el.classList.remove('drop-day','drop-slot','drop-before','drop-after'));
@@ -67,7 +68,7 @@ target = destination(element, y);
 line.hidden = true;
 if (!target) return;
 line.classList.toggle('beside', target.parallel);
-if (target.parallel) {
+if (target.parallel && target.mark === 'drop-slot') {
 target.row.classList.add('drop-slot');
 showLine(target.row, target.row.getBoundingClientRect().top, `${target.time} · daneben`);
 } else {
@@ -75,7 +76,7 @@ const rows = [...target.day.querySelectorAll('.row')].filter(r=>!r.contains(sour
 const last = rows.at(-1)?.getBoundingClientRect(), head = target.day.querySelector('h2').getBoundingClientRect();
 const box = target.row?.getBoundingClientRect();
 const at = target.mark === 'drop-before' ? box.top - 5 : target.mark === 'drop-after' ? box.bottom + 4 : (last ? last.bottom + 4 : head.bottom + 4);
-showLine(target.day, at, target.time);
+showLine(target.day, at, target.parallel ? target.time + ' · daneben' : target.time);
 }
 }
 function drop() {
