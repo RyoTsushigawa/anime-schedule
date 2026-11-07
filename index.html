@@ -196,11 +196,24 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="dlg-row">
 <select id="delayReason" aria-label="Grund"></select>
 <button type="button" id="delayDice" class="pill" title="Zufälliger Grund" aria-label="Zufälliger Grund">↻</button>
+<button type="button" id="delayList" class="pill" title="Die Gründe bearbeiten" hidden>Liste</button>
 </div>
 <div class="muted" id="delayMsg"></div>
 <div class="dlg-row">
 <button type="button" id="delaySave" class="pill primary">Speichern</button>
 <button type="button" id="delayRemove" class="pill" hidden>Entfernen</button>
+<button value="cancel" class="pill">Schließen</button>
+</div>
+</form>
+</dialog>
+<dialog id="reasonsDlg" class="dlg day-dlg">
+<form method="dialog">
+<b>Gründe</b>
+<textarea id="reasonsText" rows="14" aria-label="Gründe, einer pro Zeile"></textarea>
+<div class="muted" id="reasonsMsg"></div>
+<div class="dlg-row">
+<button type="button" id="reasonsSave" class="pill primary">Speichern</button>
+<button type="button" id="reasonsDefault" class="pill" title="Die ursprüngliche Liste ins Feld holen">Standard</button>
 <button value="cancel" class="pill">Schließen</button>
 </div>
 </form>
