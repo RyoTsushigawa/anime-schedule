@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T21:39:33.676Z",
+ "updated": "2026-11-07T21:40:39.022Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -170,6 +170,13 @@
    "title": "Seitokai ni mo Ana wa Aru!",
    "tag": "Sa.",
    "time": "21:00",
+   "week": "2026-11-02"
+  },
+  {
+   "show": "magicalexplorer",
+   "title": "Magical★Explorer",
+   "tag": "Sa.",
+   "time": "20:30",
    "week": "2026-11-02"
   }
  ],
