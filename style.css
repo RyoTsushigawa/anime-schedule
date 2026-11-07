@@ -849,6 +849,8 @@ text-align: center;
 .catchup-show .row.compact { padding-inline: 14px 12px; }
 .catchup-show .row.compact > .time { color: var(--text); }
 .row.skipped .time s { text-decoration-thickness: 1.5px; }
+.day h2 .day-absent-button { order: 1; display: inline-grid; place-items: center; padding: 3px 9px; }
+.day h2 .day-absent-button.on { border-color: var(--accent); color: var(--accent); }
 .day-absent { display: flex; flex-wrap: wrap; gap: 6px; }
 .day-absent .pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
 #moveTime[hidden], #moveDouble[hidden] { display: none; }
