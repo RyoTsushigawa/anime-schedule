@@ -15,4 +15,28 @@ root.style.setProperty('--accent-text', (l + 0.05) / 0.0556 > 1.05 / (l + 0.05) 
 root.style.setProperty('--today', `color-mix(in srgb, ${c} 14%, var(--bg))`);
 }
 } catch {}
+(() => {
+let shown = false;
+const show = () => {
+if (shown) return;
+shown = true;
+const put = () => {
+const note = document.createElement('div');
+note.className = 'crash-note';
+note.setAttribute('role', 'alert');
+note.innerHTML = '<span>Hier ist etwas schiefgelaufen.</span><button type="button" class="crash-reload">Neuladen</button><button type="button" class="crash-close" aria-label="Schließen" title="Schließen">✕</button>';
+note.querySelector('.crash-reload').addEventListener('click', () => location.reload());
+note.querySelector('.crash-close').addEventListener('click', () => note.remove());
+document.body.append(note);
+};
+document.body ? put() : document.addEventListener('DOMContentLoaded', put);
+};
+const ours = file => typeof file === 'string' && file.startsWith(location.origin + '/');
+const network = reason => /fetch|network|load|abort|timeout|offline/i.test(`${reason?.name} ${reason?.message}`);
+window.addEventListener('error', e => { if (ours(e.filename) && !network(e.error)) show(); });
+window.addEventListener('unhandledrejection', e => {
+const r = e.reason;
+if ((r instanceof TypeError || r instanceof ReferenceError || r instanceof SyntaxError) && !network(r)) show();
+});
+})();
 
