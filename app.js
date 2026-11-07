@@ -1363,7 +1363,7 @@ const below = document.querySelector('header').getBoundingClientRect().bottom;
 const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest('.hidden-by-search') && r.getBoundingClientRect().bottom > below);
 return { y: scrollY, candidates: rows.map(row => ({
 key: row.closest('[data-search]')?.dataset.search,
-day: row.closest('.day')?.querySelector('h2')?.textContent,
+day: row.closest('.day')?.dataset.date,
 episode: row.querySelector('.time')?.textContent,
 top: row.getBoundingClientRect().top,
 })).filter(r => r.key) };
@@ -1372,8 +1372,8 @@ function restoreAnchor(a) {
 const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest('.hidden-by-search'));
 for (const saved of a.candidates || []) {
 const row = rows.find(r => r.closest('[data-search]')?.dataset.search === saved.key
-&& r.closest('.day')?.querySelector('h2')?.textContent === saved.day
-&& r.querySelector('.time')?.textContent === saved.episode);
+&& r.closest('.day')?.dataset.date === saved.day
+&& (saved.day || r.querySelector('.time')?.textContent === saved.episode));
 if (row) { scrollBy(0, row.getBoundingClientRect().top - saved.top); return; }
 }
 scrollTo(0, a.y);
