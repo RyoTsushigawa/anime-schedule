@@ -2549,8 +2549,8 @@ moving.mates = [...b.closest('.parallel-slot')?.querySelectorAll('.move') || []]
 .map(x => ({ key: norm(x.dataset.moveTitle), name: x.dataset.moveName }));
 $('moveAll').hidden = !moving.mates.length;
 $('moveAll').setAttribute('aria-pressed', 'false');
-$('moveAll').textContent = moving.mates.length > 1 ? 'Alle' : 'Beide';
-$('moveAll').title = `Den ganzen Slot zusammen verschieben, skippen oder zurücksetzen: ${[moving.name, ...moving.mates.map(m => m.name)].join(', ')}`;
+$('moveAll').textContent = 'Parallel';
+$('moveAll').title = `Die parallelen Serien mitnehmen (verschieben, skippen, zurücksetzen): ${[moving.name, ...moving.mates.map(m => m.name)].join(', ')}`;
 $('moveDouble').setAttribute('aria-pressed', String(!!thisWeek?.double));
 syncMoveDialog();
 if (destination) {
