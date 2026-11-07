@@ -2372,7 +2372,6 @@ try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 let delays = [];
-let sharedReasons = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
 let movesKey = '';
@@ -2393,7 +2392,6 @@ try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 delays = newest?.delays || [];
-sharedReasons = newest?.reasons || [];
 }
 function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
@@ -2407,17 +2405,16 @@ const current = await fetch(MOVES_API + '?ref=main&_=' + Date.now(), { headers, 
 const meta = current.ok ? await current.json() : null;
 let remote = {};
 try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
-let nextDelays = remote.delays || [], nextReasons = remote.reasons || [];
-if (changeDelays) ({ delays: nextDelays, reasons: nextReasons } = changeDelays(nextDelays, nextReasons));
+let nextDelays = remote.delays || [];
+if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
-const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextReasons.length && { reasons: nextReasons }) };
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), reasons: DELAY_REASONS };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
 if (res.ok) {
 moves = file.moves;
 delays = nextDelays;
-sharedReasons = nextReasons;
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
 return;
@@ -2426,7 +2423,7 @@ if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401
 }
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
-const movesStamp = () => JSON.stringify([moves, delays, sharedReasons]);
+const movesStamp = () => JSON.stringify([moves, delays]);
 let movesSeen = '';
 let followingMoves = false;
 const canFollowMoves = () => document.visibilityState === 'visible' && view === 'week' && lastWeekRender &&
@@ -2616,18 +2613,9 @@ const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vo
 'Ein Zuschauer sucht noch seine Lieblingsdecke', 'Verspätete Ankunft aus dem Homeoffice', 'Ein Zuschauer hat Spoiler gelesen und muss sich erholen',
 'Bereitstellung des Lieferdienstes verzögert sich', 'Ein Zuschauer ist im Gacha-Spiel hängen geblieben',
 'Haustier fordert Aufmerksamkeit', 'Zuschauer im falschen Discord-Kanal', 'Ein Zuschauer muss noch „nur kurz“ etwas erledigen', 'Escanor'];
-const reasonPool = () => [...new Set([...DELAY_REASONS, ...sharedReasons])];
-const randomReason = () => { const pool = reasonPool(); return pool[Math.floor(Math.random() * pool.length)]; };
-const keptReasons = () => movesKey ? sharedReasons.filter(r => !DELAY_REASONS.includes(r)) : [];
-const syncRemember = () => {
-const typed = $('delayReason').value.trim();
-$('delayRememberBox').hidden = !typed || reasonPool().includes(typed);
-$('delayForget').hidden = !typed || !keptReasons().includes(typed);
-};
-function fillKept() {
-$('delayKept').innerHTML = keptReasons().map(r => `<option value="${esc(r)}">`).join('');
-if (movesKey) $('delayReason').setAttribute('list', 'delayKept'); else $('delayReason').removeAttribute('list');
-}
+const reasonPool = () => DELAY_REASONS;
+const randomReason = () => DELAY_REASONS[Math.floor(Math.random() * DELAY_REASONS.length)];
+$('delayReason').innerHTML = DELAY_REASONS.map(r => `<option>${esc(r)}</option>`).join('');
 let delayDay = null;
 const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const delaysOf = date => [...new Map(delays.filter(x => x.day === date).map(x => [x.show, x])).values()];
@@ -2659,14 +2647,9 @@ const minutes = current?.minutes || 15;
 const chip = $('delayMinutes').querySelector(`[data-min="${minutes}"]`);
 for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', String(x === chip));
 $('delayCustom').value = chip ? '' : minutes;
-$('delayReason').value = current?.reason || '';
-$('delayReason').placeholder = randomReason();
+$('delayReason').value = DELAY_REASONS.includes(current?.reason) ? current.reason : randomReason();
 $('delayRemove').hidden = !current;
-$('delayRemember').checked = true;
-fillKept();
-syncRemember();
 }
-$('delayReason').addEventListener('input', syncRemember);
 for (const id of ['delayReason', 'delayCustom'])
 $(id).addEventListener('keydown', e => {
 if (e.key !== 'Enter' || e.isComposing || $('delaySave').disabled) return;
@@ -2684,20 +2667,7 @@ $('delayCustom').value = '';
 $('delayCustom').addEventListener('input', () => {
 if ($('delayCustom').value) for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', 'false');
 });
-$('delayForget').onclick = async () => {
-const reason = $('delayReason').value.trim();
-$('delayMsg').textContent = 'Speichert…';
-$('delayForget').disabled = true;
-try {
-await saveMoves(moves, (d, r) => ({ delays: d, reasons: r.filter(x => x !== reason) }));
-$('delayReason').value = '';
-$('delayMsg').textContent = `„${reason}“ ist nicht mehr gemerkt.`;
-fillKept();
-syncRemember();
-} catch (e) { $('delayMsg').textContent = `Nicht gespeichert: ${e.message}`; }
-finally { $('delayForget').disabled = false; }
-};
-$('delayDice').onclick = () => { $('delayReason').value = randomReason(); syncRemember(); };
+$('delayDice').onclick = () => { $('delayReason').value = randomReason(); };
 async function postDelay(op) {
 const send = async () => {
 for (let attempt = 0; ; attempt++) {
@@ -2715,31 +2685,30 @@ const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
 moves = body.moves || moves;
 delays = body.delays || [];
-sharedReasons = body.reasons || sharedReasons;
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
 }
-async function changeDelays(day, show, add, remember, oldShow = show) {
+async function changeDelays(day, show, add, oldShow = show) {
 const mine = x => x.day === day && (x.show === show || x.show === oldShow);
 const old = delays.filter(mine);
 if (movesKey && !delaysUrl) {
-await saveMoves(moves, (d, r) => ({ delays: d.filter(x => !mine(x)).concat(add || []), reasons: remember ? [...new Set([...r, add.reason])] : r }));
+await saveMoves(moves, d => d.filter(x => !mine(x)).concat(add || []));
 return;
 }
 if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
-if (add) await postDelay({ add, ...(remember && { remember: true }) });
+if (add) await postDelay({ add });
 for (const x of old) await postDelay({ remove: x.id });
 }
 async function undoDelay() {
 const { day, show, add } = delayUndo;
-try { await changeDelays(day, show, add, false); notice('Verspätung wieder da.'); if (lastWeekRender) render(...lastWeekRender); }
+try { await changeDelays(day, show, add); notice('Verspätung wieder da.'); if (lastWeekRender) render(...lastWeekRender); }
 catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
 }
-async function storeDelay(add, done, remember = false, undo = null) {
+async function storeDelay(add, done, undo = null) {
 $('delayMsg').textContent = 'Speichert…';
 $('delaySave').disabled = $('delayRemove').disabled = true;
 try {
-await changeDelays(delayDay.date, $('delayFrom').value, add, remember, delayDay.current?.show);
+await changeDelays(delayDay.date, $('delayFrom').value, add, delayDay.current?.show);
 $('delayDlg').close();
 notice(`${done} Alle sehen es in etwa einer Minute.`, !!undo);
 delayUndo = undo;
@@ -2752,16 +2721,14 @@ const minutes = Math.round(delayMinutes());
 if (!Number.isSafeInteger(minutes) || minutes < 1 || minutes > 99999) { $('delayMsg').textContent = 'Bitte 1 bis 99999 Minuten eingeben.'; return; }
 const from = delayDay.rows.find(r => r.key === $('delayFrom').value);
 if (!from) return;
-const typed = $('delayReason').value.trim();
-const reason = typed || $('delayReason').placeholder || randomReason();
-const remember = !$('delayRememberBox').hidden && $('delayRemember').checked && typed === reason;
+const reason = DELAY_REASONS.includes($('delayReason').value) ? $('delayReason').value : randomReason();
 const id = Math.random().toString(36).slice(2, 10);
 storeDelay({ id, day: delayDay.date, show: from.key, at: hhmmOf(from.at), title: from.title, minutes, reason },
-`${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`, remember);
+`${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`);
 };
 $('delayRemove').onclick = () => {
 const removed = delayDay.current;
-storeDelay(null, 'Verspätung entfernt.', false, removed && { day: delayDay.date, show: removed.show, add: removed });
+storeDelay(null, 'Verspätung entfernt.', removed && { day: delayDay.date, show: removed.show, add: removed });
 };
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-delay]');
