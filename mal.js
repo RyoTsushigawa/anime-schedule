@@ -26,6 +26,11 @@ const response = await fetch(base + path, { ...options, redirect: 'error', signa
 headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(account?.token ? { Authorization: 'Bearer ' + account.token } : {}) } });
 const body = await response.json().catch(() => ({}));
 if (!response.ok) throw Object.assign(new Error(body.error || 'MyAnimeList antwortet nicht. Versuch es nochmal.'), { status: response.status });
+const until = Number(response.headers?.get?.('X-Session-Expires')) || 0;
+if (account && until > (account.expires || 0) && until < Date.now() + 31 * 86400000) {
+account.expires = until;
+dispatchEvent(new CustomEvent('mal-session-renewed'));
+}
 return body;
 }
 const profile = account => request(account, '/me');
