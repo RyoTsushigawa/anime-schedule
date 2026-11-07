@@ -901,6 +901,16 @@ const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
 if (existing) existing.episodes.push(episode);
 else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show) });
 }
+for (const x of moves.filter(m => m.extra && m.week === isoDay(start) && m.media?.id)) {
+const day = days.find(d => isoDay(d.date) === x.day);
+if (!day) continue;
+const m = { ...x.media, coverImage: x.media.coverImage || { medium: '' }, title: x.media.title || {} };
+const name = m.title.english || m.title.romaji || x.title;
+const episodes = Array.from({ length: Math.max(1, x.last - x.first + 1) }, (_, i) => x.first + i);
+day.rows.push({ extra: x, m, links: streamLinks(m, undefined, name), when: new Date(day.date), episodes, who: [],
+slot: { tag: DAY_TAGS[(day.date.getDay() + 6) % 7], time: x.time || '' },
+show: { romaji: `${m.title.romaji || name} · Nachholen`, english: `${name} · Nachholen` } });
+}
 const heads = p => p === 'MaRyo' ? 2 : 1;
 for (const day of days) {
 const away = absentOn(isoDay(day.date));
@@ -990,7 +1000,11 @@ found.add(show);
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
 const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip)) ? render(items, start, plans, true) : null;
-for (const d of days) { assignWatchTimes(d); applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d); }
+for (const d of days) {
+assignWatchTimes(d);
+applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d);
+for (const r of d.rows) if (r.extra) r.when = new Date(r.watchAt);
+}
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
 const picked = range === 'day' && !searching() && days.find(d => isoDay(d.date) === pickedDay);
@@ -1048,16 +1062,16 @@ return choices.time === 'watch' ? watch
 : choices.time === 'both' ? `${watch}<small><span class="out">ab </span>${release}</small>` : releaseCell;
 };
 const timeHint = { watch: 'Unser Plan', release: 'Release', both: 'Unser Plan, darunter Release' }[choices.time] || 'Release';
-const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show }) => `
-      <div class="row" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
-        <div class="time" title="${timeHint}">${timeCell(when, watchAt)}</div>
+const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra }) => `
+      <div class="row${extra ? ' catchup-planned' : ''}" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
+        <div class="time" title="${extra ? 'Unser Plan (Nachholen)' : timeHint}">${extra ? hm(new Date(watchAt)) : timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
-        ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${moveButton(show, slot)}
+        ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen">⇄</button>` : '') : moveButton(show, slot)}
       </div>`;
 const groups = [];
 for (const r of rows) {
@@ -2097,6 +2111,8 @@ const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
 : `<span class="next-hint"> · ${nextAt * 1000 <= Date.now() ? `Folge ${out + 1} schon da` : 'neu ' + (new Date(nextAt * 1000).toDateString() === new Date().toDateString() ? 'heute' + savedAt(nextAt * 1000).slice(2) : savedAt(nextAt * 1000))}</span>`;
 const mine = !friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase();
 catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
+catchupById = new Map(rows.map(r => [r.m.id, r]));
+const planIn = m => movesKey && !selecting ? `<button class="plan-in" data-plan="${m.id}" title="Einplanen: diese Woche in den Plan" aria-label="Einplanen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : '';
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Bei „Alle ✓“ mitnehmen">✓</button>`;
 const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
@@ -2111,7 +2127,7 @@ const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
         <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + check(m, out, missing) : ''}
+      ${mine ? dropButton(m.id) + check(m, out, missing) : ''}${planIn(m)}
     </div>`;
 const perEpisode = ({ m, first, out, nextAt, missing, links, progress }) => {
 const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
@@ -2121,7 +2137,7 @@ return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
-        ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}
+        ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}${planIn(m)}
       </div>${eps.map(ep => `
       <div class="row compact">
         <div class="time">Folge ${ep}</div>
@@ -2549,6 +2565,7 @@ $('moveAlways').onclick = () => setMoveScope('always');
 $('list').addEventListener('click', e => {
 const b = e.target.closest('.move');
 if (!b || document.body.dataset.suppressMoveClick) return;
+if (b.dataset.extra) { const x = moves.find(m => m.extra && m.show === b.dataset.extra && m.week === isoDay(weekStart(weekOffset))); if (x) openPlan(x); return; }
 openMoveDialog(b);
 });
 function openMoveDialog(b, destination = null) {
@@ -2566,7 +2583,7 @@ setMoveScope(mv && !mv.week ? 'always' : 'week');
 $('moveReset').hidden = !mv;
 $('moveMsg').textContent = '';
 $('moveSkip').hidden = !!thisWeek?.skip;
-moving.mates = [...b.closest('.parallel-slot')?.querySelectorAll('.move') || []].filter(x => x !== b)
+moving.mates = [...b.closest('.parallel-slot')?.querySelectorAll('.move:not([data-extra])') || []].filter(x => x !== b)
 .map(x => ({ key: norm(x.dataset.moveTitle), name: x.dataset.moveName }));
 const all = [moving.name, ...moving.mates.map(m => m.name)].join(', ');
 $('moveBoth').hidden = !moving.mates.length;
@@ -2641,6 +2658,52 @@ const mine = moves.find(m => m.show === moving.key && m.week === week) || moves.
 const same = m => mine && m.week === mine.week && m.tag === mine.tag && m.time === mine.time && !!m.skip === !!mine.skip;
 const shows = [moving, ...moving.mates.filter(s => moves.some(m => m.show === s.key && same(m)))], keys = shows.map(s => s.key);
 storeMoves(moves.filter(m => !(keys.includes(m.show) && own(m))), `${namesOf(shows)}: zurück im Guckplan-Slot.`);
+};
+let catchupById = new Map(), planning = null;
+function openPlan(source) {
+if (!movesKey) return;
+const x = source.extra ? source : null;
+const r = x ? null : source;
+const m = x ? x.media : r.m;
+const first = x ? x.first : r.first, out = x ? x.out : r.out;
+planning = { m: x ? x.media : { id: m.id, title: { romaji: m.title.romaji, english: m.title.english }, coverImage: { medium: m.coverImage?.medium || '' }, siteUrl: m.siteUrl, episodes: m.episodes || null, externalLinks: (m.externalLinks || []).map(l => ({ site: l.site, url: l.url })) }, first, out, old: x };
+const name = m.title.english || m.title.romaji;
+$('planName').textContent = `Einplanen · ${name}`;
+$('planFrom').textContent = x ? 'Nachholen, diese Woche.' : `Offen ab Folge ${first}.`;
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const days = Array.from({ length: 7 }, (_, i) => { const d = weekStart(0); d.setDate(d.getDate() + i); return d; }).filter(d => d >= today);
+$('planDay').innerHTML = days.map(d => `<option value="${isoDay(d)}">${esc(nearDayName(d) || dayName(d))}, ${esc(germanDate(d))}</option>`).join('');
+if (x && days.some(d => isoDay(d) === x.day)) $('planDay').value = x.day;
+$('planTime').value = x?.time || '';
+const count = Math.max(1, out - first + 1);
+$('planCount').innerHTML = Array.from({ length: count }, (_, i) => `<option value="${i + 1}">${i ? `Folgen ${first}–${first + i}` : `Folge ${first}`}</option>`).join('');
+$('planCount').value = String(x ? x.last - x.first + 1 : 1);
+$('planRemove').hidden = !x;
+$('planSave').textContent = x ? 'Speichern' : 'Einplanen';
+$('planMsg').textContent = '';
+$('planDlg').showModal();
+}
+$('list').addEventListener('click', e => {
+const b = e.target.closest('[data-plan]');
+const r = b && catchupById.get(Number(b.dataset.plan));
+if (r) openPlan(r);
+});
+$('planSave').onclick = () => {
+const time = $('planTime').value.trim();
+if (time && !parseTime(time)) { $('planMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
+const day = $('planDay').value;
+if (!day) { $('planMsg').textContent = 'Diese Woche ist kein Tag mehr übrig.'; return; }
+const { m, first, out, old } = planning;
+const week = isoDay(weekStart(0)), key = `extra:${m.id}`, last = first + Number($('planCount').value || 1) - 1;
+const name = m.title.english || m.title.romaji;
+const entry = { show: key, title: name, extra: true, media: m, first, last, out, day, time, week };
+const next = moves.filter(x => !(x.show === key && x.week === week) && x !== old).concat(entry);
+const label = new Date(day + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short' });
+storeMoves(next, `${name} (${last > first ? `Folgen ${first}–${last}` : `Folge ${first}`}) eingeplant: ${label}${time ? ' ' + time : ''}.`, 'planDlg', 'planMsg');
+};
+$('planRemove').onclick = () => {
+const { m, old } = planning;
+storeMoves(moves.filter(x => x !== old), `${m.title.english || m.title.romaji}: Nachholen entfernt.`, 'planDlg', 'planMsg');
 };
 function discordMessage({ date, groups }) {
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -2919,7 +2982,7 @@ const b = e.target.closest('[data-day-edit]');
 if (!b || !movesKey) return;
 const section = b.closest('.day');
 const all = weekShows();
-const keys = new Set([...section.querySelectorAll('.move')].map(m => norm(m.dataset.moveTitle)));
+const keys = new Set([...section.querySelectorAll('.move:not([data-extra])')].map(m => norm(m.dataset.moveTitle)));
 const order = s => { const hm = parseTime(s.time); return hm ? (hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0]) * 60 + hm[1] : Infinity; };
 const shows = all.filter(s => keys.has(s.key)).sort((a, b) => order(a) - order(b));
 dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [] };
