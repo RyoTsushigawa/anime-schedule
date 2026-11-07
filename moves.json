@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T19:19:42.408Z",
+ "updated": "2026-11-07T20:39:31.082Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -126,6 +126,22 @@
    "tag": "Fr.",
    "time": "21:30",
    "week": ""
+  },
+  {
+   "show": "marronnieroukokunoshichininnokishi",
+   "title": "The Seven Knights of the Marronnier Kingdom",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-02",
+   "skip": true
+  },
+  {
+   "show": "vertexforce",
+   "title": "VERTEX FORCE",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-02",
+   "skip": true
   }
  ],
  "delays": [
