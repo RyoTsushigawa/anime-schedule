@@ -184,6 +184,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="dlg-row">
 <input id="delayReason" maxlength="80" placeholder="Grund" aria-label="Grund (leer = zufällig)">
 <label class="toggle" id="delayRememberBox" title="Diesen Grund für alle zu den zufälligen Gründen hinzufügen" hidden><input id="delayRemember" type="checkbox" checked>Merken</label>
+<button type="button" id="delayForget" class="pill" title="Aus den gemerkten Gründen entfernen" aria-label="Aus den gemerkten Gründen entfernen" hidden>×</button>
+<datalist id="delayKept"></datalist>
 <button type="button" id="delayDice" class="pill" title="Zufälliger Grund" aria-label="Zufälliger Grund">↻</button>
 </div>
 <div class="muted" id="delayMsg"></div>
@@ -255,6 +257,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <dl class="keyboard-guide">
 <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
 <div><dt><kbd>T</kbd></dt><dd>Heute anzeigen</dd></div>
+<div><dt><kbd>V</kbd></dt><dd>Verspätung für heute eintragen</dd></div>
 <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Zeitplan / Catch-up / Non-seasonal</dd></div>
 <div><dt><kbd>G</kbd></dt><dd>Solo / Gruppe</dd></div>
 <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Nächste / vorherige Serie</dd></div>
