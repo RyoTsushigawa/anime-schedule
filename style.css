@@ -854,4 +854,4 @@ text-align: center;
 .day-absent { display: flex; flex-wrap: wrap; gap: 6px; }
 .day-absent .pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
 #moveTime[hidden], #moveDouble[hidden] { display: none; }
-#moveDouble[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+#moveDouble[aria-pressed="true"], #moveAll[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
