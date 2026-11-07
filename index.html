@@ -115,8 +115,10 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="segmented soft catchup-only seasonal-only" role="group" aria-label="Darstellung beim Catch-up">
 <button id="perShow" title="Eine Zeile pro Serie">Serien</button><button id="perEpisode" title="Jede Folge einzeln">Folgen</button>
 </div>
-<select id="friendList" class="pill catchup-only" aria-label="Aufhol-Liste auswählen"><option value="">Eigene Liste</option></select>
-<button id="refreshCatchup" type="button" class="pill catchup-only" title="Liste jetzt von AniList / MyAnimeList aktualisieren" aria-label="Liste jetzt aktualisieren">↻</button>
+<div class="catchup-only list-controls" role="group" aria-label="Aufhol-Liste">
+<select id="friendList" class="pill" aria-label="Aufhol-Liste auswählen"><option value="">Eigene Liste</option></select>
+<button id="refreshCatchup" type="button" class="pill" title="Liste jetzt von AniList / MyAnimeList aktualisieren" aria-label="Liste jetzt aktualisieren">↻</button>
+</div>
 <button id="markAllStart" class="pill catchup-only seasonal-only" title="Alle als gesehen markieren" aria-label="Alle als gesehen markieren" hidden>Alle gesehen</button>
 <select id="soloPerson" class="pill" aria-label="Person"></select>
 <div class="picker">
