@@ -2663,6 +2663,15 @@ next = moveTo(next, s, row.querySelector('select').value, clockOf(time));
 if (next === moves) { $('dayDlg').close(); return; }
 storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg');
 };
+async function firstTabs() {
+try {
+if (localStorage.getItem('tabs')) return;
+const res = await fetch('tabs.json', { signal: AbortSignal.timeout(1500) });
+const list = res.ok ? await res.json() : null;
+if (Array.isArray(list) && list.length && list.every(t => t && /^\d+$/.test(t.gid) && typeof t.name === 'string' && Number.isFinite(t.start)))
+localStorage.setItem('tabs', JSON.stringify(list));
+} catch {}
+}
 const streamsReady = fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json())
 .then(json => { streamsDe = json; }, e => {
 console.warn('streams-de.json not loaded:', e);
@@ -2672,7 +2681,7 @@ const ready = Promise.all([
 loadFallbackLinks(),
 loadMoves().then(() => { movesSeen = movesStamp(); }),
 streamsReady,
-savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); })
+firstTabs().then(() => savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); }))
 .then(list => { tabs = list; }, e => {
 console.warn('Sheet tabs not loaded:', e);
 setNote('tabs', `${unreachable('Google Sheets')}: die Liste der Guckplan-Tabs ist unbekannt, daher wird „${FALLBACK_TAB.name}“ angezeigt.`);
