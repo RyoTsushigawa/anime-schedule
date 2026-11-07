@@ -205,7 +205,7 @@ const WEEK_KEEP_MS = 7 * 86400 * 1000;
 const fallbackWeeks = new Set();
 const lagOf = id => streamsDe?.release?.[id]?.lag || 0;
 async function liveChartWeek(start) {
-await ready;
+await streamsReady;
 if (!Object.keys(streamsDe?.status || {}).length) return null;
 const end = new Date(start); end.setDate(end.getDate() + 7);
 const items = [];
@@ -229,10 +229,11 @@ return items;
 }
 let readiedWeek = null;
 function readyNeighbours(start) {
-if (readiedWeek === start.getTime() || navigator.onLine === false || fallbackWeeks.has(start.getTime())) return;
+if (readiedWeek === start.getTime() || navigator.onLine === false || navigator.connection?.saveData || fallbackWeeks.has(start.getTime())) return;
 readiedWeek = start.getTime();
 const whenIdle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 1000);
 whenIdle(() => {
+if (document.hidden || readiedWeek !== start.getTime() || view !== 'week') return;
 for (const by of [7, -14]) {
 const week = new Date(start);
 week.setDate(week.getDate() + by);
@@ -2027,7 +2028,7 @@ if (!weekCached(start) && !(refresh && document.querySelector('#list .row'))) $(
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 const airings = Promise.all([fetchWeek(lastWeek), fetchWeek(start)]);
 airings.catch(() => {});
-await ready;
+await tabsReady;
 const needed = new Map();
 for (const date of [lastWeek, start, end]) for (const t of activeTabs(tabs, date)) needed.set(t.gid, t);
 const plans = new Map();
@@ -2201,11 +2202,19 @@ throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
 const movesStamp = () => JSON.stringify([moves, delays, sharedReasons]);
 let movesSeen = '';
+let followingMoves = false;
+const canFollowMoves = () => document.visibilityState === 'visible' && view === 'week' && lastWeekRender &&
+!document.querySelector('dialog[open]') && !document.body.classList.contains('dnd-moving');
 async function followMoves() {
-if (document.visibilityState !== 'visible' || view !== 'week' || !lastWeekRender) return;
-if (document.querySelector('dialog[open]') || document.body.classList.contains('dnd-moving')) return;
+if (followingMoves || !canFollowMoves()) return;
 const known = new Set(delays.map(d => d.id));
+followingMoves = true;
+try {
 await loadMoves();
+} finally {
+followingMoves = false;
+}
+if (!canFollowMoves()) return;
 const stamp = movesStamp();
 if (stamp === movesSeen) return;
 const fresh = movesSeen && delays.filter(d => !known.has(d.id) && d.day === isoDay(new Date()));
@@ -2677,14 +2686,18 @@ const streamsReady = fetch('streams-de.json', { cache: 'no-cache' }).then(r => r
 console.warn('streams-de.json not loaded:', e);
 setNote('streams', `${unreachable('Die Seite')}: die Stream-Daten wurden nicht geladen, daher kommen die Links von AniList, und Pausen und Rewatches fehlen.`);
 });
-const ready = Promise.all([
-loadFallbackLinks(),
-loadMoves().then(() => { movesSeen = movesStamp(); }),
-streamsReady,
-firstTabs().then(() => savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); }))
+const tabsReady = firstTabs().then(() => savedOrFresh('tabs', guckplanTabs, list => { tabs = list; load(true); }))
 .then(list => { tabs = list; }, e => {
 console.warn('Sheet tabs not loaded:', e);
 setNote('tabs', `${unreachable('Google Sheets')}: die Liste der Guckplan-Tabs ist unbekannt, daher wird „${FALLBACK_TAB.name}“ angezeigt.`);
+});
+const ready = Promise.all([
+tabsReady,
+streamsReady,
+loadFallbackLinks().then(() => { if (lastWeekRender && view === 'week') redraw(); }),
+loadMoves().then(() => {
+movesSeen = movesStamp();
+if (lastWeekRender && view === 'week') redraw();
 }),
 ]);
 accountLoading = !!auth || !!malLoginCode;
@@ -2712,7 +2725,12 @@ document.addEventListener('visibilitychange', reloadWhenAway);
 if ('serviceWorker' in navigator) {
 const hadWorker = !!navigator.serviceWorker.controller;
 navigator.serviceWorker.register('sw.js').then(reg => {
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+let lastUpdateCheck = Date.now();
+document.addEventListener('visibilitychange', () => {
+if (document.visibilityState !== 'visible' || Date.now() - lastUpdateCheck < 60000) return;
+lastUpdateCheck = Date.now();
+reg.update().catch(() => {});
+});
 }).catch(e => console.warn('No offline copy:', e));
 navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) { updateWaiting = true; reloadWhenAway(); } });
 }
