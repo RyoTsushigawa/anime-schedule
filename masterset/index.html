@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://assets.tcgdex.net https://images.pokemontcg.io https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com; connect-src 'self' https://api.tcgdex.net https://api.pokemontcg.io https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://assets.tcgdex.net https://images.pokemontcg.io https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com; connect-src 'self' https://api.tcgdex.net https://api.pokemontcg.io https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <title>Masterset Tracker</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
@@ -21,6 +21,8 @@
 body{background:var(--ice);color:var(--ink);font:400 15px/1.45 var(--body)}
 .wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header{background:var(--band);color:var(--band-fg);padding-block:22px 18px}
+.tool-back{display:inline-flex;align-items:center;min-height:36px;padding:4px 10px;margin-bottom:10px;border:1px solid currentColor;border-radius:99px;color:inherit;text-decoration:none;font-size:13px}
+.tool-back:hover{text-decoration:underline}
 h1{font:800 clamp(28px,5vw,42px)/1.05 var(--display);margin:0;text-wrap:balance}
 .sub{color:var(--band-muted);margin:6px 0 18px;max-width:68ch}
 .ledger{display:flex;flex-wrap:wrap;gap:12px 40px}
@@ -114,6 +116,7 @@ textarea{width:100%;min-height:120px;background:var(--ice);border:1px solid var(
 
 <header>
   <div class="wrap">
+    <a class="tool-back" href="../" lang="de">← Zum Plan</a>
     <h1>Masterset Tracker</h1>
     <p class="sub">Every artwork once, at its cheapest print.</p>
     <div class="ledger" id="ledger"></div>
