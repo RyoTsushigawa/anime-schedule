@@ -2372,6 +2372,7 @@ try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 let delays = [];
+let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
 let movesKey = '';
@@ -2392,12 +2393,13 @@ try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 delays = newest?.delays || [];
+reasonList = goodReasons(newest?.reasons);
 }
 function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
-async function saveMoves(next, changeDelays = null) {
+async function saveMoves(next, changeDelays = null, reasons = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 for (let attempt = 0; attempt < 3; attempt++) {
@@ -2408,13 +2410,15 @@ try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta
 let nextDelays = remote.delays || [];
 if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
-const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), reasons: DELAY_REASONS };
+const remoteReasons = goodReasons(remote.reasons);
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
-body: JSON.stringify({ message: changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
+body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
 if (res.ok) {
 moves = file.moves;
 delays = nextDelays;
+reasonList = file.reasons;
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
 return;
@@ -2613,9 +2617,13 @@ const DELAY_REASONS = ['Verzögerungen im Betriebsablauf', 'Verspätung eines vo
 'Ein Zuschauer sucht noch seine Lieblingsdecke', 'Verspätete Ankunft aus dem Homeoffice', 'Ein Zuschauer hat Spoiler gelesen und muss sich erholen',
 'Bereitstellung des Lieferdienstes verzögert sich', 'Ein Zuschauer ist im Gacha-Spiel hängen geblieben',
 'Haustier fordert Aufmerksamkeit', 'Zuschauer im falschen Discord-Kanal', 'Ein Zuschauer muss noch „nur kurz“ etwas erledigen', 'Escanor'];
-const reasonPool = () => DELAY_REASONS;
-const randomReason = () => DELAY_REASONS[Math.floor(Math.random() * DELAY_REASONS.length)];
-$('delayReason').innerHTML = DELAY_REASONS.map(r => `<option>${esc(r)}</option>`).join('');
+const LINKISH = /https?:|www\.|discord\.gg|\]\(|[a-z0-9-]+\.(com|net|org|de|gg|io|ly|me|xyz|ru|co)\b/i;
+const goodReasons = list => Array.isArray(list)
+? [...new Set(list.filter(r => typeof r === 'string').map(r => r.trim()).filter(r => r && r.length <= 80 && !LINKISH.test(r)))].slice(0, 300) : [];
+const reasonPool = () => reasonList.length ? reasonList : DELAY_REASONS;
+const randomReason = () => { const pool = reasonPool(); return pool[Math.floor(Math.random() * pool.length)]; };
+const fillReasons = () => { $('delayReason').innerHTML = reasonPool().map(r => `<option>${esc(r)}</option>`).join(''); };
+fillReasons();
 let delayDay = null;
 const hhmmOf = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const delaysOf = date => [...new Map(delays.filter(x => x.day === date).map(x => [x.show, x])).values()];
@@ -2647,8 +2655,10 @@ const minutes = current?.minutes || 15;
 const chip = $('delayMinutes').querySelector(`[data-min="${minutes}"]`);
 for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', String(x === chip));
 $('delayCustom').value = chip ? '' : minutes;
-$('delayReason').value = DELAY_REASONS.includes(current?.reason) ? current.reason : randomReason();
+fillReasons();
+$('delayReason').value = reasonPool().includes(current?.reason) ? current.reason : randomReason();
 $('delayRemove').hidden = !current;
+$('delayList').hidden = !movesKey;
 }
 for (const id of ['delayReason', 'delayCustom'])
 $(id).addEventListener('keydown', e => {
@@ -2668,6 +2678,35 @@ $('delayCustom').addEventListener('input', () => {
 if ($('delayCustom').value) for (const x of $('delayMinutes').querySelectorAll('[data-min]')) x.setAttribute('aria-pressed', 'false');
 });
 $('delayDice').onclick = () => { $('delayReason').value = randomReason(); };
+$('delayList').onclick = () => {
+$('reasonsText').value = reasonPool().join('\n');
+$('reasonsMsg').textContent = `${reasonPool().length} Gründe, einer pro Zeile.`;
+$('reasonsDlg').showModal();
+$('reasonsText').scrollTop = 0;
+$('reasonsText').setSelectionRange(0, 0);
+};
+$('reasonsDefault').onclick = () => {
+$('reasonsText').value = DELAY_REASONS.join('\n');
+$('reasonsMsg').textContent = `${DELAY_REASONS.length} Gründe (Standard), noch nicht gespeichert.`;
+};
+$('reasonsSave').onclick = async () => {
+const lines = $('reasonsText').value.split('\n').map(l => l.trim()).filter(Boolean);
+const bad = lines.find(l => l.length > 80 || LINKISH.test(l));
+if (bad) { $('reasonsMsg').textContent = `„${bad.length > 40 ? bad.slice(0, 40) + '…' : bad}“: ${bad.length > 80 ? 'höchstens 80 Zeichen' : 'keine Links'}.`; return; }
+const list = [...new Set(lines)];
+if (!list.length || list.length > 300) { $('reasonsMsg').textContent = 'Bitte 1 bis 300 Gründe.'; return; }
+$('reasonsMsg').textContent = 'Speichert…';
+$('reasonsSave').disabled = true;
+try {
+await saveMoves(moves, d => d, list);
+$('reasonsDlg').close();
+const picked = $('delayReason').value;
+fillReasons();
+$('delayReason').value = reasonPool().includes(picked) ? picked : randomReason();
+$('delayMsg').textContent = `Liste gespeichert: ${list.length} Gründe.`;
+} catch (e) { $('reasonsMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+finally { $('reasonsSave').disabled = false; }
+};
 async function postDelay(op) {
 const send = async () => {
 for (let attempt = 0; ; attempt++) {
@@ -2685,6 +2724,7 @@ const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
 moves = body.moves || moves;
 delays = body.delays || [];
+if (body.reasons) reasonList = goodReasons(body.reasons);
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
 }
@@ -2721,7 +2761,7 @@ const minutes = Math.round(delayMinutes());
 if (!Number.isSafeInteger(minutes) || minutes < 1 || minutes > 99999) { $('delayMsg').textContent = 'Bitte 1 bis 99999 Minuten eingeben.'; return; }
 const from = delayDay.rows.find(r => r.key === $('delayFrom').value);
 if (!from) return;
-const reason = DELAY_REASONS.includes($('delayReason').value) ? $('delayReason').value : randomReason();
+const reason = reasonPool().includes($('delayReason').value) ? $('delayReason').value : randomReason();
 const id = Math.random().toString(36).slice(2, 10);
 storeDelay({ id, day: delayDay.date, show: from.key, at: hhmmOf(from.at), title: from.title, minutes, reason },
 `${delayDay.current ? 'Verspätung geändert: ' : ''}+${minutes} Min. ab ${from.title}.`);
