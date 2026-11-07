@@ -58,12 +58,14 @@ const i = tabs.indexOf(tab);
 return i < 0 ? [tab] : [tab, tabs[i - 1], tabs[i + 1]].filter(Boolean);
 }
 async function loadPlan(tab, requireHiddenMetadata = false) {
+const rows = sheetRows(tab.gid);
+rows.catch(() => {});
 const [hidden, catalog, colors] = await Promise.all([
 hiddenRows(tab).catch(e => { if (requireHiddenMetadata) throw new Error('Ausgeblendete Serien und Personen konnten nicht geprüft werden: ' + e.message); console.warn('Hidden rows unknown, all rows count:', e.message); return null; }),
 tab.catalogGid ? loadSheet(tab.catalogGid).catch(() => null) : null,
 headerColors(tab).catch(() => ({})),
 ]);
-const plan = await loadSheet(tab.gid, hidden);
+const plan = sheetFromRows(await rows, hidden);
 plan.catalog = (catalog?.shows || []).map(({ romaji, english, wo, tag }) => ({ romaji, english, wo, tag, time: '' }));
 plan.colors = colors;
 return plan;
@@ -108,10 +110,13 @@ rows: new Set((data.rowMetadata || []).flatMap((r, i) => r.hiddenByUser ? [i + 1
 cols: new Set((data.columnMetadata || []).flatMap((c, i) => c.hiddenByUser ? [i] : [])),
 };
 }
-async function loadSheet(gid, hidden = null) {
+async function sheetRows(gid) {
 const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
 if (!res.ok) throw new Error('Google Sheet antwortet ' + res.status);
-return sheetFromRows(parseCsv(await res.text()), hidden);
+return parseCsv(await res.text());
+}
+async function loadSheet(gid, hidden = null) {
+return sheetFromRows(await sheetRows(gid), hidden);
 }
 function sheetFromRows(rows, hidden = null) {
 const headerIndex = rows.findIndex(r => r.some(c => c.trim() === 'Anime Titel'));
