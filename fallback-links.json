@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-06T19:10:36.086Z",
+ "generated": "2026-11-08T19:00:23.634Z",
  "byAnilist": {
   "21": {
    "title": "One Piece",
@@ -9,7 +9,8 @@
   },
   "235": {
    "title": "Meitantei Conan",
-   "malId": 235
+   "malId": 235,
+   "aniworld": "https://aniworld.to/anime/stream/detektiv-conan"
   },
   "966": {
    "title": "Crayon Shin-chan",
@@ -67,7 +68,8 @@
   "135865": {
    "title": "Youjo Senki II",
    "malId": 49233,
-   "subsplease": "https://subsplease.org/shows/youjo-senki-s2"
+   "subsplease": "https://subsplease.org/shows/youjo-senki-s2",
+   "aniworld": "https://aniworld.to/anime/stream/saga-of-tanya-the-evil/staffel-2"
   },
   "140842": {
    "title": "Chiikawa",
@@ -81,7 +83,8 @@
   "152677": {
    "title": "Tantei wa Mou, Shindeiru. Season2",
    "malId": 52480,
-   "subsplease": "https://subsplease.org/shows/tantei-wa-mou-shindeiru-s2"
+   "subsplease": "https://subsplease.org/shows/tantei-wa-mou-shindeiru-s2",
+   "aniworld": "https://aniworld.to/anime/stream/the-detective-is-already-dead/staffel-2"
   },
   "158871": {
    "title": "Pocket Monsters (2023)",
@@ -96,7 +99,8 @@
   "159309": {
    "title": "Otome Game Sekai wa Mob ni Kibishii Sekai desu 2",
    "malId": 54000,
-   "subsplease": "https://subsplease.org/shows/otome-game-sekai-wa-mob-ni-kibishii-sekai-desu-s2"
+   "subsplease": "https://subsplease.org/shows/otome-game-sekai-wa-mob-ni-kibishii-sekai-desu-s2",
+   "aniworld": "https://aniworld.to/anime/stream/trapped-in-a-dating-sim-the-world-of-otome-games-is-tough-for-mobs/staffel-2"
   },
   "160803": {
    "title": "Mahou Shoujo Ikusei Keikaku restart",
@@ -111,11 +115,13 @@
   "169080": {
    "title": "Azur Lane Bisoku Zenshin! Ni!!",
    "malId": 56613,
-   "subsplease": "https://subsplease.org/shows/azur-lane-bisoku-zenshin-s2"
+   "subsplease": "https://subsplease.org/shows/azur-lane-bisoku-zenshin-s2",
+   "aniworld": "https://aniworld.to/anime/stream/azur-lane-slow-ahead/staffel-2"
   },
   "169579": {
    "title": "Sekai Saikou no Ansatsusha, Isekai Kizoku ni Tensei suru Season2",
-   "malId": 56732
+   "malId": 56732,
+   "aniworld": "https://aniworld.to/anime/stream/the-worlds-finest-assassin-gets-reincarnated-in-another-world-as-an-aristocrat/staffel-2"
   },
   "169581": {
    "title": "Magical★Explorer",
@@ -138,11 +144,12 @@
    "title": "Honzuki no Gekokujou ~Shisho ni Naru Tame ni wa Shudan wo Erandeiraremasen~ Ryushu no Youjo",
    "malId": 57466,
    "subsplease": "https://subsplease.org/shows/honzuki-no-gekokujou",
-   "aniworld": "https://aniworld.to/anime/stream/ascendance-of-a-bookworm"
+   "aniworld": "https://aniworld.to/anime/stream/ascendance-of-a-bookworm/staffel-4"
   },
   "172192": {
    "title": "Kikansha no Mahou wa Tokubetsu desu 2nd Season",
-   "malId": 57612
+   "malId": 57612,
+   "aniworld": "https://aniworld.to/anime/stream/a-returners-magic-should-be-special/staffel-2"
   },
   "174427": {
    "title": "Zombie no Afureta Sekai de Ore dake ga Osowarenai",
@@ -151,7 +158,8 @@
   "176314": {
    "title": "Sasaki to Pii-chan Season 2",
    "malId": 58518,
-   "subsplease": "https://subsplease.org/shows/sasaki-to-pii-chan-s2"
+   "subsplease": "https://subsplease.org/shows/sasaki-to-pii-chan-s2",
+   "aniworld": "https://aniworld.to/anime/stream/sasaki-and-peeps/staffel-2"
   },
   "177637": {
    "title": "Sayonara Lara",
@@ -168,7 +176,7 @@
    "title": "MASHLE Sanma Taisou Shinkakusha Saishu Shiken-hen",
    "malId": 58934,
    "subsplease": "https://subsplease.org/shows/mashle",
-   "aniworld": "https://aniworld.to/anime/stream/mashle-magic-and-muscles"
+   "aniworld": "https://aniworld.to/anime/stream/mashle-magic-and-muscles/staffel-3"
   },
   "178083": {
    "title": "Tokyo Revengers: Santen Sensou-hen",
@@ -178,7 +186,8 @@
   },
   "178789": {
    "title": "Mushoku Tensei Ⅲ: Isekai Ittara Honki Dasu",
-   "malId": 59193
+   "malId": 59193,
+   "aniworld": "https://aniworld.to/anime/stream/mushoku-tensei-jobless-reincarnation/staffel-3"
   },
   "178868": {
    "title": "Magic Knight Rayearth (2026)",
@@ -207,12 +216,14 @@
   "182205": {
    "title": "Tensei Shitara Slime Datta Ken 4th Season",
    "malId": 59970,
-   "subsplease": "https://subsplease.org/shows/tensei-shitara-slime-datta-ken-s4"
+   "subsplease": "https://subsplease.org/shows/tensei-shitara-slime-datta-ken-s4",
+   "aniworld": "https://aniworld.to/anime/stream/that-time-i-got-reincarnated-as-a-slime/staffel-4"
   },
   "182616": {
    "title": "Nige Jouzu no Wakagimi 2nd Season",
    "malId": 60059,
-   "subsplease": "https://subsplease.org/shows/nige-jouzu-no-wakagimi-s2"
+   "subsplease": "https://subsplease.org/shows/nige-jouzu-no-wakagimi-s2",
+   "aniworld": "https://aniworld.to/anime/stream/the-elusive-samurai/staffel-2"
   },
   "183231": {
    "title": "RILAKKUMA",
@@ -229,11 +240,13 @@
   "184492": {
    "title": "Mairimashita! Iruma-kun 4th Season",
    "malId": 60310,
-   "subsplease": "https://subsplease.org/shows/mairimashita-iruma-kun-s4"
+   "subsplease": "https://subsplease.org/shows/mairimashita-iruma-kun-s4",
+   "aniworld": "https://aniworld.to/anime/stream/welcome-to-demon-school-iruma-kun/staffel-4"
   },
   "185542": {
    "title": "Gaikotsu Kishi-sama, Tadaima Isekai e Odekakechuu II",
-   "malId": 60522
+   "malId": 60522,
+   "aniworld": "https://aniworld.to/anime/stream/skeleton-knight-in-another-world/staffel-2"
   },
   "185646": {
    "title": "Koupen Chan",
@@ -242,7 +255,7 @@
   "185692": {
    "title": "Kabushikigaisha Magi-Lumière 2nd Season",
    "malId": 60552,
-   "aniworld": "https://aniworld.to/anime/stream/magilumiere-co-ltd"
+   "aniworld": "https://aniworld.to/anime/stream/magilumiere-co-ltd/staffel-2"
   },
   "185697": {
    "title": "ARCANADEA",
@@ -250,7 +263,8 @@
   },
   "185699": {
    "title": "Ramen Akaneko Season 2",
-   "malId": 60555
+   "malId": 60555,
+   "aniworld": "https://aniworld.to/anime/stream/ramen-akaneko/staffel-2"
   },
   "185756": {
    "title": "Tensei Kizoku, Kantei Skill de Nariagaru 3rd Season",
@@ -353,24 +367,29 @@
   },
   "188892": {
    "title": "Kuroiwa Medaka ni Watashi no Kawaii ga Tsuujinai Season2",
-   "malId": 61304
+   "malId": 61304,
+   "aniworld": "https://aniworld.to/anime/stream/medaka-kuroiwa-is-impervious-to-my-charms/staffel-2"
   },
   "189046": {
    "title": "Re:Zero kara Hajimeru Isekai Seikatsu 4th season",
-   "malId": 61316
+   "malId": 61316,
+   "aniworld": "https://aniworld.to/anime/stream/rezero-starting-life-in-another-world/staffel-4"
   },
   "189123": {
    "title": "Ao no Hako Season2",
-   "malId": 61323
+   "malId": 61323,
+   "aniworld": "https://aniworld.to/anime/stream/blue-box/staffel-2"
   },
   "189323": {
    "title": "Shangri-La Frontier 3rd Season",
    "malId": 61338,
-   "subsplease": "https://subsplease.org/shows/shangri-la-frontier"
+   "subsplease": "https://subsplease.org/shows/shangri-la-frontier",
+   "aniworld": "https://aniworld.to/anime/stream/shangri-la-frontier/staffel-3"
   },
   "190054": {
    "title": "Watashi no Shiawase na Kekkon Special Episode",
-   "malId": 61440
+   "malId": 61440,
+   "aniworld": "https://aniworld.to/anime/stream/my-happy-marriage"
   },
   "190569": {
    "title": "Tenmaku no Jaadugar",
@@ -409,7 +428,8 @@
   },
   "194829": {
    "title": "Katainaka no Ossan, Kensei ni Naru II",
-   "malId": 61897
+   "malId": 61897,
+   "aniworld": "https://aniworld.to/anime/stream/from-old-country-bumpkin-to-master-swordsman/staffel-2"
   },
   "195448": {
    "title": "MONOGATARI Series: OFF & MONSTER Season - Wazamonogatari: Karen Ogre",
@@ -418,7 +438,7 @@
   "195516": {
    "title": "Kusuriya no Hitorigoto 3rd Season Cour 1",
    "malId": 61987,
-   "aniworld": "https://aniworld.to/anime/stream/the-apothecary-diaries"
+   "aniworld": "https://aniworld.to/anime/stream/the-apothecary-diaries/staffel-3"
   },
   "195571": {
    "title": "Shuiro no Kamen",
@@ -434,7 +454,8 @@
   },
   "195604": {
    "title": "Black Clover 2nd Season",
-   "malId": 61967
+   "malId": 61967,
+   "aniworld": "https://aniworld.to/anime/stream/black-clover/staffel-2"
   },
   "195833": {
    "title": "Honoo no Toukyuujo: Dodge Danko",
@@ -443,8 +464,7 @@
   },
   "196012": {
    "title": "MAO",
-   "malId": 62048,
-   "aniworld": "https://aniworld.to/anime/stream/mao"
+   "malId": 62048
   },
   "196017": {
    "title": "Grow Up Show ~Himawari no Circus-dan~",
@@ -544,7 +564,8 @@
   "198946": {
    "title": "Clevatess Ⅱ -Majuu no Ou to Akago to Shikabane no Yuusha Denshou-",
    "malId": 62513,
-   "subsplease": "https://subsplease.org/shows/clevatess-s2"
+   "subsplease": "https://subsplease.org/shows/clevatess-s2",
+   "aniworld": "https://aniworld.to/anime/stream/clevatess/staffel-2"
   },
   "199007": {
    "title": "#Zombie Sagashitemasu",
@@ -566,12 +587,12 @@
    "title": "Grand Blue Season 3",
    "malId": 62542,
    "subsplease": "https://subsplease.org/shows/grand-blue-s3",
-   "aniworld": "https://aniworld.to/anime/stream/grand-blue-dreaming"
+   "aniworld": "https://aniworld.to/anime/stream/grand-blue-dreaming/staffel-3"
   },
   "199337": {
    "title": "Shin Samurai-den YAIBA 2nd Season",
    "malId": 62580,
-   "aniworld": "https://aniworld.to/anime/stream/yaiba-samurai-legend"
+   "aniworld": "https://aniworld.to/anime/stream/yaiba-samurai-legend/staffel-2"
   },
   "199408": {
    "title": "Buchigire Reijou wa Houfuku wo Chikaimashita. Madousho no Chikara de Sokoku wo Tatakitsubushimasu",
@@ -582,7 +603,7 @@
    "title": "HOTEL INHUMANS Season 2",
    "malId": 62590,
    "subsplease": "https://subsplease.org/shows/hotel-inhumans-s2",
-   "aniworld": "https://aniworld.to/anime/stream/hotel-inhumans"
+   "aniworld": "https://aniworld.to/anime/stream/hotel-inhumans/staffel-2"
   },
   "199590": {
    "title": "Matsurika Kanriden",
@@ -623,7 +644,8 @@
   "200637": {
    "title": "Kimi no Koto ga Daidaidaidaidaisuki na 100-nin no Kanojo 3rd Season",
    "malId": 62811,
-   "subsplease": "https://subsplease.org/shows/hyakkano"
+   "subsplease": "https://subsplease.org/shows/hyakkano",
+   "aniworld": "https://aniworld.to/anime/stream/the-100-girlfriends-who-really-really-really-really-really-love-you/staffel-3"
   },
   "201514": {
    "title": "Saijo no Osewa: Takane no Hanadarake na Meimonkou de, Gakuin Ichi no Ojousama (Seikatsu Nouryoku Kaimu) wo Kagenagara Osewa suru Koto ni Narimashita",
@@ -716,11 +738,12 @@
   "204363": {
    "title": "SAKAMOTO DAYS Season 2",
    "malId": 63139,
-   "aniworld": "https://aniworld.to/anime/stream/sakamoto-days"
+   "aniworld": "https://aniworld.to/anime/stream/sakamoto-days/staffel-2"
   },
   "204389": {
    "title": "Yasei no Last Boss ga Arawareta! 2nd Season",
-   "malId": 63140
+   "malId": 63140,
+   "aniworld": "https://aniworld.to/anime/stream/a-wild-last-boss-appeared/staffel-2"
   },
   "204466": {
    "title": "Otome Kaijuu Caraméliser",
@@ -745,7 +768,8 @@
   "204747": {
    "title": "One-Punch Man Season 3 Cour 2",
    "malId": 63193,
-   "subsplease": "https://subsplease.org/shows/one-punch-man-s3"
+   "subsplease": "https://subsplease.org/shows/one-punch-man-s3",
+   "aniworld": "https://aniworld.to/anime/stream/one-punch-man/staffel-3"
   },
   "205130": {
    "title": "Historie",
@@ -935,7 +959,8 @@
   "209669": {
    "title": "Hanazakari no Kimitachi e 2nd Season",
    "malId": 63780,
-   "subsplease": "https://subsplease.org/shows/hanazakari-no-kimitachi-e-s2"
+   "subsplease": "https://subsplease.org/shows/hanazakari-no-kimitachi-e-s2",
+   "aniworld": "https://aniworld.to/anime/stream/hana-kimi/staffel-2"
   },
   "209709": {
    "title": "Sirotan (TV)",
@@ -943,27 +968,30 @@
   },
   "209800": {
    "title": "Yoroi Shin Den Samurai Troopers 2nd Cour",
-   "malId": 63047
+   "malId": 63047,
+   "aniworld": "https://aniworld.to/anime/stream/yoroi-shinden-samurai-troopers"
   },
   "209872": {
    "title": "Ranma1/2 3rd Season",
    "malId": 63801,
-   "aniworld": "https://aniworld.to/anime/stream/ranma"
+   "aniworld": "https://aniworld.to/anime/stream/ranma/staffel-3"
   },
   "209980": {
    "title": "Isekai de Cheat Skill wo Te ni Shita Ore wa, Genjitsu Sekai wo mo Musou Suru ~Level Up wa Jinsei wo Kaeta~ 2nd Season",
    "malId": 63822,
-   "subsplease": "https://subsplease.org/shows/iseleve"
+   "subsplease": "https://subsplease.org/shows/iseleve",
+   "aniworld": "https://aniworld.to/anime/stream/i-got-a-cheat-skill-in-another-world-and-became-unrivaled-in-the-real-world-too/staffel-2"
   },
   "209983": {
    "title": "Hell Mode: Yarikomizuki no Gamer wa Hai Settei no Isekai de Musou suru 2nd Season",
    "malId": 63817,
-   "subsplease": "https://subsplease.org/shows/hell-mode"
+   "subsplease": "https://subsplease.org/shows/hell-mode",
+   "aniworld": "https://aniworld.to/anime/stream/hell-mode-the-hardcore-gamer-dominates-in-another-world-with-garbage-balancing/staffel-2"
   },
   "210031": {
    "title": "Seihantai na Kimi to Boku 2nd Season",
    "malId": 63832,
-   "aniworld": "https://aniworld.to/anime/stream/you-and-i-are-polar-opposites"
+   "aniworld": "https://aniworld.to/anime/stream/you-and-i-are-polar-opposites/staffel-2"
   },
   "210073": {
    "title": "Golden Kamuy (Saishuushou): Bousou ressha-hen",
@@ -976,7 +1004,7 @@
   "210199": {
    "title": "The Fable 2nd Season",
    "malId": 63885,
-   "aniworld": "https://aniworld.to/anime/stream/the-fable"
+   "aniworld": "https://aniworld.to/anime/stream/the-fable/staffel-2"
   },
   "210482": {
    "title": "STEEL BALL RUN JoJo no Kimyou na Bouken",
@@ -985,7 +1013,7 @@
   "210687": {
    "title": "Re:Zero kara Hajimeru Kyuukei Jikan (Break Time) 4th Season",
    "malId": 63830,
-   "aniworld": "https://aniworld.to/anime/stream/rezero-starting-break-time-from-zero"
+   "aniworld": "https://aniworld.to/anime/stream/rezero-starting-break-time-from-zero/staffel-4"
   },
   "211070": {
    "title": "Pen to Wappa to Jijitsukon",
@@ -1009,7 +1037,7 @@
   "212144": {
    "title": "Kizu darake Seijo yori Houfuku wo Komete Season2",
    "malId": 64180,
-   "aniworld": "https://aniworld.to/anime/stream/with-vengeance-sincerely-your-broken-saintess"
+   "aniworld": "https://aniworld.to/anime/stream/with-vengeance-sincerely-your-broken-saintess/staffel-2"
   },
   "212308": {
    "title": "Pan no Akachan",
@@ -1018,7 +1046,8 @@
   "212503": {
    "title": "Hyouken no Majutsushi ga Sekai wo Suberu II",
    "malId": 64254,
-   "subsplease": "https://subsplease.org/shows/hyouken-no-majutsushi-ga-sekai-wo-suberu-s2"
+   "subsplease": "https://subsplease.org/shows/hyouken-no-majutsushi-ga-sekai-wo-suberu-s2",
+   "aniworld": "https://aniworld.to/anime/stream/the-iceblade-sorcerer-shall-rule-the-world/staffel-2"
   },
   "212799": {
    "title": "Marronnier Oukoku no Shichinin no Kishi",
@@ -1047,7 +1076,7 @@
   "213359": {
    "title": "Yami Shibai 17",
    "malId": 64435,
-   "aniworld": "https://aniworld.to/anime/stream/yamishibai-japanese-ghost-stories"
+   "aniworld": "https://aniworld.to/anime/stream/yamishibai-japanese-ghost-stories/staffel-17"
   },
   "213497": {
    "title": "Sudachi no Maoujou",
@@ -1060,7 +1089,7 @@
   "213657": {
    "title": "Yozakura-san Chi no Daisakusen 2nd Season Cour 2",
    "malId": 64503,
-   "aniworld": "https://aniworld.to/anime/stream/mission-yozakura-family"
+   "aniworld": "https://aniworld.to/anime/stream/mission-yozakura-family/staffel-2"
   },
   "213658": {
    "title": "Diamond no Ace act II -Second Season- Cour 2",
@@ -1079,12 +1108,12 @@
    "title": "MARRIAGETOXIN Season 2",
    "malId": 64524,
    "subsplease": "https://subsplease.org/shows/marriagetoxin",
-   "aniworld": "https://aniworld.to/anime/stream/marriagetoxin"
+   "aniworld": "https://aniworld.to/anime/stream/marriagetoxin/staffel-2"
   },
   "213805": {
    "title": "Koori no Jouheki 2nd Season",
    "malId": 64534,
-   "aniworld": "https://aniworld.to/anime/stream/the-ramparts-of-ice"
+   "aniworld": "https://aniworld.to/anime/stream/the-ramparts-of-ice/staffel-2"
   },
   "213877": {
    "title": "MURCIÉLAGO",
@@ -1131,7 +1160,8 @@
   },
   "217070": {
    "title": "Futsutsuka na Akujo dewa Gozaimasu ga ~Suuguu Chouso Torikae Den~ Cour 2",
-   "malId": 65032
+   "malId": 65032,
+   "aniworld": "https://aniworld.to/anime/stream/though-i-am-an-inept-villainess"
   },
   "217126": {
    "title": "Meitantei Conan: 30-Gou Satsujin Jiken",
