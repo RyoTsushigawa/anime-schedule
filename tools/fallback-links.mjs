@@ -39,18 +39,42 @@ export function parseAniWorld(html) {
   }
   return [...shows.values()];
 }
-const seriesTitle = text => fallbackTitle(String(text).replace(/\b(?:\d+(?:st|nd|rd|th)\s+season|season\s*\d+|s\d+|cour\s*\d+|part\s*\d+)\b/gi, ''));
+// A season mark: "2nd Season", "Season 2", "S2", "Part 2", "Cour 2", or a Roman "II" at the end
+const ROMAN = { ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10 };
+const seriesTitle = text => fallbackTitle(String(text)
+  .replace(/\b(?:\d+(?:st|nd|rd|th)\s+season|season\s*\d+|s\d+|cour\s*\d+|part\s*\d+)\b/gi, '')
+  .replace(/\s(?:ii|iii|iv|vi{0,3}|ix|x)\s*$/i, ''));
+// Which season a title names (2 or more), else null: AniWorld keeps every season on one page, with
+// "/staffel-2" and so on for the later ones
+export function seasonOf(titles) {
+  for (const t of titles.filter(Boolean).map(String)) {
+    const n = Number(t.match(/\b(\d+)(?:st|nd|rd|th)\s+season\b/i)?.[1] || t.match(/\bseason\s*(\d+)\b/i)?.[1] || t.match(/\bs(\d+)\b/i)?.[1])
+      || ROMAN[t.match(/\s(ii|iii|iv|vi{0,3}|ix|x)\s*$/i)?.[1]?.toLowerCase()];
+    if (n >= 2 && n <= 20) return n;
+  }
+  return null;
+}
+// A title only counts when enough of it is in Latin letters: Japanese, Chinese or Thai names
+// shrink to almost nothing ("第2期" is just "2") and would match unrelated shows.
+const usable = key => /[a-z].*[a-z].*[a-z]/.test(key) && key.length >= 4;
 export function matchAniWorld(titles, index) {
   const aliases = {
     magicalgirlraisingprojectrestart: 'Magical Girl Raising Project',
     mahoushoujoikuseikeikakurestart: 'Magical Girl Raising Project',
   };
-  const exact = new Set(titles.filter(Boolean).flatMap(t => [fallbackTitle(t), ...aliases[fallbackTitle(t)] ? [fallbackTitle(aliases[fallbackTitle(t)])] : []]));
+  const exact = new Set(titles.filter(Boolean).flatMap(t => [fallbackTitle(t), ...aliases[fallbackTitle(t)] ? [fallbackTitle(aliases[fallbackTitle(t)])] : []]).filter(usable));
   let matches = index.filter(show => exact.has(fallbackTitle(show.title)));
-  if (!matches.length) matches = index.filter(show => show.titles.some(t => exact.has(fallbackTitle(t))));
+  if (!matches.length) matches = index.filter(show => show.titles.some(t => usable(fallbackTitle(t)) && exact.has(fallbackTitle(t))));
   if (!matches.length) {
     const series = new Set(titles.filter(Boolean).map(seriesTitle).filter(t => t.length >= 8));
     matches = index.filter(show => show.titles.some(t => series.has(seriesTitle(t))));
   }
-  return matches.length === 1 ? matches[0] : null;
+  if (matches.length !== 1) return null;
+  const match = matches[0];
+  const season = seasonOf(titles);
+  // A base-title alias can match exactly even when another title names the season.
+  // A separately indexed season already has its own page.
+  return season && !seasonOf([match.title])
+    ? { ...match, url: match.url.replace(/\/$/, '') + '/staffel-' + season }
+    : match;
 }
