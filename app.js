@@ -688,7 +688,7 @@ day.delayStarts = list.map(x => ({ ...x, at: startOf(x) })).filter(x => x.at != 
 const planned = r => r.plannedAt ?? r.watchAt;
 const slots = new Map();
 for (const r of timeline.rows) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
-const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause) && rs.some(r => r.skipped)).map(([at]) => at);
+const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.keepTime) && rs.some(r => r.skipped)).map(([at]) => at);
 for (const r of day.rows) {
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
 if (shared && timeline !== day) r.watchAt = planned(shared);
@@ -842,7 +842,7 @@ who.set(show, [...who.get(show) || [], p]);
 }
 for (const [show, slot] of merged) {
 const mv = moveFor(show, start);
-if (mv?.skip) merged.set(show, { ...slot, skip: true, from: slot });
+if (mv?.skip) merged.set(show, { ...slot, skip: true, keepTime: !!mv.keepTime, from: slot });
 else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot, ...(mv.double && { double: true }) });
 }
 whoBySheet.set(s, who);
@@ -2584,6 +2584,8 @@ setMoveScope(mv && !mv.week ? 'always' : 'week');
 $('moveReset').hidden = !mv;
 $('moveMsg').textContent = '';
 $('moveSkip').hidden = !!thisWeek?.skip;
+$('keepSkipOption').hidden = !!thisWeek?.skip;
+$('keepSkipTime').checked = false;
 moving.mates = [...b.closest('.parallel-slot')?.querySelectorAll('.move:not([data-extra])') || []].filter(x => x !== b)
 .map(x => ({ key: norm(x.dataset.moveTitle), name: x.dataset.moveName }));
 const all = [moving.name, ...moving.mates.map(m => m.name)].join(', ');
@@ -2647,7 +2649,8 @@ $('moveBoth').onclick = () => moveShows([moving, ...moving.mates]);
 const skipShows = shows => {
 const week = isoDay(weekStart(weekOffset)), keys = shows.map(s => s.key);
 const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
-.concat(shows.map(s => ({ show: s.key, title: s.name, tag: '', time: '', week, skip: true })));
+.concat(shows.map(s => ({ show: s.key, title: s.name, tag: '', time: '', week, skip: true,
+...($('keepSkipTime').checked && { keepTime: true }) })));
 storeMoves(next, `${namesOf(shows)} ${shows.length > 1 ? 'werden' : 'wird'} diese Woche geskippt.`);
 };
 $('moveSkip').onclick = () => skipShows([moving]);
@@ -2656,7 +2659,7 @@ $('moveReset').onclick = () => {
 const week = isoDay(weekStart(weekOffset));
 const own = m => m.week === week || !m.week;
 const mine = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
-const same = m => mine && m.week === mine.week && m.tag === mine.tag && m.time === mine.time && !!m.skip === !!mine.skip;
+const same = m => mine && m.week === mine.week && m.tag === mine.tag && m.time === mine.time && !!m.skip === !!mine.skip && !!m.keepTime === !!mine.keepTime;
 const shows = [moving, ...moving.mates.filter(s => moves.some(m => m.show === s.key && same(m)))], keys = shows.map(s => s.key);
 storeMoves(moves.filter(m => !(keys.includes(m.show) && own(m))), `${namesOf(shows)}: zurück im Guckplan-Slot.`);
 };
@@ -3174,7 +3177,7 @@ reloadPage();
 };
 const PATCH_NOTES = [
 { id: '2026-11-08', title: 'Skips, absences and catching up', items: [
-'A show can be skipped for a week. It stays in its place, crossed out, and every later show that day starts 30 minutes earlier.',
+'A show can be skipped for a week. When the slot becomes empty, later shows move up unless you select „Beim Skip Zeiten beibehalten“.',
 'Away for a day? It can be marked now. Shows left with just one watcher are skipped (MaRyo counts as two), and the evening moves up.',
 'Double episodes: last week\'s episode can come along in this week\'s slot.',
 'Catch-up shows can be put into the plan. They show up as "Nachholen" on their day.',
