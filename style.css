@@ -411,6 +411,9 @@ kbd { display: inline-block; min-width: 23px; padding: 2px 5px; border: 1px soli
 .dlg form { display: grid; gap: 10px; }
 .dlg .muted { color: var(--muted); font-size: 13px; }
 .dlg-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.move-actions { display: grid; grid-template-columns: repeat(2, max-content); gap: 8px; }
+.move-actions > [hidden] { display: none; }
+.dlg-foot > button[value="cancel"] { margin-left: auto; }
 .dlg select, .dlg input { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
 .dlg input { flex: 1; min-width: 0; }
 .dlg .pill.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
