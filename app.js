@@ -1,3 +1,4 @@
+const returningVisitor = (() => { try { return Object.keys(localStorage).some(k => k === 'tabs' || k.startsWith('sheet:') || k.startsWith('week:')); } catch { return false; } })();
 const QUERY = `query ($page: Int, $from: Int, $to: Int) {
   Page(page: $page, perPage: 50) {
     pageInfo { hasNextPage }
@@ -3165,8 +3166,49 @@ lastUpdateCheck = Date.now();
 reg.update().catch(() => {});
 });
 }).catch(e => console.warn('No offline copy:', e));
-navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) { updateWaiting = true; reloadWhenAway(); } });
+navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker) { updateWaiting = true; $('update').hidden = false; reloadWhenAway(); } });
 }
+$('updateReload').onclick = () => {
+try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, pickedDay, y: scrollY })); } catch {}
+reloadPage();
+};
+const PATCH_NOTES = [
+{ id: '2026-11-08', title: 'Skips, absences and catching up', items: [
+'A show can be skipped for a week. It stays in its place, crossed out, and every later show that day starts 30 minutes earlier.',
+'Away for a day? It can be marked now. Shows left with just one watcher are skipped (MaRyo counts as two), and the evening moves up.',
+'Double episodes: last week\'s episode can come along in this week\'s slot.',
+'Catch-up shows can be put into the plan. They show up as "Nachholen" on their day.',
+'Two shows sharing a slot can be moved or skipped together.',
+'Shows dragged to a new place land in 30-minute steps.',
+'Edit windows are tidier: "Once" is for this week only, "Permanent" for every week from now on.',
+] },
+];
+const NOTES_KEY = 'notesSeen';
+function showNotes(list) {
+$('notesList').innerHTML = list.map(n => `<section class="notes-entry"><h3>${esc(n.title)}<span>${esc(new Date(n.id + 'T12:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></h3>
+    <ul>${n.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
+$('notesDlg').showModal();
+$('notesDlg').scrollTop = 0;
+}
+function newNotes() {
+const newest = PATCH_NOTES[0]?.id;
+if (!newest) return;
+let seen = null;
+try { seen = localStorage.getItem(NOTES_KEY); localStorage.setItem(NOTES_KEY, newest); } catch { return; }
+if (!seen && !returningVisitor) return;
+const fresh = PATCH_NOTES.filter(n => !seen || n.id > seen);
+if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
+}
+$('notesButton').onclick = () => {
+showSettings(false);
+showNotes(PATCH_NOTES);
+};
+setTimeout(newNotes, 1200);
+config().then(c => {
+const url = typeof c.feedbackUrl === 'string' && /^https:\/\/(discord\.com|discord\.gg|ptb\.discord\.com|canary\.discord\.com)\//.test(c.feedbackUrl) ? c.feedbackUrl : '';
+$('feedbackLink').hidden = !url;
+if (url) $('feedbackLink').href = url;
+});
 function setMode(next) {
 mode = next;
 document.body.classList.toggle('solo', mode === 'solo');
