@@ -135,7 +135,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="people" class="popover" role="group" aria-label="Leute" hidden></div>
 </div>
 <button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" title="Plan bearbeiten" hidden>Edit</button>
-<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" data-edit-scope="always" aria-pressed="false" title="Ab jetzt immer">Immer</button></div>
+<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true" title="Nur diese Woche">Once</button><button type="button" data-edit-scope="always" aria-pressed="false" title="Ab jetzt jede Woche">Permanent</button></div>
 </div>
 <div class="weeknav">
 <button id="prev" class="icon" aria-label="Vorherige Woche">‹</button>
@@ -161,16 +161,18 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 <div class="dlg-row">
 <div class="segmented" role="group" aria-label="Für">
-<button type="button" id="moveWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="moveAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
+<button type="button" id="moveWeek" aria-pressed="true" title="Nur diese Woche">Once</button><button type="button" id="moveAlways" aria-pressed="false" title="Ab jetzt jede Woche">Permanent</button>
 </div>
 <button type="button" id="moveDouble" class="pill" aria-pressed="false" title="Diese Woche zwei Folgen (die vorige kommt dazu)">Doppelt</button>
 </div>
 <div class="muted" id="moveMsg"></div>
-<div class="dlg-row">
+<div class="move-actions">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
-<button type="button" id="moveBoth" class="pill" hidden>Move both</button>
 <button type="button" id="moveSkip" class="pill" title="Diese Woche nicht schauen; sie bleibt durchgestrichen an ihrem Platz, die späteren Slots rücken 30 Min. vor">Skip</button>
+<button type="button" id="moveBoth" class="pill" hidden>Move both</button>
 <button type="button" id="skipBoth" class="pill" hidden>Skip both</button>
+</div>
+<div class="dlg-row dlg-foot">
 <button type="button" id="moveReset" class="pill" title="Zurück in den Guckplan-Slot">Zurücksetzen</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
@@ -225,7 +227,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="dlg-row">
 <button type="button" id="delaySave" class="pill primary">Speichern</button>
 <button type="button" id="delayRemove" class="pill" hidden>Entfernen</button>
-<button value="cancel" class="pill">Schließen</button>
+<button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
 </dialog>
@@ -237,7 +239,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="muted" id="absentMsg"></div>
 <div class="dlg-row">
 <button type="button" id="absentSave" class="pill primary">Speichern</button>
-<button value="cancel" class="pill">Schließen</button>
+<button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
 </dialog>
@@ -249,7 +251,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="dlg-row">
 <button type="button" id="reasonsSave" class="pill primary">Speichern</button>
 <button type="button" id="reasonsDefault" class="pill" title="Die ursprüngliche Liste ins Feld holen">Standard</button>
-<button value="cancel" class="pill">Schließen</button>
+<button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
 </dialog>
@@ -261,13 +263,14 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="daySuggest" class="day-suggest" role="listbox" hidden></div>
 </div>
 <div id="dayMissing" class="day-missing-list" hidden></div>
-<div class="segmented" role="group" aria-label="Für">
-<button type="button" id="dayWeek" aria-pressed="true" title="Nur diese Woche">Woche</button><button type="button" id="dayAlways" aria-pressed="false" title="Ab jetzt immer">Immer</button>
+<div class="dlg-row"><div class="segmented" role="group" aria-label="Für">
+<button type="button" id="dayWeek" aria-pressed="true" title="Nur diese Woche">Once</button><button type="button" id="dayAlways" aria-pressed="false" title="Ab jetzt jede Woche">Permanent</button>
+</div>
+<button type="button" id="daySkip" class="pill" title="Die Serie in der Zeile mit dem Cursor diese Woche skippen, oder nicht mehr (markiert mit „(Skip)“)">Skip</button>
 </div>
 <div class="muted" id="dayMsg"></div>
 <div class="dlg-row">
 <button type="button" id="daySave" class="pill primary">Speichern</button>
-<button type="button" id="daySkip" class="pill" title="Die Serie in der Zeile mit dem Cursor diese Woche skippen, oder nicht mehr (markiert mit „(Skip)“)">Skip</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
@@ -295,7 +298,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <div class="dlg-row">
 <button type="button" id="keySave" class="pill primary" title="Schlüssel speichern">Speichern</button>
 <button type="button" id="keyRemove" class="pill" title="Schlüssel entfernen">Entfernen</button>
-<button value="cancel" class="pill">Schließen</button>
+<button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
 </dialog>
@@ -316,7 +319,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <section id="helpAccounts" tabindex="-1"><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle unter <b>Sync</b> das andere Konto und schalte <b>An</b> ein, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
 <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> gelten, wenn kein Dienst angezeigt wird: AniWorld oder Torrents, und bei Prime-Serien Prime oder Torrents. Unter <b>Misc.</b> findest du Watch planner, Higher / Lower, Anime Wrapped und den Masterset Tracker.</p></section>
 <section id="helpDelays" tabindex="-1"><h3>Verspätung</h3><p>Die Uhr neben <b>Heute</b> trägt eine Verspätung ab einer Serie ein: sie und alle späteren rücken nach, mehrere Verspätungen zählen zusammen. <b>Edit</b> an der Zeile ändert oder entfernt sie. Alle sehen sie nach spätestens einer halben Minute.</p></section>
-<section id="helpMoves" tabindex="-1"><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang ziehst du unter <b>Edit</b> eine Serie an ihren neuen Platz: auf die Mitte einer anderen, um daneben zu laufen, oder an ihren Rand, um davor oder danach zu kommen. Am Handy hältst du die Karte erst kurz gedrückt. <b>Woche</b> oder <b>Immer</b> sagt, wie lange es gilt, <b>Rückgängig</b> nimmt es zurück. Mit ⇄ gibst du das Ziel von Hand ein, <b>Edit</b> an einem Tag schreibt den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server.</p></section>
+<section id="helpMoves" tabindex="-1"><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang ziehst du unter <b>Edit</b> eine Serie an ihren neuen Platz: auf die Mitte einer anderen, um daneben zu laufen, oder an ihren Rand, um davor oder danach zu kommen. Am Handy hältst du die Karte erst kurz gedrückt. <b>Once</b> (nur diese Woche) oder <b>Permanent</b> (ab jetzt jede Woche) sagt, wie lange es gilt, <b>Rückgängig</b> nimmt es zurück. Mit ⇄ gibst du das Ziel von Hand ein, <b>Edit</b> an einem Tag schreibt den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server.</p></section>
 <section id="helpKeys"><h3>Tastenkürzel</h3>
 <dl class="keyboard-guide">
 <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Vorherige / nächste Woche, oder Tag, wenn nur ein Tag angezeigt wird</dd></div>
