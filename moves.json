@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-07T21:40:39.022Z",
+ "updated": "2026-11-08T09:32:39.953Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -178,32 +178,13 @@
    "tag": "Sa.",
    "time": "20:30",
    "week": "2026-11-02"
-  }
- ],
- "delays": [
-  {
-   "id": "nbd67uwo",
-   "day": "2026-11-06",
-   "show": "kusuriyanohitorigotoseason3",
-   "title": "The Apothecary Diaries Season 3",
-   "minutes": 60,
-   "reason": "Uneinigkeit über Sub oder Dub"
   },
   {
-   "id": "ohtw7nql",
-   "day": "2026-11-06",
-   "show": "uchinootoutodomogasumimasen",
-   "title": "Please Excuse My Younger Brothers",
-   "minutes": 15,
-   "reason": "Bauarbeiten am Discord-Server"
-  },
-  {
-   "id": "z0sii9mg",
-   "day": "2026-11-06",
-   "show": "tsuihousaretatenseijuukishiwagamechishikidemusousuru",
-   "title": "The Exiled Heavy Knight Knows How to Game the System",
-   "minutes": 30,
-   "reason": "DIESE VERSPÄTUNG IST GESPONSERT VON HOLY"
+   "show": "aonohakoseason2",
+   "title": "Blue Box Season 2",
+   "tag": "So.",
+   "time": "18:45",
+   "week": ""
   }
  ],
  "reasons": [
