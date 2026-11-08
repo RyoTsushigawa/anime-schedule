@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-08T09:32:39.953Z",
+ "updated": "2026-11-08T17:30:38.738Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -185,6 +185,14 @@
    "tag": "So.",
    "time": "18:45",
    "week": ""
+  }
+ ],
+ "absent": [
+  {
+   "day": "2026-11-08",
+   "people": [
+    "Marius"
+   ]
   }
  ],
  "reasons": [
