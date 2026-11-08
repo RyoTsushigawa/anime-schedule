@@ -91,6 +91,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </section>
 <section>
 <button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
+<button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes</button>
+<a id="feedbackLink" class="menu-item" target="_blank" rel="noopener" title="Feedback oder Wünsche im Discord" hidden>Feedback<span aria-hidden="true">↗</span></a>
 </section>
 </div>
 </div>
@@ -300,6 +302,14 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <button type="button" id="keyRemove" class="pill" title="Schlüssel entfernen">Entfernen</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
+</form>
+</dialog>
+<div id="update" role="status" hidden><span>Neue Version ist da.</span><button id="updateReload" class="pill">Neuladen</button></div>
+<dialog id="notesDlg" class="dlg notes-dlg" aria-labelledby="notesTitle">
+<form method="dialog">
+<b id="notesTitle">What's new</b>
+<div id="notesList"></div>
+<div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
 </form>
 </dialog>
 <div id="notice" role="status" hidden><span id="noticeText"></span><button id="noticeRetry" type="button" hidden>Abgleich wiederholen</button><button id="noticeUndo">Rückgängig</button></div>
