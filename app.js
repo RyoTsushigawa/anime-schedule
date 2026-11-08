@@ -340,7 +340,7 @@ if (!data.Page.pageInfo.hasNextPage) return items;
 const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'kein Tag';
 const moveButton = (show, slot) => !movesKey || !show ? '' :
 `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
-    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" data-skip="${slot?.skip ? 1 : ''}"
+    data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" data-skip="${slot?.skip ? 1 : ''}" data-keep-time="${slot?.keepTime ? 1 : ''}"
     data-from-tag="${esc((slot?.from || slot)?.tag || '')}" data-from-time="${esc((slot?.from || slot)?.time || '')}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben">⇄</button>`;
 const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
 || note.text.replace(/\btoday\b/i, 'am ' + shortDayDate(new Date(note.at * 1000)));
@@ -842,7 +842,7 @@ who.set(show, [...who.get(show) || [], p]);
 }
 for (const [show, slot] of merged) {
 const mv = moveFor(show, start);
-if (mv?.skip) merged.set(show, { ...slot, skip: true, keepTime: !!mv.keepTime, from: slot });
+if (mv?.skip) merged.set(show, { ...slot, ...(mv.tag && { tag: mv.tag, time: mv.time }), skip: true, keepTime: !!mv.keepTime, from: slot });
 else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot, ...(mv.double && { double: true }) });
 }
 whoBySheet.set(s, who);
@@ -1021,7 +1021,7 @@ const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missin
         <div class="time"${skipped ? ' title="Ausgesetzt"' : ''}>${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s>` : 'Pause'}</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
-          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}` : backLine(when, note, news)}</div>
+          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' · Zeiten beibehalten' : ''}` : backLine(when, note, news)}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
@@ -2649,8 +2649,11 @@ $('moveBoth').onclick = () => moveShows([moving, ...moving.mates]);
 const skipShows = shows => {
 const week = isoDay(weekStart(weekOffset)), keys = shows.map(s => s.key);
 const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
-.concat(shows.map(s => ({ show: s.key, title: s.name, tag: '', time: '', week, skip: true,
-...($('keepSkipTime').checked && { keepTime: true }) })));
+.concat(shows.map(s => {
+const current = moves.find(m => m.show === s.key && m.week === week) || moves.find(m => m.show === s.key && !m.week);
+return { show: s.key, title: s.name, tag: current?.tag || '', time: current?.time || '', week, skip: true,
+...($('keepSkipTime').checked && { keepTime: true }) };
+}));
 storeMoves(next, `${namesOf(shows)} ${shows.length > 1 ? 'werden' : 'wird'} diese Woche geskippt.`);
 };
 $('moveSkip').onclick = () => skipShows([moving]);
@@ -2970,7 +2973,7 @@ const shows = new Map();
 for (const b of document.querySelectorAll('#list .move')) {
 const key = norm(b.dataset.moveTitle);
 if (!shows.has(key)) shows.set(key, { key, title: b.dataset.moveTitle, name: b.dataset.moveName,
-tag: b.dataset.tag, time: clockOf(b.dataset.time), fromTag: b.dataset.fromTag, fromTime: clockOf(b.dataset.fromTime), skip: !!b.dataset.skip });
+tag: b.dataset.tag, time: clockOf(b.dataset.time), fromTag: b.dataset.fromTag, fromTime: clockOf(b.dataset.fromTime), skip: !!b.dataset.skip, keepTime: !!b.dataset.keepTime });
 }
 return [...shows.values()];
 }
@@ -2991,7 +2994,7 @@ const order = s => { const hm = parseTime(s.time); return hm ? (hm[0] < NIGHT_UN
 const shows = all.filter(s => keys.has(s.key)).sort((a, b) => order(a) - order(b));
 dayEdit = { tag: section.dataset.moveDay, label: section.querySelector('h2 > span').textContent.trim(), all, shows, scope: 'week', missing: [] };
 $('dayName').textContent = dayEdit.label;
-$('dayText').value = shows.map(s => `${s.time ? s.time + ' ' : ''}${s.name}${s.skip ? ' ' + SKIP_MARK : ''}`).join('\n') + '\n';
+$('dayText').value = shows.map(s => `${s.time ? s.time + ' ' : ''}${s.name}${s.skip ? ' ' + skipMark(s.keepTime) : ''}`).join('\n') + '\n';
 $('dayMissing').hidden = true; $('dayMissing').innerHTML = '';
 $('dayMsg').textContent = '';
 closeSuggest();
@@ -2999,22 +3002,27 @@ setDayScope(editScope);
 $('dayDlg').showModal();
 const t = $('dayText'); t.focus(); t.setSelectionRange(t.value.length, t.value.length);
 });
-const SKIP_MARK = '(Skip)';
+const skipMark = keepTime => keepTime ? '(Skip · Zeiten beibehalten)' : '(Skip)';
+const skipSuffix = /\s*\(skip( · zeiten beibehalten)?\)\s*$/i;
 const parseLine = line => {
-const skip = /\(skip\)\s*$/i.test(line);
-const m = line.replace(/\s*\(skip\)\s*$/i, '').match(/^\s*(\d{1,2}[:.]\d{2})?\s*(.*?)\s*$/);
-return { time: m[1] ? clockOf(m[1]) : '', text: m[2], skip };
+const marker = line.match(skipSuffix);
+const m = line.replace(skipSuffix, '').match(/^\s*(\d{1,2}[:.]\d{2})?\s*(.*?)\s*$/);
+return { time: m[1] ? clockOf(m[1]) : '', text: m[2], skip: !!marker, keepTime: !!marker?.[1] };
 };
-$('daySkip').onclick = () => {
+function toggleDaySkip(keepTime) {
 const t = $('dayText'), { index, lines } = currentLine();
 const line = lines[index] || '';
 if (!parseLine(line).text) { $('dayMsg').textContent = 'Erst in die Zeile der Serie klicken.'; t.focus(); return; }
-lines[index] = parseLine(line).skip ? line.replace(/\s*\(skip\)\s*$/i, '') : `${line.trimEnd()} ${SKIP_MARK}`;
+const parsed = parseLine(line);
+const unmarked = line.replace(skipSuffix, '');
+lines[index] = parsed.skip && parsed.keepTime === keepTime ? unmarked : `${unmarked.trimEnd()} ${skipMark(keepTime)}`;
 t.value = lines.join('\n');
 const end = lines.slice(0, index + 1).join('\n').length;
 t.focus(); t.setSelectionRange(end, end);
 $('dayMsg').textContent = '';
 };
+$('daySkip').onclick = () => toggleDaySkip(false);
+$('dayKeepSkip').onclick = () => toggleDaySkip(true);
 function findShow(text) {
 const q = norm(text);
 if (!q) return { none: true };
@@ -3044,8 +3052,8 @@ function pickSuggest(i) {
 const s = suggest.items[i];
 if (!s) return;
 const t = $('dayText'), lines = t.value.split('\n');
-const { time, skip } = parseLine(lines[suggest.line]);
-lines[suggest.line] = `${time ? time + ' ' : ''}${s.name}${skip ? ' ' + SKIP_MARK : ''}`;
+const { time, skip, keepTime } = parseLine(lines[suggest.line]);
+lines[suggest.line] = `${time ? time + ' ' : ''}${s.name}${skip ? ' ' + skipMark(keepTime) : ''}`;
 t.value = lines.join('\n');
 const end = lines.slice(0, suggest.line + 1).join('\n').length;
 t.focus(); t.setSelectionRange(end, end);
@@ -3075,11 +3083,11 @@ return next.concat({ show: s.key, title: s.title, tag, time, week });
 $('daySave').onclick = () => {
 const placed = new Map(), problems = [];
 $('dayText').value.split('\n').forEach((line, i) => {
-const { time, text, skip } = parseLine(line);
+const { time, text, skip, keepTime } = parseLine(line);
 if (!text) return;
 const found = findShow(text);
 if (!found.show) problems.push(`Zeile ${i + 1}: „${text}“ ${found.many ? 'passt zu mehreren Serien' : 'ist keine Serie dieser Woche'}`);
-else placed.set(found.show.key, { show: found.show, time, skip });
+else placed.set(found.show.key, { show: found.show, time, skip, keepTime });
 });
 if (problems.length) { $('dayMsg').textContent = problems.join('. ') + '.'; return; }
 const missing = dayEdit.shows.filter(s => !placed.has(s.key));
@@ -3095,10 +3103,17 @@ if (missing.length) { $('dayMsg').textContent = ''; $('dayMissing').querySelecto
 }
 let next = moves;
 const thisWeek = isoDay(weekStart(weekOffset));
-for (const { show, time, skip } of placed.values()) {
-if (skip) { if (!show.skip) next = next.filter(m => !(m.show === show.key && m.week === thisWeek)).concat({ show: show.key, title: show.title, tag: '', time: '', week: thisWeek, skip: true }); continue; }
+for (const { show, time, skip, keepTime } of placed.values()) {
+if (skip) {
+if (!show.skip || keepTime !== show.keepTime || time !== show.time || dayEdit.tag !== show.tag) {
+next = next.filter(m => !(m.show === show.key && m.week === thisWeek)).concat({
+show: show.key, title: show.title, tag: dayEdit.tag, time, week: thisWeek, skip: true, ...(keepTime && { keepTime: true }),
+});
+}
+continue;
+}
 if (show.skip) next = next.filter(m => !(m.show === show.key && m.week === thisWeek && m.skip));
-next = moveTo(next, show.skip ? { ...show, skip: false } : show, dayEdit.tag, time);
+next = moveTo(next, show.skip ? { ...show, tag: null, skip: false } : show, dayEdit.tag, time);
 }
 for (const row of $('dayMissing').querySelectorAll('.day-missing')) {
 const s = dayEdit.all.find(x => x.key === row.dataset.key);
