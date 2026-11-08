@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-08T18:20:11.527Z",
+ "updated": "2026-11-08T18:41:27.104Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -185,6 +185,14 @@
    "tag": "So.",
    "time": "18:45",
    "week": ""
+  },
+  {
+   "show": "aonohakoseason2",
+   "title": "Blue Box Season 2",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-02",
+   "skip": true
   }
  ],
  "absent": [
