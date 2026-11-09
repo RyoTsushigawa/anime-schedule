@@ -16,13 +16,13 @@ const POST_HOUR = 9;
 // settings → Roles → right-click the role → Copy Role ID (needs Developer Mode under Advanced).
 // An empty ID just leaves the ping out.
 const DAY_ROLES = {
-  Montag: '',
-  Dienstag: '',
-  Mittwoch: '',
-  Donnerstag: '',
-  Freitag: '',
-  Samstag: '',
-  Sonntag: '',
+  Montag: '1093452925554151474',
+  Dienstag: '1093454291672502373',
+  Mittwoch: '1093454347901349949',
+  Donnerstag: '1093454380063260714',
+  Freitag: '1093454416016842833',
+  Samstag: '1093454437680427100',
+  Sonntag: '1093454458316402788',
 };
 const dryRun = process.argv.includes('--dry-run');
 const webhook = process.env.DISCORD_WEBHOOK || '';
