@@ -904,7 +904,7 @@ const recap = (streamsDe?.status?.[m.id]?.recaps || []).find(r =>
   r.episode === it.episode && Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000);
 if (recap) {
   if (!day.rows.some(r => r.show === show))
-    day.rows.push({ pause: true, show, slot, when: null, episode, note: { text: 'Recap episode' }, news: [] });
+    day.rows.push({ pause: true, recap: true, show, slot, when, episode, note: { text: 'Recap episode', at: it.airingAt }, news: [] });
   continue;
 }
 const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
@@ -1025,12 +1025,12 @@ const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
-const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing }) => `
+const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap }) => `
       <div class="row pause${skipped ? ' skipped' : ''}" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time"${skipped ? ' title="Ausgesetzt"' : ''}>${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s>` : 'Pause'}</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
-          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' · Zeiten beibehalten' : ''}` : backLine(when, note, news)}</div>
+          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' · Zeiten beibehalten' : ''}` : recap ? 'Recap episode · Keine reguläre Folge' : backLine(when, note, news)}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
