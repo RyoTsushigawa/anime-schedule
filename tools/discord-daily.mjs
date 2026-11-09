@@ -12,6 +12,18 @@ import { chromium } from 'playwright';
 const SITE = process.env.SITE_URL || 'https://ryotsushigawa.github.io/anime-schedule/';
 const TZ = 'Europe/Berlin';
 const POST_HOUR = 9;
+// The weekday roles (@Montag … @Sonntag) pinged at the start of that day's post. Discord: Server
+// settings → Roles → right-click the role → Copy Role ID (needs Developer Mode under Advanced).
+// An empty ID just leaves the ping out.
+const DAY_ROLES = {
+  Montag: '',
+  Dienstag: '',
+  Mittwoch: '',
+  Donnerstag: '',
+  Freitag: '',
+  Samstag: '',
+  Sonntag: '',
+};
 const dryRun = process.argv.includes('--dry-run');
 const webhook = process.env.DISCORD_WEBHOOK || '';
 
@@ -59,7 +71,7 @@ try {
   }
 
   // same steps as the Discord button's click handler in app.js
-  const message = await page.evaluate(() => {
+  let message = await page.evaluate(() => {
     const today = isoDay(new Date());
     const found = render(...lastWeekRender, true).find(d => isoDay(d.date) === today);
     if (!found) return null;
@@ -71,6 +83,9 @@ try {
     return discordMessage({ date: found.date, groups });
   });
   if (!message) throw new Error('Today is missing from the rendered week.');
+  const weekday = new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long' }).format(new Date());
+  const role = DAY_ROLES[weekday];
+  if (role) message = `<@&${role}> ${message}`;
   console.log(message);
   if (dryRun) process.exit(0);
 
