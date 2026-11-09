@@ -688,12 +688,19 @@ day.delayStarts = list.map(x => ({ ...x, at: startOf(x) })).filter(x => x.at != 
 const planned = r => r.plannedAt ?? r.watchAt;
 const slots = new Map();
 for (const r of timeline.rows) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
-const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.keepTime) && rs.some(r => r.skipped)).map(([at]) => at);
+// Automatic breaks may free a slot just like a manually skipped show.
+// A Keep Time row is an anchor: never move it or pull later shows past it.
+const autoMovePauses = (() => { try { return localStorage.getItem('autoMovePauses') === '1'; } catch { return false; } })();
+const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.keepTime)
+  && rs.some(r => r.skipped || autoMovePauses)).map(([at]) => at);
+const anchors = [...slots].filter(([, rs]) => rs.some(r => r.slot?.keepTime)).map(([at]) => at);
 for (const r of day.rows) {
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
 if (shared && timeline !== day) r.watchAt = planned(shared);
 const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => n + x.minutes, 0);
-const earlier = r.skipped ? 0 : freed.filter(at => at < r.watchAt).length * SLOT_MINUTES;
+const anchor = Math.max(-Infinity, ...anchors.filter(at => at <= r.watchAt));
+const earlier = r.pause || r.slot?.keepTime ? 0
+  : freed.filter(at => at < r.watchAt && at > anchor).length * SLOT_MINUTES;
 if (minutes || earlier) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, earlier, watchAt: r.watchAt + (minutes - earlier) * 60000 });
 }
 }
@@ -1400,6 +1407,12 @@ document.body.classList.toggle(cls, !$(id).checked);
 if (id === 'moveButtons') syncMoveEditor();
 };
 }
+const autoMovePauses = $('autoMovePauses');
+try { autoMovePauses.checked = localStorage.getItem('autoMovePauses') === '1'; } catch {}
+autoMovePauses.onchange = () => {
+  try { localStorage.setItem('autoMovePauses', autoMovePauses.checked ? '1' : '0'); } catch {}
+  load(true);
+};
 let editScope = 'week';
 for (const b of document.querySelectorAll('[data-edit-scope]')) b.onclick = () => {
 editScope = b.dataset.editScope;
