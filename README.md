@@ -94,6 +94,7 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `tools/key-check.mjs` | Weekly, read-only: warns three weeks before the publish key (`tools/github-token.txt`) runs out |
 | `tools/weekly-alert.mjs` | End of the weekly run: anything that needs a look goes to the bot test channel through the webhook in `tools/alert-webhook.txt` (this PC only; `--test` sends one test line) |
 | `tools/live-check.mjs` | Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo, GitHub Pages shows the latest upload |
+| `tools/discord-daily.mjs` | Posts today's schedule to Discord every day at 09:00 (GitHub run `discord-daily.yml`, see below) |
 | `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
 | `tools/delay-check.mjs` | Weekly, read-only: the helper answers, refuses strangers and is the current version |
 | `tabs.json`, `tools/tab-list.mjs` | The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
@@ -158,6 +159,21 @@ and at most 30 changes in 10 minutes from one address (the bot is exempt). The w
 
 Each delay stores its planned start (`at`, "20:00"); the bot's status shifts its times by it. Delays
 from the bot are stored by time (`show: "@20:00"`) and count from the first show at or after it.
+
+## Täglich auf Discord (one time)
+
+Every day at 09:00 German time a GitHub run (`.github/workflows/discord-daily.yml`) posts today's
+schedule to a Discord channel: the same text the Discord button on a day heading gives, built by the
+live page itself in a headless browser (moves, delays and pings included).
+
+1. Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL.
+2. GitHub: repository **Settings → Secrets and variables → Actions → New repository secret**, name
+   `DISCORD_WEBHOOK_SCHEDULE`, the webhook address as value. Without it the run posts nothing.
+3. Try it: **Actions → Daily Discord schedule → Run workflow**. "dry run" ticked only shows the message
+   in the log; unticked posts it right away.
+
+GitHub sometimes starts scheduled runs late, so the run starts at 08:30 and waits for 09:00; on busy
+days the post can still come a few minutes late.
 
 ## Trying it locally
 
