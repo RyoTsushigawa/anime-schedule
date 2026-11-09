@@ -52,7 +52,8 @@ if (!dryRun && !webhook) {
 
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage({ timezoneId: TZ, locale: 'de-DE' });
+  // bypassCSP: the page's security rules forbid code from outside, which would block the checks below
+  const page = await browser.newPage({ timezoneId: TZ, locale: 'de-DE', bypassCSP: true });
   page.on('pageerror', e => console.log('page error:', e.message));
   await page.goto(SITE, { waitUntil: 'load', timeout: 60_000 });
   // the page's own globals: everything loaded and this week's schedule drawn
