@@ -3178,7 +3178,8 @@ if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 // Abwesenheiten: a month calendar (top bar button, or any day's "Abwesend") where planned absences
 // go in for one day or a range, the whole day or only "ab"/"bis" a time. Shows with too few people
 // left are skipped on the schedule and in the Discord message.
-const awayCal = { month: null, start: null, end: null, mode: 'day' };
+const awayCal = { month: null, start: null, end: null, mode: 'day', repeat: 'once' };
+const AWAY_REPEAT_WEEKS = 12;
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const allPeople = () => {
 const fromPlan = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
@@ -3197,7 +3198,7 @@ function openAway(date) {
 const today = isoDay(new Date());
 const pick = date && date >= today ? date : null;
 awayCal.month = (pick || today).slice(0, 7);
-awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day';
+awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.repeat = 'once';
 $('awayMsg').textContent = '';
 drawAway();
 $('awayDlg').showModal();
@@ -3210,14 +3211,21 @@ const lead = (first.getDay() + 6) % 7;
 const length = new Date(y, m, 0).getDate();
 $('awayMonth').textContent = `${MONTHS[m - 1]} ${y}`;
 $('awayPrev').disabled = awayCal.month <= today.slice(0, 7);
-const sel = new Set(selectedDays());
+$('awayToday').disabled = awayCal.month === today.slice(0, 7);
+const chosen = selectedDays();
+const sel = new Set(chosen);
+$('awayHint').textContent = !awayCal.start
+  ? 'Tag auswählen · Für einen Zeitraum danach den letzten Tag antippen.'
+  : awayCal.end
+    ? `${chosen.length} Tage ausgewählt · ${shortDate(chosen[0])} – ${shortDate(chosen.at(-1))}.`
+    : `Start: ${shortDate(awayCal.start)} · Für einen Zeitraum den letzten Tag wählen.`;
 const cells = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `<span class="away-wd">${d}</span>`);
-for (let i = 0; i < lead; i++) cells.push('<span></span>');
+for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden="true"></span>');
 for (let n = 1; n <= length; n++) {
 const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
 const entries = absent.filter(x => x.day === iso);
 const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}"${x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
-cells.push(`<button type="button" class="away-day${iso === today ? ' today' : ''}${sel.has(iso) ? ' sel' : ''}" data-away-day="${iso}"${iso < today ? ' disabled' : ''} aria-label="${esc(shortDate(iso))}${entries.length ? ': ' + esc(awayText(iso).join(', ')) : ''}"><b>${n}</b><span class="away-dots">${dots}</span></button>`);
+cells.push(`<button type="button" class="away-day${iso === today ? ' today' : ''}${sel.has(iso) ? ' sel' : ''}${entries.length ? ' has-entries' : ''}" data-away-day="${iso}"${iso < today ? ' disabled' : ''}${iso === today ? ' aria-current="date"' : ''} aria-pressed="${sel.has(iso)}" aria-label="${esc(shortDate(iso))}${entries.length ? ': ' + esc(awayText(iso).join(', ')) : ''}"><b>${n}</b><span class="away-dots">${dots}</span></button>`);
 }
 $('awayGrid').innerHTML = cells.join('');
 drawAwayEditor();
@@ -3230,6 +3238,10 @@ if (!days.length) return;
 $('awayRange').textContent = days.length > 1 ? `${shortDate(days[0])} – ${shortDate(days.at(-1))}` : shortDate(days[0]);
 for (const b of $('awayMode').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === awayCal.mode));
 $('awayTime').hidden = awayCal.mode === 'day';
+for (const b of $('awayRepeat').querySelectorAll('[data-repeat]')) b.setAttribute('aria-pressed', String(b.dataset.repeat === awayCal.repeat));
+$('awayRepeatHint').textContent = awayCal.repeat === 'weekly'
+  ? `Wiederholt sich ${AWAY_REPEAT_WEEKS} Wochen lang. Für die Wiederholung nur einen Tag auswählen.`
+  : 'Einmaliger Termin oder mehrtägiger Zeitraum.';
 // whole day: pressed = away on every chosen day, "mixed" = on some (left alone unless clicked)
 $('awayPeople').innerHTML = allPeople().map(p => {
 const on = awayCal.mode === 'day' ? days.filter(d => absentOn(d).includes(p)).length : 0;
@@ -3278,6 +3290,7 @@ if (b) openAway(b.closest('.day').dataset.date);
 });
 $('awayPrev').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() - 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
 $('awayNext').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() + 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
+$('awayToday').onclick = () => { awayCal.month = isoDay(new Date()).slice(0, 7); drawAway(); };
 $('awayGrid').addEventListener('click', e => {
 const iso = e.target.closest('[data-away-day]')?.dataset.awayDay;
 if (!iso) return;
@@ -3294,12 +3307,24 @@ awayCal.mode = mode;
 drawAwayEditor();
 if (mode !== 'day') $('awayClock').focus();
 });
+$('awayRepeat').addEventListener('click', e => {
+const repeat = e.target.closest('[data-repeat]')?.dataset.repeat;
+if (!repeat) return;
+awayCal.repeat = repeat;
+if (repeat === 'weekly') awayCal.end = null;
+drawAway();
+});
 $('awayPeople').addEventListener('click', e => {
 const b = e.target.closest('[data-away]');
 if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
 });
 $('awaySave').onclick = () => {
-const days = selectedDays();
+const selected = selectedDays();
+if (!selected.length) { $('awayMsg').textContent = 'Bitte einen Tag wählen.'; return; }
+if (awayCal.repeat === 'weekly' && selected.length !== 1) { $('awayMsg').textContent = 'Für die wöchentliche Wiederholung nur einen Tag auswählen.'; return; }
+const days = awayCal.repeat === 'weekly'
+  ? Array.from({ length: AWAY_REPEAT_WEEKS }, (_, i) => addDay(selected[0], 7 * i))
+  : selected;
 const chips = [...$('awayPeople').querySelectorAll('[data-away]')];
 const on = chips.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.away);
 const off = chips.filter(b => b.getAttribute('aria-pressed') === 'false').map(b => b.dataset.away);
@@ -3322,7 +3347,8 @@ return people.length ? [{ ...x, people }] : [];
 }).concat(days.map(day => ({ day, people: on, [awayCal.mode]: time })));
 }
 next = next.sort((a, b) => a.day.localeCompare(b.day));
-const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${clockOf($('awayClock').value)}.`;
+const label = (awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${clockOf($('awayClock').value)}.`)
+  + (awayCal.repeat === 'weekly' ? ` Jede Woche bis ${shortDate(days.at(-1))} (${AWAY_REPEAT_WEEKS} Termine).` : '');
 storeAway(next, days, label);
 };
 $('awayList').addEventListener('click', e => {
