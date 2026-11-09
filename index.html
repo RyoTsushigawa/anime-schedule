@@ -261,12 +261,16 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <dialog id="awayDlg" class="dlg away-dlg" aria-labelledby="awayTitle">
 <form method="dialog">
 <div class="away-head"><b id="awayTitle">Abwesenheiten</b><button value="cancel" class="round" aria-label="Schließen">✕</button></div>
-<div class="muted">Tag antippen, für mehrere Tage danach den letzten. Serien, bei denen höchstens eine Person übrig bleibt, setzen aus.</div>
-<div class="away-nav"><button type="button" id="awayPrev" class="round" aria-label="Voriger Monat">‹</button><b id="awayMonth"></b><button type="button" id="awayNext" class="round" aria-label="Nächster Monat">›</button></div>
-<div id="awayGrid" class="away-grid"></div>
+<p class="muted away-intro">Wähle einen Tag oder einen Zeitraum. Bei höchstens einer verbleibenden Person pausiert die Serie.</p>
+<div class="away-nav"><button type="button" id="awayPrev" class="round" aria-label="Voriger Monat">‹</button><b id="awayMonth" aria-live="polite"></b><button type="button" id="awayToday" class="pill" title="Zum aktuellen Monat springen">Heute</button><button type="button" id="awayNext" class="round" aria-label="Nächster Monat">›</button></div>
+<div class="away-legend" aria-label="Kalenderlegende"><span><i class="away-legend-today"></i> Heute</span><span><i class="away-legend-selected"></i> Auswahl</span><span><i class="away-legend-dot"></i> Abwesend</span><span><i class="away-legend-part"></i> Teilweise</span></div>
+<div id="awayGrid" class="away-grid" role="group" aria-label="Kalendertage"></div>
+<div id="awayHint" class="away-hint" role="status" aria-live="polite"></div>
 <div id="awayEditor" class="away-editor" hidden>
 <b id="awayRange"></b>
 <div id="awayMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button></div>
+<div class="away-repeat-setting"><span>Wiederholung</span><div id="awayRepeat" class="segmented soft" role="group" aria-label="Wiederholung"><button type="button" data-repeat="once" aria-pressed="true">Einmalig</button><button type="button" data-repeat="weekly" aria-pressed="false">Wöchentlich</button></div></div>
+<p id="awayRepeatHint" class="muted away-repeat-hint">Für einen einzelnen Termin oder einen Zeitraum.</p>
 <label id="awayTime" class="away-time" hidden>Uhrzeit <input id="awayClock" type="time" value="21:00" step="900"></label>
 <div id="awayPeople" class="day-absent"></div>
 <div class="dlg-row"><button type="button" id="awaySave" class="pill primary">Speichern</button></div>
