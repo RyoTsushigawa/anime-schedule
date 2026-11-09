@@ -3367,17 +3367,19 @@ if (awayCal.repeat === 'weekly' && !on.length) { $('awayMsg').textContent = 'Fü
 let next;
 if (awayCal.mode === 'day') {
 next = absent.flatMap(x => {
-if (!days.includes(x.day) || x.from || x.until) return [x];
-const people = (x.people || []).filter(p => !on.includes(p) && (awayCal.repeat === 'weekly' || !off.includes(p)));
+if (!days.includes(x.day)) return [x];
+// a whole day for someone replaces their "ab"/"bis" there; other people's times stay
+const timed = x.from || x.until;
+const people = (x.people || []).filter(p => !on.includes(p) && (timed || awayCal.repeat === 'weekly' || !off.includes(p)));
 return people.length ? [{ ...x, people }] : [];
 }).concat(on.length ? days.map(day => ({ day, people: on })) : []);
 } else {
 const time = clockOf($('awayClock').value);
 if (!time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (!on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person antippen.'; return; }
-// one "ab"/"bis" per person and day: a new one replaces the old
+// one entry per person and day: a time replaces their whole day or their other time
 next = absent.flatMap(x => {
-if (!days.includes(x.day) || (!x.from && !x.until)) return [x];
+if (!days.includes(x.day)) return [x];
 const people = (x.people || []).filter(p => !on.includes(p));
 return people.length ? [{ ...x, people }] : [];
 }).concat(days.map(day => ({ day, people: on, [awayCal.mode]: time })));
