@@ -247,6 +247,7 @@ header.away ~ main .day h2 { top: 0; }
 .day.is-today h2 { color: color-mix(in srgb, var(--accent) 55%, var(--text)); }
 .day.is-today h2 b { color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
 .day.is-today h2::after { background: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.day h2 .day-none { color: var(--muted); font-size: 14px; font-weight: 400; white-space: nowrap; }
 .empty-day {
 display: flex;
 flex-wrap: wrap;
