@@ -204,8 +204,9 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="discord-head"><div><div class="discord-eyebrow">Discord · Tagesübersicht</div><b id="discordName"></b></div><button type="button" id="discordNickToggle" class="pill" aria-controls="discordNicks" aria-expanded="true">Spitznamen</button></div>
 <div class="discord-layout">
 <section class="discord-preview" aria-label="Vorschau"><div class="discord-section-title">Nachricht <span>Vorschau</span></div><textarea id="discordText" class="discord-text" rows="6" spellcheck="false" aria-label="Nachricht für Discord"></textarea></section>
-<section id="discordNicks" class="discord-nicks" aria-label="Spitznamen bearbeiten"><div class="discord-section-title">Spitznamen <span>Optional · nur nach Speichern aktiv</span></div>
+<section id="discordNicks" class="discord-nicks" aria-label="Spitznamen bearbeiten"><div class="discord-section-title">Spitznamen <span>Ganze Staffel · nur nach Speichern aktiv</span></div>
 <p class="muted">Ein Vorschlag füllt nur das Feld. Erst „Speichern“ übernimmt den Namen für Discord und den täglichen Post.</p>
+<div class="discord-nick-filter"><input type="search" id="discordNickSearch" placeholder="Serie suchen …" aria-label="Serie in der Staffel suchen" autocomplete="off"><span id="discordNickCount" aria-live="polite"></span></div>
 <div id="discordNickList"></div>
 <div class="discord-nick-actions"><button type="button" id="discordNickSave" class="pill">Spitznamen speichern</button></div>
 </section>
