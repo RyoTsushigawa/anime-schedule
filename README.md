@@ -86,6 +86,7 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `wrapped.*`, `wrapped-profiles.json` | Anime Wrapped |
 | `streams-de.json` | Where each Guckplan show streams in Germany (from LiveChart) |
 | `seasons.json`, `fallback-links.json` | Season index and the alternative show links (daily GitHub run) |
+| `nicknames.json` | Short show names for the Discord message (written from the Discord dialog) |
 | `moves.json` | Moves, delays and kept delay reasons (only on GitHub, written by the page and the delay helper) |
 | `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany) |
 | `tools/publish.mjs` | Runs the tests and the secret guard, then uploads the changed files to GitHub |
@@ -172,8 +173,9 @@ live page itself in a headless browser (moves, delays and pings included).
 3. Try it: **Actions → Daily Discord schedule → Run workflow**. "dry run" ticked only shows the message
    in the log; unticked posts it right away.
 
-**Nicknames:** `tools/discord-nicknames.json` swaps long titles for short names in this post only
-(left the title as the post writes it, or the AniList ID; right the nickname). The site keeps the full titles.
+**Spitznamen:** the Discord button's dialog has a **Spitznamen** section: a short name per show for the
+Discord message (the button and the daily post), saved for everyone in `nicknames.json` with the GitHub key.
+The site itself keeps the full titles.
 
 GitHub sometimes starts scheduled runs late, so the run starts at 08:30 and waits for 09:00; on busy
 days the post can still come a few minutes late.

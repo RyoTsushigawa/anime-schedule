@@ -2745,35 +2745,103 @@ $('planRemove').onclick = () => {
 const { m, old } = planning;
 storeMoves(moves.filter(x => x !== old), `${m.title.english || m.title.romaji}: Nachholen entfernt.`, 'planDlg', 'planMsg');
 };
+// Nicknames for the Discord message (nicknames.json, written with the GitHub key from the Discord dialog).
+// Keyed by AniList ID, or "t:" + lower-case title for a show without one.
+const NICKNAMES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/nicknames.json';
+let nicknames = {};
+const nickKey = r => r.m?.id ? String(r.m.id) : 't:' + String(r.show.english || r.show.romaji).trim().toLowerCase();
+const nickOf = r => nicknames[nickKey(r)] || r.show.english || r.show.romaji;
+const cleanNicknames = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
+.filter(([k, v]) => typeof v === 'string' && v.trim() && !LINKISH.test(v)).map(([k, v]) => [k, v.trim().slice(0, 80)]));
+const nicknamesReady = fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {})
+.then(j => { nicknames = cleanNicknames(j.names); }).catch(() => {});
 function discordMessage({ date, groups }) {
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const when = date.toDateString() === new Date().toDateString() ? 'Heute'
 : date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
 const lines = groups.map(g => {
-const names = [...new Set(g.map(r => r.show.english || r.show.romaji))];
+const names = [...new Set(g.map(nickOf))];
 const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.toLowerCase()]).filter(Boolean))];
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
 });
 return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\nPasst?` : `${when} steht nichts an.`;
 }
-$('list').addEventListener('click', e => {
-const b = e.target.closest('[data-day-discord]');
-if (!b || !lastWeekRender) return;
-const found = render(...lastWeekRender, true).find(d => isoDay(d.date) === b.closest('.day').dataset.date);
-if (!found) return;
+function discordDay(iso) {
+const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === iso);
+if (!found) return null;
 const groups = [];
 for (const r of found.rows.filter(r => !r.pause)) {
 if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
-const day = { date: found.date, groups };
+return { date: found.date, groups };
+}
+let discordOpen = null;
+function showNickFields() {
+const rows = [...new Map(discordOpen.groups.flat().map(r => [nickKey(r), r])).values()];
+$('discordNicks').hidden = !rows.length;
+$('discordNickList').innerHTML = rows.map(r => {
+const title = r.show.english || r.show.romaji;
+return `<label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" value="${esc(nicknames[nickKey(r)] || '')}" placeholder="${esc(title)}" maxlength="80" autocomplete="off"></label>`;
+}).join('');
+}
+const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelectorAll('[data-nick]')].map(i => [i.dataset.nick, i.value.trim()]));
+const previewNicks = () => {
+const saved = nicknames;
+nicknames = cleanNicknames({ ...saved, ...typedNicks() });
+$('discordText').value = discordMessage(discordOpen);
+nicknames = saved;
+};
+$('list').addEventListener('click', async e => {
+const b = e.target.closest('[data-day-discord]');
+if (!b || !lastWeekRender) return;
+await nicknamesReady;
+const day = discordDay(b.closest('.day').dataset.date);
+if (!day) return;
+discordOpen = day;
 $('discordName').textContent = b.closest('.day').querySelector('h2 > span').textContent.trim();
 $('discordText').value = discordMessage(day);
 $('discordMsg').textContent = '';
+showNickFields();
 $('discordDlg').showModal();
 $('discordCopy').focus();
 });
+$('discordNickList').addEventListener('input', previewNicks);
+$('discordNickSave').onclick = async () => {
+const typed = typedNicks();
+if (Object.values(typed).some(v => LINKISH.test(v))) { $('discordMsg').textContent = 'Keine Links in Spitznamen.'; return; }
+$('discordNickSave').disabled = true;
+$('discordMsg').textContent = 'Speichere …';
+try {
+nicknames = await saveNicknames(typed);
+$('discordText').value = discordMessage(discordOpen);
+$('discordMsg').textContent = 'Spitznamen gespeichert, auch für den täglichen Post.';
+} catch (err) {
+$('discordMsg').textContent = `Nicht gespeichert: ${err.message}.`;
+} finally {
+$('discordNickSave').disabled = false;
+}
+};
+async function saveNicknames(changes) {
+const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
+for (let attempt = 0; attempt < 4; attempt++) {
+if (attempt) await new Promise(r => setTimeout(r, 800 * attempt));
+const current = await fetch(NICKNAMES_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
+const meta = current.ok ? await current.json() : null;
+let remote = {};
+try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
+const names = cleanNicknames(remote.names);
+for (const [k, v] of Object.entries(changes)) { if (v) names[k] = v.slice(0, 80); else delete names[k]; }
+const file = { updated: new Date().toISOString(), names };
+const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
+const res = await fetch(NICKNAMES_API, { method: 'PUT', headers,
+body: JSON.stringify({ message: 'Spitznamen', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
+if (res.ok) return names;
+if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
+}
+throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
+}
 $('discordCopy').onclick = async () => {
 const text = $('discordText').value;
 try { await navigator.clipboard.writeText(text); }
