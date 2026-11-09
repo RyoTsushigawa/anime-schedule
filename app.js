@@ -690,7 +690,7 @@ const slots = new Map();
 for (const r of timeline.rows) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
 // Automatic breaks may free a slot just like a manually skipped show.
 // A Keep Time row is an anchor: never move it or pull later shows past it.
-const autoMovePauses = (() => { try { return localStorage.getItem('autoMovePauses') === '1'; } catch { return false; } })();
+const autoMovePauses = (() => { try { return localStorage.getItem('autoMovePauses') !== '0'; } catch { return false; } })();
 const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.keepTime)
   && rs.some(r => r.skipped || autoMovePauses)).map(([at]) => at);
 const anchors = [...slots].filter(([, rs]) => rs.some(r => r.slot?.keepTime)).map(([at]) => at);
@@ -1408,7 +1408,7 @@ if (id === 'moveButtons') syncMoveEditor();
 };
 }
 const autoMovePauses = $('autoMovePauses');
-try { autoMovePauses.checked = localStorage.getItem('autoMovePauses') === '1'; } catch {}
+try { autoMovePauses.checked = localStorage.getItem('autoMovePauses') !== '0'; } catch {}
 autoMovePauses.onchange = () => {
   try { localStorage.setItem('autoMovePauses', autoMovePauses.checked ? '1' : '0'); } catch {}
   load(true);
