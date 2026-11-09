@@ -64,6 +64,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="segmented fallback-prime" role="group" aria-label="Link für Prime-Serien wählen" title="Bei Serien auf Prime Video"><button data-prime-choice="prime"><span class="prime-mark" aria-hidden="true"></span>Prime</button><button data-prime-choice="torrent">Torrents</button></div>
 </section>
 <section class="week-only">
+<div class="menu-label">Discord</div>
+<button type="button" id="settingsNicknames" class="pill" title="Spitznamen für die gesamte Staffel einrichten, nach Wochentag filtern">Spitznamen einrichten</button>
+<div class="settings-caption">Alle Anime oder einzelne Wochentage bearbeiten</div>
+</section>
+<section class="week-only">
 <div class="menu-label">Zeit</div>
 <div class="segmented" role="group" aria-label="Angezeigte Zeit">
 <button data-set="time" data-value="release" title="Wann die Folge erscheint">Release</button><button data-set="time" data-value="watch" title="Deine Guckzeit aus dem Guckplan">Plan</button><button data-set="time" data-value="both">Beide</button>
@@ -206,6 +211,16 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <section class="discord-preview" aria-label="Vorschau"><div class="discord-section-title">Nachricht <span>Vorschau</span></div><textarea id="discordText" class="discord-text" rows="6" spellcheck="false" aria-label="Nachricht für Discord"></textarea></section>
 <section id="discordNicks" class="discord-nicks" aria-label="Spitznamen bearbeiten"><div class="discord-section-title">Spitznamen <span>Dieser Tag inkl. Pausen · erst nach Speichern aktiv</span></div>
 <p class="muted">Ein Vorschlag füllt nur das Feld. Erst „Speichern“ übernimmt den Namen für Discord und den täglichen Post.</p>
+<div id="discordNickDays" class="discord-nick-days" role="group" aria-label="Spitznamen nach Wochentag filtern">
+<button type="button" class="pill" data-nick-day="all" aria-pressed="true">Alle Anime</button>
+<button type="button" class="pill" data-nick-day="0" aria-pressed="false">Mo</button>
+<button type="button" class="pill" data-nick-day="1" aria-pressed="false">Di</button>
+<button type="button" class="pill" data-nick-day="2" aria-pressed="false">Mi</button>
+<button type="button" class="pill" data-nick-day="3" aria-pressed="false">Do</button>
+<button type="button" class="pill" data-nick-day="4" aria-pressed="false">Fr</button>
+<button type="button" class="pill" data-nick-day="5" aria-pressed="false">Sa</button>
+<button type="button" class="pill" data-nick-day="6" aria-pressed="false">So</button>
+</div>
 <div class="discord-nick-filter"><input type="search" id="discordNickSearch" placeholder="Serie suchen …" aria-label="Serie in der Staffel suchen" autocomplete="off"><span id="discordNickCount" aria-live="polite"></span></div>
 <div id="discordNickList"></div>
 <div class="discord-nick-actions"><button type="button" id="discordNickSave" class="pill">Spitznamen speichern</button></div>
