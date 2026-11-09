@@ -877,3 +877,47 @@ text-align: center;
 .day-absent .pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
 #moveTime[hidden], #moveDouble[hidden] { display: none; }
 #moveDouble[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+
+/* Compact Discord composer: preview and nickname editor share one viewport-sized dialog. */
+#discordDlg { box-sizing: border-box; width: min(760px, calc(100vw - 24px)); max-width: 760px; max-height: min(680px, calc(100dvh - 24px)); overflow: hidden; padding: 0; }
+#discordDlg form { display: flex; flex-direction: column; gap: 0; min-height: 0; max-height: min(680px, calc(100dvh - 24px)); }
+.discord-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 20px 14px; border-bottom: 1px solid var(--line); }
+.discord-head > div { min-width: 0; }
+.discord-eyebrow { color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px; }
+#discordName { display: block; font-size: 18px; line-height: 1.35; }
+#discordNickToggle { flex-shrink: 0; font-size: 12px; }
+.discord-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); min-height: 0; flex: 1 1 auto; }
+.discord-preview, #discordDlg .discord-nicks { min-width: 0; min-height: 0; margin: 0; padding: 16px 18px; }
+.discord-preview { display: flex; flex-direction: column; gap: 9px; border-right: 1px solid var(--line); }
+.discord-section-title { color: var(--text); font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.discord-section-title span { color: var(--muted); font-size: 11px; font-weight: 400; text-align: right; }
+#discordText { resize: none; flex: 1 1 auto; min-height: 130px; width: 100%; font-size: 13px; line-height: 1.55; }
+#discordDlg .discord-nicks { display: flex; flex-direction: column; gap: 9px; }
+#discordDlg .discord-nicks[hidden], #discordNickToggle[hidden] { display: none; }
+#discordDlg .discord-nicks .muted { margin: 0; font-size: 11.5px; line-height: 1.45; }
+#discordNickList { min-height: 0; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.nick-item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.nick-item:first-child { padding-top: 2px; }
+.nick-item:last-child { border-bottom: none; }
+#discordDlg .nick-row { display: flex; flex-direction: column; gap: 5px; align-items: stretch; margin: 0; }
+#discordDlg .nick-row span { flex: none; max-width: 100%; font-size: 12px; font-weight: 600; color: var(--text); }
+#discordDlg .nick-row input { width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 13px; }
+.nick-suggestions { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.nick-suggestions > span { font-size: 11px; color: var(--muted); margin-right: 2px; }
+.nick-suggestion { font: inherit; font-size: 11px; line-height: 1.4; background: var(--bg); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.nick-suggestion:hover, .nick-suggestion:focus-visible { border-color: var(--accent); color: var(--text); }
+.discord-nick-actions { display: flex; justify-content: flex-end; flex: none; padding-top: 7px; border-top: 1px solid var(--line); }
+.discord-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); }
+#discordMsg { margin: 0; min-width: 0; }
+.discord-footer .dlg-row { flex: none; }
+@media (max-width: 600px) {
+ #discordDlg { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+ #discordDlg form { max-height: calc(100dvh - 20px); }
+ .discord-head { padding: 13px 14px; }
+ .discord-layout { grid-template-columns: 1fr; grid-template-rows: minmax(135px, .65fr) minmax(0, 1fr); }
+ .discord-preview, #discordDlg .discord-nicks { padding: 12px 14px; }
+ .discord-preview { border-right: none; border-bottom: 1px solid var(--line); }
+ #discordText { min-height: 85px; }
+ .discord-footer { padding: 10px 14px; flex-wrap: wrap; }
+ .discord-footer .dlg-row { margin-left: auto; }
+}
