@@ -408,7 +408,8 @@ padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background
 max-width: calc(100vw - 24px); width: max-content; padding: 9px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--accent); color: var(--text); font-size: 13px; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 @media (hover: none) { #helpKeys { display: none; } }
 .keyboard-guide { margin: 6px 0 0; display: grid; gap: 12px; font-size: 13px; }
-.keyboard-guide > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: center; }
+.keyboard-guide > div { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 10px; align-items: center; }
+.keyboard-guide dt { white-space: nowrap; }
 .keyboard-guide dd { margin: 0; }
 kbd { display: inline-block; min-width: 23px; padding: 2px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--bg); font: 12px/1.4 system-ui, sans-serif; text-align: center; }
 .dlg p { margin: 0 0 12px; font-size: 14px; }
