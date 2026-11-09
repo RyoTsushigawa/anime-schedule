@@ -3,7 +3,7 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
-The **Misc.** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
+The **Tools** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
 and the Piplup/Empoleon Masterset Tracker. **Settings** holds the display choices and **Hilfe**, the
 guide (shortcuts at its end); `?` opens it too. Catch-up stream links default on unless disabled.
 Single open episodes use one compact card; several stay grouped chronologically with ✓ at the far right.
@@ -207,7 +207,7 @@ profiles or when refreshing. List statistics and profile linking start with Wint
 2027. Group and individual stories differ; MaRyo is two people sharing one plan.
 The shared plan is never doubled when counting shows or slots.
 
-Open **Misc. → Anime Wrapped**. In the final seven calendar days of March, June,
+Open **Tools → Anime Wrapped**. In the final seven calendar days of March, June,
 September and December (Berlin time), a prominent Wrapped banner also appears above
 the schedule. Choose the season and any visible plan
 person, or the whole group. Story cards show planned series, weekly slots, the
