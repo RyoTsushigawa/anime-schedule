@@ -3209,8 +3209,11 @@ function drawAway() {
 const today = isoDay(new Date());
 const [y, m] = awayCal.month.split('-').map(Number);
 const first = new Date(y, m - 1, 1);
-const lead = (first.getDay() + 6) % 7;
 const length = new Date(y, m, 0).getDate();
+// in the current month the grid starts with this week: past weeks can't be changed anyway
+const thisMonth = awayCal.month === today.slice(0, 7);
+const startDay = thisMonth ? Math.max(1, Number(today.slice(8)) - (new Date().getDay() + 6) % 7) : 1;
+const lead = (new Date(y, m - 1, startDay).getDay() + 6) % 7;
 $('awayMonth').textContent = `${MONTHS[m - 1]} ${y}`;
 $('awayPrev').disabled = awayCal.month <= today.slice(0, 7);
 $('awayToday').disabled = awayCal.month === today.slice(0, 7);
@@ -3223,7 +3226,7 @@ $('awayHint').textContent = !awayCal.start
     : awayCal.repeat === 'weekly' ? `Wöchentlich ab ${shortDate(awayCal.start)} · ${AWAY_REPEAT_WEEKS} Termine.` : `Start: ${shortDate(awayCal.start)} · Für einen Zeitraum den letzten Tag wählen.`;
 const cells = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `<span class="away-wd">${d}</span>`);
 for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden="true"></span>');
-for (let n = 1; n <= length; n++) {
+for (let n = startDay; n <= length; n++) {
 const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
 const entries = absent.filter(x => x.day === iso);
 const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}"${x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
