@@ -927,3 +927,17 @@ text-align: center;
 #discordNickSearch { flex: 1 1 auto; min-width: 0; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; }
 #discordNickCount { flex: none; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 #discordNickList .nick-item[hidden] { display: none; }
+
+/* Season nickname setup: weekday chips filter existing inputs without discarding edits. */
+.discord-nick-days { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.discord-nick-days .pill { padding: 4px 9px; font-size: 11px; }
+.discord-nick-days .pill[aria-pressed="true"] { border-color: var(--accent); background: var(--today); color: var(--text); }
+#discordDlg.nickname-setup .discord-preview { display: none; }
+#discordDlg.nickname-setup .discord-layout { grid-template-columns: minmax(0, 1fr); }
+#discordDlg.nickname-setup .discord-nicks { padding: 16px 20px; }
+#discordDlg.nickname-setup #discordNickToggle, #discordDlg.nickname-setup #discordCopy { display: none; }
+#discordDlg.nickname-setup { width: min(580px, calc(100vw - 24px)); }
+@media (max-width: 600px) {
+  #discordDlg.nickname-setup .discord-layout { grid-template-rows: minmax(0, 1fr); }
+  #discordDlg.nickname-setup .discord-nicks { padding: 12px 14px; }
+}
