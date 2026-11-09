@@ -1159,3 +1159,60 @@ text-align: center;
   .popover:not([hidden]), .dlg[open] { animation: none; }
   :where(button, select, .toggle, .cr) { transition: none; }
 }
+
+
+/* Absence calendar: clearer hierarchy, touch targets and repeated entries. */
+.away-dlg { width: min(480px, calc(100vw - 20px)); }
+.away-dlg form { gap: 12px; }
+.away-dlg .away-intro { margin: 0; font-size: 12px; line-height: 1.5; }
+.away-head { gap: 12px; }
+#awayTitle { font-size: 17px; letter-spacing: -.01em; }
+.away-nav { justify-content: center; gap: 9px; }
+#awayMonth { flex: 1 1 auto; text-align: center; font-size: 15px; font-variant-numeric: tabular-nums; }
+#awayPrev, #awayNext { width: 34px; height: 34px; padding: 0; flex: none; }
+#awayToday { font-size: 12px; padding: 5px 10px; }
+.away-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 3px 1px 1px; color: var(--muted); font-size: 11px; }
+.away-legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.away-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.away-legend-today { border: 2px solid var(--accent); }
+.away-legend-selected { background: var(--accent); }
+.away-legend-dot { background: var(--muted); border-radius: 50% !important; }
+.away-legend-part { border: 2px solid var(--muted); border-radius: 50% !important; }
+.away-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.away-wd { padding: 2px 0 4px; font-size: 11px; font-weight: 600; }
+.away-day { min-width: 0; min-height: 51px; padding: 5px 1px; border-radius: 11px; gap: 5px; }
+.away-day b { font-size: 14px; }
+.away-day:disabled { opacity: .4; }
+.away-day.today { border: 2px solid var(--accent); }
+.away-day.sel { box-shadow: 0 0 0 1px var(--accent); }
+.away-day.today.sel { outline: 2px solid var(--accent-text); outline-offset: -4px; }
+.away-day.has-entries:not(.sel) { background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+.away-dots { min-height: 8px; align-items: center; }
+.away-dots i { width: 8px; height: 8px; }
+.away-hint { min-height: 25px; padding: 5px 8px; border-radius: 9px; background: var(--bg); color: var(--muted); font-size: 11px; line-height: 1.5; }
+.away-editor { padding: 13px; border-radius: 12px; gap: 10px; }
+#awayRange { font-size: 13px; }
+.away-mode { width: 100%; }
+.away-mode button { flex: 1 1 0; min-width: 0; }
+.away-repeat-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.away-repeat-setting > span { color: var(--muted); font-size: 12px; }
+.away-repeat-setting .segmented { margin: 0; }
+.away-repeat-setting .segmented button { font-size: 12px; }
+.away-repeat-hint { margin: 0 !important; font-size: 11px !important; line-height: 1.4; }
+.away-time { justify-content: space-between; }
+.away-time input { min-width: 110px; max-width: 155px; }
+.away-editor .day-absent { gap: 7px; }
+.away-editor .day-absent .pill { min-height: 34px; }
+.away-list { gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.away-list li { min-width: 0; padding: 8px 10px; gap: 9px; line-height: 1.35; }
+.away-list li + li { border-top: 1px solid var(--line); }
+.away-list li .pill { min-height: 30px; min-width: 30px; padding: 3px; }
+.away-list li > span:nth-child(2) { overflow-wrap: anywhere; font-size: 12px; }
+@media (max-width: 420px) {
+ .away-day { min-height: 45px; padding: 4px 1px; }
+ .away-grid { gap: 3px; }
+ .away-legend { gap: 5px 9px; }
+ .away-repeat-setting { align-items: stretch; }
+ .away-repeat-setting .segmented { width: 100%; }
+ .away-repeat-setting .segmented button { flex: 1; }
+}
