@@ -1228,3 +1228,8 @@ text-align: center;
   #settingsMenu { max-height: min(78dvh, 680px); overflow-y: auto; overscroll-behavior: contain; }
   #settingsMenu .segmented button { font-size: 11px; }
 }
+
+/* Compact return-to-today action, including small screens. */
+.weeknav .jump-today { min-height: 32px; padding: 5px 10px; white-space: nowrap; font-size: 12px; }
+.weeknav .jump-today[aria-current="date"] { border-color: var(--accent); color: var(--accent); font-weight: 650; }
+@media (max-width: 560px) { .weeknav .jump-today { padding-inline: 8px; font-size: 11px; } }
