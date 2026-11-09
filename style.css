@@ -1054,3 +1054,83 @@ text-align: center;
   #settingsMenu .segmented button,
   #settingsMenu #settingsNicknames { min-height: 44px; }
 }
+
+/* Shared visual rhythm across the schedule, planner, popovers and editors.
+   Keep specialized tools (Wrapped, Ranker, Masterset) visually distinct. */
+:root { --ui-radius: 12px; --ui-dialog-radius: 16px; --ui-gap: 8px; }
+:where(.pill, .chip, .toggle, .segmented, .round, .daystrip button) {
+  -webkit-tap-highlight-color: transparent;
+}
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:where(button, select, input, textarea):disabled {
+  cursor: not-allowed;
+}
+:where(.dlg, .popover, .plan-card, .row, .shared) {
+  border-color: var(--line);
+}
+.dlg { border-radius: var(--ui-dialog-radius); }
+.dlg form > * { min-width: 0; }
+.dlg .dlg-row { gap: var(--ui-gap); }
+.dlg .dlg-row > .pill { min-height: 35px; }
+.dlg .dlg-row .pill, .dlg .pill, .dlg-foot .pill {
+  border-radius: 999px;
+}
+.dlg :is(input:not([type="checkbox"]), select, textarea) {
+  border-color: var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+.dlg :is(input:not([type="checkbox"]), select, textarea):focus-visible {
+  border-color: var(--accent);
+}
+.dlg :is(input:not([type="checkbox"]), select, textarea)::placeholder {
+  color: var(--muted);
+  opacity: .8;
+}
+.day-suggest { border-radius: var(--ui-radius); }
+.day-suggest button { border-radius: 9px; }
+#delayDlg, #reasonsDlg, #dayDlg, #planDlg, #absentDlg {
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+}
+#discordDlg .discord-head, #discordDlg .discord-footer {
+  gap: 12px;
+}
+#discordDlg .discord-section-title { line-height: 1.4; }
+#discordDlg .nick-suggestion { transition: border-color .12s ease, background-color .12s ease, color .12s ease; }
+#discordDlg .nick-suggestion:hover { background: var(--today); }
+#discordDlg .nick-suggestion:focus-visible { outline-offset: 1px; }
+#discordDlg .nick-item[hidden] { display: none; }
+#discordDlg #discordNickSearch { border-radius: 999px; }
+#discordDlg #discordNickSearch::placeholder { color: var(--muted); opacity: .8; }
+#discordDlg .discord-nick-days .pill { border-radius: 999px; min-height: 30px; }
+#discordDlg .discord-nick-days .pill:hover { border-color: var(--accent); }
+#discordDlg .discord-nick-days .pill[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+#settingsMenu .menu-item:focus-visible,
+#accountMenu .menu-item:focus-visible { outline-offset: -2px; }
+.misc-menu.site-tools { border-radius: var(--ui-dialog-radius); }
+.misc-menu a, .misc-menu button { border-radius: var(--ui-radius); }
+.misc-menu a:focus-visible, .misc-menu button:focus-visible { outline-offset: -2px; }
+.plan-card { border-radius: var(--ui-dialog-radius); }
+.plan-card :is(input.pill, select.pill, button.pill) { border-radius: 999px; }
+.plan-card :is(input, select)::placeholder { color: var(--muted); opacity: .8; }
+.busy-row .pill, .busy-actions .pill { border-radius: 999px; }
+.row:not(.shared .row) { border-radius: var(--ui-radius); }
+@media (max-width: 560px) {
+  .dlg { max-width: calc(100vw - 20px); }
+  .dlg .dlg-row > .pill { min-height: 40px; }
+  #discordDlg .discord-footer { align-items: center; }
+  #discordDlg .discord-footer .dlg-row { justify-content: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popover:not([hidden]), .dlg[open] { animation: none; }
+  :where(button, select, .toggle, .cr) { transition: none; }
+}
