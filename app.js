@@ -861,8 +861,8 @@ return [s, merged];
 }));
 const showWho = $('who').checked;
 const others = who => mode === 'solo' ? who?.filter(p => !activePeople().includes(p)) : who;
-const whoChips = all => { const who = others(all); return showWho && who?.length
-? `<span class="who">${who.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
+const whoChips = (all, away = []) => { const who = others(all); return showWho && who?.length
+? `<span class="who">${who.map(p => away.includes(p) ? `<span class="away" title="Abwesend">${esc(p)}</span>` : `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
 const found = new Set();
 const droppedByMe = id => !everyone && !!auth && mode === 'solo' && soloPerson === ownPerson() && knownEntries.get(Number(id))?.status === 'DROPPED';
 const today = new Date().toDateString();
@@ -944,7 +944,8 @@ const minute = r.watchAt == null ? null : Math.round((r.watchAt - dayStart) / 60
 const isAway = p => awayAt(isoDay(day.date), p, minute);
 const missing = (r.who || []).filter(isAway);
 const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p), 0);
-if (!missing.length || left > 1) return r;
+if (!missing.length) return r;
+if (left > 1) return { ...r, away: missing };
 return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, alId: r.m?.id };
 });
 }
@@ -1089,13 +1090,13 @@ return choices.time === 'watch' ? watch
 : choices.time === 'both' ? `${watch}<small><span class="out">ab </span>${release}</small>` : releaseCell;
 };
 const timeHint = { watch: 'Unser Plan', release: 'Release', both: 'Unser Plan, darunter Release' }[choices.time] || 'Release';
-const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra }) => `
+const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra, away }) => `
       <div class="row${extra ? ' catchup-planned' : ''}" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time" title="${extra ? 'Unser Plan (Nachholen)' : timeHint}">${extra ? hm(new Date(watchAt)) : timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who)}</div>
+          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${whoChips(who, away)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen">⇄</button>` : '') : moveButton(show, slot)}
