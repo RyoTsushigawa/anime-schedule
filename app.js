@@ -2802,15 +2802,47 @@ function nicknameSuggestions(title) {
   }
   return out.slice(0, 3);
 }
+function seasonNicknameRows(date) {
+  const plan = lastWeekRender?.[2]?.get(tabFor(tabs, date).gid);
+  const rows = new Map();
+  const add = r => {
+    const title = r.show.english || r.show.romaji;
+    const key = norm(r.show.romaji || title);
+    if (key && (!rows.has(key) || (!rows.get(key).m?.id && r.m?.id))) rows.set(key, r);
+  };
+  for (const day of render(...lastWeekRender, true) || [])
+    for (const r of day.rows) if (r.show && !r.extra) add(r);
+  if (plan) {
+    const statuses = Object.entries(streamsDe?.status || {}).filter(([id]) => /^[0-9]+$/.test(id));
+    for (const person of plan.people)
+      for (const [show] of picks(plan, person)) {
+        if (show.hidden) continue;
+        const match = statuses.find(([, status]) => titleMatches([show.romaji, show.english], status.titles || []));
+        add({ show, ...(match && { m: { id: Number(match[0]) } }) });
+      }
+  }
+  return [...rows.values()].sort((a, b) => (a.show.english || a.show.romaji).localeCompare(b.show.english || b.show.romaji, 'de'));
+}
+function filterNickFields() {
+  const term = norm($('discordNickSearch').value.trim());
+  let visible = 0;
+  for (const item of $('discordNickList').querySelectorAll('.nick-item')) {
+    item.hidden = !!term && !norm(item.dataset.title).includes(term);
+    if (!item.hidden) visible++;
+  }
+  $('discordNickCount').textContent = visible + ' / ' + $('discordNickList').querySelectorAll('.nick-item').length;
+}
 function showNickFields() {
-const rows = [...new Map(discordOpen.groups.flat().map(r => [nickKey(r), r])).values()];
+const rows = seasonNicknameRows(discordOpen.date);
 $('discordNicks').hidden = !rows.length;
 $('discordNickToggle').hidden = !rows.length;
+$('discordNickSearch').value = '';
 $('discordNickList').innerHTML = rows.map(r => {
 const title = r.show.english || r.show.romaji;
 const chips = nicknameSuggestions(title).map(name => `<button type="button" class="nick-suggestion" data-nick-suggest="${esc(name)}" title="Vorschlag übernehmen (noch nicht speichern)">${esc(name)}</button>`).join('');
-return `<div class="nick-item"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" data-nick-title="${esc(titleKey(r))}" value="${esc(savedNick(r))}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
+return `<div class="nick-item" data-title="${esc([title, r.show.romaji].filter(Boolean).join(' '))}"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" data-nick-title="${esc(titleKey(r))}" value="${esc(savedNick(r))}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
 }).join('');
+filterNickFields();
 }
 // a name saved by title moves to the show's ID when saved here, so clearing the field really clears it
 const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelectorAll('[data-nick]')]
@@ -2837,6 +2869,7 @@ $('discordNickToggle').setAttribute('aria-expanded', 'true');
 $('discordDlg').showModal();
 $('discordCopy').focus();
 });
+$('discordNickSearch').addEventListener('input', filterNickFields);
 $('discordNickList').addEventListener('input', previewNicks);
 $('discordNickList').addEventListener('click', e => {
   const chip = e.target.closest('[data-nick-suggest]');
