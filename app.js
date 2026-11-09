@@ -2803,41 +2803,52 @@ function nicknameSuggestions(title) {
   return out.slice(0, 3);
 }
 function seasonNicknameRows(date) {
-  const plan = lastWeekRender?.[2]?.get(tabFor(tabs, date).gid);
   const rows = new Map();
-  const add = r => {
+  const add = (r, weekday) => {
+    if (!r.show) return;
     const title = r.show.english || r.show.romaji;
     const key = norm(r.show.romaji || title);
-    if (key && (!rows.has(key) || (!rows.get(key).m?.id && r.m?.id))) rows.set(key, r);
+    if (!key) return;
+    let entry = rows.get(key);
+    if (!entry) rows.set(key, entry = { ...r, nickDays: new Set() });
+    if (r.m?.id && !entry.m?.id) entry.m = r.m;
+    if (weekday >= 0) entry.nickDays.add(weekday);
   };
-  // Only shows belonging to this date, including detected breaks and skips.
-  const day = (render(...lastWeekRender, true) || []).find(d => isoDay(d.date) === isoDay(date));
-  for (const r of day?.rows || []) if (r.show && !r.extra) add(r);
-  // Also include shows assigned to this weekday but absent from the episode
-  // feed. Nicknames remain global in nicknames.json, not tied to the date.
-  if (plan) {
-    const weekday = (date.getDay() + 6) % 7;
-    const statuses = Object.entries(streamsDe?.status || {}).filter(([id]) => /^[0-9]+$/.test(id));
+  // Include every day of this schedule week, including broadcasts on break.
+  const days = render(...lastWeekRender, true) || [];
+  for (const day of days)
+    for (const r of day.rows) if (!r.extra) add(r, (day.date.getDay() + 6) % 7);
+  // The complete season plan includes shows without an episode this week.
+  // Respect week-specific moves when determining which weekday to list.
+  const statuses = Object.entries(streamsDe?.status || {}).filter(([id]) => /^[0-9]+$/.test(id));
+  const planIds = new Set(days.map(d => tabFor(tabs, d.date).gid));
+  for (const gid of planIds) {
+    const plan = lastWeekRender[2].get(gid);
+    if (!plan) continue;
     for (const person of plan.people)
       for (const [show, slot] of picks(plan, person)) {
         if (show.hidden) continue;
         const move = moveFor(show, lastWeekRender[1]);
-        const tag = move?.tag || slot.tag;
-        if (WEEKDAYS.indexOf(norm(tag).slice(0, 2)) !== weekday) continue;
+        const weekday = WEEKDAYS.indexOf(norm(move?.tag || slot.tag).slice(0, 2));
         const match = statuses.find(([, status]) => titleMatches([show.romaji, show.english], status.titles || []));
-        add({ show, ...(match && { m: { id: Number(match[0]) } }) });
+        add({ show, ...(match && { m: { id: Number(match[0]) } }) }, weekday);
       }
   }
   return [...rows.values()].sort((a, b) => (a.show.english || a.show.romaji).localeCompare(b.show.english || b.show.romaji, 'de'));
 }
+let nickDayFilter = 'all';
 function filterNickFields() {
   const term = norm($('discordNickSearch').value.trim());
   let visible = 0;
-  for (const item of $('discordNickList').querySelectorAll('.nick-item')) {
-    item.hidden = !!term && !norm(item.dataset.title).includes(term);
+  const items = $('discordNickList').querySelectorAll('.nick-item');
+  for (const item of items) {
+    item.hidden = (nickDayFilter !== 'all' && !item.dataset.days.split(',').includes(nickDayFilter))
+      || (!!term && !norm(item.dataset.title).includes(term));
     if (!item.hidden) visible++;
   }
-  $('discordNickCount').textContent = visible + ' / ' + $('discordNickList').querySelectorAll('.nick-item').length;
+  $('discordNickCount').textContent = visible + ' / ' + items.length;
+  for (const button of $('discordNickDays').querySelectorAll('[data-nick-day]'))
+    button.setAttribute('aria-pressed', String(button.dataset.nickDay === nickDayFilter));
 }
 function showNickFields() {
 const rows = seasonNicknameRows(discordOpen.date);
@@ -2847,7 +2858,7 @@ $('discordNickSearch').value = '';
 $('discordNickList').innerHTML = rows.map(r => {
 const title = r.show.english || r.show.romaji;
 const chips = nicknameSuggestions(title).map(name => `<button type="button" class="nick-suggestion" data-nick-suggest="${esc(name)}" title="Vorschlag übernehmen (noch nicht speichern)">${esc(name)}</button>`).join('');
-return `<div class="nick-item" data-title="${esc([title, r.show.romaji].filter(Boolean).join(' '))}"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" data-nick-title="${esc(titleKey(r))}" value="${esc(savedNick(r))}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
+return `<div class="nick-item" data-days="${[...r.nickDays].join(',')}" data-title="${esc([title, r.show.romaji].filter(Boolean).join(' '))}"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" data-nick-title="${esc(titleKey(r))}" value="${esc(savedNick(r))}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
 }).join('');
 filterNickFields();
 }
@@ -2860,21 +2871,38 @@ nicknames = cleanNicknames({ ...saved, ...typedNicks() });
 $('discordText').value = discordMessage(discordOpen);
 nicknames = saved;
 };
+async function openNickEditor(date, day = null, setup = false) {
+  if (!lastWeekRender) await load();
+  if (!lastWeekRender) { notice('Der Guckplan muss zuerst geladen werden.'); return; }
+  await nicknamesReady;
+  discordOpen = day || discordDay(isoDay(date));
+  if (!discordOpen) { notice('Für diesen Tag ist kein Guckplan verfügbar.'); return; }
+  nickDayFilter = setup ? 'all' : String((date.getDay() + 6) % 7);
+  $('discordDlg').classList.toggle('nickname-setup', setup);
+  $('discordName').textContent = setup ? 'Spitznamen einrichten' : `${dayName(date)}, ${germanDate(date)}`;
+  $('discordText').value = discordMessage(discordOpen);
+  $('discordMsg').textContent = '';
+  showNickFields();
+  $('discordNicks').hidden = false;
+  $('discordNickToggle').setAttribute('aria-expanded', 'true');
+  $('discordDlg').showModal();
+  (setup ? $('discordNickSearch') : $('discordCopy')).focus();
+}
+$('settingsNicknames').onclick = async () => {
+  showSettings(false);
+  await openNickEditor(weekStart(weekOffset), null, true);
+};
+$('discordNickDays').addEventListener('click', e => {
+  const button = e.target.closest('[data-nick-day]');
+  if (!button) return;
+  nickDayFilter = button.dataset.nickDay;
+  filterNickFields();
+});
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('[data-day-discord]');
 if (!b || !lastWeekRender) return;
-await nicknamesReady;
-const day = discordDay(b.closest('.day').dataset.date);
-if (!day) return;
-discordOpen = day;
-$('discordName').textContent = b.closest('.day').querySelector('h2 > span').textContent.trim();
-$('discordText').value = discordMessage(day);
-$('discordMsg').textContent = '';
-showNickFields();
-$('discordNicks').hidden = false;
-$('discordNickToggle').setAttribute('aria-expanded', 'true');
-$('discordDlg').showModal();
-$('discordCopy').focus();
+const date = new Date(b.closest('.day').dataset.date + 'T12:00:00');
+await openNickEditor(date);
 });
 $('discordNickSearch').addEventListener('input', filterNickFields);
 $('discordNickList').addEventListener('input', previewNicks);
