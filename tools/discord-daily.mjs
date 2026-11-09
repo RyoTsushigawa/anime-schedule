@@ -83,7 +83,16 @@ try {
   const role = DAY_ROLES[weekday];
   if (role) message = `<@&${role}> ${message}`;
   console.log(message);
-  if (dryRun) process.exit(0);
+  if (dryRun) {
+    // the rest of the week too, as the Discord button would write it, to check the run reads the plan
+    const week = await page.evaluate(() => [0, 1, 2, 3, 4, 5, 6].map(i => {
+      const d = new Date(lastWeekRender[1]); d.setDate(d.getDate() + i);
+      const day = discordDay(isoDay(d));
+      return day ? `--- ${isoDay(d)} ---\n${discordMessage(day)}` : `--- ${isoDay(d)}: missing ---`;
+    }));
+    console.log('\nThis week (dry run only):\n' + week.join('\n'));
+    process.exit(0);
+  }
 
   const res = await fetch(webhook + (webhook.includes('?') ? '&' : '?') + 'wait=true', {
     method: 'POST',
