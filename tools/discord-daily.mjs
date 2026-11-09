@@ -69,7 +69,7 @@ try {
     console.log(`Waiting ${Math.round(wait / 60000)} min until ${POST_HOUR}:00 German time.`);
     await page.waitForTimeout(wait);
     await page.evaluate(() => Promise.all([loadMoves(),
-      fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { nicknames = cleanNicknames(j.names); }).catch(() => {})]));
+      fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { nicknames = cleanNicknames(j.names); emotes = cleanEmotes(j.emotes); }).catch(() => {})]));
   }
 
   // same steps as the Discord button in app.js, nicknames (nicknames.json) included

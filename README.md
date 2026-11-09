@@ -176,6 +176,9 @@ live page itself in a headless browser (moves, delays and pings included).
 **Spitznamen:** the Discord button's dialog has a **Spitznamen** section: a short name per show for the
 Discord message (the button and the daily post), saved for everyone in `nicknames.json` with the GitHub key.
 The site itself keeps the full titles.
+Emojis can go straight into a nickname. Server emotes need Discord's full code once (in Discord type
+`\:emote:` and send it; the message shows `<:emote:123…>`): paste that into a nickname and save, and from
+then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames.json` under `emotes`.
 
 GitHub sometimes starts scheduled runs late, so the run starts at 08:30 and waits for 09:00; on busy
 days the post can still come a few minutes late.
