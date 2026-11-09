@@ -2810,13 +2810,20 @@ function seasonNicknameRows(date) {
     const key = norm(r.show.romaji || title);
     if (key && (!rows.has(key) || (!rows.get(key).m?.id && r.m?.id))) rows.set(key, r);
   };
-  for (const day of render(...lastWeekRender, true) || [])
-    for (const r of day.rows) if (r.show && !r.extra) add(r);
+  // Only shows belonging to this date, including detected breaks and skips.
+  const day = (render(...lastWeekRender, true) || []).find(d => isoDay(d.date) === isoDay(date));
+  for (const r of day?.rows || []) if (r.show && !r.extra) add(r);
+  // Also include shows assigned to this weekday but absent from the episode
+  // feed. Nicknames remain global in nicknames.json, not tied to the date.
   if (plan) {
+    const weekday = (date.getDay() + 6) % 7;
     const statuses = Object.entries(streamsDe?.status || {}).filter(([id]) => /^[0-9]+$/.test(id));
     for (const person of plan.people)
-      for (const [show] of picks(plan, person)) {
+      for (const [show, slot] of picks(plan, person)) {
         if (show.hidden) continue;
+        const move = moveFor(show, lastWeekRender[1]);
+        const tag = move?.tag || slot.tag;
+        if (WEEKDAYS.indexOf(norm(tag).slice(0, 2)) !== weekday) continue;
         const match = statuses.find(([, status]) => titleMatches([show.romaji, show.english], status.titles || []));
         add({ show, ...(match && { m: { id: Number(match[0]) } }) });
       }
