@@ -201,19 +201,18 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </dialog>
 <dialog id="discordDlg" class="dlg day-dlg">
 <form method="dialog">
-<b id="discordName"></b>
-<textarea id="discordText" class="discord-text" rows="11" spellcheck="false" aria-label="Nachricht für Discord"></textarea>
-<details id="discordNicks" class="discord-nicks">
-<summary>Spitznamen</summary>
-<div class="muted">Kurze Namen nur für Discord (auch der tägliche Post um 9 Uhr). Leer = voller Titel.</div>
+<div class="discord-head"><div><div class="discord-eyebrow">Discord · Tagesübersicht</div><b id="discordName"></b></div><button type="button" id="discordNickToggle" class="pill" aria-controls="discordNicks" aria-expanded="true">Spitznamen</button></div>
+<div class="discord-layout">
+<section class="discord-preview" aria-label="Vorschau"><div class="discord-section-title">Nachricht <span>Vorschau</span></div><textarea id="discordText" class="discord-text" rows="6" spellcheck="false" aria-label="Nachricht für Discord"></textarea></section>
+<section id="discordNicks" class="discord-nicks" aria-label="Spitznamen bearbeiten"><div class="discord-section-title">Spitznamen <span>Optional · nur nach Speichern aktiv</span></div>
+<p class="muted">Ein Vorschlag füllt nur das Feld. Erst „Speichern“ übernimmt den Namen für Discord und den täglichen Post.</p>
 <div id="discordNickList"></div>
-<div class="dlg-row"><button type="button" id="discordNickSave" class="pill">Spitznamen speichern</button></div>
-</details>
-<div class="muted" id="discordMsg"></div>
-<div class="dlg-row">
-<button type="button" id="discordCopy" class="pill primary">Kopieren</button>
-<button value="cancel" class="pill">Schließen</button>
+<div class="discord-nick-actions"><button type="button" id="discordNickSave" class="pill">Spitznamen speichern</button></div>
+</section>
 </div>
+<div class="discord-footer"><div class="muted" id="discordMsg" role="status" aria-live="polite"></div><div class="dlg-row">
+<button value="cancel" class="pill">Schließen</button><button type="button" id="discordCopy" class="pill primary">Kopieren</button>
+</div></div>
 </form>
 </dialog>
 <dialog id="delayDlg" class="dlg day-dlg">
