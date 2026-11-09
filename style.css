@@ -346,6 +346,11 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .day h2 .day-edit { order: 1; padding: 3px 10px; font-size: 12px; }
 .day h2 .day-discord { display: inline-grid; place-items: center; padding: 3px 9px; }
 .day-dlg { width: min(460px, 92vw); }
+.discord-nicks { margin: 8px 0; }
+.discord-nicks summary { cursor: pointer; font-weight: 600; }
+.discord-nicks > * + * { margin-top: 8px; }
+.nick-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.nick-row span { flex: 0 1 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 :root { --late: #f08c00; }
 .day h2 .day-delay { order: 1; display: inline-grid; place-items: center; padding: 3px 9px; }
 .day h2 .day-delay.on { border-color: var(--late); color: var(--late); }

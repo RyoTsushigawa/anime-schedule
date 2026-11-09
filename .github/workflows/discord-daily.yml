@@ -1,0 +1,43 @@
+# Every day at 09:00 German time: today's schedule goes to the Discord channel, the same text the
+# Discord button on a day heading gives (tools/discord-daily.mjs). Needs the repository secret
+# DISCORD_WEBHOOK_SCHEDULE (Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL).
+name: Daily Discord schedule
+
+on:
+  schedule:
+    # two times so it's 09:00 in winter and in summer; the script drops the one that doesn't fit.
+    # Started half an hour early because GitHub often starts scheduled runs late; the script waits for 09:00.
+    - cron: '30 7 * * *'   # 07:30 UTC = 08:30 in winter (UTC+1)
+    - cron: '30 6 * * *'   # 06:30 UTC = 08:30 in summer (UTC+2)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only show the message in the log, post nothing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned: a moved tag can't change what runs
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
+        with:
+          node-version: 22
+      - name: Install the headless browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Post today's schedule
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: node tools/discord-daily.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
