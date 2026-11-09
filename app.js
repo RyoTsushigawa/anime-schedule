@@ -3251,18 +3251,53 @@ return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="$
 }
 function drawAwayList() {
 const today = isoDay(new Date());
-// one line per person and condition, consecutive days joined: "Sophie · Mi 12. Nov. – Fr 14. Nov. · ganztägig"
-const items = absent.filter(x => x.day >= today).flatMap(x => (x.people || []).map(p => ({ p, day: x.day, cond: awayLabel(x) })))
-.sort((a, b) => a.p.localeCompare(b.p) || a.cond.localeCompare(b.cond) || a.day.localeCompare(b.day));
+const entries = absent.filter(x => x.day >= today).flatMap(x => (x.people || []).map(p => ({ p, day: x.day, cond: awayLabel(x) })));
+const byPerson = new Map();
+for (const it of entries) {
+  const key = JSON.stringify([it.p, it.cond]);
+  if (!byPerson.has(key)) byPerson.set(key, []);
+  byPerson.get(key).push(it);
+}
 const runs = [];
-for (const it of items) {
-const last = runs.at(-1);
-if (last && last.p === it.p && last.cond === it.cond && addDay(last.to, 1) === it.day) last.to = it.day;
-else runs.push({ p: it.p, cond: it.cond, from: it.day, to: it.day });
+for (const group of byPerson.values()) {
+  const dates = [...new Set(group.map(it => it.day))].sort();
+  if (!dates.length) continue;
+  const { p, cond } = group[0];
+  // Preserve consecutive-day ranges. A recurring absence is a sequence of
+  // matching weekdays separated by exactly seven days (at least 3 repeats).
+  const consecutive = dates.some((d, i) => i > 0 && addDay(dates[i - 1], 1) === d);
+  if (!consecutive) {
+    let rest = [];
+    const flushRest = () => {
+      for (const day of rest) runs.push({ p, cond, from: day, to: day, days: [day] });
+      rest = [];
+    };
+    for (let i = 0; i < dates.length;) {
+      let j = i + 1;
+      while (j < dates.length && addDay(dates[j - 1], 7) === dates[j]) j++;
+      if (j - i >= 3) {
+        flushRest();
+        runs.push({ p, cond, from: dates[i], to: dates[j - 1], days: dates.slice(i, j), weekly: true });
+      } else rest.push(...dates.slice(i, j));
+      i = j;
+    }
+    flushRest();
+  } else {
+    for (const d of dates) {
+      const prev = runs.at(-1);
+      if (prev && prev.p === p && prev.cond === cond && !prev.weekly && addDay(prev.to, 1) === d) {
+        prev.to = d; prev.days.push(d);
+      } else runs.push({ p, cond, from: d, to: d, days: [d] });
+    }
+  }
 }
 runs.sort((a, b) => a.from.localeCompare(b.from) || a.p.localeCompare(b.p));
-$('awayList').innerHTML = runs.length ? runs.map(r => `<li><span class="away-who" style="${personStyle(r.p)}">${esc(r.p)}</span><span>${esc(r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`)} · ${esc(r.cond)}</span><button type="button" class="pill" data-away-remove="${esc(JSON.stringify(r))}" aria-label="Entfernen">✕</button></li>`).join('')
-: '<li class="muted">Niemand hat etwas eingetragen.</li>';
+$('awayList').innerHTML = runs.length ? runs.map(r => {
+  const dates = r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`;
+  const label = r.weekly ? `Jede Woche · ${r.days.length} Termine · ${dates}` : dates;
+  const action = r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen';
+  return `<li><span class="away-who" style="${personStyle(r.p)}">${esc(r.p)}</span><span>${esc(label)} · ${esc(r.cond)}</span><button type="button" class="pill" data-away-remove="${esc(JSON.stringify(r))}" aria-label="${action}: ${esc(r.p)}" title="${action}">✕</button></li>`;
+}).join('') : '<li class="muted">Niemand hat etwas eingetragen.</li>';
 }
 // Saves the absences of the given days (the rest stay as they are).
 async function saveAway(next, days) {
@@ -3328,11 +3363,12 @@ const days = awayCal.repeat === 'weekly'
 const chips = [...$('awayPeople').querySelectorAll('[data-away]')];
 const on = chips.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.away);
 const off = chips.filter(b => b.getAttribute('aria-pressed') === 'false').map(b => b.dataset.away);
+if (awayCal.repeat === 'weekly' && !on.length) { $('awayMsg').textContent = 'Für die Wiederholung mindestens eine Person auswählen.'; return; }
 let next;
 if (awayCal.mode === 'day') {
 next = absent.flatMap(x => {
 if (!days.includes(x.day) || x.from || x.until) return [x];
-const people = (x.people || []).filter(p => !off.includes(p) && !on.includes(p));
+const people = (x.people || []).filter(p => !on.includes(p) && (awayCal.repeat === 'weekly' || !off.includes(p)));
 return people.length ? [{ ...x, people }] : [];
 }).concat(on.length ? days.map(day => ({ day, people: on })) : []);
 } else {
@@ -3355,8 +3391,7 @@ $('awayList').addEventListener('click', e => {
 const raw = e.target.closest('[data-away-remove]')?.dataset.awayRemove;
 if (!raw) return;
 const run = JSON.parse(raw);
-const days = [];
-for (let d = run.from; d <= run.to; d = addDay(d, 1)) days.push(d);
+const days = Array.isArray(run.days) ? run.days : selectedDays();
 const next = absent.flatMap(x => {
 if (!days.includes(x.day) || awayLabel(x) !== run.cond) return [x];
 const people = (x.people || []).filter(p => p !== run.p);
