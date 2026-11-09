@@ -679,6 +679,10 @@ const at = new Date(date);
 at.setHours(hm[0] + (hm[0] < NIGHT_UNTIL ? 24 : 0), hm[1], 0, 0);
 return at.getTime();
 }
+// Date-specific preference, only used when an actual (non-manual) pause exists.
+function pauseShiftEnabled(date) {
+  try { return localStorage.getItem('pauseShift:' + date) !== '0'; } catch { return true; }
+}
 function applyDelays(day, timeline = day) {
 const list = delaysOf(isoDay(day.date));
 const keyOf = r => norm(r.show?.romaji || r.show?.english || '');
@@ -690,7 +694,7 @@ const slots = new Map();
 for (const r of timeline.rows) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
 // Automatic breaks may free a slot just like a manually skipped show.
 // A Keep Time row is an anchor: never move it or pull later shows past it.
-const autoMovePauses = (() => { try { return localStorage.getItem('autoMovePauses') !== '0'; } catch { return false; } })();
+const autoMovePauses = pauseShiftEnabled(isoDay(day.date));
 const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.keepTime)
   && rs.some(r => r.skipped || autoMovePauses)).map(([at]) => at);
 const anchors = [...slots].filter(([, rs]) => rs.some(r => r.slot?.keepTime)).map(([at]) => at);
@@ -1030,6 +1034,8 @@ const ordered = picked ? [picked] : searching() || todayIndex < 0 || range === '
 let html = ordered.map(({ date, rows }) => {
 const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
+const hasAutoPause = rows.some(r => r.pause && !r.skipped && !r.slot?.keepTime);
+const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseShiftEnabled(isoDay(date)) ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseShiftEnabled(isoDay(date))}" title="Freie Slots durch Sendepausen an diesem Tag schließen">Pausen aufrücken: ${pauseShiftEnabled(isoDay(date)) ? 'An' : 'Aus'}</button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
 const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap }) => `
@@ -1102,7 +1108,7 @@ const body = ordered.length
 : row(g[0]))).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${movesKey && isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${absentOn(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${absentOn(isoDay(date)).length ? esc('Abwesend: ' + absentOn(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${pauseShiftButton}${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${movesKey && isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${absentOn(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${absentOn(isoDay(date)).length ? esc('Abwesend: ' + absentOn(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -1407,12 +1413,13 @@ document.body.classList.toggle(cls, !$(id).checked);
 if (id === 'moveButtons') syncMoveEditor();
 };
 }
-const autoMovePauses = $('autoMovePauses');
-try { autoMovePauses.checked = localStorage.getItem('autoMovePauses') !== '0'; } catch {}
-autoMovePauses.onchange = () => {
-  try { localStorage.setItem('autoMovePauses', autoMovePauses.checked ? '1' : '0'); } catch {}
+$('list').addEventListener('click', e => {
+  const button = e.target.closest('[data-pause-shift]');
+  if (!button) return;
+  const date = button.dataset.pauseShift;
+  try { localStorage.setItem('pauseShift:' + date, pauseShiftEnabled(date) ? '0' : '1'); } catch {}
   load(true);
-};
+});
 let editScope = 'week';
 for (const b of document.querySelectorAll('[data-edit-scope]')) b.onclick = () => {
 editScope = b.dataset.editScope;
