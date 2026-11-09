@@ -921,3 +921,9 @@ text-align: center;
  .discord-footer { padding: 10px 14px; flex-wrap: wrap; }
  .discord-footer .dlg-row { margin-left: auto; }
 }
+
+/* Season-wide nickname editor search. */
+.discord-nick-filter { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#discordNickSearch { flex: 1 1 auto; min-width: 0; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; }
+#discordNickCount { flex: none; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#discordNickList .nick-item[hidden] { display: none; }
