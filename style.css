@@ -1216,3 +1216,15 @@ text-align: center;
  .away-repeat-setting .segmented { width: 100%; }
  .away-repeat-setting .segmented button { flex: 1; }
 }
+
+/* Clarity pass: keep action labels readable on narrow screens. */
+#editSchedule, #editScope button, #moveWeek, #moveAlways { white-space: nowrap; }
+#editScope, #settingsMenu .segmented, .move-actions { min-width: 0; }
+#settingsMenu .settings-options .toggle { overflow-wrap: anywhere; }
+#settingsMenu .menu-item, #accountMenu .menu-item { text-align: left; }
+@media (max-width: 560px) {
+  #editScope button { padding-inline: 9px; font-size: 11px; }
+  #editSchedule { padding-inline: 11px; }
+  #settingsMenu { max-height: min(78dvh, 680px); overflow-y: auto; overscroll-behavior: contain; }
+  #settingsMenu .segmented button { font-size: 11px; }
+}
