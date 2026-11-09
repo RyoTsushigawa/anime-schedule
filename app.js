@@ -898,6 +898,15 @@ if (slot.skip) {
 if (!day.rows.some(r => r.skipped && r.show === show)) day.rows.push({ pause: true, skipped: true, show, slot, when, episode });
 continue;
 }
+// LiveChart's recap broadcasts still appear in AniList's airing schedule. They
+// are not regular episodes, even when watched on a different weekday.
+const recap = (streamsDe?.status?.[m.id]?.recaps || []).find(r =>
+  r.episode === it.episode && Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000);
+if (recap) {
+  if (!day.rows.some(r => r.show === show))
+    day.rows.push({ pause: true, show, slot, when: null, episode, note: { text: 'Recap episode' }, news: [] });
+  continue;
+}
 const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
 if (existing) existing.episodes.push(episode);
 else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show) });
@@ -1015,7 +1024,7 @@ let html = ordered.map(({ date, rows }) => {
 const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
-const backLine = (when, note, news) => [`Zurück am ${shortDayDate(when)}`, reasonHtml(note, news, '')].filter(Boolean).join(' · ');
+const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
 const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing }) => `
       <div class="row pause${skipped ? ' skipped' : ''}" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
         <div class="time"${skipped ? ' title="Ausgesetzt"' : ''}>${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s>` : 'Pause'}</div>
