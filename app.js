@@ -2778,12 +2778,36 @@ else groups.push([r]);
 return { date: found.date, groups };
 }
 let discordOpen = null;
+// Conservative, local suggestions: never written to nicknames.json without a save.
+function nicknameSuggestions(title) {
+  const original = String(title || '').trim();
+  const out = [];
+  const add = value => {
+    const name = String(value || '').replace(/\\s+/g, ' ').trim().replace(/[\\s:–—-]+$/, '');
+    if (name.length >= 3 && name.length < original.length && name.length <= 40
+      && !out.some(x => x.toLowerCase() === name.toLowerCase())) out.push(name);
+  };
+  const main = original.split(/\\s+[–—|]\\s+|:\\s+/)[0];
+  if (main !== original) add(main);
+  const withoutExtra = original.replace(/\\s*\\([^)]*\\)\\s*$/, '').trim();
+  if (withoutExtra !== original) add(withoutExtra);
+  const afterAs = original.match(/\\b(?:as|als)\\s+(?:an?\\s+|the\\s+|ein(?:e[smnr]?)?\\s+)?([^?!:,.]{3,35})[?!]?$/i);
+  if (afterAs) add(afterAs[1]);
+  const words = main.replace(/[^\\p{L}\\p{N}' -]/gu, '').split(/\\s+/);
+  if (words.length > 4) {
+    const meaningful = words.filter(x => !/^(the|a|an|of|in|on|to|is|are|and|with|my|your|what|how|that|this|i|was|at|for|der|die|das|ein|eine|und|im|in|von)$/i.test(x));
+    if (meaningful.length >= 2) add(meaningful.slice(0, 3).join(' '));
+  }
+  return out.slice(0, 3);
+}
 function showNickFields() {
 const rows = [...new Map(discordOpen.groups.flat().map(r => [nickKey(r), r])).values()];
 $('discordNicks').hidden = !rows.length;
+$('discordNickToggle').hidden = !rows.length;
 $('discordNickList').innerHTML = rows.map(r => {
 const title = r.show.english || r.show.romaji;
-return `<label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" value="${esc(nicknames[nickKey(r)] || '')}" placeholder="${esc(title)}" maxlength="80" autocomplete="off"></label>`;
+const chips = nicknameSuggestions(title).map(name => `<button type="button" class="nick-suggestion" data-nick-suggest="${esc(name)}" title="Vorschlag übernehmen (noch nicht speichern)">${esc(name)}</button>`).join('');
+return `<div class="nick-item"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" value="${esc(nicknames[nickKey(r)] || '')}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
 }).join('');
 }
 const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelectorAll('[data-nick]')].map(i => [i.dataset.nick, i.value.trim()]));
@@ -2804,10 +2828,27 @@ $('discordName').textContent = b.closest('.day').querySelector('h2 > span').text
 $('discordText').value = discordMessage(day);
 $('discordMsg').textContent = '';
 showNickFields();
+$('discordNicks').hidden = false;
+$('discordNickToggle').setAttribute('aria-expanded', 'true');
 $('discordDlg').showModal();
 $('discordCopy').focus();
 });
 $('discordNickList').addEventListener('input', previewNicks);
+$('discordNickList').addEventListener('click', e => {
+  const chip = e.target.closest('[data-nick-suggest]');
+  if (!chip) return;
+  const input = chip.closest('.nick-item')?.querySelector('[data-nick]');
+  if (!input) return;
+  input.value = chip.dataset.nickSuggest;
+  input.focus();
+  previewNicks();
+  $('discordMsg').textContent = 'Vorschlag übernommen, noch nicht gespeichert.';
+});
+$('discordNickToggle').onclick = () => {
+  const panel = $('discordNicks');
+  panel.hidden = !panel.hidden;
+  $('discordNickToggle').setAttribute('aria-expanded', String(!panel.hidden));
+};
 $('discordNickSave').onclick = async () => {
 const typed = typedNicks();
 if (Object.values(typed).some(v => LINKISH.test(v))) { $('discordMsg').textContent = 'Keine Links in Spitznamen.'; return; }
