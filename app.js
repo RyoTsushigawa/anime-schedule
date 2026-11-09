@@ -3625,6 +3625,16 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 const PATCH_NOTES = [
+{ id: '2026-11-09', title: 'Calendar, Discord and a cleaner schedule', items: [
+'New absence calendar: mark one day or a date range, including absences starting or ending at a particular time. A legend, clearer selection and a Today shortcut make it easier to use.',
+'Weekly absences: repeat a selected day for 12 weeks, see recurring dates grouped in the list and remove the series together.',
+'The watch plan and Discord messages take absences into account. If too few people are available, affected shows are skipped and later watch slots can move up.',
+'Broadcast breaks and recap episodes now appear as pauses. A day-specific option automatically moves later shows into free slots while respecting fixed times.',
+'Daily Discord schedule posts at 09:00 German time can ping the weekday role, use custom anime nicknames and show which titles dropped out of today’s plan.',
+'Nickname editing is available both in the Discord day view and in Settings: filter by weekday (including shows on break), search titles or show every anime in the season. Suggested names are only saved when confirmed.',
+'Discord messages now follow the group’s layout, with tidier formatting, short reasons and emote support.',
+'Settings, schedule controls, dialogs and the Watch Planner received a more consistent pill design, spacing and mobile styling.',
+] },
 { id: '2026-11-08', title: 'Skips, absences and catching up', items: [
 'A show can be skipped for a week. When the slot becomes empty, later shows move up unless you select „Beim Skip Zeiten beibehalten“.',
 'Away for a day? It can be marked now. Shows left with just one watcher are skipped (MaRyo counts as two), and the evening moves up.',
