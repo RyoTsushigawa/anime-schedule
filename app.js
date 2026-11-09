@@ -2783,17 +2783,17 @@ function nicknameSuggestions(title) {
   const original = String(title || '').trim();
   const out = [];
   const add = value => {
-    const name = String(value || '').replace(/\\s+/g, ' ').trim().replace(/[\\s:–—-]+$/, '');
+    const name = String(value || '').replace(/\s+/g, ' ').trim().replace(/[\s:–—-]+$/, '');
     if (name.length >= 3 && name.length < original.length && name.length <= 40
       && !out.some(x => x.toLowerCase() === name.toLowerCase())) out.push(name);
   };
-  const main = original.split(/\\s+[–—|]\\s+|:\\s+/)[0];
+  const main = original.split(/\s+[–—|]\s+|:\s+/)[0];
   if (main !== original) add(main);
-  const withoutExtra = original.replace(/\\s*\\([^)]*\\)\\s*$/, '').trim();
+  const withoutExtra = original.replace(/\s*\([^)]*\)\s*$/, '').trim();
   if (withoutExtra !== original) add(withoutExtra);
-  const afterAs = original.match(/\\b(?:as|als)\\s+(?:an?\\s+|the\\s+|ein(?:e[smnr]?)?\\s+)?([^?!:,.]{3,35})[?!]?$/i);
+  const afterAs = original.match(/\b(?:as|als)\s+(?:an?\s+|the\s+|ein(?:e[smnr]?)?\s+)?([^?!:,.]{3,35})[?!]?$/i);
   if (afterAs) add(afterAs[1]);
-  const words = main.replace(/[^\\p{L}\\p{N}' -]/gu, '').split(/\\s+/);
+  const words = main.replace(/[^\p{L}\p{N}' -]/gu, '').split(/\s+/);
   if (words.length > 4) {
     const meaningful = words.filter(x => !/^(the|a|an|of|in|on|to|is|are|and|with|my|your|what|how|that|this|i|was|at|for|der|die|das|ein|eine|und|im|in|von)$/i.test(x));
     if (meaningful.length >= 2) add(meaningful.slice(0, 3).join(' '));
