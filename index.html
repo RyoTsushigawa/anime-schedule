@@ -150,7 +150,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="weeknav">
 <button id="prev" class="icon" aria-label="Vorherige Woche">‹</button>
 <span id="week"></span>
-<button id="next" class="icon" aria-label="Nächste Woche">›</button>
+<button id="next" class="icon" aria-label="Nächste Woche">›</button><button id="jumpToday" class="pill jump-today" type="button" title="Zurück zum heutigen Tag (T)" aria-label="Zum heutigen Tag springen">Heute</button>
 <div class="segmented soft range" role="group" aria-label="Angezeigte Tage"><button id="fullWeek" title="Alle sieben Tage">Woche</button></div>
 </div>
 </div>
@@ -176,7 +176,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button type="button" id="moveDouble" class="pill" aria-pressed="false" title="Diese Woche zwei Folgen (die vorige kommt dazu)">Doppelt</button>
 </div>
 <div class="muted" id="moveMsg"></div>
-<label class="toggle" id="keepSkipOption"><input type="checkbox" id="keepSkipTime">Beim Skip Zeiten beibehalten</label>
+<label class="toggle" id="keepSkipOption" title="Wenn aktiviert, behalten die übrigen Serien ihre bisherigen Uhrzeiten."><input type="checkbox" id="keepSkipTime">Beim Skip Zeiten beibehalten</label>
 <div class="move-actions">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
 <button type="button" id="moveSkip" class="pill" title="Diese Woche nicht schauen; sie bleibt durchgestrichen an ihrem Platz, die späteren Slots rücken 30 Min. vor">Skip</button>
@@ -364,7 +364,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <section id="helpCatchup" tabindex="-1"><h3>Catch-up, wie du willst</h3><p><b>Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle gesehen</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
 <section id="helpAccounts" tabindex="-1"><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle unter <b>Sync</b> das andere Konto und schalte <b>An</b> ein, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
 <section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> gelten, wenn kein Dienst angezeigt wird: AniWorld oder Torrents, und bei Prime-Serien Prime oder Torrents. Unter <b>Misc.</b> findest du Watch planner, Higher / Lower, Anime Wrapped und den Masterset Tracker.</p></section>
-<section id="helpDelays" tabindex="-1"><h3>Verspätung</h3><p>Die Uhr neben <b>Heute</b> trägt eine Verspätung ab einer Serie ein: sie und alle späteren rücken nach, mehrere Verspätungen zählen zusammen. <b>Edit</b> an der Zeile ändert oder entfernt sie. Alle sehen sie nach spätestens einer halben Minute.</p></section>
+<section id="helpDelays" tabindex="-1"><h3>Verspätung</h3><p>Die Uhr neben <b>Heute</b> trägt eine Verspätung ab einer Serie ein: sie und alle späteren rücken nach, mehrere Verspätungen zählen zusammen. <b>Bearbeiten</b> an der Zeile ändert oder entfernt sie. Alle sehen sie nach spätestens einer halben Minute.</p></section>
 <section id="helpMoves" tabindex="-1"><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang ziehst du unter <b>Edit</b> eine Serie an ihren neuen Platz: auf die Mitte einer anderen, um daneben zu laufen, oder an ihren Rand, um davor oder danach zu kommen. Am Handy hältst du die Karte erst kurz gedrückt. <b>Once</b> (nur diese Woche) oder <b>Permanent</b> (ab jetzt jede Woche) sagt, wie lange es gilt, <b>Rückgängig</b> nimmt es zurück. Mit ⇄ gibst du das Ziel von Hand ein, <b>Edit</b> an einem Tag schreibt den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server.</p></section>
 <section id="helpKeys"><h3>Tastenkürzel</h3>
 <dl class="keyboard-guide">
