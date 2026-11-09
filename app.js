@@ -1039,7 +1039,7 @@ let html = ordered.map(({ date, rows }) => {
 const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
 const hasAutoPause = rows.some(r => r.pause && !r.skipped && !r.slot?.keepTime);
-const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseShiftEnabled(isoDay(date)) ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseShiftEnabled(isoDay(date))}" title="Freie Slots durch Sendepausen an diesem Tag schließen">Pausen aufrücken: ${pauseShiftEnabled(isoDay(date)) ? 'An' : 'Aus'}</button>` : '';
+const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseShiftEnabled(isoDay(date)) ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseShiftEnabled(isoDay(date))}" title="Nur an diesem Tag: spätere Serien rücken in freie Pausen-Slots; feste Uhrzeiten bleiben erhalten">Pausen aufrücken: ${pauseShiftEnabled(isoDay(date)) ? 'An' : 'Aus'}</button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
 const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap }) => `
@@ -1047,7 +1047,7 @@ const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missin
         <div class="time"${skipped ? ' title="Ausgesetzt"' : ''}>${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s>` : 'Pause'}</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
-          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' · Zeiten beibehalten' : ''}` : recap ? 'Recap episode · Keine reguläre Folge' : backLine(when, note, news)}</div>
+          <div class="ep">${skipped ? `Ausgesetzt · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' · Zeiten beibehalten' : ''}` : recap ? 'Recap · Keine reguläre Folge' : backLine(when, note, news)}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
@@ -2382,6 +2382,7 @@ range = next;
 if (next !== 'day') pickedDay = null;
 $('fullWeek').setAttribute('aria-pressed', range === 'week');
 $('fullWeek').textContent = range === 'week' ? 'Ab heute' : 'Woche';
+$('jumpToday').setAttribute('aria-current', weekOffset === 0 && range === 'today' ? 'date' : 'false');
 $('fullWeek').title = range === 'week' ? 'Zur aktuellen Woche ab heute' : 'Alle sieben Tage anzeigen';
 $('fullWeek').setAttribute('aria-label', $('fullWeek').title);
 }
@@ -2416,6 +2417,7 @@ resumeY = null;
 }
 $('prev').onclick = () => { weekOffset--; setRange('week'); enter = { x: -14 }; load(); };
 $('next').onclick = () => { weekOffset++; setRange('week'); enter = { x: 14 }; load(); };
+$('jumpToday').onclick = () => { setView('week'); weekOffset = 0; setRange('today'); enter = { y: 4 }; load(); };
 $('fullWeek').onclick = () => {
 if (range === 'week') { weekOffset = 0; setRange('rest'); }
 else setRange('week');
@@ -3215,10 +3217,10 @@ $('awayToday').disabled = awayCal.month === today.slice(0, 7);
 const chosen = selectedDays();
 const sel = new Set(chosen);
 $('awayHint').textContent = !awayCal.start
-  ? 'Tag auswählen · Für einen Zeitraum danach den letzten Tag antippen.'
+  ? (awayCal.repeat === 'weekly' ? 'Wochentag auswählen · Wird 12-mal wiederholt.' : 'Tag auswählen · Für einen Zeitraum danach den letzten Tag antippen.')
   : awayCal.end
     ? `${chosen.length} Tage ausgewählt · ${shortDate(chosen[0])} – ${shortDate(chosen.at(-1))}.`
-    : `Start: ${shortDate(awayCal.start)} · Für einen Zeitraum den letzten Tag wählen.`;
+    : awayCal.repeat === 'weekly' ? `Wöchentlich ab ${shortDate(awayCal.start)} · ${AWAY_REPEAT_WEEKS} Termine.` : `Start: ${shortDate(awayCal.start)} · Für einen Zeitraum den letzten Tag wählen.`;
 const cells = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `<span class="away-wd">${d}</span>`);
 for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden="true"></span>');
 for (let n = 1; n <= length; n++) {
@@ -3330,7 +3332,7 @@ $('awayGrid').addEventListener('click', e => {
 const iso = e.target.closest('[data-away-day]')?.dataset.awayDay;
 if (!iso) return;
 // first tap: one day; second tap on a later day: the range up to it; one more tap starts over
-if (awayCal.start && !awayCal.end && iso > awayCal.start) awayCal.end = iso;
+if (awayCal.repeat !== 'weekly' && awayCal.start && !awayCal.end && iso > awayCal.start) awayCal.end = iso;
 else { awayCal.start = iso; awayCal.end = null; }
 $('awayMsg').textContent = '';
 drawAway();
