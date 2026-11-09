@@ -81,7 +81,7 @@ try {
   if (!message) throw new Error('Today is missing from the rendered week.');
   const weekday = new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long' }).format(new Date());
   const role = DAY_ROLES[weekday];
-  if (role) message = `<@&${role}> ${message}`;
+  if (role) message = `<@&${role}>\n\n${message}`;
   console.log(message);
   if (dryRun) {
     // the rest of the week too, as the Discord button would write it, to check the run reads the plan
