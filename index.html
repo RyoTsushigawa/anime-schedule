@@ -40,6 +40,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
 </button>
 </div>
+<button id="awayButton" class="round" type="button" aria-label="Abwesenheiten" title="Abwesenheiten"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9.5 14.5l5 4M14.5 14.5l-5 4"/></svg></button>
 <div class="misc-tools"><button id="miscButton" class="round misc-trigger" aria-label="Misc. – weitere Tools" title="Weitere Tools" aria-haspopup="true" aria-expanded="false" aria-controls="miscMenu"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Misc.</span></button><nav id="miscMenu" class="popover misc-menu site-tools" aria-label="Weitere Tools" hidden><div class="misc-label">Weitere Tools</div><a href="planner.html" target="_blank" rel="noopener"><span class="misc-icon" aria-hidden="true">▦</span><span class="misc-text"><b>Watch planner</b><small>Zeitplan zusammenstellen</small></span><span aria-hidden="true">↗</span></a><a href="ranker/" target="_blank" rel="noopener"><span class="misc-icon" aria-hidden="true">⇅</span><span class="misc-text"><b>Higher / Lower</b><small>Deine Anime bewerten</small></span><span aria-hidden="true">↗</span></a><a href="wrapped.html" target="_blank" rel="noopener"><span class="misc-icon" aria-hidden="true">✦</span><span class="misc-text"><b>Anime Wrapped</b><small>Dein Season-Rückblick</small></span><span aria-hidden="true">↗</span></a><a href="masterset/" target="_blank" rel="noopener"><span class="misc-icon" aria-hidden="true">▧</span><span class="misc-text"><b>Masterset Tracker</b><small>Piplup & Empoleon</small></span><span aria-hidden="true">↗</span></a><button id="movesSetup" type="button" hidden>Bearbeitungszugang</button></nav></div>
 <div class="settings">
 <button id="settingsButton" class="round" aria-label="Einstellungen" title="Einstellungen" aria-haspopup="true" aria-expanded="false">
@@ -257,16 +258,22 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 </form>
 </dialog>
-<dialog id="absentDlg" class="dlg day-dlg">
+<dialog id="awayDlg" class="dlg away-dlg" aria-labelledby="awayTitle">
 <form method="dialog">
-<b id="absentName"></b>
-<div class="muted">Serien, bei denen höchstens eine Person übrig bleibt, setzen aus.</div>
-<div id="absentPeople" class="day-absent"></div>
-<div class="muted" id="absentMsg"></div>
-<div class="dlg-row">
-<button type="button" id="absentSave" class="pill primary">Speichern</button>
-<button value="cancel" class="pill">Abbrechen</button>
+<div class="away-head"><b id="awayTitle">Abwesenheiten</b><button value="cancel" class="round" aria-label="Schließen">✕</button></div>
+<div class="muted">Tag antippen, für mehrere Tage danach den letzten. Serien, bei denen höchstens eine Person übrig bleibt, setzen aus.</div>
+<div class="away-nav"><button type="button" id="awayPrev" class="round" aria-label="Voriger Monat">‹</button><b id="awayMonth"></b><button type="button" id="awayNext" class="round" aria-label="Nächster Monat">›</button></div>
+<div id="awayGrid" class="away-grid"></div>
+<div id="awayEditor" class="away-editor" hidden>
+<b id="awayRange"></b>
+<div id="awayMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button></div>
+<label id="awayTime" class="away-time" hidden>Uhrzeit <input id="awayClock" type="time" value="21:00" step="900"></label>
+<div id="awayPeople" class="day-absent"></div>
+<div class="dlg-row"><button type="button" id="awaySave" class="pill primary">Speichern</button></div>
 </div>
+<div class="muted" id="awayMsg" role="status"></div>
+<b class="away-sub">Eingetragen</b>
+<ul id="awayList" class="away-list"></ul>
 </form>
 </dialog>
 <dialog id="reasonsDlg" class="dlg day-dlg">
