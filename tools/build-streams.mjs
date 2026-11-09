@@ -338,6 +338,16 @@ for (const t of titles) {
   if (playlist) try { video = await newestVideo(playlist.url); } catch (e) { console.log(`    YouTube not read: ${e.message}`); }
   video ||= playlist && previous?.status?.[card.anilist]?.video || null;
   const notes = slotNotes[card.id] || [];
+  // A recap is a broadcast, but not a regular episode. Preserve confirmed
+  // annotations across daily builds because timetable notes are short-lived.
+  const oldRecaps = previous?.status?.[card.anilist]?.recaps || [];
+  const recapNotes = notes.filter(n => /\\brecap(?: episode)?\\b/i.test(n.text));
+  const recaps = [...oldRecaps];
+  for (const note of recapNotes) {
+    const episode = next && Math.abs(next.at - note.at) < 2 * 86400 ? next.episode : null;
+    if (episode && !recaps.some(r => r.episode === episode))
+      recaps.push({ episode, at: next.at });
+  }
   // Keep observed releases, not extrapolated weekly dates: delays and batches must stay exact.
   // New observations replace the old date for that episode if LiveChart reschedules it.
   const old = previous?.status?.[card.anilist];
@@ -345,7 +355,7 @@ for (const t of titles) {
     .filter(a => Number.isInteger(a.episode) && a.at > Date.now() / 1000 - 42 * 86400)
     .map(a => [a.episode, a]));
   status[card.anilist] = { titles: t, url: `https://www.livechart.me/anime/${card.id}`, next,
-    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(notes.length && { notes }), ...(video && { video }) };
+    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(recaps.length && { recaps }), ...(notes.length && { notes }), ...(video && { video }) };
   console.log(`${t[1] || t[0]}: ${byAnilist[card.anilist].map(s => s.name + (s.extra ? ` (+${s.extra})` : '')).join(', ') || '(none)'}` +
     (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min${offset.lag ? `, ${offset.lag} weeks behind` : ''}` : '') +
     (next ? '' : ' · nothing scheduled') + (video ? `\n    newest on YouTube: Episode ${video.episode}` : '') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
