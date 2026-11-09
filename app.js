@@ -1039,7 +1039,7 @@ const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
 const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap }) => `
-      <div class="row pause${skipped ? ' skipped' : ''}" data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" ${searchKey(show.english, show.romaji)}>
+      <div class="row pause${skipped ? ' skipped' : ''}" ${searchKey(show.english, show.romaji)}>
         <div class="time"${skipped ? ' title="Ausgesetzt"' : ''}>${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s>` : 'Pause'}</div>
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}</div>
@@ -1097,8 +1097,12 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, ex
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen">⇄</button>` : '') : moveButton(show, slot)}
       </div>`;
 const groups = [];
-for (const r of rows) {
-if (!r.skipped && !groups.at(-1)?.[0].skipped && groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
+// Pauses retain their own original slot, even if another show moves into it.
+// Never present a pause and an active episode as a parallel watch slot.
+const displayRows = [...rows].sort((a, b) => a.watchAt - b.watchAt || Number(!!b.pause) - Number(!!a.pause));
+for (const r of displayRows) {
+const previous = groups.at(-1)?.[0];
+if (!r.pause && !r.skipped && previous && !previous.pause && !previous.skipped && previous.watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
 const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
