@@ -934,12 +934,16 @@ show: { romaji: `${m.title.romaji || name} · Nachholen`, english: `${name} · N
 }
 const heads = p => p === 'MaRyo' ? 2 : 1;
 for (const day of days) {
-const away = absentOn(isoDay(day.date));
+// planned times first, so "ab 21:00" / "bis 20:00" know when each show is (assigned again below)
+assignWatchTimes(day);
+const dayStart = new Date(day.date).setHours(0, 0, 0, 0);
 day.rows = day.rows.map(r => {
 if (r.pause || !r.episodes) return r;
 if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r.episodes.includes(first - 1)) r.episodes.unshift(first - 1); }
-const missing = (r.who || []).filter(p => away.includes(p));
-const left = (r.who || []).filter(p => !away.includes(p)).reduce((n, p) => n + heads(p), 0);
+const minute = r.watchAt == null ? null : Math.round((r.watchAt - dayStart) / 60000);
+const isAway = p => awayAt(isoDay(day.date), p, minute);
+const missing = (r.who || []).filter(isAway);
+const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p), 0);
 if (!missing.length || left > 1) return r;
 return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, alId: r.m?.id };
 });
@@ -1112,7 +1116,7 @@ const body = ordered.length
 : row(g[0]))).join('')
 : `<div class="ep empty-day">Keine Folgen${range === 'today' && !searching() ? ' <button class="pill" data-rest-of-week>Rest der Woche anzeigen</button>' : ''}</div>`;
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${pauseShiftButton}${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${movesKey && isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${absentOn(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${absentOn(isoDay(date)).length ? esc('Abwesend: ' + absentOn(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${pauseShiftButton}${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit" data-day-edit>Edit</button>' : ''}${(movesKey || delaysUrl) && (isToday || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${awayText(isoDay(date)).length ? `<button type="button" class="away-note" data-day-absent>Abwesend: ${esc(awayText(isoDay(date)).join(', '))}</button>` : ''}${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -2445,7 +2449,15 @@ const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/con
 let moves = [];
 let delays = [];
 let absent = [];
-const absentOn = date => absent.find(x => x.day === date)?.people || [];
+// absent: [{ day, people }] for the whole day, or with from ("ab 21:00") / until ("bis 20:00").
+const absentOn = date => absent.filter(x => x.day === date && !x.from && !x.until).flatMap(x => x.people || []);
+const clockMinutes = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
+// minute: minutes after the day's midnight (after midnight counts on: 00:30 = 1470); null = unknown time
+const awayAt = (date, person, minute) => absent.some(x => x.day === date && x.people?.includes(person)
+&& (!x.from || (minute != null && minute >= clockMinutes(x.from)))
+&& (!x.until || (minute != null && minute < clockMinutes(x.until))));
+const awayLabel = x => x.from ? `ab ${x.from}` : x.until ? `bis ${x.until}` : 'ganztägig';
+const awayText = date => absent.filter(x => x.day === date).flatMap(x => (x.people || []).map(p => x.from || x.until ? `${p} (${awayLabel(x)})` : p));
 let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
@@ -3163,37 +3175,169 @@ if (b) openDelay(b.closest('.day').dataset.date);
 const edit = e.target.closest('[data-delay-edit]');
 if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 });
-let absentDay = null;
+// Abwesenheiten: a month calendar (top bar button, or any day's "Abwesend") where planned absences
+// go in for one day or a range, the whole day or only "ab"/"bis" a time. Shows with too few people
+// left are skipped on the schedule and in the Discord message.
+const awayCal = { month: null, start: null, end: null, mode: 'day' };
+const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const allPeople = () => {
+const fromPlan = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
+return fromPlan.length ? fromPlan : [...$('soloPerson').options].map(o => o.value);
+};
+const dayOf = iso => new Date(iso + 'T12:00:00');
+const addDay = (iso, n) => { const d = dayOf(iso); d.setDate(d.getDate() + n); return isoDay(d); };
+const shortDate = iso => `${shortDayName(dayOf(iso))} ${germanDate(dayOf(iso))}`;
+function selectedDays() {
+if (!awayCal.start) return [];
+const days = [];
+for (let d = awayCal.start; d <= (awayCal.end || awayCal.start) && days.length < 92; d = addDay(d, 1)) days.push(d);
+return days;
+}
+function openAway(date) {
+const today = isoDay(new Date());
+const pick = date && date >= today ? date : null;
+awayCal.month = (pick || today).slice(0, 7);
+awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day';
+$('awayMsg').textContent = '';
+drawAway();
+$('awayDlg').showModal();
+}
+function drawAway() {
+const today = isoDay(new Date());
+const [y, m] = awayCal.month.split('-').map(Number);
+const first = new Date(y, m - 1, 1);
+const lead = (first.getDay() + 6) % 7;
+const length = new Date(y, m, 0).getDate();
+$('awayMonth').textContent = `${MONTHS[m - 1]} ${y}`;
+$('awayPrev').disabled = awayCal.month <= today.slice(0, 7);
+const sel = new Set(selectedDays());
+const cells = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `<span class="away-wd">${d}</span>`);
+for (let i = 0; i < lead; i++) cells.push('<span></span>');
+for (let n = 1; n <= length; n++) {
+const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
+const entries = absent.filter(x => x.day === iso);
+const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}"${x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
+cells.push(`<button type="button" class="away-day${iso === today ? ' today' : ''}${sel.has(iso) ? ' sel' : ''}" data-away-day="${iso}"${iso < today ? ' disabled' : ''} aria-label="${esc(shortDate(iso))}${entries.length ? ': ' + esc(awayText(iso).join(', ')) : ''}"><b>${n}</b><span class="away-dots">${dots}</span></button>`);
+}
+$('awayGrid').innerHTML = cells.join('');
+drawAwayEditor();
+drawAwayList();
+}
+function drawAwayEditor() {
+const days = selectedDays();
+$('awayEditor').hidden = !days.length;
+if (!days.length) return;
+$('awayRange').textContent = days.length > 1 ? `${shortDate(days[0])} – ${shortDate(days.at(-1))}` : shortDate(days[0]);
+for (const b of $('awayMode').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === awayCal.mode));
+$('awayTime').hidden = awayCal.mode === 'day';
+// whole day: pressed = away on every chosen day, "mixed" = on some (left alone unless clicked)
+$('awayPeople').innerHTML = allPeople().map(p => {
+const on = awayCal.mode === 'day' ? days.filter(d => absentOn(d).includes(p)).length : 0;
+const state = on === days.length && on ? 'true' : on ? 'mixed' : 'false';
+return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${state}" style="${personStyle(p)}">${esc(p)}</button>`;
+}).join('');
+}
+function drawAwayList() {
+const today = isoDay(new Date());
+// one line per person and condition, consecutive days joined: "Sophie · Mi 12. Nov. – Fr 14. Nov. · ganztägig"
+const items = absent.filter(x => x.day >= today).flatMap(x => (x.people || []).map(p => ({ p, day: x.day, cond: awayLabel(x) })))
+.sort((a, b) => a.p.localeCompare(b.p) || a.cond.localeCompare(b.cond) || a.day.localeCompare(b.day));
+const runs = [];
+for (const it of items) {
+const last = runs.at(-1);
+if (last && last.p === it.p && last.cond === it.cond && addDay(last.to, 1) === it.day) last.to = it.day;
+else runs.push({ p: it.p, cond: it.cond, from: it.day, to: it.day });
+}
+runs.sort((a, b) => a.from.localeCompare(b.from) || a.p.localeCompare(b.p));
+$('awayList').innerHTML = runs.length ? runs.map(r => `<li><span class="away-who" style="${personStyle(r.p)}">${esc(r.p)}</span><span>${esc(r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`)} · ${esc(r.cond)}</span><button type="button" class="pill" data-away-remove="${esc(JSON.stringify(r))}" aria-label="Entfernen">✕</button></li>`).join('')
+: '<li class="muted">Niemand hat etwas eingetragen.</li>';
+}
+// Saves the absences of the given days (the rest stay as they are).
+async function saveAway(next, days) {
+if (movesKey) return saveMoves(moves, d => d, null, next);
+if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
+try { await postDelay({ absent: next.filter(x => days.includes(x.day)), days }); }
+catch (e) { throw /nichts zu tun|unbekannt|unknown|not allowed|ungültig/i.test(e.message) ? new Error('der Speicherdienst kann Abwesenheiten noch nicht speichern. Bis zum Update geht es mit dem Bearbeitungszugang') : e; }
+}
+async function storeAway(next, days, done) {
+$('awayMsg').textContent = 'Speichert…';
+for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = true;
+try {
+await saveAway(next, days);
+} catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return; }
+finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
+absent = next;
+$('awayMsg').textContent = `${done} Alle sehen es in etwa einer Minute.`;
+drawAway();
+try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
+}
+$('awayButton').onclick = () => openAway();
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-absent]');
-if (!b || !movesKey) return;
-const section = b.closest('.day');
-absentDay = section.dataset.date;
-const everybody = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
-const away = absentOn(absentDay);
-$('absentName').textContent = `Abwesend · ${section.querySelector('h2 > span').textContent.trim()}`;
-$('absentPeople').innerHTML = everybody.map(p => `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${away.includes(p)}">${esc(p)}</button>`).join('');
-$('absentMsg').textContent = '';
-$('absentDlg').showModal();
+if (b) openAway(b.closest('.day').dataset.date);
 });
-$('absentPeople').addEventListener('click', e => {
+$('awayPrev').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() - 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
+$('awayNext').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() + 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
+$('awayGrid').addEventListener('click', e => {
+const iso = e.target.closest('[data-away-day]')?.dataset.awayDay;
+if (!iso) return;
+// first tap: one day; second tap on a later day: the range up to it; one more tap starts over
+if (awayCal.start && !awayCal.end && iso > awayCal.start) awayCal.end = iso;
+else { awayCal.start = iso; awayCal.end = null; }
+$('awayMsg').textContent = '';
+drawAway();
+});
+$('awayMode').addEventListener('click', e => {
+const mode = e.target.closest('[data-mode]')?.dataset.mode;
+if (!mode) return;
+awayCal.mode = mode;
+drawAwayEditor();
+if (mode !== 'day') $('awayClock').focus();
+});
+$('awayPeople').addEventListener('click', e => {
 const b = e.target.closest('[data-away]');
 if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
 });
-$('absentSave').onclick = async () => {
-const away = [...$('absentPeople').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.away);
-if (away.join('|') === absentOn(absentDay).join('|')) { $('absentDlg').close(); return; }
-const absentNext = absent.filter(x => x.day !== absentDay).concat(away.length ? [{ day: absentDay, people: away }] : []);
-$('absentMsg').textContent = 'Speichert…';
-$('absentSave').disabled = true;
-try {
-await saveMoves(moves, d => d, null, absentNext);
-$('absentDlg').close();
-notice(`${away.length ? `Abwesend: ${away.join(', ')}.` : 'Niemand mehr abwesend.'} Alle sehen es in etwa einer Minute.`);
-load(true);
-} catch (e) { $('absentMsg').textContent = `Nicht gespeichert: ${e.message}`; }
-finally { $('absentSave').disabled = false; }
+$('awaySave').onclick = () => {
+const days = selectedDays();
+const chips = [...$('awayPeople').querySelectorAll('[data-away]')];
+const on = chips.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.away);
+const off = chips.filter(b => b.getAttribute('aria-pressed') === 'false').map(b => b.dataset.away);
+let next;
+if (awayCal.mode === 'day') {
+next = absent.flatMap(x => {
+if (!days.includes(x.day) || x.from || x.until) return [x];
+const people = (x.people || []).filter(p => !off.includes(p) && !on.includes(p));
+return people.length ? [{ ...x, people }] : [];
+}).concat(on.length ? days.map(day => ({ day, people: on })) : []);
+} else {
+const time = clockOf($('awayClock').value);
+if (!time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
+if (!on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person antippen.'; return; }
+// one "ab"/"bis" per person and day: a new one replaces the old
+next = absent.flatMap(x => {
+if (!days.includes(x.day) || (!x.from && !x.until)) return [x];
+const people = (x.people || []).filter(p => !on.includes(p));
+return people.length ? [{ ...x, people }] : [];
+}).concat(days.map(day => ({ day, people: on, [awayCal.mode]: time })));
+}
+next = next.sort((a, b) => a.day.localeCompare(b.day));
+const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${clockOf($('awayClock').value)}.`;
+storeAway(next, days, label);
 };
+$('awayList').addEventListener('click', e => {
+const raw = e.target.closest('[data-away-remove]')?.dataset.awayRemove;
+if (!raw) return;
+const run = JSON.parse(raw);
+const days = [];
+for (let d = run.from; d <= run.to; d = addDay(d, 1)) days.push(d);
+const next = absent.flatMap(x => {
+if (!days.includes(x.day) || awayLabel(x) !== run.cond) return [x];
+const people = (x.people || []).filter(p => p !== run.p);
+return people.length ? [{ ...x, people }] : [];
+});
+storeAway(next, days, `${run.p}: entfernt.`);
+});
 let dayEdit = null;
 const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const clockOf = time => { const hm = parseTime(time); return hm ? `${String(hm[0]).padStart(2, '0')}:${String(hm[1]).padStart(2, '0')}` : ''; };

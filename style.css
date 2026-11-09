@@ -874,6 +874,31 @@ text-align: center;
 .day h2 .day-absent-button { order: 1; display: inline-grid; place-items: center; padding: 3px 9px; }
 .day h2 .day-absent-button.on { border-color: var(--accent); color: var(--accent); }
 .day-absent { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-absent .pill[aria-pressed="mixed"] { border-color: var(--accent); border-style: dashed; }
+.away-note { display: block; width: 100%; margin: 0 0 6px; padding: 2px 0 2px 10px; border: 0; border-left: 2px solid var(--accent); background: none; color: var(--muted); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.away-dlg { width: min(440px, 94vw); }
+.away-dlg form { display: grid; gap: 10px; }
+.away-head, .away-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.away-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.away-wd { text-align: center; font-size: 11px; color: var(--muted); }
+.away-day { min-height: 44px; padding: 3px 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; display: grid; align-content: start; justify-items: center; gap: 2px; cursor: pointer; }
+.away-day:disabled { opacity: .35; cursor: default; }
+.away-day.today { border-color: var(--accent); }
+.away-day.sel { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.away-day b { font-size: 13px; font-weight: 600; }
+.away-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.away-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--person, var(--accent)); }
+.away-day.sel .away-dots i { box-shadow: 0 0 0 1.5px var(--accent-text); }
+.away-dots i.part { background: none; box-shadow: inset 0 0 0 1.5px var(--person, var(--accent)); }
+.away-editor { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.away-mode { justify-self: start; }
+.away-time { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.away-sub { margin-top: 4px; }
+.away-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.away-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.away-list li > span:nth-child(2) { flex: 1; min-width: 0; }
+.away-list .pill { padding: 1px 9px; }
+.away-who { padding: 1px 8px; border-radius: 99px; background: var(--person, var(--accent)); color: var(--person-text, var(--accent-text)); font-weight: 600; font-size: 13px; }
 .day-absent .pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
 #moveTime[hidden], #moveDouble[hidden] { display: none; }
 #moveDouble[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }

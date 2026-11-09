@@ -17,6 +17,13 @@ before or after; it saves at once for everyone, and **Rückgängig** in the noti
 ⇄ types a destination by hand, **Edit** on a day heading rewrites the day as a list, and the Discord icon
 turns the day into the message for the server.
 
+**Abwesenheiten:** the calendar button in the top bar (or "Abwesend" on a day) opens a month calendar.
+Tap a day, or a first and last day for a range, pick the people, and choose the whole day, "Ab …" (away
+from that time on) or "Bis …" (there only from that time). A show is skipped when at most one person is
+left at its planned time; the schedule, the Discord message and the 9:00 post all follow it. Saved in
+`moves.json` (`absent`); without the GitHub key it goes through the Cloudflare helper, which needs the
+`{ absent, days }` request added (replaces the absences of those days).
+
 **Verspätung:** the clock on today's heading adds a delay from one show on; it and every later show move,
 and delays add up. **Edit** on the delay line changes or removes it. Everyone can add one (see
 "Verspätungen für alle"); other open pages pick it up within 30 seconds.
