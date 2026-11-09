@@ -172,6 +172,9 @@ live page itself in a headless browser (moves, delays and pings included).
 3. Try it: **Actions → Daily Discord schedule → Run workflow**. "dry run" ticked only shows the message
    in the log; unticked posts it right away.
 
+**Nicknames:** `tools/discord-nicknames.json` swaps long titles for short names in this post only
+(left the title as the post writes it, or the AniList ID; right the nickname). The site keeps the full titles.
+
 GitHub sometimes starts scheduled runs late, so the run starts at 08:30 and waits for 09:00; on busy
 days the post can still come a few minutes late.
 

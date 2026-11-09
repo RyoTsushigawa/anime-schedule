@@ -8,6 +8,11 @@
 // GitHub starts the workflow at two UTC times (one for winter, one for summer time). SCHEDULE is the
 // cron line that started this run; the run that doesn't fit Germany's current offset stops at once.
 import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+
+// Short names for the post: tools/discord-nicknames.json, "title as the post writes it": "nickname".
+// Upper/lower case doesn't matter; the key can also be the show's AniList ID ("12345": "nickname").
+const NICKNAMES = JSON.parse(readFileSync(new URL('./discord-nicknames.json', import.meta.url), 'utf8'));
 
 const SITE = process.env.SITE_URL || 'https://ryotsushigawa.github.io/anime-schedule/';
 const TZ = 'Europe/Berlin';
@@ -71,17 +76,24 @@ try {
   }
 
   // same steps as the Discord button's click handler in app.js
-  let message = await page.evaluate(() => {
+  let message = await page.evaluate(nicknames => {
+    const nick = Object.fromEntries(Object.entries(nicknames).filter(([k]) => !k.startsWith('_'))
+      .map(([k, v]) => [k.trim().toLowerCase(), String(v)]));
+    const named = r => {
+      const title = r.show.english || r.show.romaji;
+      const name = nick[String(r.m?.id)] ?? nick[title.toLowerCase()];
+      return name ? { ...r, show: { english: name } } : r;
+    };
     const today = isoDay(new Date());
     const found = render(...lastWeekRender, true).find(d => isoDay(d.date) === today);
     if (!found) return null;
     const groups = [];
-    for (const r of found.rows.filter(r => !r.pause)) {
+    for (const r of found.rows.filter(r => !r.pause).map(named)) {
       if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
       else groups.push([r]);
     }
     return discordMessage({ date: found.date, groups });
-  });
+  }, NICKNAMES);
   if (!message) throw new Error('Today is missing from the rendered week.');
   const weekday = new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long' }).format(new Date());
   const role = DAY_ROLES[weekday];
