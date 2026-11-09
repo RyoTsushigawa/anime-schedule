@@ -2756,12 +2756,17 @@ const nickOf = r => savedNick(r) || r.show.english || r.show.romaji;
 const cleanNicknames = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
 .filter(([k, v]) => typeof v === 'string' && v.trim() && !LINKISH.test(v)).map(([k, v]) => [k, v.trim().slice(0, 80)]));
 const nicknamesReady = fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {})
-.then(j => { nicknames = cleanNicknames(j.names); }).catch(() => {});
+.then(j => { nicknames = cleanNicknames(j.names); emotes = cleanEmotes(j.emotes); }).catch(() => {});
+// Discord emotes: a webhook can't turn ":name:" into a server emote, so the message carries the full
+// <:name:id> code. Every code typed into a nickname is remembered, after that ":name:" is enough.
+let emotes = {};
+const EMOTE_CODE = /<(a?):(\w{2,32}):(\d{15,21})>/g;
+const cleanEmotes = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
+.filter(([k, v]) => /^\w{2,32}$/.test(k) && typeof v === 'string' && /^<a?:\w{2,32}:\d{15,21}>$/.test(v)));
+const learnEmotes = text => Object.fromEntries([...String(text).matchAll(EMOTE_CODE)].map(([code, , name]) => [name, code]));
+const withEmotes = text => text.replace(/(^|[^<a\w]):(\w{2,32}):(?!\d)/g, (all, before, name) => emotes[name] ? before + emotes[name] : all);
 // why a planned show isn't on the list, so nobody wonders where it went
-const skipReason = r => r.skipped ? `ausgesetzt${r.missing?.length ? ` (${r.missing.join(', ')} ${r.missing.length === 1 ? 'fehlt' : 'fehlen'})` : ''}`
-: r.recap ? 'Recap, keine reguläre Folge'
-: `Pause${r.when && Number.isFinite(new Date(r.when).getTime()) && new Date(r.when) > date0(new Date()) ? `, zurück am ${shortDayDate(new Date(r.when))}` : ''}`;
-const date0 = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const skipReason = r => r.skipped ? 'Skip' : r.recap ? 'Recap' : 'Pause';
 function discordMessage({ date, groups, skipped = [] }) {
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const when = date.toDateString() === new Date().toDateString() ? 'Heute'
@@ -2773,8 +2778,8 @@ const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', mi
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
 });
 const out = [...new Map(skipped.map(r => [nickKey(r), r])).values()].map(r => `${nickOf(r)} – ${skipReason(r)}`);
-return (lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`)
-+ (out.length ? `\n\nFällt aus:\n${out.join('\n')}` : '');
+return withEmotes((lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`)
++ (out.length ? `\n\nFällt aus:\n${out.join('\n')}` : ''));
 }
 function discordDay(iso) {
 const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === iso);
@@ -2954,7 +2959,9 @@ let remote = {};
 try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
 const names = cleanNicknames(remote.names);
 for (const [k, v] of Object.entries(changes)) { if (v) names[k] = v.slice(0, 80); else delete names[k]; }
-const file = { updated: new Date().toISOString(), names };
+const known = { ...cleanEmotes(remote.emotes), ...learnEmotes(Object.values(changes).join(' ')) };
+emotes = known;
+const file = { updated: new Date().toISOString(), names, ...(Object.keys(known).length && { emotes: known }) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(NICKNAMES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: 'Spitznamen', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
