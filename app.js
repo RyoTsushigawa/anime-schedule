@@ -906,7 +906,7 @@ if (!day) continue;
 found.add(show);
 if (droppedByMe(m.id)) continue;
 if (slot.skip) {
-if (!day.rows.some(r => r.skipped && r.show === show)) day.rows.push({ pause: true, skipped: true, show, slot, when, episode });
+if (!day.rows.some(r => r.skipped && r.show === show)) day.rows.push({ pause: true, skipped: true, show, slot, when, episode, alId: m.id });
 continue;
 }
 // LiveChart's recap broadcasts still appear in AniList's airing schedule. They
@@ -915,7 +915,7 @@ const recap = (streamsDe?.status?.[m.id]?.recaps || []).find(r =>
   r.episode === it.episode && Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000);
 if (recap) {
   if (!day.rows.some(r => r.show === show))
-    day.rows.push({ pause: true, recap: true, show, slot, when, episode, note: { text: 'Recap episode', at: it.airingAt }, news: [] });
+    day.rows.push({ pause: true, recap: true, show, slot, when, episode, alId: m.id, note: { text: 'Recap episode', at: it.airingAt }, news: [] });
   continue;
 }
 const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
@@ -941,7 +941,7 @@ if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r
 const missing = (r.who || []).filter(p => away.includes(p));
 const left = (r.who || []).filter(p => !away.includes(p)).reduce((n, p) => n + heads(p), 0);
 if (!missing.length || left > 1) return r;
-return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing };
+return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, alId: r.m?.id };
 });
 }
 const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
@@ -963,7 +963,7 @@ const note = (status?.notes || []).find(n => n.at * 1000 >= start.getTime() - 86
 if (upcoming?.at * 1000 >= weekEnd && note) {
 const why = { note: note || null, news: status.news || [] };
 const when = new Date(upcoming.at * 1000);
-day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode - lagOf(alId), ...why });
+day.rows.push({ pause: true, show, slot, when, episode: upcoming.episode - lagOf(alId), alId, ...why });
 breaks.push({ show, when, episode: upcoming.episode - lagOf(alId), ...why });
 } else {
 const m = { id: Number(alId) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [], coverImage: { medium: coverFor(alId) } };
@@ -997,7 +997,7 @@ const next = upcoming && new Date(upcoming.at * 1000);
 if (next && next >= weekEnd) {
 const note = (status.notes || []).find(n => n.at * 1000 >= days[0].date.getTime() - 86400000 && n.at * 1000 < weekEnd);
 const why = { note: note || null, news: status.news || [] };
-day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode - lagOf(alId), ...why });
+day.rows.push({ pause: true, show, slot, when: next, episode: upcoming.episode - lagOf(alId), alId, ...why });
 breaks.push({ show, when: next, episode: upcoming.episode - lagOf(alId), ...why });
 found.add(show);
 continue;
@@ -1013,7 +1013,7 @@ found.add(show);
 } else if (media?.nextAiringEpisode && new Date(media.nextAiringEpisode.airingAt * 1000) >= weekEnd) {
 const when = new Date((media.nextAiringEpisode.airingAt + (streamsDe?.release?.[media.id]?.offset || 0)) * 1000);
 const why = { note: null, news: [] };
-day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), ...why });
+day.rows.push({ pause: true, show, slot, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), alId: media.id, ...why });
 breaks.push({ show, when, episode: media.nextAiringEpisode.episode - lagOf(media.id), ...why });
 found.add(show);
 } else unknown.push({ show, why: media === undefined ? 'Ausstrahlung wird geprüft…'
@@ -2749,7 +2749,7 @@ storeMoves(moves.filter(x => x !== old), `${m.title.english || m.title.romaji}: 
 // Keyed by AniList ID, or "t:" + lower-case title (the ID wins when both exist).
 const NICKNAMES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/nicknames.json';
 let nicknames = {};
-const nickKey = r => r.m?.id ? String(r.m.id) : 't:' + String(r.show.english || r.show.romaji).trim().toLowerCase();
+const nickKey = r => (r.m?.id || r.alId) ? String(r.m?.id || r.alId) : 't:' + String(r.show.english || r.show.romaji).trim().toLowerCase();
 const titleKey = r => 't:' + String(r.show.english || r.show.romaji).trim().toLowerCase();
 const savedNick = r => nicknames[nickKey(r)] || nicknames[titleKey(r)] || '';
 const nickOf = r => savedNick(r) || r.show.english || r.show.romaji;
@@ -2757,7 +2757,12 @@ const cleanNicknames = o => Object.fromEntries(Object.entries(o && typeof o === 
 .filter(([k, v]) => typeof v === 'string' && v.trim() && !LINKISH.test(v)).map(([k, v]) => [k, v.trim().slice(0, 80)]));
 const nicknamesReady = fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {})
 .then(j => { nicknames = cleanNicknames(j.names); }).catch(() => {});
-function discordMessage({ date, groups }) {
+// why a planned show isn't on the list, so nobody wonders where it went
+const skipReason = r => r.skipped ? `ausgesetzt${r.missing?.length ? ` (${r.missing.join(', ')} ${r.missing.length === 1 ? 'fehlt' : 'fehlen'})` : ''}`
+: r.recap ? 'Recap, keine reguläre Folge'
+: `Pause${r.when && Number.isFinite(new Date(r.when).getTime()) && new Date(r.when) > date0(new Date()) ? `, zurück am ${shortDayDate(new Date(r.when))}` : ''}`;
+const date0 = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+function discordMessage({ date, groups, skipped = [] }) {
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const when = date.toDateString() === new Date().toDateString() ? 'Heute'
 : date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
@@ -2767,7 +2772,9 @@ const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.t
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
 });
-return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`;
+const out = [...new Map(skipped.map(r => [nickKey(r), r])).values()].map(r => `${nickOf(r)} – ${skipReason(r)}`);
+return (lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`)
++ (out.length ? `\n\nFällt aus:\n${out.join('\n')}` : '');
 }
 function discordDay(iso) {
 const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === iso);
@@ -2777,7 +2784,8 @@ for (const r of found.rows.filter(r => !r.pause)) {
 if (groups.at(-1)?.[0].watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
-return { date: found.date, groups };
+const skipped = found.rows.filter(r => r.pause).sort((a, b) => (a.watchAt ?? 0) - (b.watchAt ?? 0));
+return { date: found.date, groups, skipped };
 }
 let discordOpen = null;
 // Conservative, local suggestions: never written to nicknames.json without a save.
