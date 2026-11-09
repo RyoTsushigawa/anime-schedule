@@ -2746,11 +2746,13 @@ const { m, old } = planning;
 storeMoves(moves.filter(x => x !== old), `${m.title.english || m.title.romaji}: Nachholen entfernt.`, 'planDlg', 'planMsg');
 };
 // Nicknames for the Discord message (nicknames.json, written with the GitHub key from the Discord dialog).
-// Keyed by AniList ID, or "t:" + lower-case title for a show without one.
+// Keyed by AniList ID, or "t:" + lower-case title (the ID wins when both exist).
 const NICKNAMES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/nicknames.json';
 let nicknames = {};
 const nickKey = r => r.m?.id ? String(r.m.id) : 't:' + String(r.show.english || r.show.romaji).trim().toLowerCase();
-const nickOf = r => nicknames[nickKey(r)] || r.show.english || r.show.romaji;
+const titleKey = r => 't:' + String(r.show.english || r.show.romaji).trim().toLowerCase();
+const savedNick = r => nicknames[nickKey(r)] || nicknames[titleKey(r)] || '';
+const nickOf = r => savedNick(r) || r.show.english || r.show.romaji;
 const cleanNicknames = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
 .filter(([k, v]) => typeof v === 'string' && v.trim() && !LINKISH.test(v)).map(([k, v]) => [k, v.trim().slice(0, 80)]));
 const nicknamesReady = fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {})
@@ -2765,7 +2767,7 @@ const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.t
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
 });
-return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\nPasst?` : `${when} steht nichts an.`;
+return lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`;
 }
 function discordDay(iso) {
 const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === iso);
@@ -2807,10 +2809,12 @@ $('discordNickToggle').hidden = !rows.length;
 $('discordNickList').innerHTML = rows.map(r => {
 const title = r.show.english || r.show.romaji;
 const chips = nicknameSuggestions(title).map(name => `<button type="button" class="nick-suggestion" data-nick-suggest="${esc(name)}" title="Vorschlag übernehmen (noch nicht speichern)">${esc(name)}</button>`).join('');
-return `<div class="nick-item"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" value="${esc(nicknames[nickKey(r)] || '')}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
+return `<div class="nick-item"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" data-nick-title="${esc(titleKey(r))}" value="${esc(savedNick(r))}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
 }).join('');
 }
-const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelectorAll('[data-nick]')].map(i => [i.dataset.nick, i.value.trim()]));
+// a name saved by title moves to the show's ID when saved here, so clearing the field really clears it
+const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelectorAll('[data-nick]')]
+.flatMap(i => [[i.dataset.nickTitle, ''], [i.dataset.nick, i.value.trim()]]));
 const previewNicks = () => {
 const saved = nicknames;
 nicknames = cleanNicknames({ ...saved, ...typedNicks() });
