@@ -766,7 +766,7 @@ color: var(--muted);
 font-size: 13px;
 }
 .catchup-summary .friend-view { margin: 0; }
-.tool-back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding-left: 8px; text-decoration: none; white-space: nowrap; }
+header .bar .tool-back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 12px 4px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); color: var(--text); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .tool-back img { border-radius: 5px; }
 .busy-remove, #busyReload { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .controls-left > .segmented:first-child { border-radius: 12px; }
