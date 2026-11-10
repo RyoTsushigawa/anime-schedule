@@ -1142,7 +1142,7 @@ const body = ordered.length
 : row(g[0]))).join('')
 : range === 'today' && !searching() ? '<div class="ep empty-day"><button class="pill" data-rest-of-week>Rest der Woche anzeigen</button></div>' : '';
 const isToday = date.toDateString() === today;
-return `<section class="day${isToday ? ' is-today' : ''}${ordered.length ? '' : ' empty'}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${ordered.length ? '' : '<span class="day-none">· keine Folgen</span>'}${pauseShiftButton}${movesKey ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit day-pencil" data-day-edit title="Tag bearbeiten" aria-label="Tag bearbeiten"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : ''}${(movesKey || delaysUrl) && ((isToday && ordered.length) || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${awayText(isoDay(date)).length ? `<button type="button" class="away-note" data-day-absent>Abwesend: ${esc(awayText(isoDay(date)).join(', '))}</button>` : ''}${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}${ordered.length ? '' : ' empty'}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${ordered.length ? '' : '<span class="day-none">· keine Folgen</span>'}${pauseShiftButton}${movesKey && isoDay(date) >= isoDay(new Date()) ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht" aria-label="Als Discord-Nachricht"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button><button class="pill day-edit day-pencil" data-day-edit title="Tag bearbeiten" aria-label="Tag bearbeiten"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : ''}${(movesKey || delaysUrl) && ((isToday && ordered.length) || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${isoDay(date) >= isoDay(new Date()) ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="10" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21c0-3.9 3.1-7 7-7 1.4 0 2.7.4 3.8 1.1M16 17l5 5M21 17l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}</h2>${awayText(isoDay(date)).length ? `<button type="button" class="away-note" data-day-absent>Abwesend: ${esc(awayText(isoDay(date)).join(', '))}</button>` : ''}${body}</section>`;
 }).join('');
 const nowDay = new Date(); nowDay.setHours(0, 0, 0, 0);
 const strip = `<nav class="daystrip" aria-label="Einen Tag anzeigen">${days.map(({ date, rows }) => {
@@ -1383,6 +1383,12 @@ $('miscButton').onclick = () => showMenu('miscMenu','miscButton',$('miscMenu').h
 $('miscMenu').addEventListener('click',e=>{ if(e.target.closest('a,button')) showMenu('miscMenu','miscButton',false); });
 $('settingsButton').onclick = () => showSettings($('settingsMenu').hidden);
 $('accountButton').onclick = () => showMenu('accountMenu', 'accountButton', $('accountMenu').hidden);
+$('list').addEventListener('click', e => {
+if (!e.target.closest('[data-connect]')) return;
+e.stopPropagation();
+scrollTo({ top: 0 });
+showMenu('accountMenu', 'accountButton', true);
+});
 document.addEventListener('click', e => {
 if (!e.target.closest('#miscMenu, #miscButton')) showMenu('miscMenu','miscButton',false);
 if (!e.target.closest('#settingsMenu, #settingsButton')) showSettings(false);
@@ -2263,7 +2269,7 @@ $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend 
 } else if (friend) {
 $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
 }
-if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Um Folgen abzuhaken oder Serien zu droppen, verbinde AniList.</div>');
+if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Zum Abhaken und Droppen: <button type="button" class="pill" data-connect>Konto verbinden</button></div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
 applySearch();
@@ -2808,6 +2814,18 @@ const cleanEmotes = o => Object.fromEntries(Object.entries(o && typeof o === 'ob
 .filter(([k, v]) => /^\w{2,32}$/.test(k) && typeof v === 'string' && /^<a?:\w{2,32}:\d{15,21}>$/.test(v)));
 const learnEmotes = text => Object.fromEntries([...String(text).matchAll(EMOTE_CODE)].map(([code, , name]) => [name, code]));
 const withEmotes = text => text.replace(/(^|[^<a\w]):(\w{2,32}):(?!\d)/g, (all, before, name) => emotes[name] ? before + emotes[name] : all);
+// The dialog shows the message the way Discord will: "@Sophie" for a ping code, ":name:" for an emote
+// code. Copying puts the codes back, so Discord still pings and shows the emote.
+const pingNames = () => Object.entries(DISCORD_PINGS).map(([name, code]) => ['@' + name[0].toUpperCase() + name.slice(1), code]);
+const readable = text => {
+for (const [label, code] of pingNames()) text = text.split(code).join(label);
+for (const [name, code] of Object.entries(emotes)) text = text.split(code).join(`:${name}:`);
+return text;
+};
+const forDiscord = text => {
+for (const [label, code] of pingNames()) text = text.replace(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\wäöüß])', 'g'), code);
+return withEmotes(text);
+};
 // why a planned show isn't on the list, so nobody wonders where it went
 const skipReason = r => r.skipped ? 'Skip' : r.recap ? 'Recap' : 'Pause';
 function discordMessage({ date, groups, skipped = [] }) {
@@ -2924,7 +2942,7 @@ const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelect
 const previewNicks = () => {
 const saved = nicknames;
 nicknames = cleanNicknames({ ...saved, ...typedNicks() });
-$('discordText').value = discordMessage(discordOpen);
+$('discordText').value = readable(discordMessage(discordOpen));
 nicknames = saved;
 };
 async function openNickEditor(date, day = null, setup = false) {
@@ -2936,7 +2954,7 @@ async function openNickEditor(date, day = null, setup = false) {
   nickDayFilter = setup ? 'all' : String((date.getDay() + 6) % 7);
   $('discordDlg').classList.toggle('nickname-setup', setup);
   $('discordName').textContent = setup ? 'Spitznamen einrichten' : `${dayName(date)}, ${germanDate(date)}`;
-  $('discordText').value = discordMessage(discordOpen);
+  $('discordText').value = readable(discordMessage(discordOpen));
   $('discordMsg').textContent = '';
   showNickFields();
   $('discordNicks').hidden = false;
@@ -2984,7 +3002,7 @@ $('discordNickSave').disabled = true;
 $('discordMsg').textContent = 'Speichere …';
 try {
 nicknames = await saveNicknames(typed);
-$('discordText').value = discordMessage(discordOpen);
+$('discordText').value = readable(discordMessage(discordOpen));
 $('discordMsg').textContent = 'Spitznamen gespeichert, auch für den täglichen Post.';
 } catch (err) {
 $('discordMsg').textContent = `Nicht gespeichert: ${err.message}.`;
@@ -3014,7 +3032,7 @@ if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
 $('discordCopy').onclick = async () => {
-const text = $('discordText').value;
+const text = forDiscord($('discordText').value);
 try { await navigator.clipboard.writeText(text); }
 catch { $('discordText').select(); if (!document.execCommand?.('copy')) { $('discordMsg').textContent = 'Kopieren ging nicht: Text markieren und Strg+C.'; return; } }
 $('discordDlg').close();
@@ -3489,6 +3507,7 @@ $('dayMsg').textContent = '';
 closeSuggest();
 setDayScope(editScope);
 $('dayDlg').showModal();
+$('dayKeepTime').checked = false;
 const t = $('dayText'); t.focus(); t.setSelectionRange(t.value.length, t.value.length);
 });
 const skipMark = keepTime => keepTime ? '(Skip · Zeiten beibehalten)' : '(Skip)';
@@ -3510,8 +3529,7 @@ const end = lines.slice(0, index + 1).join('\n').length;
 t.focus(); t.setSelectionRange(end, end);
 $('dayMsg').textContent = '';
 };
-$('daySkip').onclick = () => toggleDaySkip(false);
-$('dayKeepSkip').onclick = () => toggleDaySkip(true);
+$('daySkip').onclick = () => toggleDaySkip($('dayKeepTime').checked);
 function findShow(text) {
 const q = norm(text);
 if (!q) return { none: true };
