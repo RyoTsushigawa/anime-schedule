@@ -9,19 +9,28 @@ on:
   # At any other time the helper's timer sends "dry_run": the message only goes to this run's log (a rehearsal).
   repository_dispatch:
     types: [discord-daily]
+  # A change to the plan after the post is out (a delay, an absence, a move, a nickname): today's post is
+  # edited so it stays right. No new message, no ping. Before the post it does nothing.
+  push:
+    branches: [main]
+    paths: [moves.json, nicknames.json]
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Only show the message in the log, post nothing'
         type: boolean
         default: true
+      test_edit:
+        description: 'Only test editing: a test line in the bot test channel that is edited once'
+        type: boolean
+        default: false
       test_warning:
         description: 'Only send the failure warning once, as a test (bot test channel, with ping)'
         type: boolean
         default: false
 
 permissions:
-  contents: read
+  contents: write   # daily-post.json: remembers today's post so a later change can edit it
 
 concurrency:
   group: discord-daily
@@ -33,6 +42,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned: a moved tag can't change what runs
+        with:
+          ref: main   # the newest plan, also when this run waited behind another one
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
         with:
           node-version: 22
@@ -46,7 +57,18 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
           WAIT_FOR_NINE: ${{ github.event_name == 'repository_dispatch' }}
-        run: node tools/discord-daily.mjs ${{ (inputs.dry_run || github.event.client_payload.dry_run) && '--dry-run' || '' }}
+          DISCORD_WEBHOOK_LOGS: ${{ secrets.DISCORD_WEBHOOK_LOGS }}
+        run: node tools/discord-daily.mjs ${{ (inputs.dry_run || github.event.client_payload.dry_run) && !inputs.test_edit && '--dry-run' || '' }} ${{ github.event_name == 'push' && '--update' || '' }} ${{ inputs.test_edit && '--test-edit' || '' }}
+      - name: Remember today's post
+        if: ${{ !inputs.test_warning && !inputs.test_edit }}
+        run: |
+          git add daily-post.json 2>/dev/null || exit 0
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git commit -qm "Today's Discord post"
+          git pull --rebase origin main
+          git push
       # A run that broke (site not reachable, Discord refused) says so in the logs channel and pings the owner.
       # Needs the repository secret DISCORD_WEBHOOK_LOGS (the logs channel's webhook); without it nothing is sent.
       - name: Say that the post failed

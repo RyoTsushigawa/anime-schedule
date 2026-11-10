@@ -56,7 +56,7 @@ patch notes; this README brought in line with the site.
   chat); the failure step that uses it has never fired.
 - Whether bot v7 (`/abwesend`) is installed is unconfirmed.
 - The PC's weekly `live-check.mjs` may report files added on GitHub as unexpected: `tools/discord-daily.mjs`,
-  `tools/check-site.mjs`, `tool-theme.js` and the workflows `discord-daily.yml`, `check.yml`, `cache-version.yml`. They belong here.
+  `tools/check-site.mjs`, `tool-theme.js`, `daily-post.json` and the workflows `discord-daily.yml`, `check.yml`, `cache-version.yml`. They belong here.
 - Known limits: a long finale is only recognised once AniList knows the episode count; a "double-length
   premiere" is matched to episode 1 (a Part 2 that keeps counting needs **Lang** by hand).
 
@@ -175,6 +175,7 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `streams-de.json` | Where each Guckplan show streams in Germany (from LiveChart) |
 | `seasons.json`, `fallback-links.json` | Season index and the alternative show links (daily GitHub run) |
 | `nicknames.json` | Short show names for the Discord message (written from the Discord dialog) |
+| `daily-post.json` | Today's Discord post (date, message id, text), written by the daily run so a later change can edit it |
 | `moves.json` | Moves, delays and kept delay reasons (only on GitHub, written by the page and the delay helper) |
 | `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany); the daily GitHub run uses it for the status part only |
 | `tools/livechart-pages.mjs`, `tools/fallback-links.mjs`, `tools/check-sources.mjs` | Reading LiveChart's pages; the alternative show links; the AniWorld check |
@@ -276,6 +277,12 @@ then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames
 
 The dialog shows "@Sophie" and ":emote:" instead of the codes, and copying puts the codes back. Sophie's
 ping is the only one and is built in (`DISCORD_PINGS` in `app.js`); nobody else wants one.
+
+**The post stays current:** when the plan changes after 09:00 (a delay, an absence, a move, a nickname: every
+commit to `moves.json` or `nicknames.json`), the same workflow runs again and edits today's post in place.
+No second message, no ping. `daily-post.json` remembers the post (date, Discord message id, text); before
+the day's post is out, a change does nothing. "Run workflow" with `test_edit` ticked checks editing in the
+bot test channel.
 
 **Nothing planned:** the post then reads "Heute steht nichts an." with the kek emote, and the weekday
 role is not pinged.
