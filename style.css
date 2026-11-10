@@ -288,7 +288,7 @@ font-weight: 650;
 .row.aired:not(:hover) .cr:not(:focus-visible) { background: transparent !important; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); filter: none; }
 .row.pause { border-style: dashed; background-color: color-mix(in srgb, var(--card) 55%, transparent); }
 .row.pause .time { font-weight: 500; }
-.row.pause > img { height: 44px; object-position: center 22%; box-shadow: none; }
+#list .row.pause > img { height: 46px; object-position: center 22%; box-shadow: none; }
 .row.pause > .no-cover { display: none; }
 .row.pause .ep a { color: inherit; text-decoration: underline dotted; }
 .cr.news { background: transparent; color: var(--text); border: 1px solid var(--line); }
