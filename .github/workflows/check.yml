@@ -1,0 +1,32 @@
+# Every pull request: the site is loaded with the changed files in a headless browser, against the live
+# data, and the run fails when the page throws an error, a view or dialog doesn't open, or the Discord
+# message can't be built (tools/check-site.mjs). Nothing is saved or posted.
+name: Check the site
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned: a moved tag can't change what runs
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
+        with:
+          node-version: 22
+      - name: Install the headless browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Check the site
+        run: node tools/check-site.mjs
