@@ -302,6 +302,22 @@ try { slotNotes = await timetableNotes(); } catch (e) { console.log(`Timetable n
 
 let previous = null;
 try { previous = JSON.parse(await readFile(OUT, 'utf8')); } catch {}
+// GitHub's daily run adds to the status there (recaps, long episodes, observed releases), and so does a
+// correction made on GitHub. A full build on the PC starts from the newer of the two copies, and in any
+// case keeps GitHub's recap and long-episode marks, so nothing added since the last publish is lost.
+if (!statusOnly && previous) try {
+  const live = await (await fetch('https://ryotsushigawa.github.io/anime-schedule/streams-de.json?' + Date.now(), { signal: AbortSignal.timeout(20000) })).json();
+  const stamp = s => Date.parse(s?.statusUpdated || s?.generated || 0) || 0;
+  if (live?.status && stamp(live) > stamp(previous)) {
+    previous.status = live.status;
+    console.log("Show status: starting from GitHub's newer copy");
+  } else for (const [id, s] of Object.entries(live?.status || {})) for (const key of ['recaps', 'long']) {
+    const mine = previous.status?.[id];
+    if (!mine || !s[key]?.length) continue;
+    const have = new Set((mine[key] || []).map(x => JSON.stringify(x)));
+    mine[key] = [...(mine[key] || []), ...s[key].filter(x => !have.has(JSON.stringify(x)))];
+  }
+} catch (e) { console.log(`GitHub's copy of the show status not read (${e.message}); starting from this PC's`); }
 
 const byAnilist = {};
 const release = {};
