@@ -1365,3 +1365,9 @@ body:has(#notice:not([hidden])) #refreshFeedback { bottom: calc(86px + env(safe-
  .day h2 :is(.day-delay, .day-absent-button, .pause-shift, .day-discord, .day-edit) { min-width: 44px; min-height: 44px; }
  .day h2 { flex-wrap: wrap; gap: 6px; }
 }
+
+/* Keep narrow day headings together instead of wrapping an isolated action. */
+@media (max-width: 420px) {
+ .day h2::after { display: none; }
+ .day h2 > span:first-child { margin-inline-end: auto; }
+}
