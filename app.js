@@ -592,6 +592,13 @@ else applySearch();
 searchedWeek = searching();
 }
 $('search').addEventListener('input', searchChanged);
+$('list').addEventListener('click', e => {
+const chip = e.target.closest('#airingWarnings');
+if (!chip) return;
+alertsOpen = !alertsOpen;
+chip.setAttribute('aria-expanded', String(alertsOpen));
+$('airingBody').hidden = !alertsOpen;
+});
 function openSearch(open) {
 $('searchBox').classList.toggle('open', open);
 document.body.classList.toggle('searching', open);
@@ -739,6 +746,8 @@ return x === y ? 0 : x - y;
 }
 const LOADING_HTML = '<div class="status loading">Lädt…</div><div class="skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>';
 var enter = null;
+// whether the overview chip above the week is open (kept across redraws)
+var alertsOpen = false;
 function episodeTags(episodes, total) {
 const tag = text => `<span class="ep-tag">${text}</span>`;
 if (total === 1) return '';
@@ -1177,8 +1186,10 @@ const lines = [
 ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Zurück am ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
 ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
 ];
-const alerts = !lines.length ? '' : `<details id="airingWarnings" class="alerts${breaks.length && unknown.length ? ' long' : ''}"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>`;
-html = `${staleNotice}<div class="weekline">${alerts}${strip}</div>` + html;
+// The chip stays where it is (right of the day strip); what it lists opens underneath, across the full width.
+const alerts = !lines.length ? '' : `<button type="button" id="airingWarnings" class="alerts-chip" aria-expanded="${alertsOpen}" aria-controls="airingBody"><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></button>`;
+const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts alerts-body"${alertsOpen ? '' : ' hidden'}>${lines.join('')}</div>`;
+html = `${staleNotice}<div class="weekline">${strip}${alerts}${alertsBody}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
