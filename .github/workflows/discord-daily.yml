@@ -6,6 +6,7 @@ name: Daily Discord schedule
 on:
   # GitHub's own timer starts runs hours late or not at all, so the Cloudflare helper starts this
   # every day at 08:50 German time (its cron trigger, see README "Daily Discord post"); the script waits for 09:00.
+  # At any other time the helper's timer sends "dry_run": the message only goes to this run's log (a rehearsal).
   repository_dispatch:
     types: [discord-daily]
   workflow_dispatch:
@@ -39,4 +40,4 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
           WAIT_FOR_NINE: ${{ github.event_name == 'repository_dispatch' }}
-        run: node tools/discord-daily.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: node tools/discord-daily.mjs ${{ (inputs.dry_run || github.event.client_payload.dry_run) && '--dry-run' || '' }}
