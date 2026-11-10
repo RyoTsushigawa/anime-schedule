@@ -5,8 +5,8 @@
 //   node tools/discord-daily.mjs            posts now to the webhook in DISCORD_WEBHOOK
 //   node tools/discord-daily.mjs --dry-run  only prints the message
 //
-// GitHub starts the workflow at two UTC times (one for winter, one for summer time). SCHEDULE is the
-// cron line that started this run; the run that doesn't fit Germany's current offset stops at once.
+// The Cloudflare helper starts the workflow at 08:50 German time (WAIT_FOR_NINE=true); the run then
+// waits for 09:00. GitHub's own timer was too unreliable (hours late, or not at all).
 import { chromium } from 'playwright';
 
 const SITE = process.env.SITE_URL || 'https://ryotsushigawa.github.io/anime-schedule/';
@@ -35,16 +35,7 @@ const berlin = (d = new Date()) => {
   return { ...p, offset: Number(/GMT([+-]\d+)/.exec(p.timeZoneName)?.[1] || 0) };
 };
 
-const now = berlin();
-const schedule = process.env.SCHEDULE || '';
-if (schedule) {
-  // "30 7 * * *" starts at 07:30 UTC: right when Germany is UTC+1, i.e. 08:30 there
-  const utcHour = Number(schedule.trim().split(/\s+/)[1]);
-  if (utcHour + now.offset !== POST_HOUR - 1) {
-    console.log(`Cron "${schedule}" is for the other half of the year (Germany is UTC+${now.offset}); nothing to do.`);
-    process.exit(0);
-  }
-}
+const waitForNine = process.env.WAIT_FOR_NINE === 'true';
 if (!dryRun && !webhook) {
   console.log('No DISCORD_WEBHOOK secret set; nothing posted.');
   process.exit(0);
@@ -65,7 +56,7 @@ try {
   // a GitHub run can start early: wait for 09:00 so "Heute" and any late moves/delays are right
   const t = berlin();
   const wait = ((POST_HOUR - Number(t.hour)) * 3600 - Number(t.minute) * 60 - Number(t.second)) * 1000;
-  if (!dryRun && schedule && wait > 0) {
+  if (!dryRun && waitForNine && wait > 0) {
     console.log(`Waiting ${Math.round(wait / 60000)} min until ${POST_HOUR}:00 German time.`);
     await page.waitForTimeout(wait);
     await page.evaluate(() => Promise.all([loadMoves(),

@@ -4,11 +4,10 @@
 name: Daily Discord schedule
 
 on:
-  schedule:
-    # two times so it's 09:00 in winter and in summer; the script drops the one that doesn't fit.
-    # Started half an hour early because GitHub often starts scheduled runs late; the script waits for 09:00.
-    - cron: '30 7 * * *'   # 07:30 UTC = 08:30 in winter (UTC+1)
-    - cron: '30 6 * * *'   # 06:30 UTC = 08:30 in summer (UTC+2)
+  # GitHub's own timer starts runs hours late or not at all, so the Cloudflare helper starts this
+  # every day at 08:50 German time (its cron trigger, see README "Daily Discord post"); the script waits for 09:00.
+  repository_dispatch:
+    types: [discord-daily]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -39,5 +38,5 @@ jobs:
       - name: Post today's schedule
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
-          SCHEDULE: ${{ github.event.schedule }}
+          WAIT_FOR_NINE: ${{ github.event_name == 'repository_dispatch' }}
         run: node tools/discord-daily.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
