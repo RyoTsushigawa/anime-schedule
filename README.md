@@ -3,6 +3,59 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
+## Hand-over: read this first (state on 10 Nov 2026)
+
+This project has been worked on in several chats and with several assistants. Each one only knew its own
+part, so this section says what runs where and what is still open. Keep it up to date when that changes.
+
+**What runs where**
+
+| Where | What | Notes |
+|---|---|---|
+| GitHub (this repository, branch `main`) | The site itself (GitHub Pages), `moves.json` and `nicknames.json` written by the page | The copy here is the current one. Changes go in through pull requests. |
+| GitHub Actions | `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status), `source-health.yml`, `masterset-prices.yml` | GitHub's own timer runs hours late or skips days. The daily post is therefore started from Cloudflare. |
+| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v10**. Its code is **not** in this repository (see below). |
+| The owner's PC | `tools/build-streams.mjs` (must run from Germany), `tools/publish.mjs` and the weekly checks, with the tokens | These tools exist only on the PC. Last stream build uploaded: 8 Nov 2026. |
+| Discord bot (separate zip, v7) | `/delay`, `/abwesend` and status | Not in this repository. Whether v7 is installed is unconfirmed. |
+
+**Things that bite**
+
+- `tools/publish.mjs` uploads files from the PC. If the PC's copy of `app.js`, `style.css` or `index.html`
+  is older than `main`, a publish overwrites newer work. Bring the PC folder up to date first. Planned fix:
+  let the PC publish data files only (`streams-de.json`, `seasons.json`, `tabs.json`).
+- This README lists PC tools that are not in the repository (`publish.mjs`, `delays-worker.js`,
+  `delay-check.mjs`, `live-check.mjs`, …). The PC's weekly check flags unexpected files here, so the helper
+  code was deliberately not added.
+- Every change to the site needs a new `CACHE` name in `sw.js`, or visitors keep the old version.
+- The sandbox of a cloud chat cannot load the site's data (Google Sheet, AniList, github.io). Real-data
+  checks were done with a temporary workflow on a branch, removed again afterwards.
+- A parallel session may edit the same files: fetch `main` before every change.
+
+**Done on 9–10 Nov 2026** (pull requests #1–#26)
+
+Daily Discord post with weekday role ping, nicknames, emotes and the "Fällt aus" list (Skip / Recap /
+Pause); absence calendar with "ab"/"bis" times; Doppelt and the new Lang (two slots, "(x2)" in the post);
+LiveChart "double-length" notes; partial absences checked at the real watch time; Recap weeks detected;
+icon buttons on the day heading; regrouped move dialog; help sections and patch notes.
+
+**Still open**
+
+- 11 Nov, 09:00: first daily post started by Cloudflare. If nothing comes: is the cron trigger set in the
+  Worker (Settings → Trigger events)? A refused start is reported in the bot test channel.
+- Repository secret `DISCORD_WEBHOOK_LOGS` (webhook of the bot test channel) is not set yet; without it a
+  failed post run sends no warning.
+- Helper **v13** (adds the owner's ping to the warning and a rehearsal mode) was handed over as a file but
+  is not deployed. The PC's `tools/delays-worker.js` should match whatever is deployed.
+- Known limits: a long finale is only recognised once AniList knows the episode count; a "double-length
+  premiere" is matched to episode 1 (a Part 2 that keeps counting needs **Lang** by hand).
+
+**House rules the owner has set**
+
+Keep everything as short and clean as possible. Desktop first, phones are not a priority. No countdowns,
+no calendar subscriptions, no dots for watchers, no text labels on day headings, no `/spitzname` bot
+command. Dark theme is the default. "Edit" stays "Edit". Patch notes are in English. Warnings go to the
+bot test channel with a ping for the owner (Discord user `255387990136848385`), never to the schedule channel.
+
 The **Tools** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
 and the Piplup/Empoleon Masterset Tracker. **Settings** holds the display choices and **Hilfe**, the
 guide (shortcuts at its end); `?` opens it too. Catch-up stream links default on unless disabled.
