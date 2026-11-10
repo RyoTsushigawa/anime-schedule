@@ -838,7 +838,9 @@ cursor.remove();
 cursor = next;
 }
 }
-function render(items, start, plans, everyone = false, keepDays = false) {
+// shifted: the group's final times from a first pass (delays, Lang/Doppelt), so "ab 21:00" absences
+// are checked at the time a show is really watched
+function render(items, start, plans, everyone = false, keepDays = false, shifted = null) {
 if (!everyone) lastWeekRender = [items, start, plans];
 const restore = everyone ? null : preserveListPosition();
 if (!everyone) updateFallbackControls();
@@ -941,6 +943,10 @@ slot: { tag: DAY_TAGS[(day.date.getDay() + 6) % 7], time: x.time || '' },
 show: { romaji: `${m.title.romaji || name} · Nachholen`, english: `${name} · Nachholen` } });
 }
 const heads = p => p === 'MaRyo' ? 2 : 1;
+const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip || m.double || m.long)
+  || Object.values(streamsDe?.status || {}).some(s => s.long?.length)) ? render(items, start, plans, true) : null;
+const showKey = (day, r) => isoDay(day.date) + '|' + norm(r.show?.romaji || r.show?.english || '');
+const finalAt = shifted || (fullDays && new Map(fullDays.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
 for (const day of days) {
 // planned times first, so "ab 21:00" / "bis 20:00" know when each show is (assigned again below)
 assignWatchTimes(day);
@@ -948,7 +954,8 @@ const dayStart = new Date(day.date).setHours(0, 0, 0, 0);
 day.rows = day.rows.map(r => {
 if (r.pause || !r.episodes) return r;
 if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r.episodes.includes(first - 1)) r.episodes.unshift(first - 1); }
-const minute = r.watchAt == null ? null : Math.round((r.watchAt - dayStart) / 60000);
+const at = finalAt?.get(showKey(day, r)) ?? r.watchAt;
+const minute = at == null ? null : Math.round((at - dayStart) / 60000);
 const isAway = p => awayAt(isoDay(day.date), p, minute);
 const missing = (r.who || []).filter(isAway);
 const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p), 0);
@@ -1033,13 +1040,13 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
-const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip || m.double || m.long)
-  || Object.values(streamsDe?.status || {}).some(s => s.long?.length)) ? render(items, start, plans, true) : null;
 for (const d of days) {
 assignWatchTimes(d);
 applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d);
 for (const r of d.rows) if (r.extra) r.when = new Date(r.watchAt);
 }
+if (everyone && !shifted && absent.some(x => x.from || x.until) && days.some(d => d.rows.some(r => r.plannedAt != null && r.plannedAt !== r.watchAt)))
+  return render(items, start, plans, true, keepDays, new Map(days.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
 const picked = range === 'day' && !searching() && days.find(d => isoDay(d.date) === pickedDay);

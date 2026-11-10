@@ -102,7 +102,7 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `tools/key-check.mjs` | Weekly, read-only: warns three weeks before the publish key (`tools/github-token.txt`) runs out |
 | `tools/weekly-alert.mjs` | End of the weekly run: anything that needs a look goes to the bot test channel through the webhook in `tools/alert-webhook.txt` (this PC only; `--test` sends one test line) |
 | `tools/live-check.mjs` | Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo, GitHub Pages shows the latest upload |
-| `tools/discord-daily.mjs` | Posts today's schedule to Discord every day at 09:00 (GitHub run `discord-daily.yml`, see below) |
+| `tools/discord-daily.mjs` | Posts today's schedule to Discord every day at 09:00 (GitHub run `discord-daily.yml`, started by the Cloudflare helper, see below) |
 | `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
 | `tools/delay-check.mjs` | Weekly, read-only: the helper answers, refuses strangers and is the current version |
 | `tabs.json`, `tools/tab-list.mjs` | The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
@@ -187,8 +187,14 @@ Emojis can go straight into a nickname. Server emotes need Discord's full code o
 `\:emote:` and send it; the message shows `<:emote:123…>`): paste that into a nickname and save, and from
 then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames.json` under `emotes`.
 
-GitHub sometimes starts scheduled runs late, so the run starts at 08:30 and waits for 09:00; on busy
-days the post can still come a few minutes late.
+**Start at 08:50:** GitHub's own timer starts runs hours late or not at all, so the Cloudflare helper
+from "Verspätungen für alle" starts this run (the run then waits for 09:00):
+
+4. GitHub: the helper's token (Settings → Developer settings → Fine-grained tokens) already has
+   **Contents: Read and write**; that is all it needs.
+5. Cloudflare: the Worker → **Settings → Trigger events → Add → Cron Triggers**, enter `50 6,7 * * *`
+   and save. (Cloudflare counts in UTC: one of the two is 08:50 in Germany, summer or winter; the
+   helper ignores the other.)
 
 ## Trying it locally
 
