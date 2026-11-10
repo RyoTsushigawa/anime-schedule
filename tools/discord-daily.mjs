@@ -8,7 +8,12 @@
 //                                           today's post so it shows the current plan; no new message, no ping
 //   node tools/discord-daily.mjs --test-edit  posts a test line to DISCORD_WEBHOOK_LOGS and edits it (checks editing works)
 //
-// daily-post.json remembers today's post (date, Discord message id, text), so --update can find it.
+// daily-post.json remembers today's post (date, Discord message id, channel, text), so --update can find it.
+//
+// Pinning (optional): with the bot's token in DISCORD_BOT_TOKEN the new post is pinned, the line Discord
+// writes about it ("… pinned a message") is deleted, and yesterday's post is unpinned. A webhook can't pin,
+// only a bot can; the bot's code isn't involved, only its token. The bot needs "Nachrichten anpinnen" and
+// "Nachrichten verwalten" in the channel. Pinning never stops the post: a refusal is only logged.
 //
 // The Cloudflare helper starts the workflow at 08:50 German time (WAIT_FOR_NINE=true); the run then
 // waits for 09:00. GitHub's own timer was too unreliable (hours late, or not at all).
@@ -42,6 +47,31 @@ const send = async (url, method, content, mentions) => {
   return res.json();
 };
 
+const botToken = process.env.DISCORD_BOT_TOKEN || '';
+const API = 'https://discord.com/api/v10';
+async function bot(method, path) {
+  const res = await fetch(API + path, { method, headers: { Authorization: `Bot ${botToken}`, 'User-Agent': 'DiscordBot (https://github.com/RyoTsushigawa/anime-schedule, 1)' } });
+  if (!res.ok) throw new Error(`${method} ${path.replace(/\d{15,}/g, '…')}: Discord answered ${res.status} ${(await res.text()).slice(0, 160)}`);
+  return res.status === 204 ? null : res.json();
+}
+// Pins a message and removes Discord's own "pinned a message" line. Says what happened, never throws.
+async function pin(channel, id) {
+  if (!botToken) return 'no bot token, not pinned';
+  try {
+    await bot('PUT', `/channels/${channel}/pins/${id}`);
+    await new Promise(r => setTimeout(r, 1500));
+    const recent = await bot('GET', `/channels/${channel}/messages?limit=10`);
+    const note = recent.find(m => m.type === 6 && m.message_reference?.message_id === id);
+    if (note) await bot('DELETE', `/channels/${channel}/messages/${note.id}`);
+    return note ? 'pinned, pin notice removed' : 'pinned (no pin notice found)';
+  } catch (e) { return 'not pinned: ' + e.message; }
+}
+async function unpin(channel, id) {
+  if (!botToken || !channel || !id) return '';
+  try { await bot('DELETE', `/channels/${channel}/pins/${id}`); return 'unpinned the previous post'; }
+  catch (e) { return 'previous post not unpinned: ' + e.message; }
+}
+
 if (process.argv.includes('--test-edit')) {
   const logs = process.env.DISCORD_WEBHOOK_LOGS || '';
   if (!logs) { console.log('The secret DISCORD_WEBHOOK_LOGS is missing or empty.'); process.exit(1); }
@@ -49,6 +79,11 @@ if (process.argv.includes('--test-edit')) {
   await new Promise(r => setTimeout(r, 3000));
   await send(editUrl(logs, first.id), 'PATCH', '🧪 Test (2/2): bearbeitet. So aktualisiert sich der Tagespost, ohne neue Nachricht und ohne Ping.', { parse: [] });
   console.log('Posted a test line and edited it.');
+  if (botToken) {
+    console.log('Pin test: ' + await pin(first.channel_id, first.id));
+    await new Promise(r => setTimeout(r, 8000));
+    console.log('Pin test: ' + (await unpin(first.channel_id, first.id) || 'nothing to unpin'));
+  } else console.log('Pin test skipped: no DISCORD_BOT_TOKEN.');
   process.exit(0);
 }
 
@@ -136,7 +171,13 @@ try {
 
   // role pings (e.g. Sophie's) go through, @everyone/@here never
   const sent = await send(webhook + (webhook.includes('?') ? '&' : '?') + 'wait=true', 'POST', message, { parse: ['roles', 'users'] });
-  writeFileSync(POST_FILE, JSON.stringify({ date: todayIso, id: sent.id, text: message }, null, 1) + '\n');
+  let before = null;
+  try { before = JSON.parse(readFileSync(POST_FILE, 'utf8')); } catch {}
+  writeFileSync(POST_FILE, JSON.stringify({ date: todayIso, id: sent.id, channel: sent.channel_id, text: message }, null, 1) + '\n');
+  // the new post is pinned, the one from the day before is let go
+  const pinned = await pin(sent.channel_id, sent.id);
+  console.log('Pin: ' + pinned);
+  if (pinned.startsWith('pinned') && before?.id && before.id !== sent.id) console.log('Pin: ' + await unpin(before.channel || sent.channel_id, before.id));
   console.log('Posted to Discord.');
 } finally {
   await browser.close();

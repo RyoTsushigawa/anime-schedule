@@ -284,6 +284,12 @@ No second message, no ping. `daily-post.json` remembers the post (date, Discord 
 the day's post is out, a change does nothing. "Run workflow" with `test_edit` ticked checks editing in the
 bot test channel.
 
+**Pinned post (optional):** with the Discord bot's token as the repository secret `DISCORD_BOT_TOKEN`, the
+daily run pins the new post, deletes Discord's "… pinned a message" line and unpins the post of the day
+before. Only the token is used; the bot's code is not involved and needs no update. The bot needs the
+permissions "Nachrichten anpinnen" and "Nachrichten verwalten" in the schedule channel (and, for `test_edit`,
+in the bot test channel). Without the secret nothing is pinned; a refused pin never stops the post.
+
 **Nothing planned:** the post then reads "Heute steht nichts an." with the kek emote, and the weekday
 role is not pinged.
 
