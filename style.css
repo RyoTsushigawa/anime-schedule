@@ -1267,3 +1267,7 @@ text-align: center;
   .top-actions #editScope { order: 9; flex: 1 1 100%; }
   .top-actions #editScope button { flex: 1; }
 }
+
+@media (min-width: 561px) {
+  .links > .cr > .svc-icon[style*="services/crunchyroll.svg"] { transform: scale(.82); }
+}
