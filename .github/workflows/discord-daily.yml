@@ -41,3 +41,14 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
           WAIT_FOR_NINE: ${{ github.event_name == 'repository_dispatch' }}
         run: node tools/discord-daily.mjs ${{ (inputs.dry_run || github.event.client_payload.dry_run) && '--dry-run' || '' }}
+      # A run that broke (site not reachable, Discord refused) says so in the channel instead of staying silent.
+      - name: Say that the post failed
+        if: ${{ failure() && !(inputs.dry_run || github.event.client_payload.dry_run) }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$DISCORD_WEBHOOK" ] || exit 0
+          curl -sS -o /dev/null -H 'Content-Type: application/json' \
+            -d "{\"content\":\"⚠️ Der Tagespost konnte heute nicht erstellt werden. Der Plan steht auf der Seite. (<$RUN_URL>)\",\"allowed_mentions\":{\"parse\":[]}}" \
+            "$DISCORD_WEBHOOK"
