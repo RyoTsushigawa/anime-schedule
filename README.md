@@ -194,7 +194,9 @@ from "Verspätungen für alle" starts this run (the run then waits for 09:00):
    **Contents: Read and write**; that is all it needs.
 5. Cloudflare: the Worker → **Settings → Trigger events → Add → Cron Triggers**, enter `50 6,7 * * *`
    and save. (Cloudflare counts in UTC: one of the two is 08:50 in Germany, summer or winter; the
-   helper ignores the other.)
+   other one is a rehearsal: a run that only writes the message into its log.)
+   To test at any time: add a second cron trigger a few minutes ahead (e.g. `*/5 * * * *`), wait for a
+   "Daily Discord schedule" run under Actions (it posts nothing), then remove that trigger again.
 
 ## Trying it locally
 
