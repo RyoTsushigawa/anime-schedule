@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-10T16:27:35.259Z",
+ "updated": "2026-11-10T18:19:29.169Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -281,5 +281,16 @@
   "Zuschauer im falschen Discord-Kanal",
   "Ein Zuschauer muss noch „nur kurz“ etwas erledigen",
   "Escanor"
+ ],
+ "delays": [
+  {
+   "id": "1pc6zf3l",
+   "day": "2026-11-10",
+   "show": "shiotaiounosatousangaorenidakeamai",
+   "title": "The Cold Sato-san is Only Sweet to Me",
+   "minutes": 15,
+   "reason": "Solutions30 macht 30 Probleme",
+   "at": "19:00"
+  }
  ]
 }
