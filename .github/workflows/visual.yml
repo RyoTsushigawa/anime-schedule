@@ -1,0 +1,48 @@
+name: Visual checks
+on:
+  pull_request:
+    branches: [main]
+    paths: ['*.html', '*.css', '*.js', 'tools/visual/**', 'tests/**', '.github/workflows/visual.yml']
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: Generate reference images for review (does not commit or deploy)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Install fixed test dependencies
+        run: |
+          npm ci --prefix tests --ignore-scripts --no-audit --no-fund
+          npm ci --prefix tools/visual --ignore-scripts --no-audit --no-fund
+          cd tools/visual
+          npx playwright install --with-deps chromium
+      - name: Behavior checks
+        run: node --test tests/compact-services.test.mjs
+      - name: Compare screenshots
+        working-directory: tools/visual
+        env:
+          UPDATE_VISUAL: ${{ inputs.update_baselines && '1' || '0' }}
+        run: npm test
+      - name: Keep review images and differences
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: visual-review
+          retention-days: 14
+          path: |
+            tools/visual/playwright-report/
+            tools/visual/test-results/
+            tools/visual/baselines/
