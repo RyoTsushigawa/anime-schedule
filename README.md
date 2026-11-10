@@ -56,7 +56,7 @@ patch notes; this README brought in line with the site.
   chat); the failure step that uses it has never fired.
 - Whether bot v7 (`/abwesend`) is installed is unconfirmed.
 - The PC's weekly `live-check.mjs` may report files added on GitHub as unexpected: `tools/discord-daily.mjs`,
-  `tools/check-site.mjs` and the workflows `discord-daily.yml`, `check.yml`, `cache-version.yml`. They belong here.
+  `tools/check-site.mjs`, `tool-theme.js` and the workflows `discord-daily.yml`, `check.yml`, `cache-version.yml`. They belong here.
 - Known limits: a long finale is only recognised once AniList knows the episode count; a "double-length
   premiere" is matched to episode 1 (a Part 2 that keeps counting needs **Lang** by hand).
 
@@ -169,6 +169,8 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
 | `planner.html`, `planner.js`, `xlsx.js` | Watch planner |
+| `tool-theme.js` | For Higher / Lower and the Masterset Tracker: light/dark (and the accent colour) as chosen on the main page |
+| `ranker/`, `masterset/` | Higher / Lower and the Masterset Tracker. The separate repository `anime-ranker` only forwards here and keeps the ranker's weekly data (`db.json`) |
 | `wrapped.*`, `wrapped-profiles.json` | Anime Wrapped |
 | `streams-de.json` | Where each Guckplan show streams in Germany (from LiveChart) |
 | `seasons.json`, `fallback-links.json` | Season index and the alternative show links (daily GitHub run) |
