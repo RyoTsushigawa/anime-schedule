@@ -2655,8 +2655,9 @@ async function placeByDrag(b, to) {
 const key = norm(b.dataset.moveTitle), thisWeek = isoDay(weekStart(weekOffset)), before = moves;
 const week = editScope === 'week' ? thisWeek : '';
 const home = to.tag === b.dataset.fromTag && to.time === clockOf(b.dataset.fromTime);
+const double = !!week && moves.some(m => m.show === key && m.week === thisWeek && m.double);
 let next = moves.filter(m => !(m.show === key && (m.week === week || (!week && m.week === thisWeek))));
-if (!home || (week && next.some(m => m.show === key && !m.week))) next = next.concat({ show: key, title: b.dataset.moveTitle, tag: to.tag, time: to.time, week });
+if (!home || double || (week && next.some(m => m.show === key && !m.week))) next = next.concat({ show: key, title: b.dataset.moveTitle, tag: to.tag, time: to.time, week, ...(double && { double: true }) });
 try { await saveMoves(next); } catch (e) { notice(`Nicht verschoben: ${e.message}`); return; }
 notice(`${b.dataset.moveName}: ${slotLabel(to)}${to.parallel ? ' (daneben)' : ''}, ${week ? 'diese Woche' : 'ab jetzt'}.`, true);
 movesUndo = before;
@@ -3536,9 +3537,10 @@ function moveTo(next, s, tag, time) {
 const week = dayEdit.scope === 'week' ? isoDay(weekStart(weekOffset)) : '';
 if (tag === s.tag && time === s.time) return next;
 const home = tag === s.fromTag && time === s.fromTime;
+const double = !!week && moves.some(m => m.show === s.key && m.week === week && m.double);
 next = next.filter(m => !(m.show === s.key && (m.week === week || (!week && m.week === isoDay(weekStart(weekOffset))))));
-if (home && (!week || !next.some(m => m.show === s.key && !m.week))) return next;
-return next.concat({ show: s.key, title: s.title, tag, time, week });
+if (home && !double && (!week || !next.some(m => m.show === s.key && !m.week))) return next;
+return next.concat({ show: s.key, title: s.title, tag, time, week, ...(double && { double: true }) });
 }
 $('daySave').onclick = () => {
 const placed = new Map(), problems = [];
