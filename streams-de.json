@@ -2457,7 +2457,19 @@
      "day": null
     },
     "checked": "2026-11-10T13:38:04.127Z"
-   }
+   },
+   "recaps": [
+    {
+     "episode": 7,
+     "at": 1794229200
+    }
+   ],
+   "notes": [
+    {
+     "at": 1794229200,
+     "text": "Today's episode is a recap of episodes 1–6."
+    }
+   ]
   },
   "209463": {
    "titles": [
@@ -3096,5 +3108,6 @@
     "checked": "2026-11-10T13:38:04.310Z"
    }
   }
- }
+ },
+ "statusUpdated": "2026-11-10T14:00:49.000Z"
 }
