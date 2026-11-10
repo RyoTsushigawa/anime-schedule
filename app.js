@@ -1170,11 +1170,14 @@ const statusAge = streamsDe ? daysOld(Math.max(Date.parse(streamsDe.generated) |
 let staleNotice = '';
 if (statusAge >= 3) staleNotice = `<div class="notice">Die LiveChart-Daten wurden vor ${statusAge} Tagen zuletzt aktualisiert.</div>`;
 else if (linksAge >= 14) staleNotice = `<div class="notice">Die Stream-Links wurden vor ${linksAge} Tagen zuletzt aktualisiert.</div>`;
+// shows whose last episode is this week: the overview names them too
+const finales = days.flatMap(d => d.rows.filter(r => !r.pause && !r.extra && r.m?.episodes > 1 && r.episodes?.length && Math.max(...r.episodes) === r.m.episodes).map(r => ({ r, date: d.date })));
 const lines = [
+...finales.map(({ r, date }) => `<div><b>${esc(r.m.title.english || r.m.title.romaji)}</b> · Finale am ${shortDayDate(date)}</div>`),
 ...breaks.map(b => `<div><b>${esc(b.show.english || b.show.romaji)}</b> · ${['Zurück am ' + shortDayDate(b.when), reasonHtml(b.note, b.news, '')].filter(Boolean).join(' · ')}</div>`),
 ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
 ];
-const alerts = !lines.length ? '' : `<details id="airingWarnings" class="alerts${breaks.length && unknown.length ? ' long' : ''}"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>`;
+const alerts = !lines.length ? '' : `<details id="airingWarnings" class="alerts${breaks.length && unknown.length ? ' long' : ''}"><summary><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></summary><div class="alerts-body">${lines.join('')}</div></details>`;
 html = `${staleNotice}<div class="weekline">${alerts}${strip}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
@@ -3313,6 +3316,8 @@ const today = isoDay(new Date());
 const pick = date && date >= today ? date : null;
 awayCal.month = (pick || today).slice(0, 7);
 awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.repeat = 'once';
+// in Solo view the dialog starts with that person chosen, until someone picks by hand
+awayCal.me = mode === 'solo' && soloPerson ? soloPerson : null;
 $('awayMsg').textContent = '';
 drawAway();
 $('awayDlg').showModal();
@@ -3362,7 +3367,7 @@ $('awayRepeatHint').textContent = awayCal.repeat === 'weekly'
 // whole day: pressed = away on every chosen day, "mixed" = on some (left alone unless clicked)
 $('awayPeople').innerHTML = allPeople().map(p => {
 const on = awayCal.mode === 'day' ? days.filter(d => absentOn(d).includes(p)).length : 0;
-const state = on === days.length && on ? 'true' : on ? 'mixed' : 'false';
+const state = on === days.length && on ? 'true' : on ? 'mixed' : p === awayCal.me ? 'true' : 'false';
 return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${state}" style="${personStyle(p)}">${esc(p)}</button>`;
 }).join('');
 }
@@ -3469,7 +3474,7 @@ drawAway();
 });
 $('awayPeople').addEventListener('click', e => {
 const b = e.target.closest('[data-away]');
-if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+if (b) { awayCal.me = null; b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); }
 });
 $('awaySave').onclick = () => {
 const selected = selectedDays();
