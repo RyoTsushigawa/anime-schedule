@@ -210,6 +210,8 @@ async function breakNews(livechartId) {
 
 // Notes on LiveChart's timetable ("There will be no broadcast today due to sports coverage."),
 // for this week and next: LiveChart id → [{at, text}] (at = the slot's time).
+const LONG_EPISODE = /\b(?:double[- ]length|extended|expanded|special[- ]length|(?:one|1)[- ]hour|hour[- ]long|(?:4[5-9]|[5-9]\d|1[0-2]\d)[- ]?min(?:ute)?s?\b)/i;
+const NOT_LONG = /\b(?:delay(?:ed|s)?|later|earlier|postpone[sd]?|pushed|moved|break|hiatus|no (?:episode|broadcast)|will not air|won'?t air)\b/i;
 async function timetableNotes() {
   const notes = {};
   for (const days of [0, 7]) {
@@ -348,6 +350,19 @@ for (const t of titles) {
     if (episode && !recaps.some(r => r.episode === episode))
       recaps.push({ episode, at: next.at });
   }
+  // An overlong episode ("one-hour special", "double-length premiere", "extended 45-minute episode")
+  // takes two watch slots on the page. Kept across builds like recaps.
+  const long = [...(previous?.status?.[card.anilist]?.long || [])];
+  for (const note of notes.filter(n => LONG_EPISODE.test(n.text) && !NOT_LONG.test(n.text))) {
+    const episode = next && Math.abs(next.at - note.at) < 2 * 86400 ? next.episode : null;
+    if (episode && !long.some(r => r.episode === episode)) long.push({ episode, at: next.at });
+  }
+  // LiveChart's "※ NOTE: Double-length premiere" on the show's card: the first (or last) episode
+  for (const note of (card.list?.notes || []).filter(n => LONG_EPISODE.test(n) && !NOT_LONG.test(n))) {
+    const mark = /premiere|first episode|\bep(?:isode)?\.? ?1\b/i.test(note) ? { episode: 1 }
+      : /finale|final episode|last episode/i.test(note) ? { finale: true } : null;
+    if (mark && !long.some(r => mark.finale ? r.finale : r.episode === 1)) long.push(mark);
+  }
   // Keep observed releases, not extrapolated weekly dates: delays and batches must stay exact.
   // New observations replace the old date for that episode if LiveChart reschedules it.
   const old = previous?.status?.[card.anilist];
@@ -355,7 +370,7 @@ for (const t of titles) {
     .filter(a => Number.isInteger(a.episode) && a.at > Date.now() / 1000 - 42 * 86400)
     .map(a => [a.episode, a]));
   status[card.anilist] = { titles: t, url: `https://www.livechart.me/anime/${card.id}`, next,
-    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(recaps.length && { recaps }), ...(notes.length && { notes }), ...(video && { video }) };
+    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(recaps.length && { recaps }), ...(long.length && { long }), ...(notes.length && { notes }), ...(video && { video }) };
   console.log(`${t[1] || t[0]}: ${byAnilist[card.anilist].map(s => s.name + (s.extra ? ` (+${s.extra})` : '')).join(', ') || '(none)'}` +
     (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min${offset.lag ? `, ${offset.lag} weeks behind` : ''}` : '') +
     (next ? '' : ' · nothing scheduled') + (video ? `\n    newest on YouTube: Episode ${video.episode}` : '') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));

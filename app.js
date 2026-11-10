@@ -698,6 +698,9 @@ const autoMovePauses = pauseShiftEnabled(isoDay(day.date));
 const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.keepTime)
   && rs.some(r => r.skipped || autoMovePauses)).map(([at]) => at);
 const anchors = [...slots].filter(([, rs]) => rs.some(r => r.slot?.keepTime)).map(([at]) => at);
+// A double episode or an overlong special needs more than its 30 minutes: later shows move back.
+const extraSlots = r => r.pause || r.extra || !r.episodes ? 0 : Math.max(r.episodes.length - 1, r.long ? 1 : 0);
+const longs = [...slots].map(([at, rs]) => [at, Math.max(0, ...rs.map(extraSlots))]).filter(([, n]) => n);
 for (const r of day.rows) {
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
 if (shared && timeline !== day) r.watchAt = planned(shared);
@@ -705,7 +708,9 @@ const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => 
 const anchor = Math.max(-Infinity, ...anchors.filter(at => at <= r.watchAt));
 const earlier = r.pause || r.slot?.keepTime ? 0
   : freed.filter(at => at < r.watchAt && at > anchor).length * SLOT_MINUTES;
-if (minutes || earlier) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, earlier, watchAt: r.watchAt + (minutes - earlier) * 60000 });
+const later = r.pause || r.slot?.keepTime ? 0
+  : longs.filter(([at]) => at < r.watchAt && at > anchor).reduce((n, [, k]) => n + k, 0) * SLOT_MINUTES;
+if (minutes || earlier || later) Object.assign(r, { plannedAt: r.watchAt, delay: minutes, earlier, later, watchAt: r.watchAt + (minutes + later - earlier) * 60000 });
 }
 }
 function nearDayName(date) {
@@ -854,7 +859,7 @@ who.set(show, [...who.get(show) || [], p]);
 for (const [show, slot] of merged) {
 const mv = moveFor(show, start);
 if (mv?.skip) merged.set(show, { ...slot, ...(mv.tag && { tag: mv.tag, time: mv.time }), skip: true, keepTime: !!mv.keepTime, from: slot });
-else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot, ...(mv.double && { double: true }) });
+else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot, ...(mv.double && { double: true }), ...(mv.long && { long: true }) });
 }
 whoBySheet.set(s, who);
 return [s, merged];
@@ -913,6 +918,8 @@ continue;
 // are not regular episodes, even when watched on a different weekday.
 const recap = (streamsDe?.status?.[m.id]?.recaps || []).find(r =>
   r.episode === it.episode && Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000);
+const long = slot.long || (streamsDe?.status?.[m.id]?.long || []).some(r => r.finale ? it.episode === m.episodes
+  : r.episode === it.episode && (!r.at || Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000));
 if (recap) {
   if (!day.rows.some(r => r.show === show))
     day.rows.push({ pause: true, recap: true, show, slot, when, episode, alId: m.id, note: { text: 'Recap episode', at: it.airingAt }, news: [] });
@@ -920,7 +927,7 @@ if (recap) {
 }
 const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
 if (existing) existing.episodes.push(episode);
-else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show) });
+else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show), ...(long && { long }) });
 }
 for (const x of moves.filter(m => m.extra && m.week === isoDay(start) && m.media?.id)) {
 const day = days.find(d => isoDay(d.date) === x.day);
@@ -1066,9 +1073,9 @@ const rewatch = ({ m, links, watchAt, who, show, slot }) => `
       </div>`;
 const plainRow = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
 const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-const row = r => !r.delay && !r.earlier ? plainRow(r) : plainRow(r)
+const row = r => !r.delay && !r.earlier && !r.later ? plainRow(r) : plainRow(r)
 .replace(/data-watch-time="[^"]*"/, `data-watch-time="${hhmm(r.plannedAt)}"`)
-.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time${r.delay ? ' late' : ''}" title="Unser Plan, geplant ${hhmm(r.plannedAt)}${r.delay ? ` · +${r.delay} Min.` : ''}${r.earlier ? ` · ${r.earlier} Min. früher (Skip)` : ''}">`);
+.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time${r.delay ? ' late' : ''}" title="Unser Plan, geplant ${hhmm(r.plannedAt)}${r.delay ? ` · +${r.delay} Min.` : ''}${r.earlier ? ` · ${r.earlier} Min. früher (Skip)` : ''}${r.later ? ` · ${r.later} Min. später (lange Folge davor)` : ''}">`);
 const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
 .filter(x => {
 const first = Math.min(...rows.map(r => r.plannedAt ?? r.watchAt).filter(at => at >= x.at));
@@ -2599,7 +2606,7 @@ load(true);
 };
 let moving = null, moveScope = 'week';
 const syncMoveDialog = () => {
-const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
+const double = ['moveDouble', 'moveLong'].some(id => $(id).getAttribute('aria-pressed') === 'true');
 if (double) setMoveScope('week');
 $('moveAlways').disabled = double;
 };
@@ -2641,6 +2648,7 @@ $('moveBoth').title = `Zusammen verschieben: ${all}`;
 $('skipBoth').hidden = !moving.mates.length || !!thisWeek?.skip;
 $('skipBoth').title = `Zusammen skippen: ${all}`;
 $('moveDouble').setAttribute('aria-pressed', String(!!thisWeek?.double));
+$('moveLong').setAttribute('aria-pressed', String(!!thisWeek?.long));
 syncMoveDialog();
 if (destination) {
 $('moveTag').value = destination.tag;
@@ -2655,9 +2663,10 @@ async function placeByDrag(b, to) {
 const key = norm(b.dataset.moveTitle), thisWeek = isoDay(weekStart(weekOffset)), before = moves;
 const week = editScope === 'week' ? thisWeek : '';
 const home = to.tag === b.dataset.fromTag && to.time === clockOf(b.dataset.fromTime);
-const double = !!week && moves.some(m => m.show === key && m.week === thisWeek && m.double);
+const was = week ? moves.find(m => m.show === key && m.week === thisWeek) : null;
+const double = !!(was?.double || was?.long);
 let next = moves.filter(m => !(m.show === key && (m.week === week || (!week && m.week === thisWeek))));
-if (!home || double || (week && next.some(m => m.show === key && !m.week))) next = next.concat({ show: key, title: b.dataset.moveTitle, tag: to.tag, time: to.time, week, ...(double && { double: true }) });
+if (!home || double || (week && next.some(m => m.show === key && !m.week))) next = next.concat({ show: key, title: b.dataset.moveTitle, tag: to.tag, time: to.time, week, ...(was?.double && { double: true }), ...(was?.long && { long: true }) });
 try { await saveMoves(next); } catch (e) { notice(`Nicht verschoben: ${e.message}`); return; }
 notice(`${b.dataset.moveName}: ${slotLabel(to)}${to.parallel ? ' (daneben)' : ''}, ${week ? 'diese Woche' : 'ab jetzt'}.`, true);
 movesUndo = before;
@@ -2677,20 +2686,21 @@ load(true);
 } catch (e) { $(msg).textContent = `Nicht gespeichert: ${e.message}`; }
 }
 $('moveTag').addEventListener('change', syncMoveDialog);
-$('moveDouble').onclick = () => {
-$('moveDouble').setAttribute('aria-pressed', String($('moveDouble').getAttribute('aria-pressed') !== 'true'));
+for (const id of ['moveDouble', 'moveLong']) $(id).onclick = () => {
+$(id).setAttribute('aria-pressed', String($(id).getAttribute('aria-pressed') !== 'true'));
 syncMoveDialog();
 };
 const namesOf = shows => shows.map(s => s.name).join(' und ');
 const moveShows = shows => {
 const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
+const long = $('moveLong').getAttribute('aria-pressed') === 'true';
 const time = $('moveTime').value.trim();
 if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
-const week = moveScope === 'week' || double ? isoDay(weekStart(weekOffset)) : '';
+const week = moveScope === 'week' || double || long ? isoDay(weekStart(weekOffset)) : '';
 const keys = shows.map(s => s.key);
 const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
-.concat(shows.map(s => ({ show: s.key, title: s.name, tag: $('moveTag').value, time, week, ...(double && { double: true }) })));
-storeMoves(next, `${namesOf(shows)}${double ? ' mit Doppelfolge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
+.concat(shows.map(s => ({ show: s.key, title: s.name, tag: $('moveTag').value, time, week, ...(double && { double: true }), ...(long && { long: true }) })));
+storeMoves(next, `${namesOf(shows)}${double ? ' mit Doppelfolge' : long ? ' mit langer Folge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
 };
 $('moveSave').onclick = () => moveShows([moving]);
 $('moveBoth').onclick = () => moveShows([moving, ...moving.mates]);
@@ -2787,7 +2797,7 @@ const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const when = date.toDateString() === new Date().toDateString() ? 'Heute'
 : date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
 const lines = groups.map(g => {
-const names = [...new Set(g.map(nickOf))];
+const names = [...new Set(g.map(r => nickOf(r) + (r.episodes?.length > 1 ? ` (x${r.episodes.length})` : '')))];
 const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.toLowerCase()]).filter(Boolean))];
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
@@ -3537,10 +3547,11 @@ function moveTo(next, s, tag, time) {
 const week = dayEdit.scope === 'week' ? isoDay(weekStart(weekOffset)) : '';
 if (tag === s.tag && time === s.time) return next;
 const home = tag === s.fromTag && time === s.fromTime;
-const double = !!week && moves.some(m => m.show === s.key && m.week === week && m.double);
+const was = week ? moves.find(m => m.show === s.key && m.week === week) : null;
+const double = !!(was?.double || was?.long);
 next = next.filter(m => !(m.show === s.key && (m.week === week || (!week && m.week === isoDay(weekStart(weekOffset))))));
 if (home && !double && (!week || !next.some(m => m.show === s.key && !m.week))) return next;
-return next.concat({ show: s.key, title: s.title, tag, time, week, ...(double && { double: true }) });
+return next.concat({ show: s.key, title: s.title, tag, time, week, ...(was?.double && { double: true }), ...(was?.long && { long: true }) });
 }
 $('daySave').onclick = () => {
 const placed = new Map(), problems = [];
