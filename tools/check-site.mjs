@@ -8,7 +8,7 @@
 // that exist in this checkout replace the published ones. Nothing is saved or posted: every request
 // that would write (GitHub API, the Cloudflare helper) is cut off.
 import { chromium } from 'playwright';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const SITE = 'https://ryotsushigawa.github.io/anime-schedule/';
@@ -24,7 +24,16 @@ for (const file of [...readdirSync('.').filter(f => f.endsWith('.js')), ...readd
   const run = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
   if (run.status !== 0) fail(`${file} does not parse: ${run.stderr.split('\n').slice(0, 4).join(' ')}`);
 }
-if (!failures.length) ok('all scripts parse');
+// ... and the stylesheets have matching braces (a stray "}" silently drops the rule after it)
+for (const file of readdirSync('.').filter(f => f.endsWith('.css'))) {
+  let depth = 0, broken = false;
+  for (const ch of readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')) {
+    if (ch === '{') depth++;
+    else if (ch === '}' && --depth < 0) { broken = true; break; }
+  }
+  if (broken || depth) fail(`${file} has unbalanced braces`);
+}
+if (!failures.length) ok('all scripts parse, stylesheets are balanced');
 
 const browser = await chromium.launch();
 async function open(viewport, init = {}) {
