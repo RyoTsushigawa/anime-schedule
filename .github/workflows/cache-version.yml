@@ -1,0 +1,42 @@
+# After a change to the page's files reaches main: raise the CACHE name in sw.js by itself, so visitors
+# get the new version offered at once ("Neue Version ist da"). Nobody has to remember the number.
+# Does nothing when the same push already changed the CACHE name.
+name: Cache version
+
+on:
+  push:
+    branches: [main]
+    paths: ['*.html', '*.css', '*.js', 'manifest.webmanifest', '*.png', 'services/**', '!sw.js']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cache-version
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned: a moved tag can't change what runs
+        with:
+          fetch-depth: 0
+      - name: Raise the CACHE name unless this push already did
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          name() { git show "$1:sw.js" 2>/dev/null | grep -m1 -oE "schedule-v[0-9]+" || true; }
+          now=$(name HEAD); was=$(name "$BEFORE")
+          echo "before: ${was:-unknown}, now: $now"
+          if [ -z "$now" ]; then echo "No CACHE name found in sw.js; nothing changed."; exit 0; fi
+          if [ -n "$was" ] && [ "$was" != "$now" ]; then echo "This push changed it already."; exit 0; fi
+          git pull --rebase origin main
+          now=$(grep -m1 -oE "schedule-v[0-9]+" sw.js); next="schedule-v$(( ${now#schedule-v} + 1 ))"
+          sed -i "s/$now/$next/" sw.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git commit -qam "Cache version ${next#schedule-}"
+          git push
+          echo "Raised to $next."
