@@ -458,6 +458,7 @@ a.menu-item { color: inherit; text-decoration: none; box-sizing: border-box; }
 #noticeUndo { flex: none; border-color: var(--accent); color: var(--accent); font-weight: 600; padding: 5px 12px; }
 #noticeUndo[hidden] { display: none; }
 .notice { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 14px; }
+.notice .pill { margin-left: 6px; padding: 3px 10px; font-size: 12px; }
 .status, .nomatch { color: var(--muted); text-align: center; padding: 40px 0; }
 .status.happy {
 display: grid;
