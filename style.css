@@ -1346,3 +1346,22 @@ body:has(#notice:not([hidden])) #refreshFeedback { bottom: calc(86px + env(safe-
  :is(#moveDlg, #planDlg, #delayDlg, #dayDlg, #scoreDlg) { padding: 16px; }
  .dlg :is(button.pill, input:not([type="checkbox"]), select) { min-height: 44px; }
 }
+
+/* Visual audit: consistent controls without changing the service-button alignment. */
+:is(#moveDlg, #planDlg, #delayDlg, #dayDlg, #scoreDlg) .dlg-row > .pill {
+ min-height: 36px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.25;
+}
+#delayDlg #delayMinutes { align-items: stretch; }
+#delayDlg #delayMinutes button { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+#delayDlg #delayDice { flex: 0 0 36px; padding-inline: 0; }
+.day h2 :is(.day-delay, .day-absent-button, .pause-shift, .day-discord, .day-edit) {
+ box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+ min-width: 34px; min-height: 30px; line-height: 1; border-radius: 999px;
+}
+@media (max-width: 560px) {
+ :is(#moveDlg, #planDlg, #delayDlg, #dayDlg, #scoreDlg) .dlg-row > .pill,
+ #delayDlg #delayMinutes button { min-height: 44px; }
+ #delayDlg #delayDice { flex-basis: 44px; }
+ .day h2 :is(.day-delay, .day-absent-button, .pause-shift, .day-discord, .day-edit) { min-width: 44px; min-height: 44px; }
+ .day h2 { flex-wrap: wrap; gap: 6px; }
+}
