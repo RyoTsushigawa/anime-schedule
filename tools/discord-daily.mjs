@@ -4,10 +4,16 @@
 //
 //   node tools/discord-daily.mjs            posts now to the webhook in DISCORD_WEBHOOK
 //   node tools/discord-daily.mjs --dry-run  only prints the message
+//   node tools/discord-daily.mjs --update   after a change to the plan (moves.json, nicknames.json): edits
+//                                           today's post so it shows the current plan; no new message, no ping
+//   node tools/discord-daily.mjs --test-edit  posts a test line to DISCORD_WEBHOOK_LOGS and edits it (checks editing works)
+//
+// daily-post.json remembers today's post (date, Discord message id, text), so --update can find it.
 //
 // The Cloudflare helper starts the workflow at 08:50 German time (WAIT_FOR_NINE=true); the run then
 // waits for 09:00. GitHub's own timer was too unreliable (hours late, or not at all).
 import { chromium } from 'playwright';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const SITE = process.env.SITE_URL || 'https://ryotsushigawa.github.io/anime-schedule/';
 const TZ = 'Europe/Berlin';
@@ -25,7 +31,26 @@ const DAY_ROLES = {
   Sonntag: '1093454458316402788',
 };
 const dryRun = process.argv.includes('--dry-run');
+const update = process.argv.includes('--update');
 const webhook = process.env.DISCORD_WEBHOOK || '';
+const POST_FILE = 'daily-post.json';
+// A webhook can edit its own messages: .../webhooks/<id>/<token>/messages/<message id>
+const editUrl = (hook, id) => { const u = new URL(hook); u.pathname = u.pathname.replace(/\/$/, '') + '/messages/' + id; return u.href; };
+const send = async (url, method, content, mentions) => {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, allowed_mentions: mentions }) });
+  if (!res.ok) throw new Error(`Discord answered ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return res.json();
+};
+
+if (process.argv.includes('--test-edit')) {
+  const logs = process.env.DISCORD_WEBHOOK_LOGS || '';
+  if (!logs) { console.log('The secret DISCORD_WEBHOOK_LOGS is missing or empty.'); process.exit(1); }
+  const first = await send(logs + (logs.includes('?') ? '&' : '?') + 'wait=true', 'POST', '🧪 Test (1/2): diese Nachricht wird gleich bearbeitet.', { parse: [] });
+  await new Promise(r => setTimeout(r, 3000));
+  await send(editUrl(logs, first.id), 'PATCH', '🧪 Test (2/2): bearbeitet. So aktualisiert sich der Tagespost, ohne neue Nachricht und ohne Ping.', { parse: [] });
+  console.log('Posted a test line and edited it.');
+  process.exit(0);
+}
 
 const berlin = (d = new Date()) => {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
@@ -36,6 +61,12 @@ const berlin = (d = new Date()) => {
 };
 
 const waitForNine = process.env.WAIT_FOR_NINE === 'true';
+const todayIso = (() => { const b = berlin(); return `${b.year}-${b.month}-${b.day}`; })();
+let posted = null;
+if (update) {
+  try { posted = JSON.parse(readFileSync(POST_FILE, 'utf8')); } catch {}
+  if (posted?.date !== todayIso || !posted?.id) { console.log("Today's post isn't out yet (or wasn't recorded); nothing to update."); process.exit(0); }
+}
 if (!dryRun && !webhook) {
   console.log('No DISCORD_WEBHOOK secret set; nothing posted.');
   process.exit(0);
@@ -46,6 +77,11 @@ try {
   // bypassCSP: the page's security rules forbid code from outside, which would block the checks below
   const page = await browser.newPage({ timezoneId: TZ, locale: 'de-DE', bypassCSP: true });
   page.on('pageerror', e => console.log('page error:', e.message));
+  // After a change the published copy lags a minute or more behind: the plan's own files come from this checkout.
+  if (update) await page.route(u => u.href.startsWith(SITE) && /\/(moves|nicknames)\.json$/.test(u.pathname), r => {
+    const file = new URL(r.request().url()).pathname.split('/').pop();
+    return existsSync(file) ? r.fulfill({ path: file, contentType: 'application/json' }) : r.continue();
+  });
   await page.goto(SITE, { waitUntil: 'load', timeout: 60_000 });
   // the page's own globals: everything loaded and this week's schedule drawn
   await page.waitForFunction(() => typeof ready !== 'undefined', null, { timeout: 60_000 });
@@ -85,16 +121,22 @@ try {
       return day ? `--- ${isoDay(d)} ---\n${discordMessage(day)}` : `--- ${isoDay(d)}: missing ---`;
     }));
     console.log('\nThis week (dry run only):\n' + week.join('\n'));
+    if (update) console.log(posted.text === message ? '\nUpdate: the post is still right.' : '\nUpdate: the post would be edited.');
     process.exit(0);
   }
 
-  const res = await fetch(webhook + (webhook.includes('?') ? '&' : '?') + 'wait=true', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    // role pings (e.g. Sophie's) go through, @everyone/@here never
-    body: JSON.stringify({ content: message, allowed_mentions: { parse: ['roles', 'users'] } }),
-  });
-  if (!res.ok) throw new Error(`Discord answered ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (update) {
+    if (posted.text === message) { console.log('The post is still right; nothing edited.'); process.exit(0); }
+    // an edit never pings, so nobody is notified twice
+    await send(editUrl(webhook, posted.id), 'PATCH', message, { parse: [] });
+    writeFileSync(POST_FILE, JSON.stringify({ ...posted, text: message, edited: new Date().toISOString() }, null, 1) + '\n');
+    console.log("Edited today's post.");
+    process.exit(0);
+  }
+
+  // role pings (e.g. Sophie's) go through, @everyone/@here never
+  const sent = await send(webhook + (webhook.includes('?') ? '&' : '?') + 'wait=true', 'POST', message, { parse: ['roles', 'users'] });
+  writeFileSync(POST_FILE, JSON.stringify({ date: todayIso, id: sent.id, text: message }, null, 1) + '\n');
   console.log('Posted to Discord.');
 } finally {
   await browser.close();
