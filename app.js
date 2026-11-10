@@ -1040,6 +1040,14 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
+// A recap week can also come out as a break: AniList doesn't count the recap as an episode, so the
+// show has none this week. LiveChart still has the recap (or its note) for this week: it's a recap.
+const recapThisWeek = r => {
+  const status = streamsDe?.status?.[r.alId];
+  const inWeek = at => at * 1000 >= days[0].date.getTime() - 86400000 && at * 1000 < weekEnd;
+  return (status?.recaps || []).some(x => inWeek(x.at)) || /\brecap/i.test(r.note?.text || '');
+};
+for (const d of days) for (const r of d.rows) if (r.pause && !r.skipped && !r.recap && recapThisWeek(r)) r.recap = true;
 for (const d of days) {
 assignWatchTimes(d);
 applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d);
