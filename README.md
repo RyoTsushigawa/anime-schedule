@@ -267,10 +267,8 @@ Emojis can go straight into a nickname. Server emotes need Discord's full code o
 `\:emote:` and send it; the message shows `<:emote:123…>`): paste that into a nickname and save, and from
 then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames.json` under `emotes`.
 
-**Pings:** the same dialog has a **Pings** list, one field per person: the code Discord shows for `\@Name`
-(`<@&…>` for a role, `<@…>` for a person). A show's line then pings its watchers who have one. Saved in
-`nicknames.json` under `pings`; an empty field means no ping. The dialog shows "@Name" and ":emote:"
-instead of the codes, and copying puts the codes back.
+The dialog shows "@Sophie" and ":emote:" instead of the codes, and copying puts the codes back. Sophie's
+ping is the only one and is built in (`DISCORD_PINGS` in `app.js`); nobody else wants one.
 
 **Nothing planned:** the post then reads "Heute steht nichts an." with the kek emote, and the weekday
 role is not pinged.
