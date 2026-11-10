@@ -1371,3 +1371,13 @@ body:has(#notice:not([hidden])) #refreshFeedback { bottom: calc(86px + env(safe-
  .day h2::after { display: none; }
  .day h2 > span:first-child { margin-inline-end: auto; }
 }
+
+/* One primary service, with additional choices available on demand. */
+.links .stream-more { flex: none; min-width: 32px; min-height: 32px; padding: 4px 7px; border-radius: 999px; color: var(--muted); font-size: 12px; }
+.stream-alternatives { display: contents; }
+.stream-alternatives[hidden] { display: none !important; }
+.stream-alternatives > .cr { min-width: 138px; }
+.slot-why { padding: 1px 7px; border-radius: 999px; color: var(--muted); font: inherit; font-size: 11px; line-height: 1.5; }
+#slotReasonDlg { box-sizing: border-box; width: min(420px, calc(100vw - 24px)); padding: 20px; }
+#slotReasonText { white-space: pre-line; color: var(--muted); line-height: 1.6; font-size: 14px; }
+@media (max-width: 560px) { .stream-alternatives > .cr { min-width: 0; } #slotReasonDlg .pill { min-height: 44px; } }

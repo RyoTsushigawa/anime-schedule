@@ -1,3 +1,24 @@
+
+function slotReasons(r) {
+ const notes = [];
+ const slot = r.slot || {};
+ const label = s => [s.tag, s.time].filter(Boolean).join(' ');
+ if (slot.from && (slot.tag !== slot.from.tag || slot.time !== slot.from.time)) notes.push('Im Plan verschoben: ' + label(slot.from) + ' → ' + label(slot) + '.');
+ if (r.delay) notes.push(r.delay + ' Minuten später durch Verspätungen im gemeinsamen Tagesplan, auch bei parallelen Serien.');
+ if (r.earlier) notes.push(r.earlier + ' Minuten früher durch frei gewordene Slots (Pause, Skip oder Abwesenheit).');
+ if (r.later) notes.push(r.later + ' Minuten später durch lange oder doppelte Folgen davor.');
+ if (r.long) notes.push('Lange Folge: zwei Slots im Plan.');
+ if (slot.double && r.episodes?.length > 1) notes.push('Doppelfolge: zwei Folgen und zwei Slots.');
+ if (r.skipped) notes.push(r.missing?.length ? 'Ausgesetzt wegen Abwesenheit: ' + r.missing.join(', ') + '.' : 'Diese Woche im gemeinsamen Plan ausgesetzt.');
+ if (slot.keepTime) notes.push('Zeiten beibehalten: spätere Serien behalten ihren Slot beim Überspringen.');
+ if (r.extra) notes.push('Manuell eingeplante Catch-up-Folge.');
+ return notes;
+}
+function explainSlot(html, r) {
+ const notes = slotReasons(r);
+ return notes.length ? html.replace('<div class="ep">', '<div class="ep"><button type="button" class="slot-why" data-slot-reasons="' + esc(notes.join('\n')) + '" aria-label="Warum liegt diese Serie in diesem Slot?">Warum?</button> ') : html;
+}
+
 const returningVisitor = (() => { try { return Object.keys(localStorage).some(k => k === 'tabs' || k.startsWith('sheet:') || k.startsWith('week:')); } catch { return false; } })();
 const QUERY = `query ($page: Int, $from: Int, $to: Int) {
   Page(page: $page, perPage: 50) {
@@ -537,7 +558,8 @@ if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) altern
 else if (streaming && !listed.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
 ? { label: 'AniWorld', url: source.aniworld }
 : { label: 'AniWorld-Suche', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
-return shown.map(button).join('') + alternatives.map(alternativeButton).join('');
+const buttons = [...shown.map(button), ...alternatives.map(alternativeButton)];
+  return buttons.length < 2 ? buttons.join('') : buttons[0] + '<button type="button" class="stream-more" data-stream-more aria-expanded="false" aria-label="Weitere Streamingdienste anzeigen">+' + (buttons.length - 1) + '</button><span class="stream-alternatives" hidden>' + buttons.slice(1).join('') + '</span>';
 }
 const searchKey = (...titles) => `data-search="${esc(titles.filter(Boolean).map(norm).join(' '))}"`;
 function applySearch() {
@@ -1100,9 +1122,9 @@ const rewatch = ({ m, links, watchAt, who, show, slot }) => `
       </div>`;
 const plainRow = r => r.pause ? pause(r) : r.fallback ? fallbackRow(r) : r.rewatch ? rewatch(r) : episodeRow(r);
 const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-const row = r => !r.delay && !r.earlier && !r.later ? plainRow(r) : plainRow(r)
+const row = r => explainSlot(!r.delay && !r.earlier && !r.later ? plainRow(r) : plainRow(r)
 .replace(/data-watch-time="[^"]*"/, `data-watch-time="${hhmm(r.plannedAt)}"`)
-.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time${r.delay || r.later ? ' late' : ''}" title="Unser Plan, geplant ${hhmm(r.plannedAt)}${r.delay ? ` · +${r.delay} Min.` : ''}${r.earlier ? ` · ${r.earlier} Min. früher (Skip)` : ''}${r.later ? ` · ${r.later} Min. später (lange Folge davor)` : ''}">`);
+.replace(/<div class="time"(?: title="[^"]*")?>/, `<div class="time${r.delay || r.later ? ' late' : ''}" title="Unser Plan, geplant ${hhmm(r.plannedAt)}${r.delay ? ` · +${r.delay} Min.` : ''}${r.earlier ? ` · ${r.earlier} Min. früher (Skip)` : ''}${r.later ? ` · ${r.later} Min. später (lange Folge davor)` : ''}">`), r);
 const delayNote = g => (rows.length && date ? (days.find(d => d.date === date)?.delayStarts || []) : [])
 .filter(x => {
 const first = Math.min(...rows.map(r => r.plannedAt ?? r.watchAt).filter(at => at >= x.at));
@@ -4129,3 +4151,25 @@ document.addEventListener('visibilitychange',updateWrappedBanner);
 $('list').addEventListener('click', e => { if (e.target.closest('[data-pick-people]')) { e.stopPropagation(); showPeople(true); $('groupButton').focus({ preventScroll: true }); } });
 
 $('list').addEventListener('click', e => { if (e.target.closest('[data-back-to-week]')) $('viewWeek').click(); });
+
+$('list').addEventListener('click', e => {
+ const more = e.target.closest('[data-stream-more]');
+ if (more) {
+  const alternatives = more.nextElementSibling;
+  const open = more.getAttribute('aria-expanded') !== 'true';
+  alternatives.hidden = !open;
+  more.setAttribute('aria-expanded', String(open));
+  more.textContent = open ? '−' : '+' + alternatives.querySelectorAll('a').length;
+ }
+ const why = e.target.closest('[data-slot-reasons]');
+ if (!why) return;
+ let dialog = $('slotReasonDlg');
+ if (!dialog) {
+  dialog = document.createElement('dialog'); dialog.id = 'slotReasonDlg'; dialog.className = 'dlg';
+  dialog.setAttribute('aria-labelledby', 'slotReasonTitle');
+  dialog.innerHTML = '<form method="dialog"><b id="slotReasonTitle">Zu diesem Slot</b><div id="slotReasonText"></div><div class="dlg-row"><button class="pill" value="close">Schließen</button></div></form>';
+  document.body.append(dialog);
+ }
+ $('slotReasonText').textContent = why.dataset.slotReasons;
+ dialog.showModal();
+});
