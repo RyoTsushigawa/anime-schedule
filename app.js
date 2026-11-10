@@ -1064,7 +1064,8 @@ let html = ordered.map(({ date, rows }) => {
 const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
 const hasAutoPause = rows.some(r => r.pause && !r.skipped && !r.slot?.keepTime);
-const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseShiftEnabled(isoDay(date)) ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseShiftEnabled(isoDay(date))}" title="Ja: spätere Serien rücken an diesem Tag in den freien Slot der Pause vor (feste Uhrzeiten bleiben). Nein: alle behalten ihre geplante Zeit.">Pause überspringen? ${pauseShiftEnabled(isoDay(date)) ? 'Ja' : 'Nein'}</button>` : '';
+const pauseOn = pauseShiftEnabled(isoDay(date));
+const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseOn ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseOn}" aria-label="Pause überspringen" title="Pause überspringen: ${pauseOn ? 'an · spätere Serien rücken in den freien Slot vor (feste Uhrzeiten bleiben)' : 'aus · alle behalten ihre geplante Zeit'}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
 const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap }) => `
