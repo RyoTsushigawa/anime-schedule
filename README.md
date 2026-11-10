@@ -187,6 +187,10 @@ Emojis can go straight into a nickname. Server emotes need Discord's full code o
 `\:emote:` and send it; the message shows `<:emote:123…>`): paste that into a nickname and save, and from
 then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames.json` under `emotes`.
 
+**If it fails:** a run that breaks writes a warning with a ping into the logs channel. For that, add the
+logs channel's webhook as the repository secret `DISCORD_WEBHOOK_LOGS` (same place as in step 2). If the
+helper can't start the run at all, it warns in its `DISCORD_TEST_WEBHOOK` channel.
+
 **Start at 08:50:** GitHub's own timer starts runs hours late or not at all, so the Cloudflare helper
 from "Verspätungen für alle" starts this run (the run then waits for 09:00):
 
