@@ -31,9 +31,12 @@ part, so this section says what runs where and what is still open. Keep it up to
   (`delays-worker.js`). The PC's weekly check flags unexpected files in this repository, so the helper code
   was deliberately not added here. Nobody working from GitHub alone has seen the PC tools: what this README
   says about them comes from earlier sessions and was not re-checked on 10 Nov.
-- Every change to the site needs a new `CACHE` name in `sw.js`, or visitors keep the old version.
-- The sandbox of a cloud chat cannot load the site's data (Google Sheet, AniList, github.io). Real-data
-  checks were done with a temporary workflow on a branch, removed again afterwards.
+- The `CACHE` name in `sw.js` decides when visitors are offered the new version. It raises itself after
+  page files change on `main` (`cache-version.yml`); nobody has to edit it by hand any more.
+- Every pull request is checked by `check.yml` (`tools/check-site.mjs`). A red check means: don't merge.
+- The sandbox of a cloud chat cannot load the site's data (Google Sheet, AniList, github.io). For a look at
+  real data, run `SCREENS=screens node tools/check-site.mjs` in a temporary workflow on a branch and remove
+  it again afterwards.
 - A parallel session may edit the same files: fetch `main` before every change.
 
 **Done on 9–10 Nov 2026** (pull requests #1–#28)
@@ -52,8 +55,8 @@ patch notes; this README brought in line with the site.
 - Repository secret `DISCORD_WEBHOOK_LOGS` was added by the owner on 10 Nov (cannot be verified from a
   chat); the failure step that uses it has never fired.
 - Whether bot v7 (`/abwesend`) is installed is unconfirmed.
-- The PC's weekly `live-check.mjs` may report `tools/discord-daily.mjs` and
-  `.github/workflows/discord-daily.yml` as unexpected files; they belong here.
+- The PC's weekly `live-check.mjs` may report files added on GitHub as unexpected: `tools/discord-daily.mjs`,
+  `tools/check-site.mjs` and the workflows `discord-daily.yml`, `check.yml`, `cache-version.yml`. They belong here.
 - Known limits: a long finale is only recognised once AniList knows the episode count; a "double-length
   premiere" is matched to episode 1 (a Part 2 that keeps counting needs **Lang** by hand).
 
@@ -62,7 +65,8 @@ patch notes; this README brought in line with the site.
 Keep everything as short and clean as possible. Desktop first, phones are not a priority. No countdowns,
 no calendar subscriptions, no dots for watchers, no text labels on day headings, no `/spitzname` bot
 command. The Watch planner and the absence calendar stay separate: the planner builds a schedule that works
-for everyone, the calendar is for short-term absences. The "Pause" chip above the week is an overview and stays. Dark theme is the default. "Edit" stays "Edit". Patch notes are in English. Warnings go to the
+for everyone, the calendar is for short-term absences. The "Pause" chip above the week is an overview and stays. Dark theme is the default. "Edit" stays "Edit". Patch notes are in English and only for big
+changes users will notice, not for small fixes or work behind the scenes. Warnings go to the
 bot test channel with a ping for the owner (Discord user `255387990136848385`), never to the schedule channel.
 
 The **Tools** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
@@ -159,7 +163,8 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 
 | File | What it is |
 |---|---|
-| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml` |
+| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml`, `check.yml` (checks every pull request), `cache-version.yml` (raises the `CACHE` name in `sw.js` by itself) |
+| `tools/check-site.mjs` | The pull-request check: loads the live site with the changed files, fails on page errors, views or dialogs that don't open, or a Discord message that doesn't build; `SCREENS=dir` also saves screenshots |
 | `index.html`, `style.css` | The page and its look |
 | `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
