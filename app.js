@@ -341,7 +341,7 @@ const slotLabel = s => [s?.tag, s?.time].filter(Boolean).join(' ') || 'kein Tag'
 const moveButton = (show, slot) => !movesKey || !show ? '' :
 `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
     data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" data-skip="${slot?.skip ? 1 : ''}" data-keep-time="${slot?.keepTime ? 1 : ''}"
-    data-from-tag="${esc((slot?.from || slot)?.tag || '')}" data-from-time="${esc((slot?.from || slot)?.time || '')}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben">⇄</button>`;
+    data-from-tag="${esc((slot?.from || slot)?.tag || '')}" data-from-time="${esc((slot?.from || slot)?.time || '')}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben" aria-label="Verschieben"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h15l-4-4M20 16H5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
 const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
 || note.text.replace(/\btoday\b/i, 'am ' + shortDayDate(new Date(note.at * 1000)));
 const reasonHtml = (note, news, none) => note
@@ -1076,9 +1076,10 @@ const pauseOn = pauseShiftEnabled(isoDay(date));
 const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseOn ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseOn}" aria-label="Pause überspringen" title="Pause überspringen: ${pauseOn ? 'an · spätere Serien rücken in den freien Slot vor (feste Uhrzeiten bleiben)' : 'aus · alle behalten ihre geplante Zeit'}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
-const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap }) => `
+const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap, alId }) => `
       <div class="row pause${skipped ? ' skipped' : ''}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
+        ${coverFor(alId) ? `<img src="${safeUrl(coverFor(alId))}" alt="" loading="lazy">` : '<span class="no-cover"></span>'}
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}${skipped || recap ? `<span class="ep-tag">${skipped ? (missing?.length ? 'Abwesend' : 'Skip') : 'Recap'}</span>` : ''}</div>
           <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' · Zeiten beibehalten' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>
@@ -1132,7 +1133,7 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, ex
           <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${long ? '<span class="ep-tag" title="Lange Folge: braucht zwei Slots">Lang</span>' : ''}${whoChips(who, away)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
-        ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen">⇄</button>` : '') : moveButton(show, slot)}
+        ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen" aria-label="Nachholen ändern"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h15l-4-4M20 16H5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '') : moveButton(show, slot)}
       </div>`;
 const groups = [];
 // Pauses retain their own original slot, even if another show moves into it.
@@ -1268,7 +1269,7 @@ notice('Liste konnte nicht aktualisiert werden: ' + error.message);
 } finally {
 button.disabled = false;
 button.removeAttribute('aria-busy');
-button.textContent = '↻';
+button.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 };
 async function anilistAsMe(query, variables = {}, account = auth) {
