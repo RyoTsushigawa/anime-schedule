@@ -353,8 +353,6 @@ body.no-drop .drop, body.no-drop .drop-space, body.no-move .move, body.no-move .
 .discord-nicks summary { cursor: pointer; font-weight: 600; }
 .discord-nicks > * + * { margin-top: 8px; }
 .nick-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
-.discord-pings-title { margin-top: 18px; }
-#discordPingList .nick-row span { flex: 0 0 90px; }
 .nick-row span { flex: 0 1 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 :root { --late: #f08c00; }
 .day h2 .day-delay { order: 1; display: inline-grid; place-items: center; padding: 3px 9px; }
