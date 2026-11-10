@@ -342,7 +342,10 @@ const moveButton = (show, slot) => !movesKey || !show ? '' :
 `<button class="move" data-move-title="${esc(show.romaji || show.english)}" data-move-name="${esc(show.english || show.romaji)}"
     data-tag="${esc(slot?.tag || '')}" data-time="${esc(slot?.time || '')}" data-moved="${slot?.from ? 1 : ''}" data-skip="${slot?.skip ? 1 : ''}" data-keep-time="${slot?.keepTime ? 1 : ''}"
     data-from-tag="${esc((slot?.from || slot)?.tag || '')}" data-from-time="${esc((slot?.from || slot)?.time || '')}" draggable="true" title="Auf einen Tag oder Slot ziehen, oder klicken, um ein Ziel einzugeben" aria-label="Verschieben"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h15l-4-4M20 16H5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
-const noteReason = note => note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
+// LiveChart's note in a few words: "Recap der Folgen 1–6", the reason after "due to", otherwise the note itself
+const noteReason = note => /\brecap\b/i.test(note.text)
+? 'Recap' + (note.text.match(/recap of episodes?\s+(\d+\s*[–-]\s*\d+)/i) ? ` der Folgen ${note.text.match(/recap of episodes?\s+(\d+\s*[–-]\s*\d+)/i)[1].replace(/\s*[–-]\s*/, '–')}` : '')
+: note.text.match(/\b(?:due to|because of)\s+(.+?)\.?$/i)?.[1]
 || note.text.replace(/\btoday\b/i, 'am ' + shortDayDate(new Date(note.at * 1000)));
 const reasonHtml = (note, news, none) => note
 ? esc(noteReason(note))

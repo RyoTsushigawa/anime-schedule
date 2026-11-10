@@ -1848,17 +1848,7 @@ function startFollowing(){
   });
 }
 
-// Light / dark toggle: remembers your choice; until you pick one, it follows your system setting
-(() => {
-  const root = document.documentElement, btn = $('themeBtn');
-  const current = () => root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const show = () => { btn.textContent = current()==='dark' ? '☀' : '☾'; btn.title = current()==='dark' ? 'Light mode' : 'Dark mode'; };
-  try{ const saved = localStorage.getItem('theme'); if(saved === 'light' || saved === 'dark') root.dataset.theme = saved;
-    const accent = localStorage.getItem('accent'); if(/^#[0-9a-f]{6}$/i.test(accent || '')) root.style.setProperty('--accent', accent); }catch(e){}
-  show();
-  btn.onclick = () => { const next = current()==='dark' ? 'light' : 'dark'; root.dataset.theme = next; try{ localStorage.setItem('theme', next); }catch(e){} show(); };
-  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', show);
-})();
+// Light / dark and the accent colour follow the main page (../tool-theme.js in the head).
 // Results filters
 $('fLetter').insertAdjacentHTML('beforeend', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => `<option value="${c}">${c}</option>`).join(''));
 $('fScore').insertAdjacentHTML('beforeend', LEVELS.map(v => `<option value="${v}">${fmt(v)}</option>`).join(''));
