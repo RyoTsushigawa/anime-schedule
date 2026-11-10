@@ -19,6 +19,8 @@ await p.click(p.$('settingsButton'));
 await p.click(p.$('list').querySelector('[data-delay]') || p.$('list').querySelector('.day-delay'));
 await save('delay');p.$('delayDlg').close();
 p.advance(10*3600000);await p.click(p.$('viewCatchup'));await save('catchup');
+p.run(`{ const row = document.querySelector('#list .row'); row.outerHTML = explainSlot(row.outerHTML, {slot:{tag:'Fr.',time:'21:00',from:{tag:'Do.',time:'20:00'}},delay:30,later:30}); }`);
+await p.click(p.document.querySelector('[data-slot-reasons]'));await save('reasons');
 p.close();
 await writeFile(new URL('./fixtures/visual-cover.svg',import.meta.url),'<svg xmlns="http://www.w3.org/2000/svg" width="50" height="70"><rect width="50" height="70" fill="#8171ab"/><circle cx="25" cy="28" r="15" fill="#d5c3fb"/></svg>');
 
