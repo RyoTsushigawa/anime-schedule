@@ -1331,3 +1331,18 @@ html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: reduce) {
   #list .watch[aria-busy="true"]::after { animation: none; border-style: dotted; }
 }
+
+/* Shared editor rhythm and quiet background-refresh status. */
+:is(#moveDlg, #planDlg, #delayDlg, #dayDlg, #scoreDlg) { box-sizing: border-box; padding: 20px; max-height: calc(100dvh - 24px); overflow-y: auto; }
+:is(#moveDlg, #planDlg, #delayDlg, #dayDlg, #scoreDlg) form { gap: 12px; }
+.dlg :is(#moveMsg, #planMsg, #delayMsg, #dayMsg, #scoreMsg) { line-height: 1.45; overflow-wrap: anywhere; }
+.dlg :is(#moveMsg, #planMsg, #delayMsg, #dayMsg, #scoreMsg):empty { display: none; }
+.dlg .dlg-foot { padding-top: 12px; border-top: 1px solid var(--line); }
+.dlg[aria-busy="true"] { cursor: progress; }
+#refreshFeedback { position: fixed; z-index: 30; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 12px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); color: var(--muted); font-size: 12px; pointer-events: none; }
+body:has(#notice:not([hidden])) #refreshFeedback { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+.status .empty-action { display: block; margin: 12px auto 0; }
+@media (max-width: 560px) {
+ :is(#moveDlg, #planDlg, #delayDlg, #dayDlg, #scoreDlg) { padding: 16px; }
+ .dlg :is(button.pill, input:not([type="checkbox"]), select) { min-height: 44px; }
+}
