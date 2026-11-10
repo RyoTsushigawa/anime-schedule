@@ -14,15 +14,19 @@ part, so this section says what runs where and what is still open. Keep it up to
 |---|---|---|
 | GitHub (this repository, branch `main`) | The site itself (GitHub Pages), `moves.json` and `nicknames.json` written by the page | The copy here is the current one. Changes go in through pull requests. |
 | GitHub Actions | `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status), `source-health.yml`, `masterset-prices.yml` | GitHub's own timer runs hours late or skips days. The daily post is therefore started from Cloudflare. |
-| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v10**. Its code is **not** in this repository (see below). |
-| The owner's PC | `tools/build-streams.mjs` (must run from Germany), `tools/publish.mjs` and the weekly checks, with the tokens | These tools exist only on the PC. Last stream build uploaded: 8 Nov 2026. |
+| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v13** (checked 10 Nov), cron trigger set. Its code is **not** in this repository (see below). |
+| The owner's PC | `tools/build-streams.mjs` (must run from Germany), `tools/publish.mjs` and the weekly checks, with the tokens | These tools exist only on the PC. Since 10 Nov `publish.mjs` uploads data only (see below). |
 | Discord bot (separate zip, v7) | `/delay`, `/abwesend` and status | Not in this repository. Whether v7 is installed is unconfirmed. |
 
 **Things that bite**
 
-- `tools/publish.mjs` uploads files from the PC. If the PC's copy of `app.js`, `style.css` or `index.html`
-  is older than `main`, a publish overwrites newer work. Bring the PC folder up to date first. Planned fix:
-  let the PC publish data files only (`streams-de.json`, `seasons.json`, `tabs.json`).
+- `tools/publish.mjs` on the PC was changed on 10 Nov: it uploads only data (`streams-de.json`, `seasons.json`,
+  `fallback-links.json`, `tabs.json`, `config.json`) and first fetches the build tools from GitHub. It no
+  longer uploads the page's code. `--code` is the old behaviour and overwrites GitHub's page files: don't use it
+  unless the PC's files are known to be newer.
+- The PC holds the original, commented page source; what is on GitHub is the version stripped of comments
+  (`tools/slim.mjs`), and all work since 9 Nov was done on that. The PC's page files are out of date: an archive,
+  not a source to publish from.
 - Some tools exist only on the PC (marked **PC only** under "Files"), among them the helper's code
   (`delays-worker.js`). The PC's weekly check flags unexpected files in this repository, so the helper code
   was deliberately not added here. Nobody working from GitHub alone has seen the PC tools: what this README
@@ -42,12 +46,14 @@ patch notes; this README brought in line with the site.
 
 **Still open**
 
-- 11 Nov, 09:00: first daily post started by Cloudflare. If nothing comes: is the cron trigger set in the
-  Worker (Settings → Trigger events)? A refused start is reported in the bot test channel.
-- Repository secret `DISCORD_WEBHOOK_LOGS` (webhook of the bot test channel) is not set yet; without it a
-  failed post run sends no warning.
-- Helper **v13** (adds the owner's ping to the warning and a rehearsal mode) was handed over as a file but
-  is not deployed. The PC's `tools/delays-worker.js` should match whatever is deployed.
+- 11 Nov: first morning with the Cloudflare timer. Expected: a rehearsal run under Actions shortly after
+  07:50 German time (posts nothing) and the real post at 09:00. A refused start is reported in the bot test
+  channel with a ping.
+- Repository secret `DISCORD_WEBHOOK_LOGS` was added by the owner on 10 Nov (cannot be verified from a
+  chat); the failure step that uses it has never fired.
+- Whether bot v7 (`/abwesend`) is installed is unconfirmed.
+- The PC's weekly `live-check.mjs` may report `tools/discord-daily.mjs` and
+  `.github/workflows/discord-daily.yml` as unexpected files; they belong here.
 - Known limits: a long finale is only recognised once AniList knows the episode count; a "double-length
   premiere" is matched to episode 1 (a Part 2 that keeps counting needs **Lang** by hand).
 
