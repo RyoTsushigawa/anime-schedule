@@ -855,7 +855,7 @@ if (!everyone) updateFallbackControls();
 const fallback = fallbackWeeks.has(start.getTime());
 const people = everyone ? [...new Set([...plans.values()].flatMap(s => s.people))] : activePeople();
 if (!people.length) {
-$('list').innerHTML = '<div class="status">Keine Person ausgewählt.</div>';
+$('list').innerHTML = '<div class="status">Keine Person ausgewählt.<button class="pill empty-action" data-pick-people>Personen auswählen</button></div>';
 return;
 }
 const whoBySheet = new Map();
@@ -1679,9 +1679,9 @@ function syncSavingButtons() {
 for (const b of document.querySelectorAll('#list button[data-media]')) {
 const saving = pendingChanges.has(Number(b.dataset.media));
 b.disabled = saving || bulkSaving || accountLoading;
-if (saving) {
+if (saving || accountLoading || bulkSaving) {
 if (!b.hasAttribute('data-idle-title')) b.dataset.idleTitle = b.title;
-b.title = `Speichert auf ${listService()}…`;
+b.title = accountLoading ? 'Konto wird geladen. Bitte kurz warten.' : bulkSaving ? 'Mehrere Folgen werden gespeichert. Bitte kurz warten.' : `Speichert auf ${listService()}…`;
 } else if (b.hasAttribute('data-idle-title')) {
 b.title = b.dataset.idleTitle;
 delete b.dataset.idleTitle;
@@ -2139,7 +2139,7 @@ if (countingCatchup === job && auth === job.account && $('anilistUser').value.tr
 } catch {} finally { if (countingCatchup === job) countingCatchup = null; }
 }
 let catchupGeneration = 0;
-async function loadCatchup(refresh = false) {
+async function loadCatchupContent(refresh = false) {
 const generation = ++catchupGeneration, account = auth;
 updateFallbackControls();
 const user = listUser(), friend = friendList.value;
@@ -2251,7 +2251,7 @@ let unfolded = false;
 try { unfolded = localStorage.getItem('notListedOpen') === '1'; } catch {}
 $('list').innerHTML = rows.length ? top + listed.map(show).join('') + (notListed.length
 ? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '')
-: '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.</div>';
+: '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.<button class="pill" data-back-to-week>Zum Zeitplan</button></div>';
 $('list').querySelector('.not-listed > summary')?.addEventListener('click', e => {
 try { localStorage.setItem('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1'); } catch {}
 });
@@ -2331,7 +2331,7 @@ return planShowsCache.media
 .filter(m => !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
 .map(m => ({ progress: m.mediaListEntry?.progress || 0, media: m, missing: true }));
 }
-async function load(refresh = false) {
+async function loadContent(refresh = false) {
 if (listView()) return loadCatchup(refresh);
 const start = weekStart(weekOffset);
 const end = new Date(start); end.setDate(end.getDate() + 6);
@@ -2710,14 +2710,55 @@ async function undoMove() {
 const before = movesUndo;
 try { await saveMoves(before); notice('Rückgängig gemacht.'); load(true); } catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
 }
+
+// Keep a pending save attached to the editor that started it.
+function beginEditorSave(dialogId, messageId) {
+ const dialog = $(dialogId), message = $(messageId);
+ const token = Symbol('editor-save');
+ dialog.saveToken = token;
+ const controls = [...dialog.querySelectorAll('input, select, textarea, button')].map(el => [el, el.disabled]);
+ controls.forEach(([el]) => { el.disabled = true; });
+ dialog.setAttribute('aria-busy', 'true');
+ message.setAttribute('role', 'status');
+ message.textContent = 'Speichert…';
+ const cancel = e => e.preventDefault();
+ dialog.addEventListener('cancel', cancel);
+ const finish = () => {
+  if (dialog.saveToken !== token) return;
+  controls.forEach(([el, disabled]) => { el.disabled = disabled; });
+  dialog.removeAttribute('aria-busy');
+  dialog.removeEventListener('cancel', cancel);
+  dialog.removeEventListener('close', finish);
+  delete dialog.saveToken;
+ };
+ dialog.addEventListener('close', finish, { once: true });
+ return { active: () => dialog.saveToken === token && dialog.open, finish,
+  failed: error => { if (dialog.saveToken === token) message.textContent = 'Nicht gespeichert: ' + error.message + '. Deine Eingaben bleiben erhalten. Bitte erneut speichern.'; } };
+}
+let refreshingViews = 0;
+async function withRefreshFeedback(refresh, action) {
+ const visible = refresh && !!document.querySelector('#list .row');
+ let badge = document.getElementById('refreshFeedback');
+ if (visible) {
+  if (!badge) { badge = document.createElement('span'); badge.id = 'refreshFeedback'; badge.setAttribute('role', 'status'); document.body.append(badge); }
+  refreshingViews++; badge.hidden = false; badge.textContent = 'Wird aktualisiert…';
+ }
+ try { return await action(); }
+ finally { if (visible && --refreshingViews === 0) badge.hidden = true; }
+}
+async function load(refresh = false) { return withRefreshFeedback(refresh, () => loadContent(refresh)); }
+async function loadCatchup(refresh = false) { return withRefreshFeedback(refresh, () => loadCatchupContent(refresh)); }
+
 async function storeMoves(next, done, dlg = 'moveDlg', msg = 'moveMsg') {
+  if ($(dlg).saveToken) return;
+  const editor = beginEditorSave(dlg, msg);
 $(msg).textContent = 'Speichert…';
 try {
 await saveMoves(next);
-$(dlg).close();
+if (editor.active()) $(dlg).close();
 notice(`${done} Alle sehen es in etwa einer Minute.`);
 load(true);
-} catch (e) { $(msg).textContent = `Nicht gespeichert: ${e.message}`; }
+} catch (e) { editor.failed(e); } finally { editor.finish(); }
 }
 $('moveTag').addEventListener('change', syncMoveDialog);
 for (const id of ['moveDouble', 'moveLong']) $(id).onclick = () => {
@@ -3212,16 +3253,18 @@ try { await changeDelays(day, show, add); notice('Verspätung wieder da.'); if (
 catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
 }
 async function storeDelay(add, done, undo = null) {
+ if ($('delayDlg').saveToken) return;
+ const editor = beginEditorSave('delayDlg', 'delayMsg');
 $('delayMsg').textContent = 'Speichert…';
 $('delaySave').disabled = $('delayRemove').disabled = true;
 try {
 await changeDelays(delayDay.date, $('delayFrom').value, add, delayDay.current?.show);
-$('delayDlg').close();
+if (editor.active()) $('delayDlg').close();
 notice(`${done} Alle sehen es in etwa einer Minute.`, !!undo);
 delayUndo = undo;
 if (lastWeekRender) render(...lastWeekRender);
-} catch (e) { $('delayMsg').textContent = `Nicht gespeichert: ${e.message}`; }
-finally { $('delaySave').disabled = $('delayRemove').disabled = false; }
+} catch (e) { editor.failed(e); }
+finally { editor.finish(); }
 }
 $('delaySave').onclick = () => {
 const minutes = Math.round(delayMinutes());
@@ -4082,3 +4125,7 @@ updateWrappedBanner();
 setInterval(updateWrappedBanner,60000);
 document.addEventListener('visibilitychange',updateWrappedBanner);
 
+
+$('list').addEventListener('click', e => { if (e.target.closest('[data-pick-people]')) { e.stopPropagation(); showPeople(true); $('groupButton').focus({ preventScroll: true }); } });
+
+$('list').addEventListener('click', e => { if (e.target.closest('[data-back-to-week]')) $('viewWeek').click(); });
