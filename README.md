@@ -23,20 +23,22 @@ part, so this section says what runs where and what is still open. Keep it up to
 - `tools/publish.mjs` uploads files from the PC. If the PC's copy of `app.js`, `style.css` or `index.html`
   is older than `main`, a publish overwrites newer work. Bring the PC folder up to date first. Planned fix:
   let the PC publish data files only (`streams-de.json`, `seasons.json`, `tabs.json`).
-- This README lists PC tools that are not in the repository (`publish.mjs`, `delays-worker.js`,
-  `delay-check.mjs`, `live-check.mjs`, …). The PC's weekly check flags unexpected files here, so the helper
-  code was deliberately not added.
+- Some tools exist only on the PC (marked **PC only** under "Files"), among them the helper's code
+  (`delays-worker.js`). The PC's weekly check flags unexpected files in this repository, so the helper code
+  was deliberately not added here. Nobody working from GitHub alone has seen the PC tools: what this README
+  says about them comes from earlier sessions and was not re-checked on 10 Nov.
 - Every change to the site needs a new `CACHE` name in `sw.js`, or visitors keep the old version.
 - The sandbox of a cloud chat cannot load the site's data (Google Sheet, AniList, github.io). Real-data
   checks were done with a temporary workflow on a branch, removed again afterwards.
 - A parallel session may edit the same files: fetch `main` before every change.
 
-**Done on 9–10 Nov 2026** (pull requests #1–#26)
+**Done on 9–10 Nov 2026** (pull requests #1–#28)
 
 Daily Discord post with weekday role ping, nicknames, emotes and the "Fällt aus" list (Skip / Recap /
 Pause); absence calendar with "ab"/"bis" times; Doppelt and the new Lang (two slots, "(x2)" in the post);
 LiveChart "double-length" notes; partial absences checked at the real watch time; Recap weeks detected;
-icon buttons on the day heading; regrouped move dialog; help sections and patch notes.
+icon buttons on the day heading; regrouped move dialog; pause rows with reason tags; help sections and
+patch notes; this README brought in line with the site.
 
 **Still open**
 
@@ -63,19 +65,26 @@ Single open episodes use one compact card; several stay grouped chronologically 
 Paused shows keep a smaller card in their slot. MAL avatars come from the connected profile, with an
 initial if unavailable.
 
-**Moving shows** (with the GitHub key in this browser): **Edit** next to the views turns on moving.
+**Moving shows** (with the GitHub key in this browser): **Edit** in the top row turns on moving.
 Drag a card onto the middle of another show to share its slot, or onto its top or bottom edge to go
-before or after; it saves at once for everyone, and **Rückgängig** in the notice undoes it. **Woche** or
-**Immer** sets how long a move lasts. On phones, hold the card 300 ms first; normal swipes still scroll.
-⇄ types a destination by hand, **Edit** on a day heading rewrites the day as a list, and the Discord icon
-turns the day into the message for the server.
+before or after; it saves at once for everyone, and **Rückgängig** in the notice undoes it. **Diese Woche** or
+**Dauerhaft** sets how long a move lasts. On phones, hold the card 300 ms first; normal swipes still scroll.
+⇄ opens the move dialog for one show: day and time, **Diese Woche / Dauerhaft**, **Doppelt** (last week's
+episode comes along) or **Lang** (an overlong episode); both take two slots, so later shows move back
+30 minutes, and both only apply to the current week. **Skip** drops the show for the week. The pencil on a
+day heading rewrites the day as a list, and the Discord icon turns the day into the message for the server.
+
+**Long episodes** are also found by themselves: LiveChart's card note ("Double-length premiere", or a note
+about a long finale) and timetable notes ("one-hour special") are stored by the daily build as `long` in
+`streams-de.json`. Two episodes that merely air in the same week are *not* treated as a double.
 
 **Abwesenheiten:** the calendar button in the top bar (or "Abwesend" on a day) opens a month calendar.
 Tap a day, or a first and last day for a range, pick the people, and choose the whole day, "Ab …" (away
-from that time on) or "Bis …" (there only from that time). A show is skipped when at most one person is
-left at its planned time; the schedule, the Discord message and the 9:00 post all follow it. Saved in
-`moves.json` (`absent`); without the GitHub key it goes through the Cloudflare helper, which needs the
-`{ absent, days }` request added (replaces the absences of those days).
+from that time on) or "Bis …" (there only from that time). A show is set out when at most one person is
+left at the time it is really watched (after delays and long episodes); the schedule, the Discord message
+and the 9:00 post all follow it. On a show that still runs, absent watchers' names are struck through.
+Absences can also repeat weekly (12 weeks). Saved in `moves.json` (`absent`); everyone can enter them, without
+the GitHub key through the Cloudflare helper (v9 or later).
 
 **Verspätung:** the clock on today's heading adds a delay from one show on; it and every later show move,
 and delays add up. **Edit** on the delay line changes or removes it. Everyone can add one (see
@@ -91,8 +100,8 @@ off GitHub. MAL accounts support Week/Catch-up/Non-seasonal, ✓, Drop, whole-nu
 ID mappings come from AniList `idMal` and the LiveChart season index, never guessed titles.
 Native MAL metadata and saved mappings remain usable if AniList is down.
 
-**Optional two-list sync:** connect both accounts, choose the counterpart under “Keep lists
-together”, then enable “Sync both lists”. Only subsequent actions made in this schedule are
+**Optional two-list sync:** connect both accounts, choose the counterpart under **Listen-Sync**
+in the account menu, then switch **An** on. Only subsequent actions made in this schedule are
 mirrored; no existing list is imported or overwritten. Pairing is explicit and per browser,
 including when names differ. Undo restores each provider's exact original values. Scores
 convert between scales (MAL uses whole numbers). Partial failures are shown; a partner that
@@ -108,8 +117,8 @@ The ranker's separate AniList writes are not included in this schedule-specific 
   counted separately. Explicit `FINISHED` media status suppresses end-of-run warnings; an empty
   next-episode date alone does not mean finished. Recent season finishes are not treated as rewatches.
 
-Keyboard: **← / →** changes weeks in Week view; **T** shows today; **1 / 2 / 3** opens
-Week / Catch-up / Non-seasonal; **/** focuses search; **?** opens the guide at its shortcuts.
+Keyboard: **← / →** changes weeks in Week view; **T** shows today; **V** adds a delay for today;
+**G** switches Solo / Gruppe; **1 / 2 / 3** opens Week / Catch-up / Non-seasonal; **/** focuses search; **?** opens the guide at its shortcuts.
 Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser modifiers.
 **Ctrl/Cmd+Z** still undoes the latest AniList change outside text fields and dialogs.
 
@@ -118,15 +127,17 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 - **Airing times** come live from AniList.
 - **AniList outage fallback:** use the browser's last saved week first; without one, use the site's
   independently updated LiveChart release records and the Guckplan. Unconfirmed episodes keep their
-  watch day and stream links, labelled “Episode not confirmed”, without an episode tick. A visible
+  watch day and stream links, labelled “Folge nicht bestätigt”, without an episode tick. A visible
   notice identifies the fallback and its update time. No weekly dates or episode numbers are guessed.
   Daily LiveChart runs retain observed releases for six weeks; existing installations begin with the
   next-episode data already present. Catch-up uses its saved AniList list when available; progress
   changes and first-time list downloads still require AniList.
 - **German streams** come from LiveChart.me and are saved in `streams-de.json` once a week, together with
   release times on our services, each show's next episode and recent break/delay headlines.
-- Shows without an episode that week appear as **Pause** (back date + announcement) when LiveChart has a
-  later episode; older shows in the plan that AniList lists as finished appear as **Rewatch** in their slot.
+- Shows without an episode that week appear as a **Pause** row (back date + announcement) when LiveChart has a
+  later episode; a recap week gets the tag **Recap**, a skipped show **Skip**, a show set out by absences
+  **Abwesend**. The arrow icon on the day heading ("Pause überspringen") decides whether later shows move up
+  into the free slot; older shows in the plan that AniList lists as finished appear as **Rewatch** in their slot.
 - **Catch-up** view: everything on an AniList "Watching" list with episodes out but not yet watched.
 - **Connect AniList** (optional, per browser): the ✓ next to an episode sets your AniList progress. Uses the
   AniList API client 54702 (redirect URL `https://ryotsushigawa.github.io/anime-schedule/`); the login key
@@ -137,8 +148,11 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 
 ## Files
 
+Rows marked **PC only** are not in this repository: they exist only in the owner's folder on the PC.
+
 | File | What it is |
 |---|---|
+| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml` |
 | `index.html`, `style.css` | The page and its look |
 | `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
@@ -148,20 +162,23 @@ Navigation shortcuts ignore typing, open menus/dialogs, held keys and browser mo
 | `seasons.json`, `fallback-links.json` | Season index and the alternative show links (daily GitHub run) |
 | `nicknames.json` | Short show names for the Discord message (written from the Discord dialog) |
 | `moves.json` | Moves, delays and kept delay reasons (only on GitHub, written by the page and the delay helper) |
-| `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany) |
-| `tools/publish.mjs` | Runs the tests and the secret guard, then uploads the changed files to GitHub |
-| `tools/secret-scan.mjs` | The secret guard: stops a publish or a bot zip that contains a GitHub key, Discord webhook address or bot token |
-| `tools/mal-check.mjs` | Weekly, read-only: the MyAnimeList helper answers, asks for a login, turns strangers away and is the current version |
-| `tools/key-check.mjs` | Weekly, read-only: warns three weeks before the publish key (`tools/github-token.txt`) runs out |
-| `tools/weekly-alert.mjs` | End of the weekly run: anything that needs a look goes to the bot test channel through the webhook in `tools/alert-webhook.txt` (this PC only; `--test` sends one test line) |
-| `tools/live-check.mjs` | Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo, GitHub Pages shows the latest upload |
+| `tools/build-streams.mjs` | Rebuilds `streams-de.json` (about 7 minutes; must run from Germany); the daily GitHub run uses it for the status part only |
+| `tools/livechart-pages.mjs`, `tools/fallback-links.mjs`, `tools/check-sources.mjs` | Reading LiveChart's pages; the alternative show links; the AniWorld check |
+| `tools/publish.mjs` | **PC only.** Runs the tests and the secret guard, then uploads the changed files to GitHub |
+| `tools/secret-scan.mjs` | **PC only.** The secret guard: stops a publish or a bot zip that contains a GitHub key, Discord webhook address or bot token |
+| `tools/mal-check.mjs` | **PC only.** Weekly, read-only: the MyAnimeList helper answers, asks for a login, turns strangers away and is the current version |
+| `tools/key-check.mjs` | **PC only.** Weekly, read-only: warns three weeks before the publish key (`tools/github-token.txt`) runs out |
+| `tools/weekly-alert.mjs` | **PC only.** End of the weekly run: anything that needs a look goes to the bot test channel through the webhook in `tools/alert-webhook.txt` (this PC only; `--test` sends one test line) |
+| `tools/live-check.mjs` | **PC only.** Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo, GitHub Pages shows the latest upload |
 | `tools/discord-daily.mjs` | Posts today's schedule to Discord every day at 09:00 (GitHub run `discord-daily.yml`, started by the Cloudflare helper, see below) |
-| `tools/delays-worker.js` | The Cloudflare helper that saves delays for everyone |
-| `tools/delay-check.mjs` | Weekly, read-only: the helper answers, refuses strangers and is the current version |
-| `tabs.json`, `tools/tab-list.mjs` | The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
-| `tests/` | The page clicked through in a simulated browser (`node --test` there) |
+| `tools/delays-worker.js` | **PC only.** The Cloudflare helper: saves delays and absences for everyone and starts the daily Discord post |
+| `tools/delay-check.mjs` | **PC only.** Weekly, read-only: the helper answers, refuses strangers and is the current version |
+| `tabs.json`, `tools/tab-list.mjs` | (`tab-list.mjs` is **PC only**.) The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
+| `tests/` | **PC only.** The page clicked through in a simulated browser (`node --test` there) |
 
 ## Weekly refresh
+
+(Everything in this section runs on the owner's PC with tools that are **PC only**.)
 
 A Windows scheduled task, **Anime Schedule - German streams**, runs both scripts every Monday at 05:00
 (or the next time the PC is on) without opening a window. The output is in `tools/last-run.log`.
@@ -187,11 +204,14 @@ candidates in `tools/last-run.log` as `check:` lines; a title that's fine as it 
 6. After a minute the page is at `https://ryotsushigawa.github.io/anime-schedule/`.
 
 Changes to the page made on this PC are uploaded by the next weekly run, or right away with `node tools/publish.mjs`.
+**Careful:** the site is now also changed directly on GitHub (pull requests). Bring the PC folder up to date
+with `main` before publishing, or the PC's older files overwrite the newer ones.
 
 ## Verspätungen für alle (one time)
 
 With the GitHub key, "Verspätung" on today's heading saves straight to `moves.json`. For everyone else
-a small helper on Cloudflare saves it: it holds its own GitHub token and only changes the delays.
+a small helper on Cloudflare saves it: it holds its own GitHub token and only changes the delays and absences.
+The same helper starts the daily Discord post (see "Täglich auf Discord").
 
 1. Make a free account at <https://dash.cloudflare.com>, then **Workers & Pages → Create → Worker**.
    Name it e.g. `schedule-delays`, **Deploy**, then **Edit code**: replace everything with
@@ -206,7 +226,7 @@ a small helper on Cloudflare saves it: it holds its own GitHub token and only ch
 Optional, both as **Secret** in the Worker's Variables and Secrets:
 
 - `DISCORD_WEBHOOK`: a channel's webhook address (Discord: channel settings → Integrations → Webhooks →
-  New Webhook → Copy Webhook URL). Every saved, changed or removed Verspätung is posted there as one line,
+  New Webhook → Copy Webhook URL). Every saved, changed or removed Verspätung or absence is posted there as one line,
   without pings: how many minutes, from which show on. The reason only shows on the site. With the helper set up, the key holder's delays go through it too, so they're posted as well.
 - `DISCORD_TEST_WEBHOOK`: the bot test channel's webhook. `node tools/delay-e2e.mjs` checks the whole path
   once (a test delay a week ahead, in and out again); its two lines go only there, never into the real
@@ -242,7 +262,7 @@ then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames
 
 **If it fails:** a run that breaks writes a warning with a ping into the logs channel. For that, add the
 logs channel's webhook as the repository secret `DISCORD_WEBHOOK_LOGS` (same place as in step 2). If the
-helper can't start the run at all, it warns in its `DISCORD_TEST_WEBHOOK` channel.
+helper can't start the run at all, it warns in its `DISCORD_TEST_WEBHOOK` channel (with the ping from v13 on).
 
 **Start at 08:50:** GitHub's own timer starts runs hours late or not at all, so the Cloudflare helper
 from "Verspätungen für alle" starts this run (the run then waits for 09:00):
@@ -250,10 +270,10 @@ from "Verspätungen für alle" starts this run (the run then waits for 09:00):
 4. GitHub: the helper's token (Settings → Developer settings → Fine-grained tokens) already has
    **Contents: Read and write**; that is all it needs.
 5. Cloudflare: the Worker → **Settings → Trigger events → Add → Cron Triggers**, enter `50 6,7 * * *`
-   and save. (Cloudflare counts in UTC: one of the two is 08:50 in Germany, summer or winter; the
-   other one is a rehearsal: a run that only writes the message into its log.)
-   To test at any time: add a second cron trigger a few minutes ahead (e.g. `*/5 * * * *`), wait for a
-   "Daily Discord schedule" run under Actions (it posts nothing), then remove that trigger again.
+   and save. (Cloudflare counts in UTC: one of the two is 08:50 in Germany, summer or winter. Helper v10
+   ignores the other one; from v11 on it starts a rehearsal, a run that only writes the message into its log.)
+   To test at any time (helper v11 or later): add a second cron trigger a few minutes ahead (e.g. `*/5 * * * *`),
+   wait for a "Daily Discord schedule" run under Actions (it posts nothing), then remove that trigger again.
 
 ## Trying it locally
 
