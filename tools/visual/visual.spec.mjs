@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-for(const view of ['week','services','settings','delay','catchup'])test(view,async({page})=>{
+for(const view of ['week','services','settings','delay','catchup','reasons'])test(view,async({page})=>{
  await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
  await page.goto('/'+view+'.html');await page.evaluate(()=>document.fonts.ready);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
