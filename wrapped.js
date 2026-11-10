@@ -70,7 +70,7 @@ async function wrappedReadTabs() {
       if(!cached&&SHEET_ID==='1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ')cached=JSON.parse(localStorage.getItem('tabs')||'null');
     }catch{}
     if(Array.isArray(cached)&&cached.length){wrappedTabNote='Season-Auswahl aus der gespeicherten Kopie.';return cached;}
-    throw new Error('Die Season-Auswahl konnte nicht geladen werden. Bitte ↻ versuchen.');
+    throw new Error('Die Season-Auswahl konnte nicht geladen werden. Bitte neu laden.');
   }
 }
 async function wrappedReadPlan(tab) {
@@ -184,7 +184,7 @@ async function wrappedRender(fresh=false) {
   if(!allowLists){
     cards.push({kicker:season+' · zum Schluss',title:person?(shared?'Das war eure gemeinsame Season.':'Das war deine Season.'):'So unterschiedlich. Trotzdem eine Runde.',color:'#d6ff79',html:'<p>'+(person?'Ob gemeinsame Serien oder die eigene Auswahl: Schön, dass '+(shared?'ihr':'du')+' dabei '+(shared?'seid.':'bist.'):'Zehn verschiedene Geschmäcker müssen nicht denselben Anime mögen, um einen schönen gemeinsamen Abend zu haben.').replace('Zehn verschiedene',WrappedStats.peopleCount(wrappedPlan.people)+' verschiedene')+'</p><p>Für '+wrappedSafe(season)+' bleiben wir bewusst beim Guckplan. Listen-Statistiken kommen erst ab Winter 2027 dazu.</p>',note:'Keine AniList- oder MAL-Daten für diesen Rückblick. Der Plan ist eine Momentaufnahme der Season.'});
     const index=wrappedIndex;wrappedDraw(cards);wrappedShow(index);
-    $('status').textContent=wrappedTabNote||wrappedPlanNote?'Gespeicherter Guckplan · ↻ versucht es erneut.':season+' · nur aus eurem Guckplan.';
+    $('status').textContent=wrappedTabNote||wrappedPlanNote?'Gespeicherter Guckplan · Neu laden versucht es erneut.':season+' · nur aus eurem Guckplan.';
     $('sources').textContent=(wrappedTabNote+' '+wrappedPlanNote+' Dieser Rückblick basiert auf dem aktuellen Guckplan, einschließlich Vielleicht und bedingter Zusagen. MaRyo zählt als zwei Menschen mit einem gemeinsamen Plan. Keine Listen- oder Watch-Historie; keine temporären Wochenverschiebungen.').trim();
     return;
   }
@@ -221,7 +221,7 @@ async function wrappedRender(fresh=false) {
   } else cards.push({kicker:'Noch mehr Wrapped?',title:'Dein Plan kennt nur die halbe Story.',color:'#f4a9d1',html:'<p>Ordne unter <button class="inline-action" data-open-profiles>Profile</button> einer Person ihre AniList- oder MAL-Konten zu. Dann kommen Abschlüsse, Favoriten und Genres dazu.</p>',note:'Persönliche Plan-Statistiken funktionieren auch ohne Konto. Gruppen-Listenstatistiken sind nur so vollständig wie die zugeordneten Konten.'});
   const index=wrappedIndex;
   wrappedDraw(cards);wrappedShow(index);
-  $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:(wrappedTabNote||wrappedPlanNote?'Gespeicherte Daten · ↻ versucht es erneut.':'Dein Wrapped ist bereit.');
+  $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:(wrappedTabNote||wrappedPlanNote?'Gespeicherte Daten · Neu laden versucht es erneut.':'Dein Wrapped ist bereit.');
   const stale=results.filter(r=>r.stale);
   $('sources').textContent=`${wrappedTabNote} ${wrappedPlanNote} Guckplan-Snapshot: ${new Date().toLocaleDateString('de-DE')}. Season: ${season}. Plan-Daten sind keine Watch-Historie; temporäre Wochenverschiebungen sind nicht eingerechnet. ${person?'Persönliche Serienauswahl.':'Konten zählen einmal; ausdrücklich gekoppelte AniList/MAL-Listen werden nicht doppelt gezählt.'} ${undated?undated+' undatierte Abschlüsse aus der gesamten Liste wurden nicht dieser Season zugeordnet. ':''}${stale.length?'Gespeicherte Listen statt Live-Daten: '+stale.map(r=>r.profile.name+' ('+new Date(r.time).toLocaleDateString('de-DE')+')').join(', '):''}`;
 }

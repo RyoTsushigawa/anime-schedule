@@ -422,7 +422,7 @@ return `<section class="plan-card">
     <div id="busyList" class="busy-list">${busyRows(data)}</div>
     <div class="plan-actions busy-actions">
       <button id="busyAdd" class="pill">+ Add</button>
-      <button id="busyReload" class="pill" title="Replace the busy times with the ones in the Seasonpläne tab">↻ From Seasonpläne</button>
+      <button id="busyReload" class="pill" title="Replace the busy times with the ones in the Seasonpläne tab"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> From Seasonpläne</button>
     </div>
     <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
     <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
@@ -450,7 +450,7 @@ return planFixed.map((f, i) => `
       <select class="pill fixed-show" data-field="show" aria-label="Show">${selectOptions(shows, f.show)}</select>
       <select class="pill" data-field="day" aria-label="Day">${selectOptions(days, f.day)}</select>
       <select class="pill" data-field="slot" aria-label="Slot">${selectOptions(slots, f.slot)}</select>
-      <button class="round busy-remove" aria-label="Remove">✕</button>
+      <button class="round busy-remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>`).join('');
 }
 function busyRows(data) {
@@ -464,7 +464,7 @@ return planBusy.map((e, i) => `
       <input class="pill busy-time" data-field="from" value="${esc(e.from || '')}" placeholder="from" inputmode="numeric" maxlength="5" aria-label="From">
       <input class="pill busy-time" data-field="to" value="${esc(e.to || '')}" placeholder="to" inputmode="numeric" maxlength="5" aria-label="To">
       <input class="pill busy-note" data-field="note" value="${esc(e.note || '')}" placeholder="note" aria-label="Note">
-      <button class="round busy-remove" aria-label="Remove">✕</button>
+      <button class="round busy-remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>`).join('');
 }
 function bindPlannerSetup(data) {

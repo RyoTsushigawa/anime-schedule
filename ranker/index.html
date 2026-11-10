@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://ryotsushigawa.github.io;
   object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="referrer" content="strict-origin-when-cross-origin"><script src="../frame-guard.js"></script>
+<meta name="referrer" content="strict-origin-when-cross-origin"><script src="../frame-guard.js"></script><script src="../tool-theme.js" data-accent></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Higher or Lower Ranker</title>
 <style>
@@ -157,10 +157,10 @@ textarea.xmlout{font-family:var(--mono);font-size:.75rem;min-height:90px}
 
 /* ---- calmer look: pills, one clear start, secondary things folded away ---- */
 [hidden]{display:none!important}
-header.top{position:relative;padding-right:52px;display:flex;align-items:center;gap:10px}
+header.top{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 header.top .logo{flex:none;width:36px;height:36px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
 header.top p{margin:0;font-size:12px}
-header.top #themeBtn{position:absolute;right:0;top:0}
+
 .round{width:38px;height:38px;border-radius:50%;padding:0;display:inline-grid;place-items:center;font-size:1.05rem}
 .tab{border-radius:999px;padding:6px 14px;font-size:.9rem;background:transparent}
 .tab::before,.tab[aria-expanded="true"]::before{content:none}
@@ -244,18 +244,16 @@ kbd{font:inherit;font-family:var(--mono)}
 #exportMenu > summary{align-items:center}
 #toast:empty{display:none}
 @media(max-width:520px){.settings > summary span{display:none}.lower{gap:10px}.rank-help{font-size:.78rem}}
-.ranker-nav { margin: 0 0 12px; } .ranker-nav .tool-back { display: inline-flex; align-items: center; min-height: 36px; text-decoration: none; white-space: nowrap; }</style>
+header.top .tool-back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 12px 4px 8px; border-radius: 99px; text-decoration: none; white-space: nowrap; font-size: 13px; font-weight: 500; } header.top .tool-back img { border-radius: 5px; } #tierClose { display: inline-grid; place-items: center; }</style>
 
 <div class="wrap">
   <header class="top">
-    <button class="btn round" id="themeBtn" aria-label="Switch light or dark mode"></button>
-    <img class="logo" src="../icon-192.png" alt="" width="36" height="36">
+    <a class="tool-back btn" href="../" lang="de"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="../icon-72.png" alt="" width="20" height="20">Zum Plan</a>
     <div>
       <h1>Higher or Lower Ranker</h1>
       <p class="muted">Rescore your list one show at a time: higher or lower than a show you already scored?</p>
     </div>
   </header>
-  <nav class="ranker-nav" aria-label="Simulcast-Plan"><a class="btn tool-back" href="../">← Zum Plan</a></nav>
 
   <section class="panel" id="loadPanel">
     <details class="settings" id="settingsPanel">
@@ -439,7 +437,7 @@ kbd{font:inherit;font-family:var(--mono)}
     <textarea class="xmlout" id="xmlOut" hidden readonly></textarea>
   </section>
   <dialog id="tierDlg" class="tierdlg">
-    <div class="substrip"><b>Tier list picture</b><button class="btn round" id="tierClose" aria-label="Close">✕</button></div>
+    <div class="substrip"><b>Tier list picture</b><button class="btn round" id="tierClose" aria-label="Close"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
     <img id="tierImg" alt="Tier list" hidden>
     <div class="substrip"><span class="muted" id="tierMsg"></span>
       <span><button class="btn primary" id="tierCopy">Copy for Discord</button> <button class="btn" id="tierSave">Save .png</button></span></div>
