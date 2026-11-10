@@ -7,7 +7,7 @@ const types={'.html':'text/html','.css':'text/css','.js':'text/javascript','.png
 createServer(async(req,res)=>{
  try{
   const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname).slice(1);
-  const base=/^(week|services|settings|delay|catchup)\.html$|^visual-cover\.svg$/.test(path)?fixtures:root;
+  const base=/^(week|services|settings|delay|catchup|reasons)\.html$|^visual-cover\.svg$/.test(path)?fixtures:root;
   const file=resolve(base,path);if(!file.startsWith(resolve(base)+sep))throw Error('path');
   const content=await readFile(file);res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream'});res.end(content);
  }catch{res.writeHead(404);res.end();}
