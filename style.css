@@ -1270,5 +1270,8 @@ text-align: center;
 
 @media (min-width: 561px) {
   .links > .cr:has(> .svc-icon[style*="services/crunchyroll.svg"]),
-  .links > .cr:has(> .site-icon[src$="/aniworld.png"]) { grid-template-columns: 22px minmax(0, 1fr) 14px; }
+  .links > .cr:has(> .site-icon[src$="/aniworld.png"]),
+  .links > .cr:has(> .site-icon[src$="/subsplease.png"]),
+  .links > .cr:has(> .site-icon[src$="/nyaa.png"]),
+  .links > .cr:has(> .svc-icon[style*="services/disney.svg"]) { grid-template-columns: 22px minmax(0, 1fr) 14px; }
 }
