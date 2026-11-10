@@ -61,7 +61,8 @@ patch notes; this README brought in line with the site.
 
 Keep everything as short and clean as possible. Desktop first, phones are not a priority. No countdowns,
 no calendar subscriptions, no dots for watchers, no text labels on day headings, no `/spitzname` bot
-command. Dark theme is the default. "Edit" stays "Edit". Patch notes are in English. Warnings go to the
+command. The Watch planner and the absence calendar stay separate: the planner builds a schedule that works
+for everyone, the calendar is for short-term absences. The "Pause" chip above the week is an overview and stays. Dark theme is the default. "Edit" stays "Edit". Patch notes are in English. Warnings go to the
 bot test channel with a ping for the owner (Discord user `255387990136848385`), never to the schedule channel.
 
 The **Tools** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
@@ -265,6 +266,14 @@ The site itself keeps the full titles.
 Emojis can go straight into a nickname. Server emotes need Discord's full code once (in Discord type
 `\:emote:` and send it; the message shows `<:emote:123…>`): paste that into a nickname and save, and from
 then on `:emote:` is enough in any nickname. Known emotes are kept in `nicknames.json` under `emotes`.
+
+**Pings:** the same dialog has a **Pings** list, one field per person: the code Discord shows for `\@Name`
+(`<@&…>` for a role, `<@…>` for a person). A show's line then pings its watchers who have one. Saved in
+`nicknames.json` under `pings`; an empty field means no ping. The dialog shows "@Name" and ":emote:"
+instead of the codes, and copying puts the codes back.
+
+**Nothing planned:** the post then reads "Heute steht nichts an." with the kek emote, and the weekday
+role is not pinged.
 
 **If it fails:** a run that breaks writes a warning with a ping into the logs channel. For that, add the
 logs channel's webhook as the repository secret `DISCORD_WEBHOOK_LOGS` (same place as in step 2). If the

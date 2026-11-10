@@ -60,19 +60,22 @@ try {
     console.log(`Waiting ${Math.round(wait / 60000)} min until ${POST_HOUR}:00 German time.`);
     await page.waitForTimeout(wait);
     await page.evaluate(() => Promise.all([loadMoves(),
-      fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { nicknames = cleanNicknames(j.names); emotes = cleanEmotes(j.emotes); }).catch(() => {})]));
+      fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.json())
+        .then(j => { if (typeof applyNickFile === 'function') applyNickFile(j); else { nicknames = cleanNicknames(j.names); emotes = cleanEmotes(j.emotes); } }).catch(() => {})]));
   }
 
   // same steps as the Discord button in app.js, nicknames (nicknames.json) included
-  let message = await page.evaluate(async () => {
+  const today = await page.evaluate(async () => {
     await nicknamesReady;
     const day = discordDay(isoDay(new Date()));
-    return day && discordMessage(day);
+    return day && { message: discordMessage(day), empty: !day.groups.length };
   });
-  if (!message) throw new Error('Today is missing from the rendered week.');
+  if (!today) throw new Error('Today is missing from the rendered week.');
+  let message = today.message;
   const weekday = new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long' }).format(new Date());
   const role = DAY_ROLES[weekday];
-  if (role) message = `<@&${role}>\n\n${message}`;
+  // nothing planned: the note goes out, but nobody is pinged for it
+  if (role && !today.empty) message = `<@&${role}>\n\n${message}`;
   console.log(message);
   if (dryRun) {
     // the rest of the week too, as the Discord button would write it, to check the run reads the plan

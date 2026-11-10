@@ -550,6 +550,14 @@ for (const box of document.querySelectorAll('#list .shared:not([data-search])'))
 box.classList.toggle('hidden-by-search', !!q && !box.querySelector('[data-search]:not(.hidden-by-search)'));
 if (q) for (const fold of document.querySelectorAll('#list details.not-listed:not([open])'))
 if (fold.querySelector('[data-search]:not(.hidden-by-search)')) fold.open = true;
+// how many shows match, so a shorter list explains itself
+const hits = q ? new Set([...document.querySelectorAll('#list [data-search]:not(.hidden-by-search)')].map(el => el.dataset.search)).size : 0;
+let count = $('matchCount');
+if (hits) {
+if (!count) { count = document.createElement('div'); count.id = 'matchCount'; count.className = 'notice'; count.setAttribute('role', 'status'); }
+count.textContent = `${hits} Treffer${view === 'week' ? ' in dieser Woche' : ''}`;
+if (!count.isConnected) $('list').prepend(count);
+} else count?.remove();
 let none = $('noMatch');
 if (q && items.length && !document.querySelector('#list [data-search]:not(.hidden-by-search)')) {
 if (!none) {
@@ -2805,10 +2813,25 @@ const nickOf = r => savedNick(r) || r.show.english || r.show.romaji;
 const cleanNicknames = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
 .filter(([k, v]) => typeof v === 'string' && v.trim() && !LINKISH.test(v)).map(([k, v]) => [k, v.trim().slice(0, 80)]));
 const nicknamesReady = fetch('nicknames.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {})
-.then(j => { nicknames = cleanNicknames(j.names); emotes = cleanEmotes(j.emotes); }).catch(() => {});
+.then(j => applyNickFile(j)).catch(() => {});
+// nicknames.json as a whole: names, emotes and the pings per person (also used by tools/discord-daily.mjs)
+function applyNickFile(j) {
+nicknames = cleanNicknames(j?.names);
+emotes = { ...DEFAULT_EMOTES, ...cleanEmotes(j?.emotes) };
+pings = j?.pings && typeof j.pings === 'object' ? cleanPings(j.pings) : { ...DISCORD_PINGS };
+}
+// Pings per person for the Discord message: lower-case name → "<@&id>" (a role) or "<@id>" (a person).
+// Until nicknames.json has its own "pings", the ones in DISCORD_PINGS count.
+let pings = { ...DISCORD_PINGS };
+const PING_CODE = /^<@&?\d{15,21}>$/;
+const cleanPings = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
+.filter(([k, v]) => k.length <= 40 && typeof v === 'string' && PING_CODE.test(v)).map(([k, v]) => [k.toLowerCase(), v]));
+const planPeople = () => lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
 // Discord emotes: a webhook can't turn ":name:" into a server emote, so the message carries the full
 // <:name:id> code. Every code typed into a nickname is remembered, after that ":name:" is enough.
-let emotes = {};
+// always known, so the message for an empty day can use it
+const DEFAULT_EMOTES = { kek: '<:kek:1074622036648939550>' };
+let emotes = { ...DEFAULT_EMOTES };
 const EMOTE_CODE = /<(a?):(\w{2,32}):(\d{15,21})>/g;
 const cleanEmotes = o => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
 .filter(([k, v]) => /^\w{2,32}$/.test(k) && typeof v === 'string' && /^<a?:\w{2,32}:\d{15,21}>$/.test(v)));
@@ -2816,7 +2839,8 @@ const learnEmotes = text => Object.fromEntries([...String(text).matchAll(EMOTE_C
 const withEmotes = text => text.replace(/(^|[^<a\w]):(\w{2,32}):(?!\d)/g, (all, before, name) => emotes[name] ? before + emotes[name] : all);
 // The dialog shows the message the way Discord will: "@Sophie" for a ping code, ":name:" for an emote
 // code. Copying puts the codes back, so Discord still pings and shows the emote.
-const pingNames = () => Object.entries(DISCORD_PINGS).map(([name, code]) => ['@' + name[0].toUpperCase() + name.slice(1), code]);
+const pingNames = () => Object.entries(pings).map(([name, code]) =>
+['@' + (planPeople().find(p => p.toLowerCase() === name) || name[0].toUpperCase() + name.slice(1)), code]);
 const readable = text => {
 for (const [label, code] of pingNames()) text = text.split(code).join(label);
 for (const [name, code] of Object.entries(emotes)) text = text.split(code).join(`:${name}:`);
@@ -2834,12 +2858,12 @@ const when = date.toDateString() === new Date().toDateString() ? 'Heute'
 : date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
 const lines = groups.map(g => {
 const names = [...new Set(g.map(r => nickOf(r) + (r.slot?.double && r.episodes?.length > 1 ? ' (x2)' : '')))];
-const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.toLowerCase()]).filter(Boolean))];
+const tags = [...new Set(g.flatMap(r => r.who || []).map(p => pings[p.toLowerCase()]).filter(Boolean))];
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
+return `${time} ${names.join(' / ')}${tags.length ? ' ' + tags.join(' ') : ''}`;
 });
 const out = [...new Map(skipped.map(r => [nickKey(r), r])).values()].map(r => `${nickOf(r)} – ${skipReason(r)}`);
-return withEmotes((lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an.`)
+return withEmotes((lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an. ${DEFAULT_EMOTES.kek}`)
 + (out.length ? `\n\nFällt aus:\n${out.join('\n')}` : ''));
 }
 function discordDay(iso) {
@@ -2934,8 +2958,11 @@ const title = r.show.english || r.show.romaji;
 const chips = nicknameSuggestions(title).map(name => `<button type="button" class="nick-suggestion" data-nick-suggest="${esc(name)}" title="Vorschlag übernehmen (noch nicht speichern)">${esc(name)}</button>`).join('');
 return `<div class="nick-item" data-days="${[...r.nickDays].join(',')}" data-title="${esc([title, r.show.romaji].filter(Boolean).join(' '))}"><label class="nick-row"><span title="${esc(title)}">${esc(title)}</span><input data-nick="${esc(nickKey(r))}" data-nick-title="${esc(titleKey(r))}" value="${esc(savedNick(r))}" placeholder="Eigener Kurzname" maxlength="80" autocomplete="off" aria-label="Spitzname für ${esc(title)}"></label>${chips ? `<div class="nick-suggestions"><span>Vorschläge</span>${chips}</div>` : ''}</div>`;
 }).join('');
+$('discordPingList').innerHTML = planPeople().sort((x, y) => x.localeCompare(y)).map(p =>
+`<label class="nick-row"><span>${esc(p)}</span><input data-ping="${esc(p.toLowerCase())}" data-ping-name="${esc(p)}" value="${esc(pings[p.toLowerCase()] || '')}" placeholder="kein Ping" maxlength="30" spellcheck="false" autocomplete="off" aria-label="Ping für ${esc(p)}"></label>`).join('');
 filterNickFields();
 }
+const typedPings = () => Object.fromEntries([...$('discordPingList').querySelectorAll('[data-ping]')].map(i => [i.dataset.ping, i.value.trim()]));
 // a name saved by title moves to the show's ID when saved here, so clearing the field really clears it
 const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelectorAll('[data-nick]')]
 .flatMap(i => [[i.dataset.nickTitle, ''], [i.dataset.nick, i.value.trim()]]));
@@ -2998,19 +3025,21 @@ $('discordNickToggle').onclick = () => {
 $('discordNickSave').onclick = async () => {
 const typed = typedNicks();
 if (Object.values(typed).some(v => LINKISH.test(v))) { $('discordMsg').textContent = 'Keine Links in Spitznamen.'; return; }
+const badPing = [...$('discordPingList').querySelectorAll('[data-ping]')].find(i => i.value.trim() && !PING_CODE.test(i.value.trim()));
+if (badPing) { $('discordMsg').textContent = `Ping für ${badPing.dataset.pingName}: der Code aus Discord, <@&123…> für eine Rolle oder <@123…> für eine Person.`; badPing.focus(); return; }
 $('discordNickSave').disabled = true;
 $('discordMsg').textContent = 'Speichere …';
 try {
-nicknames = await saveNicknames(typed);
+nicknames = await saveNicknames(typed, typedPings());
 $('discordText').value = readable(discordMessage(discordOpen));
-$('discordMsg').textContent = 'Spitznamen gespeichert, auch für den täglichen Post.';
+$('discordMsg').textContent = 'Gespeichert, auch für den täglichen Post.';
 } catch (err) {
 $('discordMsg').textContent = `Nicht gespeichert: ${err.message}.`;
 } finally {
 $('discordNickSave').disabled = false;
 }
 };
-async function saveNicknames(changes) {
+async function saveNicknames(changes, pingChanges = null) {
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 for (let attempt = 0; attempt < 4; attempt++) {
 if (attempt) await new Promise(r => setTimeout(r, 800 * attempt));
@@ -3021,8 +3050,12 @@ try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta
 const names = cleanNicknames(remote.names);
 for (const [k, v] of Object.entries(changes)) { if (v) names[k] = v.slice(0, 80); else delete names[k]; }
 const known = { ...cleanEmotes(remote.emotes), ...learnEmotes(Object.values(changes).join(' ')) };
-emotes = known;
-const file = { updated: new Date().toISOString(), names, ...(Object.keys(known).length && { emotes: known }) };
+emotes = { ...DEFAULT_EMOTES, ...known };
+// pings: what is typed replaces what was saved for that person; an empty field removes the ping
+const savedPings = remote.pings && typeof remote.pings === 'object' ? cleanPings(remote.pings) : { ...DISCORD_PINGS };
+const nextPings = pingChanges ? cleanPings({ ...Object.fromEntries(Object.entries(savedPings).filter(([k]) => !(k in pingChanges))), ...pingChanges }) : savedPings;
+pings = nextPings;
+const file = { updated: new Date().toISOString(), names, ...(Object.keys(known).length && { emotes: known }), pings: nextPings };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(NICKNAMES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: 'Spitznamen', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
