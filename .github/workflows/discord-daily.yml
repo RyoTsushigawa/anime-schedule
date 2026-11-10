@@ -41,14 +41,15 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
           WAIT_FOR_NINE: ${{ github.event_name == 'repository_dispatch' }}
         run: node tools/discord-daily.mjs ${{ (inputs.dry_run || github.event.client_payload.dry_run) && '--dry-run' || '' }}
-      # A run that broke (site not reachable, Discord refused) says so in the channel instead of staying silent.
+      # A run that broke (site not reachable, Discord refused) says so in the logs channel and pings the owner.
+      # Needs the repository secret DISCORD_WEBHOOK_LOGS (the logs channel's webhook); without it nothing is sent.
       - name: Say that the post failed
         if: ${{ failure() && !(inputs.dry_run || github.event.client_payload.dry_run) }}
         env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
+          DISCORD_WEBHOOK_LOGS: ${{ secrets.DISCORD_WEBHOOK_LOGS }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          [ -n "$DISCORD_WEBHOOK" ] || exit 0
+          [ -n "$DISCORD_WEBHOOK_LOGS" ] || { echo "No DISCORD_WEBHOOK_LOGS secret; no warning sent."; exit 0; }
           curl -sS -o /dev/null -H 'Content-Type: application/json' \
-            -d "{\"content\":\"⚠️ Der Tagespost konnte heute nicht erstellt werden. Der Plan steht auf der Seite. (<$RUN_URL>)\",\"allowed_mentions\":{\"parse\":[]}}" \
-            "$DISCORD_WEBHOOK"
+            -d "{\"content\":\"<@255387990136848385> ⚠️ Der Tagespost konnte heute nicht erstellt werden. (<$RUN_URL>)\",\"allowed_mentions\":{\"users\":[\"255387990136848385\"]}}" \
+            "$DISCORD_WEBHOOK_LOGS"
