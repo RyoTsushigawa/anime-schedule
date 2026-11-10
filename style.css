@@ -1307,3 +1307,27 @@ text-align: center;
   font-size: 11px;
   white-space: nowrap;
 }
+
+/* Steady cards, legible titles and visible save feedback. */
+html { scrollbar-gutter: stable; }
+#list .row > img { aspect-ratio: 5 / 7; }
+#list .time, #catchupCount { font-variant-numeric: tabular-nums; }
+#list .info { min-width: 0; }
+#list .watch { position: relative; flex-shrink: 0; }
+#list .watch[aria-busy="true"] { color: transparent; opacity: 1; }
+#list .watch[aria-busy="true"]::after {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 15px; height: 15px;
+  border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%;
+  animation: saving-turn .8s linear infinite;
+}
+@keyframes saving-turn { to { transform: rotate(360deg); } }
+#list .watch.save-failed { border-style: dashed; }
+#list :is(button, a):focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.popover :is(button, a, input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+@media (max-width: 560px) {
+  #list .title { font-size: 14px; line-height: 1.35; text-wrap: pretty; overflow-wrap: anywhere; }
+  #list .ep { line-height: 1.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #list .watch[aria-busy="true"]::after { animation: none; border-style: dotted; }
+}
