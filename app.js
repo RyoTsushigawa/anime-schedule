@@ -1507,9 +1507,10 @@ $('who').onchange = () => {
 try { localStorage.setItem('who', $('who').checked ? '1' : '0'); } catch {}
 redraw();
 };
+const hiddenAnchorSelector = '.hidden-by-search, [hidden], details:not([open])';
 function scrollAnchor() {
 const below = document.querySelector('header').getBoundingClientRect().bottom;
-const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest('.hidden-by-search') && r.getBoundingClientRect().bottom > below);
+const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest(hiddenAnchorSelector) && r.getBoundingClientRect().bottom > below);
 return { y: scrollY, candidates: rows.map(row => ({
 key: row.closest('[data-search]')?.dataset.search,
 day: row.closest('.day')?.dataset.date,
@@ -1518,7 +1519,7 @@ top: row.getBoundingClientRect().top,
 })).filter(r => r.key) };
 }
 function restoreAnchor(a) {
-const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest('.hidden-by-search'));
+const rows = [...document.querySelectorAll('#list .row')].filter(r => !r.closest(hiddenAnchorSelector));
 for (const saved of a.candidates || []) {
 const row = rows.find(r => r.closest('[data-search]')?.dataset.search === saved.key
 && r.closest('.day')?.dataset.date === saved.day
@@ -1685,8 +1686,8 @@ b.title = `Speichert auf ${listService()}…`;
 b.title = b.dataset.idleTitle;
 delete b.dataset.idleTitle;
 }
-if (saving) b.setAttribute('aria-busy', 'true');
-else b.removeAttribute('aria-busy');
+if (saving) { b.setAttribute('aria-busy', 'true'); b.setAttribute('aria-label', b.title); }
+else { b.removeAttribute('aria-busy'); b.setAttribute('aria-label', b.title); }
 }
 for (const id of ['markAll', 'markAllStart', 'cancelMark', 'noticeUndo']) {
 const button = $(id);
@@ -3847,10 +3848,11 @@ showMenu('people', 'groupButton', open);
 $('groupButton').onclick = () => showPeople($('people').hidden);
 document.addEventListener('click', e => { if (!e.target.closest('.picker')) showPeople(false); });
 document.addEventListener('keydown', e => {
-if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
 for (const [menu, button] of [['miscMenu', 'miscButton'], ['settingsMenu', 'settingsButton'], ['accountMenu', 'accountButton'], ['people', 'groupButton']]) {
 if ($(menu).hidden) continue;
-showMenu(menu, button, false);
+e.preventDefault();
+    showMenu(menu, button, false);
 $(button).focus();
 break;
 }
