@@ -699,7 +699,8 @@ const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.ke
   && rs.some(r => r.skipped || autoMovePauses)).map(([at]) => at);
 const anchors = [...slots].filter(([, rs]) => rs.some(r => r.slot?.keepTime)).map(([at]) => at);
 // A double episode ("Doppelt") or an overlong one ("Lang", LiveChart) needs two slots: later shows move back.
-const extraSlots = r => !r.pause && !r.extra && (r.slot?.double || r.long) ? 1 : 0;
+const twoEpisodes = r => r.slot?.double && r.episodes?.length > 1;
+const extraSlots = r => !r.pause && !r.extra && (twoEpisodes(r) || r.long) ? 1 : 0;
 const longs = [...slots].map(([at, rs]) => [at, Math.max(0, ...rs.map(extraSlots))]).filter(([, n]) => n);
 for (const r of day.rows) {
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
@@ -1032,7 +1033,8 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
-const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip)) ? render(items, start, plans, true) : null;
+const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip || m.double || m.long)
+  || Object.values(streamsDe?.status || {}).some(s => s.long?.length)) ? render(items, start, plans, true) : null;
 for (const d of days) {
 assignWatchTimes(d);
 applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d);
@@ -2797,7 +2799,7 @@ const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const when = date.toDateString() === new Date().toDateString() ? 'Heute'
 : date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
 const lines = groups.map(g => {
-const names = [...new Set(g.map(r => nickOf(r) + (r.slot?.double ? ' (x2)' : '')))];
+const names = [...new Set(g.map(r => nickOf(r) + (r.slot?.double && r.episodes?.length > 1 ? ' (x2)' : '')))];
 const pings = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.toLowerCase()]).filter(Boolean))];
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${pings.length ? ' ' + pings.join(' ') : ''}`;
