@@ -906,6 +906,7 @@ text-align: center;
 .away-who { padding: 1px 8px; border-radius: 99px; background: var(--person, var(--accent)); color: var(--person-text, var(--accent-text)); font-weight: 600; font-size: 13px; }
 .day-absent .pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
 #moveTime[hidden], #moveDouble[hidden], #moveLong[hidden] { display: none; }
+.episode-kind { display: inline-flex; gap: 6px; }
 #moveDouble[aria-pressed="true"], #moveLong[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
 
 /* Compact Discord composer: preview and nickname editor share one viewport-sized dialog. */
