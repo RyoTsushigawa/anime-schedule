@@ -120,7 +120,10 @@ function matches(titles, text) {
 const seconds = iso => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '') || []; return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0); };
 function score(v, titles, fromAniList, start, channelPref) {
   const t = v.snippet.title, len = seconds(v.contentDetails.duration);
-  if (!fromAniList && !matches(titles, t)) return -99;
+  const preferred = channelPref && norm(v.snippet.channelTitle).includes(norm(channelPref));
+  // from a preferred channel one distinctive word of the title is enough ("Hasunosora")
+  const loose = preferred && titles.filter(Boolean).some(x => [...tokens(x)].filter(w => w.length >= 6 && !/^(school|season|anime)$/.test(w)).some(w => tokens(t).has(w)));
+  if (!fromAniList && !loose && !matches(titles, t)) return -99;
   if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(t) && !/trailer|pv/i.test(t)) return -50;
   let s = 0;
   if (/main (trailer|pv)|official trailer|本pv|メインpv/i.test(t)) s += 5;
@@ -129,7 +132,7 @@ function score(v, titles, fromAniList, start, channelPref) {
   if (/pv ?[2-9]|trailer ?[2-9]|第[2-9]弾/i.test(t)) s += 1;
   if (len >= 60 && len <= 240) s += 2; else if (len < 40) s -= 4; else if (len > 360) s -= 6;
   if (OFFICIAL.test(v.snippet.channelTitle) && !COLLECTOR.test(v.snippet.channelTitle)) s += 3;
-  if (channelPref && norm(v.snippet.channelTitle) === norm(channelPref)) s += 8;
+  if (preferred) s += 8;
   // a film or concert of the franchise is not this show's trailer (unless the show itself is a film)
   if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(t) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) return -50;
   // subtitles in another language than German or English
@@ -182,7 +185,8 @@ async function pick(show, start) {
   }
   const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} ${show.channelPref || 'anime'} trailer`, relevanceLanguage: 'en' }, 100);
   const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
-  const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer, start, show.channelPref) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
+  const all = await videos(ids);
+  const ranked = all.filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer, start, show.channelPref) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
   // subtitles in German or English decide among the best few
   // (at most two checks, 50 units each, and only for candidates close to the best)
   for (const x of ranked.slice(0, 2)) if (x.v.contentDetails.caption === 'true' && x.s >= ranked[0].s - 4) {
@@ -191,6 +195,7 @@ async function pick(show, start) {
   }
   ranked.sort((a, b) => b.s - a.s);
   const best = ranked[0];
+  if (!best && show.channelPref) for (const v of all) log(`    candidate: ${v.snippet.title} · ${v.snippet.channelTitle} (${score(v, titles, v.id === alTrailer, start, show.channelPref)})`);
   if (best && !show.notSequel && SEQUEL_VIDEO.test(best.v.snippet.title))
     return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: best.v.snippet.title, searched: new Date().toISOString() };
   return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '',
