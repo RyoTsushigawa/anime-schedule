@@ -11,7 +11,7 @@ let voteApi = '', member = null, memberError = '', votingToken = '', saving = ne
 let carryoverNotice = '', seasonRequest = 0;
 const checkedNewTitles = new Map();
 function state(msg) {pv('previewStatus').textContent=msg;}
-function seasonKey(tab){const m=tab.name.match(PV_SEASONS);return m ? m[1].toLowerCase()+'-'+m[2] : '';}
+function seasonKey(tab){const m=tab?.name.match(PV_SEASONS);if(!m)return '';const name={winter:'winter','frühling':'spring',sommer:'summer',herbst:'fall'}[m[1].toLowerCase()];return name+'-'+m[2];}
 function parseSeasonRows(rows, updatePeople=true){
   const h = rows.findIndex(r=>r.some(c=>clean(c)==='Anime Titel'));
   if(h<0)throw Error('Die Season-Liste enthält keine Spalte „Anime Titel“.');
