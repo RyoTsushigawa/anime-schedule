@@ -72,6 +72,19 @@ async function queryAniList(title){
  if(!res.ok)throw Error('AniList HTTP '+res.status);
  const value=await res.json();return value?.data?.Media||null;
 }
+async function searchYoutube(title){
+ const key=process.env.YOUTUBE_API_KEY;
+ if(!key)return [];
+ const params=new URLSearchParams({part:'snippet',type:'video',maxResults:'5',safeSearch:'strict',
+  q:title+' anime official full trailer',key});
+ const result=await getJSON('https://www.googleapis.com/youtube/v3/search?'+params);
+ return (result.items||[]).flatMap(item=>{
+  const id=item.id?.videoId;
+  if(!/^[A-Za-z0-9_-]{11}$/.test(id||''))return [];
+  return [{youtubeId:id,title:item.snippet?.title||'',channel:item.snippet?.channelTitle||'',
+   publishedAt:item.snippet?.publishedAt||'',source:'YouTube search — NOT VERIFIED'}];
+ });
+}
 async function main(){
  const now=new Date(),month=now.getUTCFullYear()*12+now.getUTCMonth();
  const tabs=(await getTabs()).filter(t=>{
@@ -105,6 +118,20 @@ async function main(){
     entries.push({...s,...(match||{review:'pending',reason:'AniList title match uncertain'}),checkedAt:new Date().toISOString()});
    }catch(error){entries.push({...old,...s,review:'pending',reason:error.message});}
    await new Promise(resolve=>setTimeout(resolve,850));
+  }
+  // Search is quota-limited: max 6 YouTube queries per run, candidates ONLY.
+  // Videos stay unapproved until a person checks the actual footage and source.
+  let searched=0;
+  for(const item of entries){
+   if(searched>=6||!process.env.YOUTUBE_API_KEY)break;
+   const approved=catalog.seasons?.[key]?.trailers?.[item.key];
+   if(approved?.verified&&approved?.footageVerified)continue;
+   if(item.lastYoutubeSearch&&Date.now()-Date.parse(item.lastYoutubeSearch)<7*86400000)continue;
+   searched++;
+   try{
+    item.youtubeSearch=await searchYoutube(item.english||item.title);
+    item.lastYoutubeSearch=new Date().toISOString();
+   }catch(error){item.youtubeSearchError=String(error.message).slice(0,150);}
   }
   report.seasons[key]={title:tab.title,gid:String(tab.sheetId),entries};
  }
