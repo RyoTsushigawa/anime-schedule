@@ -32,3 +32,5 @@ jobs:
         run: node tools/check-site.mjs
       - name: Test the Season Preview voting worker
         run: node --test tests/season-votes-worker.test.mjs
+      - name: Test Season Preview sequel suggestions
+        run: node --test tests/season-preview-sequel.test.mjs
