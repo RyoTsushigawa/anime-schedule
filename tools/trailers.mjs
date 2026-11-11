@@ -53,7 +53,7 @@ const SEASON_KEY = { winter: 'winter', frühling: 'spring', sommer: 'summer', he
 const seasonId = name => { const m = name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i); return m ? `${SEASON_KEY[m[1].toLowerCase()]}-${m[2]}` : null; };
 // the list three months earlier ("Herbst 2026" for "Winter 2027"), if it is in the sheet
 const previousList = tab => allLists.find(t => { const d = new Date(tab.start); d.setMonth(d.getMonth() - 3); return t.start === d.getTime(); });
-const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv|final season)\b|\(sequel\)/i;
+const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv|final season|arc|hen)\b|\(sequel\)|編/i; // a named arc ("… Arc", "-hen") continues a show
 // a trailer whose own title names a later season gives a sequel away even when AniList and the list don't
 const SEQUEL_VIDEO = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:nd|rd|th)\s+season|cour\s*[2-9]|part\s*[2-9]|final season)\b|第[2-9二三四五]期|[2-9]期/i;
 async function listShows(gid) {
@@ -303,7 +303,7 @@ try { for (const tab of lists) {
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
       const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
         && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || ''));
-      if (!s.fixed && s.video && SEQUEL_VIDEO.test(s.videoTitle || '')) { Object.assign(s, { video: null, skip: 'sequel' }); log(`  ${s.english || s.romaji}: trailer names a later season, now counted as a sequel`); continue; }
+      if (!s.fixed && s.video && (SEQUEL_VIDEO.test(s.videoTitle || '') || SEQUEL_TITLE.test(`${s.romaji} ${s.english}`))) { Object.assign(s, { video: null, skip: 'sequel' }); log(`  ${s.english || s.romaji}: title or trailer names a later season or an arc, counted as a sequel now`); continue; }
       if ((s.searched && !again) || s.skip === 'carryover' || searchBlocked) continue;
       try { Object.assign(s, await pick(s, tab.start)); }
       catch (e) { if (!(e instanceof SearchQuota)) throw e; searchBlocked = e.message; log(`  ${e.message}; the remaining shows follow tomorrow.`); continue; }
