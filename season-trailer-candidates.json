@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-11-11T11:45:57.664Z",
+  "generated": "2026-11-11T12:10:02.426Z",
   "seasons": {
     "fall-2026": {
       "title": "Herbst 2026",
@@ -356,9 +356,15 @@
           "key": "kashita maryoku wa \"revo barai\" de kyousei choushuu: youzumi to party tsuihou sareta ore wa, kawaii support yousei to issho ni toritateta maryoku wo unyou shite saikyou wo mezasu.",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13386",
-          "livechartUrl": "https://www.livechart.me/anime/13386"
+          "livechartUrl": "https://www.livechart.me/anime/13386",
+          "anilistId": 202250,
+          "malId": 62922,
+          "sequelStatus": "unknown",
+          "youtubeId": "kXqx3rFSkxc",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:06.896Z"
         },
         {
           "order": 24,
@@ -367,9 +373,15 @@
           "key": "ao no hako season2",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13118",
-          "livechartUrl": "https://www.livechart.me/anime/13118"
+          "livechartUrl": "https://www.livechart.me/anime/13118",
+          "anilistId": 189123,
+          "malId": 61323,
+          "sequelStatus": "sequel",
+          "youtubeId": "hJ6Y8PAOUk8",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:07.864Z"
         },
         {
           "order": 25,
@@ -378,9 +390,15 @@
           "key": "aoashi season 2",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13151",
-          "livechartUrl": "https://www.livechart.me/anime/13151"
+          "livechartUrl": "https://www.livechart.me/anime/13151",
+          "anilistId": 191788,
+          "malId": 61603,
+          "sequelStatus": "sequel",
+          "youtubeId": "phKPnPXm74c",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:08.838Z"
         },
         {
           "order": 26,
@@ -389,7 +407,7 @@
           "key": "mezametara saikyou soubi to uchuusenmochi datta node, ikkodate mezashite youhei toshite jiyuu ni ikitai",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13033",
           "livechartUrl": "https://www.livechart.me/anime/13033"
         },
@@ -400,7 +418,7 @@
           "key": "ojisan wa kawaii mono ga osuki.",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13382",
           "livechartUrl": "https://www.livechart.me/anime/13382"
         },
@@ -411,7 +429,7 @@
           "key": "mahou no shimai lulutto lilly part 2",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup"
+          "reason": "AniList HTTP 404"
         },
         {
           "order": 29,
@@ -420,9 +438,15 @@
           "key": "tank chair",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13556",
-          "livechartUrl": "https://www.livechart.me/anime/13556"
+          "livechartUrl": "https://www.livechart.me/anime/13556",
+          "anilistId": 209499,
+          "malId": 63751,
+          "sequelStatus": "unknown",
+          "youtubeId": "ihAvU833DHA",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:12.725Z"
         },
         {
           "order": 30,
@@ -431,7 +455,7 @@
           "key": "yowaki max reijo nano ni, ratsuwan konyakusha-sama no kake ni notte shimatta",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13364",
           "livechartUrl": "https://www.livechart.me/anime/13364"
         },
@@ -1147,9 +1171,15 @@
           "key": "zombie no afureta sekai de ore dake ga osowarenai",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "12518",
-          "livechartUrl": "https://www.livechart.me/anime/12518"
+          "livechartUrl": "https://www.livechart.me/anime/12518",
+          "anilistId": 174427,
+          "malId": 57990,
+          "sequelStatus": "unknown",
+          "youtubeId": "ky1EjKvGMrA",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:19.333Z"
         },
         {
           "order": 27,
@@ -1158,9 +1188,15 @@
           "key": "isshiki-san wa koi wo shiritai.",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13367",
-          "livechartUrl": "https://www.livechart.me/anime/13367"
+          "livechartUrl": "https://www.livechart.me/anime/13367",
+          "anilistId": 200578,
+          "malId": 62808,
+          "sequelStatus": "unknown",
+          "youtubeId": "A86REZ-veV8",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:20.311Z"
         },
         {
           "order": 28,
@@ -1169,9 +1205,10 @@
           "key": "marriagetoxin season 2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList title match uncertain",
           "livechartId": "13707",
-          "livechartUrl": "https://www.livechart.me/anime/13707"
+          "livechartUrl": "https://www.livechart.me/anime/13707",
+          "checkedAt": "2026-11-11T12:10:21.280Z"
         },
         {
           "order": 29,
@@ -1180,9 +1217,15 @@
           "key": "himekishi-sama no himo",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13042",
-          "livechartUrl": "https://www.livechart.me/anime/13042"
+          "livechartUrl": "https://www.livechart.me/anime/13042",
+          "anilistId": 186741,
+          "malId": 61015,
+          "sequelStatus": "unknown",
+          "youtubeId": "yavypPvVcnw",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:22.429Z"
         },
         {
           "order": 30,
@@ -1191,7 +1234,7 @@
           "key": "futsutsuka na akujo dewa gozaimasu ga ~suuguu chouso torikae den~ cour 2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13811",
           "livechartUrl": "https://www.livechart.me/anime/13811"
         },
@@ -1202,9 +1245,15 @@
           "key": "doukyo shiteiru kensei no onna shishou ga kawaisugite mainichi shiawase desu",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13488",
-          "livechartUrl": "https://www.livechart.me/anime/13488"
+          "livechartUrl": "https://www.livechart.me/anime/13488",
+          "anilistId": 206798,
+          "malId": 63350,
+          "sequelStatus": "unknown",
+          "youtubeId": "Bh4XDVDUZKc",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:24.412Z"
         },
         {
           "order": 32,
@@ -1213,9 +1262,15 @@
           "key": "majutsu wo kiwamete tabi ni deta tensei elf, moteamashita jumyou de ikeru densetsu to naru",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13396",
-          "livechartUrl": "https://www.livechart.me/anime/13396"
+          "livechartUrl": "https://www.livechart.me/anime/13396",
+          "anilistId": 202503,
+          "malId": 62978,
+          "sequelStatus": "unknown",
+          "youtubeId": "swAIVfYAZDQ",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:25.388Z"
         },
         {
           "order": 33,
@@ -1224,9 +1279,15 @@
           "key": "kekkaishi no ichirinka",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13285",
-          "livechartUrl": "https://www.livechart.me/anime/13285"
+          "livechartUrl": "https://www.livechart.me/anime/13285",
+          "anilistId": 197619,
+          "malId": 62311,
+          "sequelStatus": "unknown",
+          "youtubeId": "QCC-PqpQCCo",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:10:26.356Z"
         },
         {
           "order": 34,
