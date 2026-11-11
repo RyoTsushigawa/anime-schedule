@@ -99,14 +99,20 @@ async function saveVote(body,member,env){
   if(str(rows[i]?.[animeCol])===title)matching.push(i);
  }
  if(matching.length!==1)fail(409,'Anime-Titel wurde nicht eindeutig in dieser Season gefunden.');
- const index=matching[0],current=str(rows[index]?.[personCol])||'Default';
- if(body.expected!==undefined&&(str(body.expected)||'Default')!==current)
+ const index=matching[0],current=str(rows[index]?.[personCol]).replace(/,$/,'')||'Default';
+ if(body.expected!==undefined&&(str(body.expected).replace(/,$/,'')||'Default')!==current)
   fail(409,'Die Stimme wurde inzwischen im Google Sheet geändert. Bitte aktualisieren.');
  const cell=quoted+'!'+columnName(personCol+1)+(index+1);
- await google(encodeURIComponent(env.SHEET_ID)+'/values/'+encodeURIComponent(cell)+'?valueInputOption=RAW',token,{
+ const endpoint=encodeURIComponent(env.SHEET_ID)+'/values/'+encodeURIComponent(cell);
+ const written=await google(endpoint+'?valueInputOption=RAW',token,{
   method:'PUT',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({range:cell,majorDimension:'ROWS',values:[[choice]]})
  });
+ if(written.updatedCells!==1)
+  fail(502,'Google Sheets hat die Stimme nicht bestätigt. Bitte aktualisieren.');
+ const confirmed=await google(endpoint,token);
+ if(str(confirmed.values?.[0]?.[0])!==choice)
+  fail(409,'Die gespeicherte Stimme stimmt nicht mit der Tabelle überein. Bitte aktualisieren.');
  return {ok:true,person,choice};
 }
 export default {
