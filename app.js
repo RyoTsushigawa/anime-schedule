@@ -889,8 +889,8 @@ return [s, merged];
 }));
 const showWho = $('who').checked;
 const others = who => mode === 'solo' ? who?.filter(p => !activePeople().includes(p)) : who;
-const whoChips = (all, away = []) => { const who = others(all); return showWho && who?.length
-? `<span class="who">${who.map(p => away.includes(p) ? `<span class="away" title="Abwesend">${esc(p)}</span>` : `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
+const whoChips = (all, away = [], maybe = []) => { const who = others(all); return showWho && who?.length
+? `<span class="who">${who.map(p => away.includes(p) ? maybe.includes(p) ? `<span class="away maybe" title="Spontan da">${esc(p)}</span>` : `<span class="away" title="Abwesend">${esc(p)}</span>` : `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}${who.length > 2 ? `<button class="who-more" data-more="+${who.length - 2}" aria-expanded="false" aria-label="Alle anzeigen: ${esc(who.join(', '))}">+${who.length - 2}</button>` : ''}</span>` : ''; };
 const found = new Set();
 const droppedByMe = id => !everyone && !!auth && mode === 'solo' && soloPerson === ownPerson() && knownEntries.get(Number(id))?.status === 'DROPPED';
 const today = new Date().toDateString();
@@ -980,8 +980,9 @@ const isAway = p => awayAt(isoDay(day.date), p, minute);
 const missing = (r.who || []).filter(isAway);
 const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p), 0);
 if (!missing.length) return r;
-if (left > 1) return { ...r, away: missing };
-return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, alId: r.m?.id };
+const maybe = missing.filter(p => absent.some(x => x.day === isoDay(day.date) && x.maybe && x.people?.includes(p)));
+if (left > 1) return { ...r, away: missing, maybe };
+return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, maybe, alId: r.m?.id };
 });
 }
 const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
@@ -1088,13 +1089,13 @@ const pauseOn = pauseShiftEnabled(isoDay(date));
 const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseOn ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseOn}" aria-label="Pause überspringen" title="Pause überspringen: ${pauseOn ? 'an · spätere Serien rücken in den freien Slot vor (feste Uhrzeiten bleiben)' : 'aus · alle behalten ihre geplante Zeit'}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
-const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, recap, alId }) => `
+const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, maybe, recap, alId }) => `
       <div class="row pause${skipped ? ' skipped' : ''}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         ${coverFor(alId) ? `<img src="${safeUrl(coverFor(alId))}" alt="" loading="lazy">` : '<span class="no-cover"></span>'}
         <div class="info">
           <div class="title">${esc(show.english || show.romaji)}${skipped || recap ? `<span class="ep-tag">${skipped ? (missing?.length ? 'Abwesend' : 'Skip') : 'Recap'}</span>` : ''}</div>
-          <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' <span class="keep-time-note">Zeiten beibehalten</span>' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>
+          <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? missing.every(p => maybe?.includes(p)) ? `${missing.map(esc).join(', ')} spontan da` : `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' <span class="keep-time-note">Zeiten beibehalten</span>' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>
         </div>
         <div class="links"></div>
         ${checkSpace}${moveButton(show, slot)}
@@ -1136,13 +1137,13 @@ return choices.time === 'watch' ? watch
 : choices.time === 'both' ? `${watch}<small><span class="out">ab </span>${release}</small>` : releaseCell;
 };
 const timeHint = { watch: 'Unser Plan', release: 'Release', both: 'Unser Plan, darunter Release' }[choices.time] || 'Release';
-const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra, away, long }) => `
+const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra, away, maybe, long }) => `
       <div class="row${extra ? ' catchup-planned' : ''}" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time" title="${extra ? 'Unser Plan (Nachholen)' : timeHint}">${extra ? hm(new Date(watchAt)) : timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${long ? '<span class="ep-tag" title="Lange Folge: braucht zwei Slots">Lang</span>' : ''}${whoChips(who, away)}</div>
+          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${long ? '<span class="ep-tag" title="Lange Folge: braucht zwei Slots">Lang</span>' : ''}${whoChips(who, away, maybe)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen" aria-label="Nachholen ändern"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h15l-4-4M20 16H5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '') : moveButton(show, slot)}
@@ -2540,15 +2541,16 @@ const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/con
 let moves = [];
 let delays = [];
 let absent = [];
-// absent: [{ day, people }] for the whole day, or with from ("ab 21:00") / until ("bis 20:00").
-const absentOn = date => absent.filter(x => x.day === date && !x.from && !x.until).flatMap(x => x.people || []);
+// absent: [{ day, people }] for the whole day, or with from ("ab 21:00") / until ("bis 20:00"),
+// or maybe: true ("spontan da": not planned with, but might turn up).
+const absentOn = date => absent.filter(x => x.day === date && !x.from && !x.until && !x.maybe).flatMap(x => x.people || []);
 const clockMinutes = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
 // minute: minutes after the day's midnight (after midnight counts on: 00:30 = 1470); null = unknown time
 const awayAt = (date, person, minute) => absent.some(x => x.day === date && x.people?.includes(person)
 && (!x.from || (minute != null && minute >= clockMinutes(x.from)))
 && (!x.until || (minute != null && minute < clockMinutes(x.until))));
-const awayLabel = x => x.from ? `ab ${x.from}` : x.until ? `bis ${x.until}` : 'ganztägig';
-const awayText = date => absent.filter(x => x.day === date).flatMap(x => (x.people || []).map(p => x.from || x.until ? `${p} (${awayLabel(x)})` : p));
+const awayLabel = x => x.maybe ? 'spontan da' : x.from ? `ab ${x.from}` : x.until ? `bis ${x.until}` : 'ganztägig';
+const awayText = date => absent.filter(x => x.day === date).flatMap(x => (x.people || []).map(p => x.from || x.until || x.maybe ? `${p} (${awayLabel(x)})` : p));
 let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
@@ -3391,7 +3393,7 @@ for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden=
 for (let n = startDay; n <= length; n++) {
 const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
 const entries = absent.filter(x => x.day === iso);
-const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}"${x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
+const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}"${x.maybe ? ' class="maybe"' : x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
 cells.push(`<button type="button" class="away-day${iso === today ? ' today' : ''}${sel.has(iso) ? ' sel' : ''}${entries.length ? ' has-entries' : ''}" data-away-day="${iso}"${iso < today ? ' disabled' : ''}${iso === today ? ' aria-current="date"' : ''} aria-pressed="${sel.has(iso)}" aria-label="${esc(shortDate(iso))}${entries.length ? ': ' + esc(awayText(iso).join(', ')) : ''}"><b>${n}</b><span class="away-dots">${dots}</span></button>`);
 }
 $('awayGrid').innerHTML = cells.join('');
@@ -3404,7 +3406,7 @@ $('awayEditor').hidden = !days.length;
 if (!days.length) return;
 $('awayRange').textContent = days.length > 1 ? `${shortDate(days[0])} – ${shortDate(days.at(-1))}` : shortDate(days[0]);
 for (const b of $('awayMode').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === awayCal.mode));
-$('awayTime').hidden = awayCal.mode === 'day';
+$('awayTime').hidden = awayCal.mode === 'day' || awayCal.mode === 'maybe';
 for (const b of $('awayRepeat').querySelectorAll('[data-repeat]')) b.setAttribute('aria-pressed', String(b.dataset.repeat === awayCal.repeat));
 $('awayRepeatHint').textContent = awayCal.repeat === 'weekly'
   ? `Wiederholt sich ${AWAY_REPEAT_WEEKS} Wochen lang. Für die Wiederholung nur einen Tag auswählen.`
@@ -3508,7 +3510,7 @@ const mode = e.target.closest('[data-mode]')?.dataset.mode;
 if (!mode) return;
 awayCal.mode = mode;
 drawAwayEditor();
-if (mode !== 'day') $('awayClock').focus();
+if (mode === 'from' || mode === 'until') $('awayClock').focus();
 });
 $('awayRepeat').addEventListener('click', e => {
 const repeat = e.target.closest('[data-repeat]')?.dataset.repeat;
@@ -3537,12 +3539,12 @@ if (awayCal.mode === 'day') {
 next = absent.flatMap(x => {
 if (!days.includes(x.day)) return [x];
 // a whole day for someone replaces their "ab"/"bis" there; other people's times stay
-const timed = x.from || x.until;
+const timed = x.from || x.until || x.maybe;
 const people = (x.people || []).filter(p => !on.includes(p) && (timed || awayCal.repeat === 'weekly' || !off.includes(p)));
 return people.length ? [{ ...x, people }] : [];
 }).concat(on.length ? days.map(day => ({ day, people: on })) : []);
 } else {
-const time = clockOf($('awayClock').value);
+const time = awayCal.mode === 'maybe' ? true : clockOf($('awayClock').value);
 if (!time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (!on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
 // one entry per person and day: a time replaces their whole day or their other time
@@ -3553,7 +3555,7 @@ return people.length ? [{ ...x, people }] : [];
 }).concat(days.map(day => ({ day, people: on, [awayCal.mode]: time })));
 }
 next = next.sort((a, b) => a.day.localeCompare(b.day));
-const label = (awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${clockOf($('awayClock').value)}.`)
+const label = (awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${clockOf($('awayClock').value)}.`)
   + (awayCal.repeat === 'weekly' ? ` Jede Woche bis ${shortDate(days.at(-1))} (${AWAY_REPEAT_WEEKS} Termine).` : '');
 storeAway(next, days, label);
 };
@@ -3566,7 +3568,7 @@ if (edit) {
   awayCal.end = run.weekly ? null : run.to !== run.from ? run.to : null;
   awayCal.repeat = run.weekly ? 'weekly' : 'once';
   const existing = absent.find(x => x.day === run.from && (x.people || []).includes(run.p) && awayLabel(x) === run.cond);
-  awayCal.mode = existing?.from ? 'from' : existing?.until ? 'until' : 'day';
+  awayCal.mode = existing?.maybe ? 'maybe' : existing?.from ? 'from' : existing?.until ? 'until' : 'day';
   if (existing?.from || existing?.until) $('awayClock').value = existing.from || existing.until;
   $('awayMsg').textContent = 'Eintrag ausgewählt. Änderungen vornehmen und speichern.';
   drawAway();
