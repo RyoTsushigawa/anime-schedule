@@ -113,6 +113,11 @@ async function main(){
  for(const name of seasonNames){
   const rows=candidates.seasons[name];
   if(!rows?.entries?.length)continue;
+  // Do not mutate playlists based on an incomplete or unchecked previous season.
+  if(rows.previousSeasonChecked!==true){
+   console.warn(name+': previous season not confirmed; preserving existing playlist unchanged');
+   continue;
+  }
   const destination=catalog.seasons[name]||{trailers:{}};
   destination.trailers||={};
   await checkVideoAvailability(destination,rows.entries);
@@ -125,6 +130,10 @@ async function main(){
    else if(live===true&&entry.youtubeStatus==='unavailable')delete entry.youtubeStatus;
   }
   let playlistId=destination.youtubePlaylistId;
+  if(!playlistId&&!desired.length){
+   console.log(name+': no approved videos yet; playlist creation skipped');
+   continue;
+  }
   if(!playlistId){
    playlistId=await createPlaylist(rows.title||name);
    destination.youtubePlaylistId=playlistId;
@@ -134,7 +143,11 @@ async function main(){
    writes++;
   }
   if(!/^PL[\w-]{12,}$/.test(playlistId))throw Error('Unexpected playlist ID format for '+name);
+  // After each season, persist successful availability checks and playlist metadata.
+  // The workflow commits this file even if a subsequent season needs a retry.
   const count=await reconcile(playlistId,desired);
+  catalog.seasons[name]=destination;
+  await writeFile(file,JSON.stringify(catalog,null,2)+'\n');
   writes+=count;
   console.log(name+': '+desired.length+' approved videos; '+count+' changes, playlist '+playlistId);
  }
