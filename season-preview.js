@@ -412,7 +412,7 @@ function render(){
  pv('previewStats').hidden=false;
  // sequels get no trailer on purpose; the rest without one is what is really missing
  const sequels=shows.filter(s=>!trailerFor(s)&&(detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel')).length;
- pv('previewStats').innerHTML='<span class="preview-stat"><b>'+shows.length+'</b> Serien</span><span class="preview-stat"><b>'+trailers+'</b> Trailer</span><span class="preview-stat"><b>'+sequels+'</b> Fortsetzungen</span><span class="preview-stat" title="Neue Serien, für die noch kein passender Trailer gefunden wurde"><b>'+(shows.length-trailers-sequels)+'</b> fehlende Trailer</span>';
+ pv('previewStats').innerHTML='<span class="preview-stat"><b>'+shows.length+'</b> Serien</span><span class="preview-stat"><b>'+trailers+'</b> Trailer</span><span class="preview-stat"><b>'+sequels+'</b> Sequels</span><span class="preview-stat" title="Neue Serien, für die noch kein passender Trailer gefunden wurde"><b>'+(shows.length-trailers-sequels)+'</b> fehlende Trailer</span>';
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{10,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
@@ -431,8 +431,9 @@ function render(){
   const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item';
   const sequel=detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel';
   // the trailers are streamed as one playlist; a card only notes when a show has none
-  const action=trailer?'':'<span class="preview-none">'+(sequel?'Fortsetzung':'Noch kein Trailer')+'</span>';
-  article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+action+'</div>';
+  // above the title, so the vote buttons line up on every card
+  const note=trailer?'':'<span class="preview-none">'+(sequel?'Sequel':'Noch kein Trailer')+'</span>';
+  article.innerHTML='<div class="preview-order">'+s.order+'</div><div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
   parent.append(article);
  }
 }
