@@ -7,7 +7,7 @@ const pv = id => document.getElementById(id);
 const clean = s => String(s || '').trim();
 const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let seasonTabs = [], seasonIndex = {seasons:{}}, current = null, shows = [], people = [];
-let voteApi = '', member = null, votingToken = '', saving = new Set(), reloadTimer = 0;
+let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
 function state(msg) {pv('previewStatus').textContent=msg;}
 function seasonKey(tab){const m=tab.name.match(PV_SEASONS);return m ? m[1].toLowerCase()+'-'+m[2] : '';}
 function parseSeasonRows(rows){
@@ -103,20 +103,21 @@ function updateMemberUI(){
  info.textContent=member?'AniList: '+member.account+' · Deine Änderungen werden in Google Sheets gespeichert.':
   voteApi?'Bitte verbinde dein AniList-Konto über die Hauptseite. Nur freigeschaltete Mitglieder dürfen abstimmen.':
   'Abstimmen wird nach Einrichtung der sicheren Sheets-Verbindung freigeschaltet. Die Tabelle bleibt jederzeit bearbeitbar.';
+ if(memberError && !member)info.textContent=memberError;
 }
 async function configureVoting(){
  const settings=await config();
  voteApi=typeof settings.previewVotesUrl==='string' && /^https:\/\//.test(settings.previewVotesUrl)?
   settings.previewVotesUrl.replace(/\/$/,''):'';
  votingToken=readAniListToken();
- member=null;
+ member=null;memberError='';
  if(voteApi&&votingToken){
   try{
    const response=await fetch(voteApi+'/me',{headers:{Authorization:'Bearer '+votingToken},cache:'no-store'});
    if(!response.ok)throw new Error(response.status===403?'Dieses AniList-Konto ist noch nicht freigeschaltet.':'Anmeldung konnte nicht geprüft werden.');
    const verified=await response.json();
    if(typeof verified.account==='string'&&typeof verified.person==='string')member=verified;
-  }catch(error){pv('previewVotingInfo').textContent='Anmeldung nicht verfügbar: '+error.message;}
+  }catch(error){memberError='Anmeldung nicht verfügbar: '+error.message;}
  }
  updateMemberUI();
  if(current)render();
@@ -184,6 +185,7 @@ pv('previewList').addEventListener('click',event=>{
  }
 });
 pv('previewPerson').addEventListener('change',render);
+pv('previewRefresh').addEventListener('click',()=>refreshSheet(false));
 function render(){
  const q=clean(pv('previewSearch').value).toLocaleLowerCase(),filter=pv('previewFilter').value;
  const data=seasonIndex.seasons?.[seasonKey(current)]||{}, trailers=shows.filter(x=>trailerFor(x)).length;
@@ -201,7 +203,8 @@ function render(){
   const trailer=pickedTrailer(s),candidates=trailerCandidates(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ Vollständigen Trailer ansehen</a>':'';
   const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
-  const votes=s.votes.length?s.votes.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Einträge</span>';
+  const decided=s.votes.filter(v=>v.value&&v.value.toLowerCase()!=='default');
+  const votes=decided.length?decided.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Stimmen</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2>'+safeText(s.title)+'</h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.english)+'</p>':'')+
   '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?'Vollständiger Trailer verfügbar':trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
   '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="https://www.livechart.me/">LiveChart öffnen</a></div>'+choices+
