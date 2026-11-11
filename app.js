@@ -2239,6 +2239,9 @@ function catchupSeasonGroups(rows) {
 // Mark only the episodes belonging to this season, never later episodes from
 // the same series. AniList/MAL progress is sequential, so older episodes below
 // a later progress value are implicitly watched as well.
+function showCatchupSeasonHeaders(groups, now = Date.now() / 1000) {
+ return !(groups.length === 1 && groups[0].key === catchupSeasonKey(now));
+}
 function seasonWatchTargets(rows) {
  const byMedia = new Map();
  for (const r of rows) {
@@ -2388,9 +2391,7 @@ const top = !mine || !rows.length || !selecting ? ''
 const show = single ? perEpisode : grouped;
 const seasonGroups = catchupSeasonGroups(rows);
 catchupSeasonTargets = new Map(seasonGroups.map(g => [g.key, seasonWatchTargets(g.rows)]));
-const today = new Date();
-const currentSeasonKey = catchupSeasonKey(today.getTime() / 1000);
-const hideSeasonHeader = seasonGroups.length === 1 && seasonGroups[0].key === currentSeasonKey;
+const hideSeasonHeader = !showCatchupSeasonHeaders(seasonGroups);
 const seasonBulkButton = group => mine && !selecting && catchupSeasonTargets.get(group.key)?.length
  ? `<button type="button" class="pill catchup-season-mark" data-mark-season="${group.key}" title="Alle offenen Folgen dieser Season als gesehen markieren">Alle gesehen ✓</button>` : '';
 const newestSeason = seasonGroups.find(g => g.key !== 'unknown')?.key || seasonGroups[0]?.key;
