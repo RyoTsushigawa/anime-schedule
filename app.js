@@ -594,6 +594,21 @@ else applySearch();
 searchedWeek = searching();
 }
 $('search').addEventListener('input', searchChanged);
+// Recent searches: the last six terms that found something, offered by the browser as suggestions
+const RECENT_MAX = 6;
+let recentTimer = 0;
+const recentSearches = () => { try { const v = JSON.parse(localStorage.getItem('recentSearches') || '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, RECENT_MAX) : []; } catch { return []; } };
+function drawRecentSearches() { $('recentSearches').replaceChildren(...recentSearches().map(term => Object.assign(document.createElement('option'), { value: term }))); }
+function rememberSearch() {
+  const term = $('search').value.trim();
+  if (term.length < 2 || !document.querySelector('#list [data-search]:not(.hidden-by-search)')) return;
+  const next = [term, ...recentSearches().filter(t => t.toLowerCase() !== term.toLowerCase())].slice(0, RECENT_MAX);
+  try { localStorage.setItem('recentSearches', JSON.stringify(next)); } catch {}
+  drawRecentSearches();
+}
+drawRecentSearches();
+$('search').addEventListener('input', () => { clearTimeout(recentTimer); recentTimer = setTimeout(rememberSearch, 1500); });
+$('search').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(recentTimer); rememberSearch(); } });
 $('list').addEventListener('click', e => {
 const chip = e.target.closest('#airingWarnings');
 if (!chip) return;
@@ -1494,7 +1509,7 @@ if (id === 'moveButtons') syncMoveEditor();
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
 const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
   'who', 'behind', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
-  'notListedOpen', 'listProvider', 'anilistUser'];
+  'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
 $('settingsExport').onclick = () => {
   const settings = {};
   for (const key of EXPORTED_SETTINGS) { try { const v = localStorage.getItem(key); if (v != null) settings[key] = v; } catch {} }

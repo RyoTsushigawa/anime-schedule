@@ -37,7 +37,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" title="Plan bearbeiten" hidden>Bearbeiten</button>
 <div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true" title="Nur diese Woche">Diese Woche</button><button type="button" data-edit-scope="always" aria-pressed="false" title="Ab jetzt jede Woche">Dauerhaft</button></div>
 <div id="searchBox" class="search">
-<input id="search" class="pill" type="search" placeholder="Serien suchen" aria-label="Serien suchen" spellcheck="false">
+<input id="search" class="pill" type="search" placeholder="Serien suchen" aria-label="Serien suchen" spellcheck="false" list="recentSearches" autocomplete="off"><datalist id="recentSearches"></datalist>
 <button id="searchButton" class="round" aria-label="Serien suchen" aria-expanded="false" aria-controls="search">
 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
 </button>
