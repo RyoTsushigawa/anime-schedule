@@ -7,7 +7,7 @@ const pv = id => document.getElementById(id);
 const clean = s => String(s || '').trim();
 const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, previewCandidates = {seasons:{}}, current = null, shows = [], people = [];
-let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
+let voteApi = '', member = null, memberError = '', groupCode = '', saving = new Set(), reloadTimer = 0;
 let carryoverNotice = '', seasonRequest = 0;
 const checkedNewTitles = new Map();
 const voteFeedback = new Map();
@@ -209,45 +209,48 @@ function validChoices(person){
  return PV_OPTIONS.filter(option=>option!=='Okinawa 3'||['quecks','rei','terra'].includes(person.toLowerCase()));
 }
 function currentVoter(){return pv('previewPerson').value||member?.person||'';}
-function readAniListToken(){
- try{
-  if(localStorage.getItem('listProvider')==='mal')return '';
-  const accounts=JSON.parse(localStorage.getItem('anilistAccounts')||'[]');
-  const selected=localStorage.getItem('anilistActive');
-  const account=accounts.find(a=>a.name===selected && (a.provider||'anilist')==='anilist')||
-    (!selected?accounts.find(a=>(a.provider||'anilist')==='anilist'):null);
-  return account?.token && (!account.expires||account.expires>Date.now())?account.token:'';
- }catch{return '';}
+// A shared code unlocks group voting, without pretending to identify individual voters.
+// Keep the code in session storage, not in public scripts or URLs.
+function storedGroupCode(){
+ try{return sessionStorage.getItem('previewGroupCode')||'';}catch{return '';}
+}
+function selectedGroupPerson(){
+ try{return localStorage.getItem('previewVotePerson')||'';}catch{return '';}
 }
 function updateMemberUI(){
- const info=pv('previewVotingInfo'), selector=pv('previewPerson'), label=pv('previewPersonLabel');
- const allowed=member?[member.person,...(member.delegates||[])].filter((p,i,all)=>all.indexOf(p)===i&&people.includes(p)):[];
- const previous=selector.value;
- selector.replaceChildren(...allowed.map(p=>new Option(p+(p===member.person?'':' (Vertretung)'),p)));
- if(allowed.includes(previous))selector.value=previous;
- else if(allowed.includes(member?.person))selector.value=member.person;
- label.hidden=selector.hidden=allowed.length<2;
- const voteFilter=pv('previewVoteFilterLabel');
- voteFilter.hidden=!allowed.length;
- if(!allowed.length)pv('previewVoteFilter').value='all';
- info.textContent=member?'AniList: '+member.account+' · Deine Änderungen werden in Google Sheets gespeichert.':
-  voteApi?'Bitte verbinde dein AniList-Konto über die Hauptseite. Nur freigeschaltete Mitglieder dürfen abstimmen.':
-  'Abstimmen wird nach Einrichtung der sicheren Sheets-Verbindung freigeschaltet. Die Tabelle bleibt jederzeit bearbeitbar.';
- if(memberError && !member)info.textContent=memberError;
+ const info=pv('previewVotingInfo'),selector=pv('previewPerson'),label=pv('previewPersonLabel');
+ const form=pv('previewAccessForm'),lock=pv('previewLock');
+ const unlocked=!!member&&!!groupCode;
+ const previous=selector.value||selectedGroupPerson();
+ const available=unlocked?people:[];
+ selector.replaceChildren(...available.map(p=>new Option(p,p)));
+ if(available.includes(previous))selector.value=previous;
+ else if(available.length)selector.value=available[0];
+ label.hidden=selector.hidden=!available.length;
+ form.hidden=!voteApi||unlocked;
+ lock.hidden=!unlocked;
+ const filter=pv('previewVoteFilterLabel');
+ filter.hidden=!unlocked;
+ if(!unlocked)pv('previewVoteFilter').value='all';
+ info.textContent=unlocked?'Gruppenabstimmung freigeschaltet · Wähle deinen Namen. Änderungen werden direkt in Google Sheets gespeichert.':
+  voteApi?'Kein AniList-Login nötig. Gruppencode einmal pro Browser-Sitzung eingeben, um abzustimmen.':
+  'Die Abstimmung wird nach Einrichtung der Google-Sheets-Verbindung freigeschaltet. Bestehende Stimmen bleiben sichtbar.';
+ if(memberError&&!unlocked)info.textContent=memberError;
+}
+async function checkGroupAccess(code){
+ const response=await fetch(voteApi+'/access',{headers:{'X-Group-Code':code},cache:'no-store'});
+ if(!response.ok)throw Error(response.status===401?'Gruppencode ungültig.':response.status===503?'Gruppenzugang noch nicht eingerichtet.':'Verbindung fehlgeschlagen (HTTP '+response.status+').');
+ return true;
 }
 async function configureVoting(){
  const settings=await config();
  voteApi=typeof settings.previewVotesUrl==='string' && /^https:\/\//.test(settings.previewVotesUrl)?
   settings.previewVotesUrl.replace(/\/$/,''):'';
- votingToken=readAniListToken();
+ groupCode=voteApi?storedGroupCode():'';
  member=null;memberError='';
- if(voteApi&&votingToken){
-  try{
-   const response=await fetch(voteApi+'/me',{headers:{Authorization:'Bearer '+votingToken},cache:'no-store'});
-   if(!response.ok)throw new Error(response.status===403?'Dieses AniList-Konto ist noch nicht freigeschaltet.':'Anmeldung konnte nicht geprüft werden.');
-   const verified=await response.json();
-   if(typeof verified.account==='string'&&typeof verified.person==='string')member=verified;
-  }catch(error){memberError='Anmeldung nicht verfügbar: '+error.message;}
+ if(voteApi&&groupCode){
+  try{await checkGroupAccess(groupCode);member={account:'Gruppe'};}
+  catch(error){groupCode='';try{sessionStorage.removeItem('previewGroupCode');}catch{}memberError=error.message;}
  }
  updateMemberUI();
  if(current)render();
@@ -282,7 +285,7 @@ async function refreshSheet(silent=false){
  }catch(error){if(!silent)state('Aktualisierung fehlgeschlagen: '+error.message);}
 }
 async function saveVote(show,choice){
- if(!member||!voteApi||!votingToken||saving.has(show.key))return;
+ if(!member||!voteApi||!groupCode||saving.has(show.key))return;
  const person=currentVoter();
  if(!validChoices(person).includes(choice)&&choice!=='Default')return;
  const old=voteValue(show,person),gid=current.gid;
@@ -294,11 +297,11 @@ async function saveVote(show,choice){
  let conflict=false;
  try{
   const response=await fetch(voteApi+'/vote',{
-   method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+votingToken},
+   method:'POST',headers:{'Content-Type':'application/json','X-Group-Code':groupCode},
    body:JSON.stringify({gid,title:show.title,person,choice,expected:old})
   });
   const data=await response.json().catch(()=>({}));
-  if(!response.ok){conflict=response.status===409;throw new Error(data.error||('Speichern fehlgeschlagen (HTTP '+response.status+')'));}
+  if(!response.ok){conflict=response.status===409;if(response.status===401){groupCode='';member=null;try{sessionStorage.removeItem('previewGroupCode');}catch{}updateMemberUI();}throw new Error(data.error||('Speichern fehlgeschlagen (HTTP '+response.status+')'));}
   if(current?.gid===gid){
    const existing=show.votes.find(v=>v.name===person);
    if(existing)existing.value=choice;else show.votes.push({name:person,value:choice});
@@ -354,7 +357,35 @@ pv('previewList').addEventListener('click',event=>{
   render();
  }
 });
-pv('previewPerson').addEventListener('change',render);
+pv('previewPerson').addEventListener('change',()=>{
+ try{localStorage.setItem('previewVotePerson',pv('previewPerson').value);}catch{}
+ render();
+});
+pv('previewAccessForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ if(!voteApi)return;
+ const form=pv('previewAccessForm'),code=pv('previewGroupCode').value.trim();
+ const button=form.querySelector('button[type="submit"]');
+ if(!code||button.disabled)return;
+ button.disabled=true;
+ memberError='';
+ try{
+  await checkGroupAccess(code);
+  groupCode=code;
+  member={account:'Gruppe'};
+  try{sessionStorage.setItem('previewGroupCode',code);}catch{}
+  pv('previewGroupCode').value='';
+  state('Gruppenabstimmung freigeschaltet.');
+ }catch(error){memberError=error.message;state('Nicht freigeschaltet: '+error.message);}
+ finally{button.disabled=false;updateMemberUI();if(current)render();}
+});
+pv('previewLock').addEventListener('click',()=>{
+ if(saving.size)return;
+ groupCode='';member=null;voteFeedback.clear();
+ try{sessionStorage.removeItem('previewGroupCode');}catch{}
+ updateMemberUI();if(current)render();
+ state('Gruppenzugang für diese Browser-Sitzung geschlossen.');
+});
 pv('previewVoteFilter').addEventListener('change',()=>{if(current)render();});
 pv('previewRefresh').addEventListener('click',()=>refreshSheet(false));
 function render(){
