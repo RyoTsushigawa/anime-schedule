@@ -115,6 +115,7 @@ async function main(){
  });
  const prior=await readFile('season-trailer-candidates.json','utf8').then(JSON.parse).catch(()=>({seasons:{}}));
  const catalog=await readFile('season-trailers.json','utf8').then(JSON.parse);
+ const livechart=await readFile('seasons.json','utf8').then(JSON.parse).catch(()=>({seasons:{}}));
  const report={schemaVersion:1,generated:new Date().toISOString(),seasons:{}};
  for(const tab of tabs){
   const key=seasonId(tab.title);
@@ -162,6 +163,17 @@ async function main(){
     item.youtubeSearch=await searchYoutube(item.english||item.title);
     item.lastYoutubeSearch=new Date().toISOString();
    }catch(error){item.youtubeSearchError=String(error.message).slice(0,150);}
+  }
+  // Give reviewers a direct route to LiveChart's per-anime video/subtitle options.
+  // This metadata is only a link, never evidence of verified subtitles or footage.
+  const chartList=livechart.seasons?.[key]||[];
+  for(const row of entries){
+   const titles=[row.title,row.english].filter(Boolean).map(norm);
+   const match=chartList.find(item=>[item.romaji,item.english].filter(Boolean).map(norm).some(t=>titles.includes(t)));
+   if(match && /^\d+$/.test(String(match.livechartId||''))){
+    row.livechartId=String(match.livechartId);
+    row.livechartUrl='https://www.livechart.me/anime/'+row.livechartId;
+   }
   }
   report.seasons[key]={title:tab.title,gid:String(tab.sheetId),previousSeason:priorName,previousSeasonChecked:!!previous,entries};
  }
