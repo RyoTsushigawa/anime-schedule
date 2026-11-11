@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-11-11T12:10:02.426Z",
+  "generated": "2026-11-11T12:11:11.305Z",
   "seasons": {
     "fall-2026": {
       "title": "Herbst 2026",
@@ -466,9 +466,15 @@
           "key": "hotel inhumans season 2",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13344",
-          "livechartUrl": "https://www.livechart.me/anime/13344"
+          "livechartUrl": "https://www.livechart.me/anime/13344",
+          "anilistId": 199426,
+          "malId": 62590,
+          "sequelStatus": "sequel",
+          "youtubeId": null,
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:18.975Z"
         },
         {
           "order": 32,
@@ -477,9 +483,15 @@
           "key": "kanata kara",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13557",
-          "livechartUrl": "https://www.livechart.me/anime/13557"
+          "livechartUrl": "https://www.livechart.me/anime/13557",
+          "anilistId": 209463,
+          "malId": 63753,
+          "sequelStatus": "unknown",
+          "youtubeId": "dLRKywRu3iM",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:19.878Z"
         },
         {
           "order": 33,
@@ -488,9 +500,15 @@
           "key": "dark summoner to dekiteiru",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13526",
-          "livechartUrl": "https://www.livechart.me/anime/13526"
+          "livechartUrl": "https://www.livechart.me/anime/13526",
+          "anilistId": 208025,
+          "malId": 63509,
+          "sequelStatus": "unknown",
+          "youtubeId": "-YCols5lYow",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:20.817Z"
         },
         {
           "order": 34,
@@ -499,9 +517,15 @@
           "key": "doumo, suki na hito ni horegusuri wo irai sareta majo desu.",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13508",
-          "livechartUrl": "https://www.livechart.me/anime/13508"
+          "livechartUrl": "https://www.livechart.me/anime/13508",
+          "anilistId": 207191,
+          "malId": 63409,
+          "sequelStatus": "unknown",
+          "youtubeId": "hGRtocAh3iw",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:21.719Z"
         },
         {
           "order": 35,
@@ -1296,9 +1320,15 @@
           "key": "kaketa tsuki no mercedes",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13268",
-          "livechartUrl": "https://www.livechart.me/anime/13268"
+          "livechartUrl": "https://www.livechart.me/anime/13268",
+          "anilistId": 197095,
+          "malId": 62188,
+          "sequelStatus": "unknown",
+          "youtubeId": "BeBqd3yuV9U",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:27.990Z"
         },
         {
           "order": 35,
@@ -1307,9 +1337,15 @@
           "key": "sudachi no maoujou",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13686",
-          "livechartUrl": "https://www.livechart.me/anime/13686"
+          "livechartUrl": "https://www.livechart.me/anime/13686",
+          "anilistId": 213497,
+          "malId": 64467,
+          "sequelStatus": "unknown",
+          "youtubeId": "BXcu-Z3SEYo",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:28.894Z"
         },
         {
           "order": 36,
@@ -1318,9 +1354,15 @@
           "key": "shishite ikiru sss-kyuu hunter",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13796",
-          "livechartUrl": "https://www.livechart.me/anime/13796"
+          "livechartUrl": "https://www.livechart.me/anime/13796",
+          "anilistId": 216624,
+          "malId": 64950,
+          "sequelStatus": "unknown",
+          "youtubeId": "C6ecZk2mHqA",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:29.805Z"
         },
         {
           "order": 37,
@@ -1329,9 +1371,15 @@
           "key": "isekai tensei soudouki",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13551",
-          "livechartUrl": "https://www.livechart.me/anime/13551"
+          "livechartUrl": "https://www.livechart.me/anime/13551",
+          "anilistId": 209221,
+          "malId": 63730,
+          "sequelStatus": "unknown",
+          "youtubeId": "G7ddo_2gKXE",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:30.705Z"
         },
         {
           "order": 38,
@@ -1340,7 +1388,7 @@
           "key": "odebu akujo ni tensei shitara, nazeka last boss oujisama ni shuuchaku sareteimasu",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13522",
           "livechartUrl": "https://www.livechart.me/anime/13522"
         },
@@ -1351,9 +1399,15 @@
           "key": "game sekai tensei \"dankatsu\": gamer wa \"dungeon shuukatsu no susume\" wo \"hajime kara\" play suru",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13547",
-          "livechartUrl": "https://www.livechart.me/anime/13547"
+          "livechartUrl": "https://www.livechart.me/anime/13547",
+          "anilistId": 209224,
+          "malId": 63706,
+          "sequelStatus": "unknown",
+          "youtubeId": "4BFObPUXf2E",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:11:32.507Z"
         },
         {
           "order": 40,
@@ -1362,7 +1416,7 @@
           "key": "boukensha license wo hakudatsu sareta ossan dakedo, manamusume ga dekita node nonbiri jinsei wo ouka suru",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13470",
           "livechartUrl": "https://www.livechart.me/anime/13470"
         },
