@@ -332,7 +332,8 @@ weeks ago are left alone.
 Picking (`tools/trailers.mjs`): AniList's trailer plus a YouTube search per show. Full trailers ("Main Trailer",
 "Trailer", "PV 2") beat teasers, 1–4 minutes, official channels, German/English subtitle tracks (burned-in
 subtitles can't be seen by the tool); videos blocked in Germany or not embeddable are out. Each show is searched
-once. A wrong pick goes into `trailer-picks.json` (see "Files").
+once; a teaser (or nothing) is looked up again once a week until the season starts, since main trailers come later.
+A wrong pick goes into `trailer-picks.json` (see "Files").
 
 YouTube allows 10,000 units a day (a search 100, each playlist change 50): a long list takes two days; the run
 stops on its own and carries on the next day. Failures ping the owner in the bot test channel.
