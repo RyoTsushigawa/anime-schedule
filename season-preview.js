@@ -1,5 +1,6 @@
 'use strict';
-const PV_OPTIONS = ['Ja','Nein','Vielleicht','Demons','Allein','Default','Wenn Belly dabei ist','Okinawa 3'];
+// 'Default' denotes an untouched vote in Google Sheets; it is not a selectable choice.
+const PV_OPTIONS = ['Ja','Nein','Vielleicht','Demons','Allein','Wenn Belly dabei ist','Okinawa 3'];
 const PV_SEASONS = /^(Winter|Frühling|Sommer|Herbst)\s+(20\d{2})$/i;
 const PV_MONTHS = {winter:0,'frühling':3,sommer:6,herbst:9};
 const pv = id => document.getElementById(id);
