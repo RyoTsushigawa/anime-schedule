@@ -18,6 +18,7 @@ export function desiredVideos(season,entries){
  const chosen=new Set(),result=[];
  const unavailable=new Set(Object.entries(season?.videoStatus||{}).filter(([,v])=>v?.available===false).map(([id])=>id));
  for(const row of entries){
+  if(row.carriedOver!==false)continue; // Previous season unknown? Fail closed; never expose carryover footage.
   const video=chooseVideo(season?.trailers?.[row.key],unavailable);
   if(!video||chosen.has(video.youtubeId))continue;
   chosen.add(video.youtubeId);result.push(video.youtubeId);
@@ -45,7 +46,7 @@ async function auth(){
 }
 async function checkVideoAvailability(season,entries){
  const ids=[...new Set(entries.flatMap(row=>{
-  const entry=season?.trailers?.[row.key];
+  const entry=row.carriedOver===false?season?.trailers?.[row.key]:null;
   return [entry,...(Array.isArray(entry?.candidates)?entry.candidates:[])].filter(x=>
    x?.verified===true&&x?.footageVerified===true&&x?.sequelStatus==='not_sequel'&&safeId(x.youtubeId)
   ).map(x=>x.youtubeId);
