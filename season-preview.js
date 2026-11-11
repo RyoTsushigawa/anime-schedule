@@ -265,10 +265,10 @@ function votingControls(show){
  const button=(choice,label=choice)=>'<button type="button" class="'+(picked===choice?'on':'')+'" data-vote="'+safeText(choice)+'" data-anime="'+safeText(show.key)+'" aria-pressed="'+(picked===choice)+'"'+(disabled?' disabled':'')+'>'+safeText(label)+'</button>';
  const more=allChoices.filter(c=>!quick.includes(c));
  const moreOn=more.includes(picked);
- return '<div class="preview-vote" role="group" aria-label="Stimme von '+safeText(person)+' für '+safeText(show.english||show.title)+'">'+
+ return '<div class="preview-vote" role="group" aria-label="Stimme von '+safeText(person)+' für '+safeText(show.english||show.title)+': '+(picked==='Default'?'Noch offen':safeText(picked))+'">'+
   quick.filter(c=>allChoices.includes(c)).map(c=>button(c)).join('')+
   '<span class="preview-more"><button type="button" class="'+(moreOn?'on':'')+'" data-more aria-expanded="false" title="Weitere Optionen">'+(moreOn?safeText(picked):'…')+'</button><span class="preview-more-menu" hidden>'+more.map(c=>button(c)).join('')+(picked!=='Default'?button('Default','Zurücksetzen'):'')+'</span></span>'+
-  (disabled?'<small>…</small>':feedback?.error?'<small class="error" title="'+safeText(feedback.message)+'">!</small>':'')+'</div>';
+  (disabled?'<small title="Wird gespeichert">…</small>':feedback?.error?'<small class="error" title="'+safeText(feedback.message)+'">!</small>':'')+'</div>';
 }
 // the group's votes from the sheet, counted ("3 Ja · 1 Vielleicht"), names on hover
 function voteSummary(show){

@@ -49,11 +49,11 @@ test('selected votes indicate pressed state and allow reset',()=>{
  assert.match(result.html,/data-vote="Ja"[^>]*aria-pressed="true"/);
  assert.match(result.html,/data-vote="Default"/);
 });
-test('unselected vote displays open status and disables reset',()=>{
+test('unselected vote says it is open and offers no reset',()=>{
  const result=run(show('Default'),null,false);
  assert.equal(result.value,'Default');
  assert.match(result.html,/Noch offen/);
- assert.match(result.html,/data-vote="Default"[^>]*disabled/);
+ assert.doesNotMatch(result.html,/data-vote="Default"/);
 });
 test('saving state disables controls and is visible on the card',()=>{
  const result=run(show(),null,true);
@@ -62,23 +62,17 @@ test('saving state disables controls and is visible on the card',()=>{
 });
 test('failed save is shown on the corresponding anime card',()=>{
  const result=run(show(),{error:true,message:'Nicht gespeichert'},false);
- assert.match(result.html,/preview-vote-feedback error/);
+ assert.match(result.html,/class="error"/);
  assert.match(result.html,/Nicht gespeichert/);
 });
-
-test('special options remain available behind a compact expandable section',()=>{
+test('special options remain available behind a compact "…" menu',()=>{
  const result=run(show(),null,false);
- assert.match(result.html,/data-vote="Ja"/);
- assert.match(result.html,/data-vote="Nein"/);
- assert.match(result.html,/data-vote="Vielleicht"/);
- assert.match(result.html,/<details class="preview-extra-votes"/);
- assert.match(result.html,/data-vote="Demons"/);
- assert.match(result.html,/data-vote="Allein"/);
- assert.match(result.html,/data-vote="Wenn Belly dabei ist"/);
- assert.match(result.html,/data-vote="Okinawa 3"/);
+ for(const value of ['Ja','Nein','Vielleicht','Demons','Allein','Wenn Belly dabei ist','Okinawa 3'])
+  assert.match(result.html,new RegExp('data-vote="'+value+'"'));
+ assert.match(result.html,/<span class="preview-more-menu" hidden>/);
 });
-test('selected special vote expands the option section to show the selection',()=>{
+test('a selected special vote shows on the menu button',()=>{
  const result=run(show('Demons'),null,false);
- assert.match(result.html,/<details class="preview-extra-votes" open>/);
+ assert.match(result.html,/class="on" data-more[^>]*>Demons</);
  assert.match(result.html,/data-vote="Demons"[^>]*aria-pressed="true"/);
 });
