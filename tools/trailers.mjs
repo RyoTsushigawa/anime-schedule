@@ -53,7 +53,7 @@ const SEASON_KEY = { winter: 'winter', frühling: 'spring', sommer: 'summer', he
 const seasonId = name => { const m = name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i); return m ? `${SEASON_KEY[m[1].toLowerCase()]}-${m[2]}` : null; };
 // the list three months earlier ("Herbst 2026" for "Winter 2027"), if it is in the sheet
 const previousList = tab => allLists.find(t => { const d = new Date(tab.start); d.setMonth(d.getMonth() - 3); return t.start === d.getTime(); });
-const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv)\b/i;
+const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv|final season)\b|\(sequel\)/i;
 async function listShows(gid) {
   const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
   if (!res.ok) throw new Error('Google Sheet answered ' + res.status);
@@ -101,7 +101,9 @@ async function anilist(show, start) {
 }
 
 // ---- picking
-const OFFICIAL = /crunchyroll|aniplex|toho ?animation|muse ?asia|muse ?communication|ani-?one|kadokawa|pony ?canyon|avex|bandai ?namco|netflix|hidive|mappa|sentai|funimation|tms|king ?amuse|lantis|nbcuniversal|warner|shueisha|kodansha|square ?enix|bilibili|ufotable|toei|sunrise|cloverworks|a-1|official|公式|アニメ/i;
+const OFFICIAL = /crunchyroll|aniplex|toho ?animation|muse ?asia|muse ?communication|ani-?one|kadokawa|pony ?canyon|avex|bandai ?namco|netflix|hidive|mappa|sentai|funimation|tms|king ?amuse|lantis|nbcuniversal|warner|shueisha|kodansha|square ?enix|bilibili|ufotable|toei|sunrise|cloverworks|a-1|frontier ?works|mbs|shopro|dmm|abc ?animation|公式|株式会社/i;
+// channels that only collect or re-upload trailers: no official bonus, even with "Official" in the name
+const COLLECTOR = /anime officials? trailer|animevibe|anime ?mojo|anime ?tenkai|geek realm|anime overview|tr anime/i;
 const tokens = s => new Set(String(s || '').normalize('NFKD').toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 1 && !/^(the|no|wa|ga|wo|to|ni|de|of|a|an|season|part|cour|2nd|3rd|\d+th)$/.test(t)));
 function matches(titles, text) {
   const have = tokens(text);
@@ -118,7 +120,9 @@ function score(v, titles, fromAniList, start) {
   if (/teaser|ティザー|特報|announcement|first look/i.test(t)) s -= 3;
   if (/pv ?[2-9]|trailer ?[2-9]|第[2-9]弾/i.test(t)) s += 1;
   if (len >= 60 && len <= 240) s += 2; else if (len < 40) s -= 4; else if (len > 360) s -= 6;
-  if (OFFICIAL.test(v.snippet.channelTitle)) s += 3;
+  if (OFFICIAL.test(v.snippet.channelTitle) && !COLLECTOR.test(v.snippet.channelTitle)) s += 3;
+  // subtitles in another language than German or English
+  if (/vostfr|legendado|sub(titulado)? español|sub ita|\bfr\b|crunchyroll (fr|br|es|de dub)|latino/i.test(t + ' ' + v.snippet.channelTitle)) s -= 5;
   if (fromAniList) s += 2;
   if (v.contentDetails.caption === 'true') s += 2;
   if (/english sub|eng ?sub|english subtitles/i.test(t)) s += 2;
@@ -268,7 +272,10 @@ try { for (const tab of lists) {
       const key = norm(s.romaji || s.english);
       if (key in own) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; continue; }
       if (s.fixed) { delete s.fixed; delete s.searched; }
-      if (s.searched || s.skip === 'carryover') continue;
+      // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
+      const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
+        && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || ''));
+      if ((s.searched && !again) || s.skip === 'carryover') continue;
       Object.assign(s, await pick(s, tab.start));
       log(`  ${s.english || s.romaji}: ${s.skip === 'sequel' ? 'sequel, no trailer' : s.video ? `${s.videoTitle} · ${s.channel}${s.subs?.length ? ' · subs ' + s.subs.join('/') : ''}` : 'no trailer found'}`);
     }
