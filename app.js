@@ -2392,7 +2392,7 @@ const show = single ? perEpisode : grouped;
 const seasonGroups = catchupSeasonGroups(rows);
 catchupSeasonTargets = new Map(seasonGroups.map(g => [g.key, seasonWatchTargets(g.rows)]));
 const hideSeasonHeader = !showCatchupSeasonHeaders(seasonGroups);
-const seasonBulkButton = group => mine && !selecting && catchupSeasonTargets.get(group.key)?.length
+const seasonBulkButton = group => seasonGroups.length > 1 && mine && !selecting && catchupSeasonTargets.get(group.key)?.length
  ? `<button type="button" class="pill catchup-season-mark" data-mark-season="${group.key}" title="Alle offenen Folgen dieser Season als gesehen markieren">Alle gesehen ✓</button>` : '';
 const newestSeason = seasonGroups.find(g => g.key !== 'unknown')?.key || seasonGroups[0]?.key;
 const seasonSection = group => {
