@@ -41,3 +41,9 @@ test('compact navigation preserves mobile controls and accessible menu focus',()
  assert.match(css,/\.misc-menu\.site-tools\{[^}]*overflow:auto/);
  assert.match(css,/\.misc-menu \.misc-section-title/);
 });
+
+test('primary navigation uses equal-height outlined pills with visible focus',()=>{
+ assert.match(css,/\.header-nav-link\{[^}]*height:34px;[^}]*border:1px solid var\(--line\)/);
+ assert.match(css,/\.header-nav-link:focus-visible\{[^}]*outline:2px solid var\(--accent\)/);
+ assert.match(css,/\.header-nav-link\[aria-current="page"\]\{[^}]*background:var\(--today\)/);
+});
