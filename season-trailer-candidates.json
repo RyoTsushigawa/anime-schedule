@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-11-11T11:42:07.313Z",
+  "generated": "2026-11-11T11:45:57.664Z",
   "seasons": {
     "fall-2026": {
       "title": "Herbst 2026",
@@ -203,9 +203,15 @@
           "key": "marronnier oukoku no shichinin no kishi",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13653",
-          "livechartUrl": "https://www.livechart.me/anime/13653"
+          "livechartUrl": "https://www.livechart.me/anime/13653",
+          "anilistId": 212799,
+          "malId": 64326,
+          "sequelStatus": "unknown",
+          "youtubeId": "wk26nTxUzPY",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:00.134Z"
         },
         {
           "order": 14,
@@ -214,7 +220,7 @@
           "key": "genso suikoden",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13068",
           "livechartUrl": "https://www.livechart.me/anime/13068"
         },
@@ -225,9 +231,15 @@
           "key": "romelia senki",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13383",
-          "livechartUrl": "https://www.livechart.me/anime/13383"
+          "livechartUrl": "https://www.livechart.me/anime/13383",
+          "anilistId": 180894,
+          "malId": 59787,
+          "sequelStatus": "unknown",
+          "youtubeId": "PxXPcoo8uGM",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:01.977Z"
         },
         {
           "order": 16,
@@ -236,7 +248,7 @@
           "key": "tensei shita daiseijo wa, seijo de aru koto wo hitakakusu",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13073",
           "livechartUrl": "https://www.livechart.me/anime/13073"
         },
@@ -247,9 +259,15 @@
           "key": "black clover 2nd season",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13232",
-          "livechartUrl": "https://www.livechart.me/anime/13232"
+          "livechartUrl": "https://www.livechart.me/anime/13232",
+          "anilistId": 195604,
+          "malId": 61967,
+          "sequelStatus": "sequel",
+          "youtubeId": "4MYo8FfiXMA",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:03.805Z"
         },
         {
           "order": 18,
@@ -258,9 +276,15 @@
           "key": "vertex force",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13562",
-          "livechartUrl": "https://www.livechart.me/anime/13562"
+          "livechartUrl": "https://www.livechart.me/anime/13562",
+          "anilistId": 209562,
+          "malId": 63764,
+          "sequelStatus": "unknown",
+          "youtubeId": "JqjXaJysS5w",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:04.706Z"
         },
         {
           "order": 19,
@@ -269,9 +293,15 @@
           "key": "#zombie sagashitemasu",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13327",
-          "livechartUrl": "https://www.livechart.me/anime/13327"
+          "livechartUrl": "https://www.livechart.me/anime/13327",
+          "anilistId": 199007,
+          "malId": 62524,
+          "sequelStatus": "unknown",
+          "youtubeId": "_0kVb8-uRSI",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:05.622Z"
         },
         {
           "order": 20,
@@ -280,9 +310,15 @@
           "key": "magical★explorer",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "12344",
-          "livechartUrl": "https://www.livechart.me/anime/12344"
+          "livechartUrl": "https://www.livechart.me/anime/12344",
+          "anilistId": 169581,
+          "malId": 56733,
+          "sequelStatus": "unknown",
+          "youtubeId": "XqrBfyUNYZs",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:06.523Z"
         },
         {
           "order": 21,
@@ -291,9 +327,15 @@
           "key": "seitokai ni mo ana wa aru!",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13150",
-          "livechartUrl": "https://www.livechart.me/anime/13150"
+          "livechartUrl": "https://www.livechart.me/anime/13150",
+          "anilistId": 191656,
+          "malId": 61578,
+          "sequelStatus": "unknown",
+          "youtubeId": "VTRVLnzhl90",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:07.434Z"
         },
         {
           "order": 22,
@@ -302,9 +344,10 @@
           "key": "ranma1/2 3rd season",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList title match uncertain",
           "livechartId": "13571",
-          "livechartUrl": "https://www.livechart.me/anime/13571"
+          "livechartUrl": "https://www.livechart.me/anime/13571",
+          "checkedAt": "2026-11-11T11:46:08.351Z"
         },
         {
           "order": 23,
@@ -717,15 +760,6 @@
           "reason": "Awaiting AniList lookup",
           "livechartId": "12775",
           "livechartUrl": "https://www.livechart.me/anime/12775"
-        },
-        {
-          "order": 61,
-          "title": "Amount",
-          "english": "60",
-          "key": "amount",
-          "carriedOver": null,
-          "review": "pending",
-          "reason": "Awaiting AniList lookup"
         }
       ]
     },
@@ -965,9 +999,15 @@
           "key": "shangri-la frontier 3rd season",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13126",
-          "livechartUrl": "https://www.livechart.me/anime/13126"
+          "livechartUrl": "https://www.livechart.me/anime/13126",
+          "anilistId": 189323,
+          "malId": 61338,
+          "sequelStatus": "sequel",
+          "youtubeId": "84JvYWUOOaU",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:12.051Z"
         },
         {
           "order": 17,
@@ -976,9 +1016,15 @@
           "key": "love live! hasunosora jogakuin school idol club",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13590",
-          "livechartUrl": "https://www.livechart.me/anime/13590"
+          "livechartUrl": "https://www.livechart.me/anime/13590",
+          "anilistId": 210157,
+          "malId": 63851,
+          "sequelStatus": "sequel",
+          "youtubeId": null,
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:12.953Z"
         },
         {
           "order": 18,
@@ -987,9 +1033,15 @@
           "key": "spirit circle",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13888",
-          "livechartUrl": "https://www.livechart.me/anime/13888"
+          "livechartUrl": "https://www.livechart.me/anime/13888",
+          "anilistId": 219548,
+          "malId": 65323,
+          "sequelStatus": "unknown",
+          "youtubeId": "ZHtSRbvQRMQ",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:13.859Z"
         },
         {
           "order": 19,
@@ -998,9 +1050,10 @@
           "key": "sekai saikou no ansatsusha, isekai kizoku ni tensei suru season2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList title match uncertain",
           "livechartId": "12346",
-          "livechartUrl": "https://www.livechart.me/anime/12346"
+          "livechartUrl": "https://www.livechart.me/anime/12346",
+          "checkedAt": "2026-11-11T11:46:14.761Z"
         },
         {
           "order": 20,
@@ -1009,7 +1062,7 @@
           "key": "mashle sanma taisou shinkakusha saishu shiken-hen",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "12680",
           "livechartUrl": "https://www.livechart.me/anime/12680"
         },
@@ -1020,9 +1073,15 @@
           "key": "isekai de cheat skill wo te ni shita ore wa, genjitsu sekai wo mo musou suru ~level up wa jinsei wo kaeta~ 2nd season",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13582",
-          "livechartUrl": "https://www.livechart.me/anime/13582"
+          "livechartUrl": "https://www.livechart.me/anime/13582",
+          "anilistId": 209980,
+          "malId": 63822,
+          "sequelStatus": "sequel",
+          "youtubeId": "twGVFfRI-7s",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:16.590Z"
         },
         {
           "order": 22,
@@ -1031,9 +1090,15 @@
           "key": "sakamoto days season 2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13441",
-          "livechartUrl": "https://www.livechart.me/anime/13441"
+          "livechartUrl": "https://www.livechart.me/anime/13441",
+          "anilistId": 204363,
+          "malId": 63139,
+          "sequelStatus": "sequel",
+          "youtubeId": "1YSQ1mD20G0",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:17.519Z"
         },
         {
           "order": 23,
@@ -1042,9 +1107,10 @@
           "key": "kuroiwa medaka ni watashi no kawaii ga tsuujinai season2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList title match uncertain",
           "livechartId": "13113",
-          "livechartUrl": "https://www.livechart.me/anime/13113"
+          "livechartUrl": "https://www.livechart.me/anime/13113",
+          "checkedAt": "2026-11-11T11:46:18.420Z"
         },
         {
           "order": 24,
@@ -1053,7 +1119,7 @@
           "key": "one-punch man season 3 cour 2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13463",
           "livechartUrl": "https://www.livechart.me/anime/13463"
         },
@@ -1064,9 +1130,15 @@
           "key": "kakunaru ue wa",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13399",
-          "livechartUrl": "https://www.livechart.me/anime/13399"
+          "livechartUrl": "https://www.livechart.me/anime/13399",
+          "anilistId": 202564,
+          "malId": 62989,
+          "sequelStatus": "unknown",
+          "youtubeId": "u05QQa7wun4",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T11:46:20.238Z"
         },
         {
           "order": 26,
@@ -1463,16 +1535,6 @@
           "reason": "Awaiting AniList lookup",
           "livechartId": "13779",
           "livechartUrl": "https://www.livechart.me/anime/13779"
-        },
-        {
-          "order": 62,
-          "title": "Amount",
-          "english": "61",
-          "key": "amount",
-          "carriedOver": true,
-          "carriedOverFrom": "fall-2026",
-          "review": "excluded",
-          "reason": "Already listed in previous season"
         }
       ]
     }
