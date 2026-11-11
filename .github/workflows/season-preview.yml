@@ -1,6 +1,9 @@
 name: Season Preview trailers and playlist
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - .github/season-discovery-request.txt
   schedule:
     - cron: '17 5 * * *'
 permissions:
