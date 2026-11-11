@@ -1988,6 +1988,18 @@ const watchButton = (mediaId, episode, add = false) => !auth ? '' :
 `<button class="watch${failedTicks.has(tickKey(mediaId, episode)) ? ' save-failed' : (myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
     title="${failedTicks.has(tickKey(mediaId, episode)) ? 'Nicht gespeichert · Nochmal versuchen' : `Folge ${episode} gesehen (${listService()})`}">${failedTicks.has(tickKey(mediaId, episode)) ? '↻' : '✓'}</button>`;
 const before = new Map();
+$('list').addEventListener('click', e => {
+const step = e.target.closest('[data-step]');
+if (!step) return;
+const box = step.closest('.ep-stepper'), first = Number(box.dataset.first), out = Number(box.dataset.out);
+const count = Math.min(out - first + 1, Math.max(1, Number(box.querySelector('.ep-count').textContent) + Number(step.dataset.step)));
+box.querySelector('.ep-count').textContent = count;
+box.querySelector('[data-step="-1"]').disabled = count <= 1;
+box.querySelector('[data-step="1"]').disabled = count >= out - first + 1;
+// the ✓ next to it saves up to this episode
+const watch = box.nextElementSibling;
+if (watch?.classList.contains('watch')) { watch.dataset.ep = first + count - 1; watch.title = `Bis Folge ${first + count - 1} gesehen (${listService()})`; watch.setAttribute('aria-label', watch.title); }
+});
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('.watch');
 if (!b || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
@@ -2437,8 +2449,13 @@ const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
         <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + check(m, out, missing) : ''}${planIn(m)}
+      ${mine ? dropButton(m.id) + (selecting || out <= first || !auth ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
     </div>`;
+// Several open episodes: − / + choose how many to mark (all by default); only the ✓ saves
+const stepper = (m, first, out, missing) => `<span class="ep-stepper" data-first="${first}" data-out="${out}">`
+  + `<button type="button" data-step="-1" aria-label="Eine Folge weniger" title="Eine Folge weniger">−</button>`
+  + `<span class="ep-count" title="So viele Folgen markiert ✓ als gesehen">${out - first + 1}</span>`
+  + `<button type="button" data-step="1" aria-label="Eine Folge mehr" title="Eine Folge mehr" disabled>+</button></span>${check(m, out, missing)}`;
 const perEpisode = ({ m, first, out, nextAt, missing, links, progress }) => {
 const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
 if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, progress });
