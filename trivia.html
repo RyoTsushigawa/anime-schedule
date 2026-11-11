@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://graphql.anilist.co https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Anime Trivia Battle · Anime Schedule</title>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="trivia.css">
+<script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<script defer src="common.js"></script><script defer src="trivia-core.js"></script><script defer src="trivia.js"></script>
+</head><body class="trivia-page">
+<header><div class="bar"><a class="tool-back pill" href="./">← Zum Plan</a><div class="brand"><h1>Anime Trivia Battle</h1><div>Aus eurem Guckplan · gemeinsam am Bildschirm</div></div></div></header>
+<main class="trivia-shell">
+<section id="setup" class="trivia-panel">
+<h2>Quizabend starten</h2>
+<p>Reihum spielen: Gebt eure Namen ein, wählt die Season und beantwortet Fragen zu Genres und Studios eurer Anime. Jede richtige Antwort gibt 100 Punkte.</p>
+<label>Guckplan-Season<select id="triviaSeason" aria-label="Season wählen"></select></label>
+<label>Spielernamen (eine Person pro Zeile)<textarea id="triviaPlayers" rows="4" maxlength="200" spellcheck="false">MaRyo
+Belly</textarea></label>
+<label>Fragen pro Person<select id="triviaRounds"><option value="3">3 · Schnellrunde</option><option value="5" selected>5 · Normal</option><option value="8">8 · Lang</option></select></label>
+<button type="button" id="triviaStart" class="pill primary">Battle starten</button>
+</section>
+<p id="triviaStatus" role="status" aria-live="polite"></p>
+<section id="battle" hidden>
+<div class="trivia-top"><span id="triviaProgress"></span><button class="pill" id="triviaReset" type="button">Neue Runde</button></div>
+<div id="triviaScoreboard" class="trivia-scores" aria-label="Punktestand"></div>
+<div class="trivia-panel trivia-question">
+<p class="trivia-turn" id="triviaTurn"></p><h2 id="triviaPrompt"></h2>
+<div class="trivia-options" id="triviaOptions"></div>
+<div id="triviaReveal" hidden><p id="triviaExplanation" class="trivia-explanation"></p><button type="button" id="triviaNext" class="pill primary">Weiter →</button></div>
+</div>
+</section>
+<section id="triviaEnd" class="trivia-panel" hidden>
+<h2>Battle beendet!</h2><div id="triviaWinner"></div><div id="triviaFinal" class="trivia-scores"></div>
+<button id="triviaReplay" type="button" class="pill primary">Noch eine Runde</button>
+<button id="triviaShare" type="button" class="pill">Ergebnis kopieren</button>
+</section>
+</main></body></html>
