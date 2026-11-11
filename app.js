@@ -3621,8 +3621,10 @@ $('overviewCount').textContent = shows.length ? `${shows.length} ${shows.length 
 }
 $('overviewButton').onclick = () => {
 const people = allPeople();
-const pick = mode === 'solo' && soloPerson ? soloPerson : ownPerson();
+const solo = soloPerson || (() => { try { return localStorage.getItem('soloPerson'); } catch { return null; } })() || $('soloPerson')?.value || DEFAULT_PERSON;
+const pick = people.includes(solo) ? solo : (people[0] || solo);
 $('overviewPerson').innerHTML = people.map(p => `<option${p === pick ? ' selected' : ''}>${esc(p)}</option>`).join('');
+$('overviewPerson').value = pick;
 drawOverview();
 $('overviewDlg').showModal();
 };
