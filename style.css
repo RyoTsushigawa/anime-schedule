@@ -1386,3 +1386,24 @@ body:has(#notice:not([hidden])) #refreshFeedback { bottom: calc(86px + env(safe-
 .overview-time { flex: none; width: 40px; font-variant-numeric: tabular-nums; color: var(--muted); }
 .overview-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .overview-who { flex: none; font-size: 11px; color: var(--muted); }
+
+
+/* Catch-up backlog grouped by airing season. The newest season opens by default. */
+body.catchup #list > .catchup-season{margin:0 0 13px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:clip}
+body.catchup #list > .catchup-season > summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 16px;cursor:pointer;list-style:none;padding:12px 15px;background:color-mix(in srgb,var(--card) 75%,var(--bg))}
+body.catchup #list > .catchup-season > summary::-webkit-details-marker{display:none}
+body.catchup #list > .catchup-season > summary h2{position:static;margin:0;padding:0;display:flex;gap:10px;align-items:center;background:transparent;font-weight:750;font-size:16px;color:var(--text)}
+body.catchup #list > .catchup-season > summary h2::after{display:none}
+body.catchup #list > .catchup-season > summary .fold{width:8px;height:8px;display:inline-block;flex:none;border:solid currentColor;border-width:0 1.8px 1.8px 0;transform:rotate(-45deg);transition:transform .15s ease}
+body.catchup #list > .catchup-season[open] > summary .fold{transform:rotate(45deg)}
+body.catchup .catchup-season-count{font-size:12px;color:var(--muted);font-weight:600}
+body.catchup #list > .catchup-season > .row,
+body.catchup #list > .catchup-season > .shared{margin:8px 10px}
+body.catchup #list > .catchup-season > .not-listed{margin:9px 10px;padding:0 8px 4px;border-top:1px solid var(--line)}
+body.catchup #list > .catchup-season > .not-listed > summary h2{position:static}
+@media(max-width:560px){
+ body.catchup #list > .catchup-season > summary{padding:12px}
+ body.catchup #list > .catchup-season > summary h2{font-size:15px}
+ body.catchup #list > .catchup-season > .row,
+ body.catchup #list > .catchup-season > .shared{margin:7px}
+}
