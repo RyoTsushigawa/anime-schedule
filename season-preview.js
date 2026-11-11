@@ -31,16 +31,17 @@ async function listSeasonTabs(){
  return raw.map(([,name,gid])=>({name:clean(name),gid})).filter(x=>PV_SEASONS.test(x.name))
  .sort((a,b)=>{const ma=a.name.match(PV_SEASONS),mb=b.name.match(PV_SEASONS);return (+mb[2]*12+PV_MONTHS[mb[1].toLowerCase()])-(+ma[2]*12+PV_MONTHS[ma[1].toLowerCase()]);});
 }
-// One canonical trailer per non-sequel show, including short-form anime.
-// Classification must be explicit: unreviewed entries never become public trailers.
-
+// Teasers are permitted only after a documented search finds no suitable full trailer.
+// Both trailer types require verified footage and a non-sequel classification.
 function verifiedTrailer(entry) {
- if(!entry || Array.isArray(entry) || entry.type!=='full_trailer' || entry.verified!==true ||
+ if(!entry || Array.isArray(entry) || entry.verified!==true ||
     entry.sequelStatus!=='not_sequel' || entry.footageVerified!==true)return null;
+ const teaser=entry.type==='teaser';
+ if(entry.type!=='full_trailer' && !(teaser&&entry.fallbackApproved===true&&entry.fullTrailerUnavailable===true))return null;
  const id=clean(entry.youtubeId);
  return /^[a-zA-Z0-9_-]{11}$/.test(id)?{
-  id, subtitles:entry.subtitles==='de'?'DE':entry.subtitles==='en'?'EN':null,
-  title:clean(entry.title)||'Offizieller Trailer'
+  id,type:entry.type, subtitles:entry.subtitles==='de'?'DE':entry.subtitles==='en'?'EN':null,
+  title:clean(entry.title)||(teaser?'Offizieller Teaser':'Offizieller Trailer')
  }:null;
 }
 function malLink(show){
@@ -64,12 +65,15 @@ function trailerCandidates(show){
  if(!entry || entry.sequelStatus==='sequel')return [];
  const all=[entry,...(Array.isArray(entry.candidates)?entry.candidates:[])];
  const seen=new Set();
- return all.flatMap(item=>{
+ const videos=all.flatMap(item=>{
   const video=verifiedTrailer(item);
   if(!video||seen.has(video.id))return [];
   if(shows.some(s=>s!==show && verifiedTrailer(detailsFor(s))?.id===video.id))return [];
   seen.add(video.id);return [video];
  });
+ // Full trailers always take precedence, regardless of source ordering or saved preference.
+ const full=videos.filter(video=>video.type==='full_trailer');
+ return full.length?full:videos.filter(video=>video.type==='teaser');
 }
 function pickedTrailer(show){
  const list=trailerCandidates(show);
@@ -249,15 +253,15 @@ function render(){
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent='Keine passenden Serien gefunden.';parent.append(empty);return;}
  for(const s of shown){
   const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),external=localExternal(s),article=document.createElement('article');article.className='preview-item';
-  const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ Vollständigen Trailer ansehen</a>':'';
-  const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
+  const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ '+(trailer.type==='teaser'?'Teaser ansehen (Ersatz)':'Vollständigen Trailer ansehen')+'</a>':'';
+  const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.type==='teaser'?' · Teaser (Ersatz)':'')+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
   const fallback=!trailer&&detailsFor(s)?.sequelStatus!=='sequel'?'<div class="preview-external">'+
   (external?'<p>Eigener Trailer (ungeprüft): <a href="'+safeText(external)+'" target="_blank" rel="noopener noreferrer">Trailer öffnen</a> <button type="button" class="preview-reset" data-remove-external="'+safeText(s.key)+'">Entfernen</button></p>':'')+
   '<form data-external-anime="'+safeText(s.key)+'"><label>Trailer von einer anderen Seite (nur für dich)<input type="url" name="externalTrailer" required placeholder="https://…" value="'+safeText(external)+'"></label><button type="submit" class="preview-choice">Link speichern</button></form><small>Nur echte Trailer mit Szenen des Anime. Der Link wird in diesem Browser gespeichert, nicht veröffentlicht oder der YouTube-Playlist hinzugefügt.</small></div>':'';
   const decided=s.votes.filter(v=>v.value&&v.value.toLowerCase()!=='default');
   const votes=decided.length?decided.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Stimmen</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2>'+safeText(s.title)+'</h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.english)+'</p>':'')+
-  '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?'Vollständiger Trailer verfügbar':trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
+  '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?(trailer.type==='teaser'?'Nur Teaser verfügbar · Ersatz':'Vollständiger Trailer verfügbar'):trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
   '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="'+safeText(mal.url)+'">'+mal.label+'</a></div>'+choices+fallback+
   '<div class="preview-votes"><div class="preview-vote-title">Gruppen-Entscheidung · aus Google Sheets</div><div class="preview-vote-chips">'+votes+'</div>'+votingControls(s)+'</div></div>';
   parent.append(article);
