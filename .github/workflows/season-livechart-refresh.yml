@@ -1,6 +1,8 @@
 name: Refresh LiveChart season metadata
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 2'
   push:
     paths:
       - .github/season-refresh-request.txt
@@ -18,21 +20,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Refresh LiveChart Autumn 2026 and Winter 2027 titles and IDs
-        run: node tools/build-streams.mjs --seasons-only fall-2026 winter-2027
-      - name: Validate enriched metadata
+      - name: Refresh current, previous, and upcoming season IDs
+        run: node tools/build-streams.mjs --seasons-only
+      - name: Validate refreshed season IDs
         run: |
-          node --input-type=module -e "
-            import fs from 'node:fs';
-            const data=JSON.parse(fs.readFileSync('seasons.json','utf8'));
-            for (const key of ['fall-2026','winter-2027']) {
-              const list=data.seasons[key];
-              if (!Array.isArray(list) || list.length<30) throw Error(key+' season list missing or incomplete');
-              const withIds=list.filter(x=>/^\d+$/.test(String(x.livechartId||'')));
-              if (withIds.length < list.length * .75) throw Error(key+' LiveChart IDs too sparse: '+withIds.length+'/'+list.length);
-              console.log(key+': '+list.length+' entries, '+withIds.length+' with LiveChart IDs');
-            }
-          "
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const data=JSON.parse(fs.readFileSync('seasons.json','utf8'));
+          const now=new Date();
+          const quarters=['winter','spring','summer','fall'];
+          const q=Math.floor(now.getUTCMonth()/3), year=now.getUTCFullYear();
+          const targets=[
+            quarters[q]+'-'+year,
+            (q===0?'fall-'+(year-1):quarters[q-1]+'-'+year),
+            (q===3?'winter-'+(year+1):quarters[q+1]+'-'+year)
+          ];
+          for(const key of targets){
+            const list=data.seasons?.[key];
+            if(!Array.isArray(list)||list.length<30)throw Error(key+' season list incomplete');
+            const ids=list.filter(entry=>/^\d+$/.test(String(entry.livechartId||''))).length;
+            if(ids<list.length*0.75)throw Error(key+' LiveChart IDs missing: '+ids+'/'+list.length);
+            console.log(key+': '+ids+'/'+list.length+' LiveChart IDs');
+          }
+          NODE
       - name: Commit metadata refresh only
         run: |
           git config user.name "github-actions[bot]"
