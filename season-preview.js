@@ -76,9 +76,22 @@ function comparableTitles(show){
  return [show.title,show.english].map(s=>clean(s).normalize('NFKC').toLocaleLowerCase()
   .replace(/[\s\p{P}\p{S}]+/gu,' ').trim()).filter(Boolean);
 }
-function withoutCarryovers(items,previous){
+function catalogIds(tab,show){
+ if(!tab)return [];
+ const season=seasonKey(tab);
+ const entries=animeIndex.seasons?.[season]||[];
+ const names=new Set(comparableTitles(show));
+ return entries.filter(e=>[e.romaji,e.english].some(name=>comparableTitles({title:name}).some(value=>names.has(value))))
+  .map(e=>String(e.mal||'').match(/^https:\/\/myanimelist\.net\/anime\/(\d+)/)?.[1])
+  .filter(Boolean);
+}
+function withoutCarryovers(items,previous,tab,priorTab){
  const oldTitles=new Set(previous.flatMap(comparableTitles));
- return items.filter(item=>!comparableTitles(item).some(name=>oldTitles.has(name)));
+ const oldIds=new Set(previous.flatMap(show=>catalogIds(priorTab,show)));
+ return items.filter(item=>{
+  if(comparableTitles(item).some(name=>oldTitles.has(name)))return false;
+  return !catalogIds(tab,item).some(id=>oldIds.has(id));
+ });
 }
 async function prepareShows(tab){
  const oldTab=previousTab(tab);
@@ -91,7 +104,7 @@ async function prepareShows(tab){
  ]);
  // A missing previous-season list is not proof that a show is new.
  // Exclude only positively identified carryovers from the review report in that case.
- const eligible=previous?withoutCarryovers(items,previous):
+ const eligible=previous?withoutCarryovers(items,previous,tab,oldTab):
   items.filter(item=>previewCandidates.seasons?.[seasonKey(tab)]?.entries?.find(e=>e.key===item.key)?.carriedOver!==true);
  const excluded=items.length-eligible.length;
  if(previous)checkedNewTitles.set(tab.gid,new Set(eligible.map(item=>item.key)));
