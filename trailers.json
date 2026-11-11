@@ -45,11 +45,12 @@
      "romaji": "Mera × Death: Shinigami to Boku no Ijou na Koi",
      "english": "Mera × Death: Shinigami to Boku no Ijou na Koi",
      "anilist": 217433,
-     "skip": null,
-     "video": "atN57-EYoww",
+     "skip": "sequel",
+     "video": null,
      "videoTitle": "Mera x Death: Shinigami to Boku no Ijou na Koi | Official Trailer ",
      "channel": "A-Ronin",
-     "searched": "2026-11-11T13:38:06.884Z"
+     "officialCheck": true,
+     "searched": "2026-11-11T17:38:39.175Z"
     },
     {
      "romaji": "Gacha wo Mawashite Nakama wo Fuyasu: Saikyou no Bishoujo Gundan wo Tsukuriagero",
@@ -67,10 +68,11 @@
      "english": "CHARISMA",
      "anilist": 203116,
      "skip": null,
-     "video": "hgnPsDQnsrQ",
-     "videoTitle": "Charisma - New Anime Official Trailer (With Eng Subtitles)",
-     "channel": "MiracuStream",
-     "searched": "2026-11-11T13:38:08.186Z"
+     "video": "5JO4G4NRRx0",
+     "videoTitle": "【ティザーPV】TVアニメ『カリスマ』| 2027年1月7日毎週木曜よる11時56分放送開始！",
+     "channel": "カリスマ Official Channel",
+     "officialCheck": true,
+     "searched": "2026-11-11T17:38:39.982Z"
     },
     {
      "romaji": "Jirai nan desu ka? Chihara-san",
@@ -97,11 +99,13 @@
      "english": "BLESS",
      "anilist": 208766,
      "skip": null,
-     "video": "gkWMfMgCuP8",
-     "videoTitle": "Bless | Official Trailer (2026)",
-     "channel": "Anime MoJo X",
+     "video": "1IcjukAV03Q",
+     "videoTitle": "『ブレス』PV第1弾｜27年1月8日より毎週金曜23時30分から全国フジテレビ系“ノイタミナ”にて放送",
+     "channel": "アニプレックス チャンネル",
      "subs": [],
-     "searched": "2026-11-11T13:38:09.889Z"
+     "officialCheck": true,
+     "via": "anilist",
+     "searched": "2026-11-11T17:38:40.226Z"
     },
     {
      "romaji": "BanG Dream! MyGO!!!!! // Ave Mujica",
@@ -165,7 +169,8 @@
      "video": "JRfCKFnvtOE",
      "videoTitle": "SPIRIT CIRCLE — OFFICIAL TRAILER「4K」",
      "channel": "Anime Tenkai",
-     "searched": "2026-11-11T13:38:11.352Z"
+     "officialCheck": true,
+     "searched": "2026-11-11T17:38:41.054Z"
     },
     {
      "romaji": "Sekai Saikou no Ansatsusha, Isekai Kizoku ni Tensei suru Season2",
@@ -321,11 +326,12 @@
      "english": "The Fledgling Demon Lord's Starter Shop",
      "anilist": 213497,
      "skip": null,
-     "video": "DX_XBDUo1P0",
-     "videoTitle": "The Fledgling Demon Lord's Starter Shop - New Anime Official Trailer (With Eng Subtitles)",
-     "channel": "MiracuStream",
+     "video": "BXcu-Z3SEYo",
+     "videoTitle": "TVアニメ『すだちの魔王城』ティザーPV 第2弾【2027年1月 放送開始】",
+     "channel": "【公式】TVアニメ『すだちの魔王城』",
      "subs": [],
-     "searched": "2026-11-11T13:39:17.490Z"
+     "officialCheck": true,
+     "searched": "2026-11-11T17:38:41.796Z"
     },
     {
      "romaji": "Shishite Ikiru SSS-kyuu Hunter",
@@ -356,7 +362,7 @@
      "video": "k36ip8-Wn5E",
      "videoTitle": "The FinalBoss Prince is Somehow Obsessed with the Chubby Villainess Reincarnated Me Official Trailer",
      "channel": "Anime Update 0",
-     "searched": "2026-11-11T13:39:19.178Z"
+     "officialCheck": true
     },
     {
      "romaji": "Game Sekai Tensei \"Dankatsu\": Gamer wa \"Dungeon Shuukatsu no Susume\" wo \"Hajime kara\" Play suru",
@@ -378,7 +384,7 @@
      "videoTitle": "I Lost My Adventurer's License, but It's Fine Because... - New Anime Trailer (With Eng Subtitles)",
      "channel": "MiracuStream",
      "subs": [],
-     "searched": "2026-11-11T13:39:20.074Z"
+     "officialCheck": true
     },
     {
      "romaji": "Giant Ojou-sama",
@@ -407,7 +413,7 @@
      "video": "q_UGyAntkMk",
      "videoTitle": "PV | Around 40 Kenja no Isekai Seikatsu Nikki - official trailer",
      "channel": "TR anime",
-     "searched": "2026-11-11T13:39:21.111Z"
+     "officialCheck": true
     },
     {
      "romaji": "Akane-banashi Season 2",
@@ -496,7 +502,7 @@
      "video": "9aF_e6hclTw",
      "videoTitle": "\"Arcanadea\" | OFFICIAL TRAILER // New PV | SUBBED",
      "channel": "Anime Overview ",
-     "searched": "2026-11-11T13:40:25.047Z"
+     "officialCheck": true
     },
     {
      "romaji": "MURCIÉLAGO",
@@ -506,7 +512,7 @@
      "video": "Z09Hk6AE3Bg",
      "videoTitle": "\"Murciélago\" Yuri Action TV ANIME | OFFICIAL TRAILER ",
      "channel": "Anime Update 0",
-     "searched": "2026-11-11T13:40:25.535Z"
+     "officialCheck": true
     },
     {
      "romaji": "Pen to Wappa to Jijitsukon",
@@ -527,7 +533,7 @@
      "videoTitle": "Inherit The Winds New Anime Official Trailer (With Eng Subtitles)",
      "channel": "MiracuStream",
      "subs": [],
-     "searched": "2026-11-11T13:40:26.509Z"
+     "officialCheck": true
     },
     {
      "romaji": "Yuukyuu no Gusha Asley no, Kenja no Susume",
@@ -547,7 +553,7 @@
      "video": "5t73vYlujsg",
      "videoTitle": "Ore to Yu nii! - Official Trailer",
      "channel": "Anime Officials Trailer",
-     "searched": "2026-11-11T13:40:27.471Z"
+     "officialCheck": true
     },
     {
      "romaji": "Akazukin, Tabi no Tochuu de Shitai to Deau.",
@@ -589,8 +595,8 @@
    ],
    "playlist": "PLMKUhokF0XN8",
    "url": "https://www.youtube.com/playlist?list=PLMKUhokF0XN8",
-   "synced": "2026-11-11T17:33:12.524Z"
+   "synced": "2026-11-11T17:38:45.100Z"
   }
  },
- "updated": "2026-11-11T17:33:12.524Z"
+ "updated": "2026-11-11T17:38:45.100Z"
 }
