@@ -50,3 +50,7 @@ GitHub Actions schedules can be delayed or missed; check the workflow history. N
 ## LiveChart subtitle-first trailer review
 
 LiveChart's per-anime video selector is the preferred **manual review source** for German/English subtitle choices. On the next LiveChart seasons refresh, the parser now records `livechartId` in `seasons.json`, enabling precise LiveChart anime links in the Preview rather than repeated homepage links. YouTube's API still manages the playlist; a LiveChart video listing alone does not verify meaningful footage, captions or sequel classification. LiveChart has no documented public API for exporting its subtitle-filtered video choices, so do not infer or auto-approve videos from unofficial endpoints. Review actual links and record approved entries in the trailer catalog.
+
+## LiveChart refresh status (11 November 2026)
+
+LiveChart season metadata was successfully refreshed through [GitHub Actions run #43013545850](https://github.com/RyoTsushigawa/anime-schedule/actions/runs/43013545850). `seasons.json` contains **71/71 LiveChart IDs for Winter 2027** and **109/109 for Autumn 2026**. The workflow `season-livechart-refresh.yml` also runs weekly for current/previous/next seasons. This metadata is public **title and anime link information**, not proof of a verified trailer or subtitles. The first `season-preview.yml` candidate-discovery run was triggered separately; only its completed job outcome can confirm candidate generation.
