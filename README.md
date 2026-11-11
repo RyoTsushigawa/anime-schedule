@@ -334,7 +334,9 @@ Picking (`tools/trailers.mjs`): AniList's trailer, and a YouTube search only whe
 subtitles can't be seen by the tool); videos blocked in Germany or not embeddable are out. Each show is searched
 once; a teaser, nothing, or a trailer without English/German subtitles is looked up again once a week until the
 season starts, since main trailers and subtitled versions come later.
-Before trailer night: Actions → "Trailer playlists" → Run workflow with **refresh** searches all of those again
+Before trailer night: the **↻** next to "▶ Trailers" in the planner (only with the GitHub key; it writes
+`.github/trailer-refresh.txt`, which starts the workflow), or Actions → "Trailer playlists" → Run workflow with
+**refresh**, searches all of those again
 right away (YouTube allows about 100 searches a day; whatever is left follows the next day).
 A wrong pick goes into `trailer-picks.json` (see "Files").
 
