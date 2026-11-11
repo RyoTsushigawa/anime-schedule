@@ -17,7 +17,7 @@ jobs:
       GOOGLE_REFRESH_TOKEN: ${{ secrets.SEASON_GOOGLE_REFRESH_TOKEN }}
       GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL }}
       GOOGLE_PRIVATE_KEY: ${{ secrets.SEASON_GOOGLE_PRIVATE_KEY }}
-      SHEET_ID: ${{ secrets.SEASON_SHEET_ID }}
+      SHEET_ID: ${{ secrets.SEASON_SHEET_ID || '1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ' }}   # the Guckplan sheet (public in common.js)
       GROUP_ACCESS_CODE: ${{ secrets.SEASON_GROUP_ACCESS_CODE }}
     steps:
       - uses: actions/checkout@v4
