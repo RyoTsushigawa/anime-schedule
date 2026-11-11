@@ -1,0 +1,240 @@
+// Trailer playlists: for every season list in the Google Sheet ("Winter 2027", "Frühling 2027", …) that
+// hasn't started yet, an unlisted YouTube playlist "Trailer Winter 2027" with one trailer per show, in the
+// list's order. Runs daily on GitHub (.github/workflows/trailers.yml); the planner links the playlist.
+//
+//   node tools/trailers.mjs             pick trailers for new shows, then bring the playlist in line
+//   node tools/trailers.mjs --dry-run   only print the picks (still uses search quota, writes nothing)
+//
+// Secrets (GitHub): YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN (README, "Trailer-Playlist").
+// Without them the run says so and stops without an error.
+//
+// Picking: AniList's trailer plus a YouTube search per show. Full trailers ("Trailer", "Main Trailer", "PV 2")
+// beat teasers; 1–4 minutes; official channels; German/English subtitle tracks; blocked in Germany or not
+// embeddable = out. A show is searched once; its pick is kept in trailers.json.
+// A wrong pick: trailer-picks.json {"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}} ("" = no trailer).
+//
+// Quota: YouTube allows 10,000 units a day; a search costs 100, a playlist change 50. The run stops before the
+// limit and the next day's run carries on.
+import { readFile, writeFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const dry = process.argv.includes('--dry-run');
+const onlySeason = (() => { const i = process.argv.indexOf('--season'); return i > 0 ? process.argv[i + 1] : ''; })();
+const BUDGET = Number(process.env.TRAILER_BUDGET || 9000);
+const STATE = 'trailers.json', PICKS = 'trailer-picks.json';
+const DAY = 86400000;
+const log = (...a) => console.log(...a);
+
+// the site's own sheet code (CSV, columns, title matching)
+const ctx = { location: { search: '' }, fetch, URLSearchParams, console, setTimeout };
+vm.createContext(ctx);
+vm.runInContext(await readFile(new URL('../common.js', import.meta.url), 'utf8') + '\n;Object.assign(globalThis, { SHEET, SEASON_MONTH, parseCsv, sheetFromRows, norm });', ctx);
+const { SHEET, SEASON_MONTH, parseCsv, sheetFromRows, norm } = ctx;
+
+const readJson = async (file, fallback) => { try { return JSON.parse(await readFile(file, 'utf8')); } catch { return fallback; } };
+const state = await readJson(STATE, { seasons: {} });
+state.seasons ||= {};
+const fixed = await readJson(PICKS, {});
+
+// ---- season lists in the sheet that haven't started yet (or started less than three weeks ago)
+async function seasonLists() {
+  const html = await (await fetch(SHEET + '/htmlview')).text();
+  return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
+    .map(([, name, gid]) => ({ name: JSON.parse(`"${name}"`).trim(), gid }))
+    .map(t => ({ ...t, m: t.name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i) }))
+    .filter(t => t.m)
+    .map(({ name, gid, m }) => ({ name, gid, start: new Date(Number(m[2]), SEASON_MONTH[m[1].toLowerCase()], 1).getTime() }))
+    .filter(t => t.start + 21 * DAY > Date.now() && (!onlySeason || t.name.toLowerCase() === onlySeason.toLowerCase()));
+}
+async function listShows(gid) {
+  const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
+  if (!res.ok) throw new Error('Google Sheet answered ' + res.status);
+  return sheetFromRows(parseCsv(await res.text())).shows.filter(s => !s.hidden).map(s => ({ romaji: s.romaji, english: s.english }));
+}
+
+// ---- YouTube
+let units = 0;
+class Quota extends Error {}
+let access = '';
+async function login() {
+  const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', body: new URLSearchParams({
+    client_id: process.env.YOUTUBE_CLIENT_ID, client_secret: process.env.YOUTUBE_CLIENT_SECRET,
+    refresh_token: process.env.YOUTUBE_REFRESH_TOKEN, grant_type: 'refresh_token' }) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.access_token) throw new Error(`Google login failed (${res.status} ${json.error || ''} ${json.error_description || ''}). Is the consent screen "In production"? Otherwise the key expires after 7 days.`);
+  access = json.access_token;
+}
+async function yt(path, params, cost, method = 'GET', body = null) {
+  if (units + cost > BUDGET) throw new Quota('own budget reached');
+  units += cost;
+  const url = `https://www.googleapis.com/youtube/v3/${path}?${new URLSearchParams(params)}`;
+  const res = await fetch(url, { method, headers: { Authorization: `Bearer ${access}`, ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
+  if (res.status === 204) return {};
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 403 && /quota/i.test(JSON.stringify(json.error || ''))) throw new Quota('YouTube quota for today used up');
+  if (!res.ok) throw new Error(`YouTube ${method} ${path}: ${res.status} ${json.error?.message || ''}`);
+  return json;
+}
+
+// ---- AniList: titles and the listed trailer
+async function anilist(show, start) {
+  const d = new Date(start), season = ['WINTER', 'SPRING', 'SUMMER', 'FALL'][Math.floor(d.getMonth() / 3)];
+  const q = `query ($s: String, $season: MediaSeason, $year: Int) { a: Page(perPage: 1) { media(search: $s, type: ANIME, season: $season, seasonYear: $year, sort: SEARCH_MATCH) { ...f } }
+    b: Page(perPage: 1) { media(search: $s, type: ANIME, status_in: [NOT_YET_RELEASED, RELEASING], sort: SEARCH_MATCH) { ...f } } }
+    fragment f on Media { id title { romaji english native } synonyms trailer { id site } }`;
+  for (let tries = 0; tries < 3; tries++) {
+    const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query: q, variables: { s: show.romaji || show.english, season, year: d.getFullYear() } }) });
+    if (res.status === 429) { await new Promise(r => setTimeout(r, 30000)); continue; }
+    const json = await res.json().catch(() => ({}));
+    return json.data?.a?.media?.[0] || json.data?.b?.media?.[0] || null;
+  }
+  return null;
+}
+
+// ---- picking
+const OFFICIAL = /crunchyroll|aniplex|toho ?animation|muse ?asia|muse ?communication|ani-?one|kadokawa|pony ?canyon|avex|bandai ?namco|netflix|hidive|mappa|sentai|funimation|tms|king ?amuse|lantis|nbcuniversal|warner|shueisha|kodansha|square ?enix|bilibili|ufotable|toei|sunrise|cloverworks|a-1|official|公式|アニメ/i;
+const tokens = s => new Set(String(s || '').normalize('NFKD').toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 1 && !/^(the|no|wa|ga|wo|to|ni|de|of|a|an|season|part|cour|2nd|3rd|\d+th)$/.test(t)));
+function matches(titles, text) {
+  const have = tokens(text);
+  return titles.filter(Boolean).some(t => { const want = [...tokens(t)]; return want.length && want.filter(w => have.has(w)).length / want.length >= 0.6; });
+}
+const seconds = iso => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '') || []; return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0); };
+function score(v, titles, fromAniList) {
+  const t = v.snippet.title, len = seconds(v.contentDetails.duration);
+  if (!fromAniList && !matches(titles, t)) return -99;
+  if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(t) && !/trailer|pv/i.test(t)) return -50;
+  let s = 0;
+  if (/main (trailer|pv)|official trailer|本pv|メインpv/i.test(t)) s += 5;
+  else if (/trailer|\bpv\b|pv ?\d/i.test(t)) s += 3;
+  if (/teaser|ティザー|特報|announcement|first look/i.test(t)) s -= 3;
+  if (/pv ?[2-9]|trailer ?[2-9]|第[2-9]弾/i.test(t)) s += 1;
+  if (len >= 60 && len <= 240) s += 2; else if (len < 40) s -= 4; else if (len > 360) s -= 6;
+  if (OFFICIAL.test(v.snippet.channelTitle)) s += 3;
+  if (fromAniList) s += 2;
+  if (v.contentDetails.caption === 'true') s += 2;
+  if (/english sub|eng ?sub|english subtitles/i.test(t)) s += 2;
+  if (/german|deutsch/i.test(t + ' ' + v.snippet.channelTitle) && !/dub/i.test(t)) s += 1;
+  if (/\bdub\b|吹替/i.test(t)) s -= 1;
+  return s;
+}
+const playable = v => v && v.status?.embeddable !== false && v.status?.privacyStatus === 'public'
+  && !(v.contentDetails?.regionRestriction?.blocked || []).includes('DE')
+  && !(v.contentDetails?.regionRestriction?.allowed && !v.contentDetails.regionRestriction.allowed.includes('DE'));
+
+async function videos(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 50)
+    out.push(...(await yt('videos', { part: 'snippet,contentDetails,status', id: ids.slice(i, i + 50).join(',') }, 1)).items || []);
+  return out;
+}
+async function subtitleLanguages(id) {
+  const res = await yt('captions', { part: 'snippet', videoId: id }, 50);
+  return [...new Set((res.items || []).filter(c => c.snippet.trackKind !== 'asr').map(c => c.snippet.language.slice(0, 2)))];
+}
+async function pick(show, start) {
+  const al = await anilist(show, start);
+  const titles = [show.romaji, show.english, al?.title?.romaji, al?.title?.english, ...(al?.synonyms || [])];
+  const alTrailer = al?.trailer?.site === 'youtube' ? al.trailer.id : '';
+  const name = al?.title?.english || show.english || al?.title?.romaji || show.romaji;
+  const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} anime trailer`, relevanceLanguage: 'en' }, 100);
+  const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
+  const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
+  // subtitles in German or English decide among the best few
+  // (at most two checks, 50 units each, and only for candidates close to the best)
+  for (const x of ranked.slice(0, 2)) if (x.v.contentDetails.caption === 'true' && x.s >= ranked[0].s - 4) {
+    x.subs = await subtitleLanguages(x.v.id);
+    if (x.subs.some(l => l === 'de' || l === 'en')) { x.s += 4; break; }
+  }
+  ranked.sort((a, b) => b.s - a.s);
+  const best = ranked[0];
+  return { anilist: al?.id || null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '',
+    ...(best?.subs && { subs: best.subs }), searched: new Date().toISOString() };
+}
+
+// ---- the playlist, in the list's order
+async function playlistItems(id) {
+  const items = [];
+  let page = '';
+  do {
+    const res = await yt('playlistItems', { part: 'snippet', playlistId: id, maxResults: 50, ...(page && { pageToken: page }) }, 1);
+    items.push(...(res.items || []).map(i => ({ item: i.id, video: i.snippet.resourceId.videoId })));
+    page = res.nextPageToken || '';
+  } while (page);
+  return items;
+}
+async function sync(name, season) {
+  if (!season.playlist) {
+    const made = await yt('playlists', { part: 'snippet,status' }, 50, 'POST', {
+      snippet: { title: `Trailer ${name}`, description: `Trailer zur Liste „${name}“, in der Reihenfolge der Liste. Wird automatisch aktualisiert.` },
+      status: { privacyStatus: 'unlisted' } });
+    season.playlist = made.id;
+    season.url = `https://www.youtube.com/playlist?list=${made.id}`;
+    log(`Playlist made: ${season.url}`);
+  }
+  const want = [...new Set(season.shows.map(s => s.video).filter(Boolean))];
+  let have = await playlistItems(season.playlist);
+  // gone from the list (or another pick): out
+  for (const x of have.filter(x => !want.includes(x.video) || have.findIndex(y => y.video === x.video) !== have.indexOf(x))) {
+    await yt('playlistItems', { id: x.item }, 50, 'DELETE');
+    have = have.filter(y => y !== x);
+  }
+  // then place every wanted video at its position
+  for (const [pos, video] of want.entries()) {
+    const at = have.findIndex(x => x.video === video);
+    if (at === pos) continue;
+    if (at < 0) {
+      const added = await yt('playlistItems', { part: 'snippet' }, 50, 'POST', { snippet: { playlistId: season.playlist, position: pos, resourceId: { kind: 'youtube#video', videoId: video } } });
+      have.splice(pos, 0, { item: added.id, video });
+    } else {
+      const [x] = have.splice(at, 1);
+      await yt('playlistItems', { part: 'snippet' }, 50, 'PUT', { id: x.item, snippet: { playlistId: season.playlist, position: pos, resourceId: { kind: 'youtube#video', videoId: video } } });
+      have.splice(pos, 0, x);
+    }
+  }
+  season.synced = new Date().toISOString();
+}
+
+// ---- run
+const lists = await seasonLists();
+if (!lists.length) { log('No season list that is still ahead; nothing to do.'); process.exit(0); }
+if (!process.env.YOUTUBE_REFRESH_TOKEN || !process.env.YOUTUBE_CLIENT_ID || !process.env.YOUTUBE_CLIENT_SECRET) {
+  log(`Lists ahead: ${lists.map(t => t.name).join(', ')}. The YouTube secrets are not set yet (README, "Trailer-Playlist"); nothing done.`);
+  process.exit(0);
+}
+await login();
+let stopped = '', failure = null;
+const save = async () => {
+  if (dry) return;
+  // seasons gone from the sheet's "ahead" lists are dropped four months after their last update
+  for (const name of Object.keys(state.seasons)) if (!lists.some(t => t.name === name) && Date.now() - Date.parse(state.seasons[name].synced || 0) > 120 * DAY) delete state.seasons[name];
+  state.updated = new Date().toISOString();
+  await writeFile(STATE, JSON.stringify(state, null, 1) + '\n');
+};
+try { for (const tab of lists) {
+  const season = state.seasons[tab.name] ||= { gid: tab.gid, shows: [] };
+  const known = new Map(season.shows.map(s => [norm(s.romaji || s.english), s]));
+  const own = Object.fromEntries(Object.entries(fixed[tab.name] || {}).map(([k, v]) => [norm(k), v]));
+  season.gid = tab.gid;
+  season.shows = (await listShows(tab.gid)).map(s => ({ ...known.get(norm(s.romaji || s.english)), ...s }));
+  log(`${tab.name}: ${season.shows.length} shows in the list.`);
+  try {
+    for (const s of season.shows) {
+      const key = norm(s.romaji || s.english);
+      if (key in own) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true }); delete s.subs; continue; }
+      if (s.fixed) { delete s.fixed; delete s.searched; }
+      if (s.searched) continue;
+      Object.assign(s, await pick(s, tab.start));
+      log(`  ${s.english || s.romaji}: ${s.video ? `${s.videoTitle} · ${s.channel}${s.subs?.length ? ' · subs ' + s.subs.join('/') : ''}` : 'no trailer found'}`);
+    }
+    if (!dry) await sync(tab.name, season);
+  } catch (e) {
+    if (!(e instanceof Quota)) throw e;
+    stopped = e.message;
+    break;
+  }
+} } catch (e) { failure = e; }
+// whatever was picked or changed so far is kept, also when something failed
+await save();
+log(`YouTube units used: ${units}.${stopped ? ` Stopped: ${stopped}; the next run carries on.` : ''}`);
+if (failure) throw failure;

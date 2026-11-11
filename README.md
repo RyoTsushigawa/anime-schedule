@@ -170,6 +170,9 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
 | `planner.html`, `planner.js`, `xlsx.js` | Watch planner |
+| `tools/trailers.mjs`, `.github/workflows/trailers.yml` | Daily: trailer playlist for each season list still ahead ("Winter 2027"), unlisted, in the list's order; picks and link in `trailers.json` |
+| `trailer-picks.json` | Optional, by hand: `{"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}}` replaces a wrong pick (`""` = no trailer for that show) |
+| `tools/youtube-login.mjs` | **PC only.** One-time YouTube login for the trailer playlists (see "Trailer-Playlist") |
 | `tool-theme.js` | For Higher / Lower and the Masterset Tracker: light/dark (and the accent colour) as chosen on the main page |
 | `ranker/`, `masterset/` | Higher / Lower and the Masterset Tracker. The separate repository `anime-ranker` only forwards here and keeps the ranker's weekly data (`db.json`) |
 | `wrapped.*`, `wrapped-profiles.json` | Anime Wrapped |
@@ -315,6 +318,35 @@ from "Verspätungen für alle" starts this run (the run then waits for 09:00):
    ignores the other one; from v11 on it starts a rehearsal, a run that only writes the message into its log.)
    To test at any time (helper v11 or later): add a second cron trigger a few minutes ahead (e.g. `*/5 * * * *`),
    wait for a "Daily Discord schedule" run under Actions (it posts nothing), then remove that trigger again.
+
+## Trailer-Playlist (one time)
+
+As soon as a season list ("Winter 2027", "Frühling 2027" …, the tab with all of the season's shows) is in the
+sheet, the daily workflow "Trailer playlists" makes an **unlisted** YouTube playlist "Trailer Winter 2027" on the
+owner's channel: one trailer per show, in the list's order. New, moved or removed shows follow on the next run.
+The planner shows "▶ Trailers" next to the list once the playlist exists. Lists that started more than three
+weeks ago are left alone.
+
+Picking (`tools/trailers.mjs`): AniList's trailer plus a YouTube search per show. Full trailers ("Main Trailer",
+"Trailer", "PV 2") beat teasers, 1–4 minutes, official channels, German/English subtitle tracks (burned-in
+subtitles can't be seen by the tool); videos blocked in Germany or not embeddable are out. Each show is searched
+once. A wrong pick goes into `trailer-picks.json` (see "Files").
+
+YouTube allows 10,000 units a day (a search 100, each playlist change 50): a long list takes two days; the run
+stops on its own and carries on the next day. Failures ping the owner in the bot test channel.
+
+Setup:
+1. <https://console.cloud.google.com>: new project → **APIs & Services → Library → YouTube Data API v3 → Enable**.
+2. **OAuth consent screen**: External, app name e.g. "Anime Schedule", your email; then **Publish app** so it is
+   "In production" (in "Testing" Google ends the login after 7 days). No verification is needed for your own use.
+3. **Credentials → Create credentials → OAuth client ID → Desktop app** → **Download JSON**, saved as
+   `tools/youtube-client.json` on the PC.
+4. On the PC in `tools`: `node youtube-login.mjs`, log in with the YouTube account that should own the playlists
+   (Google warns that the app isn't verified: Advanced → continue). It shows the three values.
+5. GitHub secrets `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN`; then Actions →
+   "Trailer playlists" → Run workflow once (with "dry run" it only shows the picks).
+
+`youtube-client.json` and `youtube-refresh-token.txt` stay on the PC and are never uploaded or pasted anywhere.
 
 ## Trying it locally
 
