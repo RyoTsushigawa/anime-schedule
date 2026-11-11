@@ -28,8 +28,10 @@ async function listSeasonTabs(){
  return raw.map(([,name,gid])=>({name:clean(name),gid})).filter(x=>PV_SEASONS.test(x.name))
  .sort((a,b)=>{const ma=a.name.match(PV_SEASONS),mb=b.name.match(PV_SEASONS);return (+mb[2]*12+PV_MONTHS[mb[1].toLowerCase()])-(+ma[2]*12+PV_MONTHS[ma[1].toLowerCase()]);});
 }
+// One canonical trailer per non-sequel show, including short-form anime.
+// Classification must be explicit: unreviewed entries never become public trailers.
 function verifiedTrailer(entry) {
- if(!entry || entry.type!=='full_trailer' || entry.verified!==true)return null;
+ if(!entry || Array.isArray(entry) || entry.type!=='full_trailer' || entry.verified!==true || entry.sequelStatus!=='not_sequel')return null;
  const id=clean(entry.youtubeId);
  return /^[a-zA-Z0-9_-]{11}$/.test(id) ? {id,subtitles:entry.subtitles==='de'?'DE':entry.subtitles==='en'?'EN':null}:null;
 }
@@ -37,9 +39,22 @@ function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
  return data.trailers?.[show.key] || null;
 }
+function trailerFor(show){
+ const candidate=verifiedTrailer(detailsFor(show));
+ if(!candidate)return null;
+ // Also protect against accidentally reusing one video for multiple shows.
+ const earlier=shows.slice(0,shows.indexOf(show));
+ return earlier.some(s=>verifiedTrailer(detailsFor(s))?.id===candidate.id)?null:candidate;
+}
+function trailerStatus(show){
+ const entry=detailsFor(show);
+ if(entry?.sequelStatus==='sequel')return 'Fortsetzung · kein Trailer';
+ if(entry?.sequelStatus!=='not_sequel')return 'Einordnung noch offen · kein Trailer';
+ return 'Trailer noch nicht bestätigt';
+}
 function render(){
  const q=clean(pv('previewSearch').value).toLocaleLowerCase(),filter=pv('previewFilter').value;
- const data=seasonIndex.seasons?.[seasonKey(current)]||{}, trailers=shows.filter(x=>verifiedTrailer(detailsFor(x))).length;
+ const data=seasonIndex.seasons?.[seasonKey(current)]||{}, trailers=shows.filter(x=>trailerFor(x)).length;
  pv('previewTitle').textContent=current?.name||'Season Preview';
  pv('previewIntro').textContent='Reihenfolge aus der Google-Sheets-Season-Liste · '+shows.length+' Serien';
  pv('previewStats').hidden=false;
@@ -47,15 +62,15 @@ function render(){
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{20,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
- const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&(filter==='all'||(filter==='ready')===!!verifiedTrailer(detailsFor(s))));
+ const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&(filter==='all'||(filter==='ready')===!!trailerFor(s)));
  const parent=pv('previewList');parent.replaceChildren();
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent='Keine passenden Serien gefunden.';parent.append(empty);return;}
  for(const s of shown){
-  const trailer=verifiedTrailer(detailsFor(s)),article=document.createElement('article');article.className='preview-item';
+  const trailer=trailerFor(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ Vollständigen Trailer ansehen</a>':'';
   const votes=s.votes.length?s.votes.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Einträge</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2>'+safeText(s.title)+'</h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.english)+'</p>':'')+
-  '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?'Vollständiger Trailer verfügbar':'Trailer noch nicht bestätigt')+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
+  '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?'Vollständiger Trailer verfügbar':trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
   '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="https://www.livechart.me/">LiveChart öffnen</a></div>'+
   '<div class="preview-votes"><div class="preview-vote-title">Gruppen-Entscheidung · aus Google Sheets</div><div class="preview-vote-chips">'+votes+'</div><p class="preview-vote-note">Bearbeiten nur mit verifiziertem Gruppenzugang (noch nicht aktiviert).</p></div></div>';
   parent.append(article);
