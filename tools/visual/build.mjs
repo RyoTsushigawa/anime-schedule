@@ -11,9 +11,7 @@ async function save(name){
  await writeFile(new URL('./fixtures/'+name+'.html',import.meta.url),'<!doctype html>'+copy.outerHTML);
 }
 p.document.querySelector('#list .title a').textContent='A Very Long Anime Title That Should Wrap Clearly Without Pushing Controls Off the Screen';
-p.run(`document.querySelector('#list .links').innerHTML=linkButtons([{label:'Crunchyroll',url:'https://example.com/a',main:true,color:'#f47521'},{label:'Netflix',url:'https://example.com/b',main:true,color:'#e50914'}],1)`);
 await save('week');
-await p.click(p.document.querySelector('[data-stream-more]'));await save('services');
 await p.click(p.$('settingsButton'));await save('settings');
 await p.click(p.$('settingsButton'));
 await p.click(p.$('list').querySelector('[data-delay]') || p.$('list').querySelector('.day-delay'));

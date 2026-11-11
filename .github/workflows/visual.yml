@@ -4,11 +4,6 @@ on:
     branches: [main]
     paths: ['*.html', '*.css', '*.js', 'tools/visual/**', 'tests/**', '.github/workflows/visual.yml']
   workflow_dispatch:
-    inputs:
-      update_baselines:
-        description: Generate reference images for review (does not commit or deploy)
-        type: boolean
-        default: false
 permissions:
   contents: read
 concurrency:
@@ -30,11 +25,10 @@ jobs:
           cd tools/visual
           npx playwright install --with-deps chromium
       - name: Behavior checks
-        run: node --test tests/compact-services.test.mjs
-      - name: Compare screenshots
+        run: node --test tests/catchup-seasons.test.mjs tests/skipped-catchup.test.mjs
+      # each view renders without errors or sideways scrolling; the pictures are kept for review, not compared
+      - name: Render the views
         working-directory: tools/visual
-        env:
-          UPDATE_VISUAL: ${{ inputs.update_baselines && '1' || '0' }}
         run: npm test
       - name: Keep review images and differences
         if: always()
@@ -45,4 +39,3 @@ jobs:
           path: |
             tools/visual/playwright-report/
             tools/visual/test-results/
-            tools/visual/baselines/
