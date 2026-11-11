@@ -1,0 +1,568 @@
+{
+ "seasons": {
+  "Winter 2027": {
+   "gid": "966052173",
+   "shows": [
+    {
+     "romaji": "Marronnier Oukoku no Shichinin no Kishi",
+     "english": "The Seven Knights of the Marronnier Kingdom",
+     "video": null,
+     "skip": "carryover"
+    },
+    {
+     "romaji": "Kyouran Reijou Nia Liston: Byoujaku Reijou ni Tensei shita Kamigoroshi no Bujin no Karei naru Musouroku",
+     "english": "Nia Liston: The Merciless Maiden",
+     "video": null,
+     "skip": "carryover"
+    },
+    {
+     "romaji": "Magic Knight Rayearth (2026)",
+     "english": "Magic Knight Rayearth (2026)",
+     "video": null,
+     "skip": "carryover"
+    },
+    {
+     "romaji": "Zatsuyou Fuyo Jutsushi ga Jibun no Saikyou ni Kizuku made: Meiwaku wo Kakenai You ni Shite Kimashita ga, Tsuihou sareta node Suki ni Ikiru Koto ni Shimashita",
+     "english": "Magical Buffs: The Support Caster is Stronger Than He Realized!",
+     "anilist": null,
+     "skip": null,
+     "video": "1wCIF-ypn5g",
+     "videoTitle": "Magical Buffs: The Support Caster is Stronger Than He Realized! | Official Trailer | Crunchyroll",
+     "channel": "Crunchyroll",
+     "searched": "2026-11-11T13:38:05.879Z"
+    },
+    {
+     "romaji": "Mairimashita! Iruma-kun: If Episode of Mafia",
+     "english": "Welcome to Demon School! Iruma-kun: IruMafia Edition",
+     "anilist": 207251,
+     "skip": null,
+     "video": "kA7yYnW9gpM",
+     "videoTitle": "Welcome to Demon School! Iruma-kun Season 4 Cour 2 | Official Trailer | Crunchyroll",
+     "channel": "Crunchyroll",
+     "searched": "2026-11-11T13:38:06.418Z"
+    },
+    {
+     "romaji": "Mera × Death: Shinigami to Boku no Ijou na Koi",
+     "english": "Mera × Death: Shinigami to Boku no Ijou na Koi",
+     "anilist": 217433,
+     "skip": null,
+     "video": "atN57-EYoww",
+     "videoTitle": "Mera x Death: Shinigami to Boku no Ijou na Koi | Official Trailer ",
+     "channel": "A-Ronin",
+     "searched": "2026-11-11T13:38:06.884Z"
+    },
+    {
+     "romaji": "Gacha wo Mawashite Nakama wo Fuyasu: Saikyou no Bishoujo Gundan wo Tsukuriagero",
+     "english": "Gacha Girls Corps",
+     "anilist": 194030,
+     "skip": null,
+     "video": "HJFvCv3h6ag",
+     "videoTitle": "Gacha Girls Corps | Official Trailer | Crunchyroll",
+     "channel": "Crunchyroll",
+     "subs": [],
+     "searched": "2026-11-11T13:38:07.482Z"
+    },
+    {
+     "romaji": "CHARISMA",
+     "english": "CHARISMA",
+     "anilist": 203116,
+     "skip": null,
+     "video": "hgnPsDQnsrQ",
+     "videoTitle": "Charisma - New Anime Official Trailer (With Eng Subtitles)",
+     "channel": "MiracuStream",
+     "searched": "2026-11-11T13:38:08.186Z"
+    },
+    {
+     "romaji": "Jirai nan desu ka? Chihara-san",
+     "english": "Are You a Landmine, Chihara-san?",
+     "anilist": 204579,
+     "skip": null,
+     "video": "9MXzPz2cOYk",
+     "videoTitle": "TVアニメ「地雷なんですか？地原さん」Teaser PV | 2027年1月より全国同時放送",
+     "channel": "「KING AMUSEMENT CREATIVE」公式チャンネル",
+     "searched": "2026-11-11T13:38:08.854Z"
+    },
+    {
+     "romaji": "Kininatteru Hito ga Otoko ja Nakatta",
+     "english": "The Guy She Was Interested In Wasn't a Guy At All",
+     "anilist": null,
+     "skip": null,
+     "video": "2KPFnP1othM",
+     "videoTitle": "The Guy She Was Interested In Wasn't a Guy at All | Official Trailer | Crunchyroll",
+     "channel": "Crunchyroll",
+     "searched": "2026-11-11T13:38:09.433Z"
+    },
+    {
+     "romaji": "BLESS",
+     "english": "BLESS",
+     "anilist": 208766,
+     "skip": null,
+     "video": "gkWMfMgCuP8",
+     "videoTitle": "Bless | Official Trailer (2026)",
+     "channel": "Anime MoJo X",
+     "subs": [],
+     "searched": "2026-11-11T13:38:09.889Z"
+    },
+    {
+     "romaji": "BanG Dream! MyGO!!!!! // Ave Mujica",
+     "english": "BanG Dream! MyGO!!!!! // Ave Mujica",
+     "anilist": 189121,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:09.950Z"
+    },
+    {
+     "romaji": "Shin Samurai-den YAIBA 2nd Season",
+     "english": "YAIBA: Samurai Legend Season 2",
+     "anilist": 199337,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:10.046Z"
+    },
+    {
+     "romaji": "Kizuguchi to Houtai",
+     "english": "Wound & Bandage",
+     "anilist": 214049,
+     "skip": null,
+     "video": "DyimnIi9nJk",
+     "videoTitle": "TVアニメ『傷口と包帯』本PV",
+     "channel": "ABC Animation Channel",
+     "searched": "2026-11-11T13:38:10.596Z"
+    },
+    {
+     "romaji": "The Fable 2nd Season",
+     "english": "The Fable 2nd Season",
+     "anilist": 210199,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:10.674Z"
+    },
+    {
+     "romaji": "Shangri-La Frontier 3rd Season",
+     "english": "Shangri-La Frontier Season 3",
+     "anilist": 189323,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:10.746Z"
+    },
+    {
+     "romaji": "Love Live! Hasunosora Jogakuin School Idol Club",
+     "english": "Love Live! Hasunosora Jogakuin School Idol Club",
+     "anilist": 210157,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:10.815Z"
+    },
+    {
+     "romaji": "Spirit Circle",
+     "english": "Spirit Circle",
+     "anilist": 219548,
+     "skip": null,
+     "video": "JRfCKFnvtOE",
+     "videoTitle": "SPIRIT CIRCLE — OFFICIAL TRAILER「4K」",
+     "channel": "Anime Tenkai",
+     "searched": "2026-11-11T13:38:11.352Z"
+    },
+    {
+     "romaji": "Sekai Saikou no Ansatsusha, Isekai Kizoku ni Tensei suru Season2",
+     "english": "The World's Finest Assassin Gets Reincarnated in Another World as an Aristocrat Season2",
+     "anilist": 169579,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:11.436Z"
+    },
+    {
+     "romaji": "MASHLE Sanma Taisou Shinkakusha Saishu Shiken-hen",
+     "english": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc",
+     "anilist": null,
+     "skip": null,
+     "video": "R67NmkIwhco",
+     "videoTitle": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc | Official Trailer",
+     "channel": "Crunchyroll",
+     "searched": "2026-11-11T13:38:11.961Z"
+    },
+    {
+     "romaji": "Isekai de Cheat Skill wo Te ni Shita Ore wa, Genjitsu Sekai wo mo Musou Suru ~Level Up wa Jinsei wo Kaeta~ 2nd Season",
+     "english": "I Got a Cheat Skill in Another World and Became Unrivaled in The Real World, Too Season 2",
+     "anilist": 209980,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:12.051Z"
+    },
+    {
+     "romaji": "SAKAMOTO DAYS Season 2",
+     "english": "SAKAMOTO DAYS Season 2",
+     "anilist": 204363,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:12.129Z"
+    },
+    {
+     "romaji": "Kuroiwa Medaka ni Watashi no Kawaii ga Tsuujinai Season2",
+     "english": "Medaka Kuroiwa is Impervious to My Charms Season 2",
+     "anilist": 188892,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:12.205Z"
+    },
+    {
+     "romaji": "One-Punch Man Season 3 Cour 2",
+     "english": "One-Punch Man Season 3 Part 2",
+     "anilist": null,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:12.271Z"
+    },
+    {
+     "romaji": "Kakunaru Ue wa",
+     "english": "Now That We Draw",
+     "anilist": 202564,
+     "skip": null,
+     "video": "u05QQa7wun4",
+     "videoTitle": "【2027年1月放送】TVアニメ「描くなるうえは」第1弾PV",
+     "channel": "株式会社インフィニット",
+     "searched": "2026-11-11T13:38:12.796Z"
+    },
+    {
+     "romaji": "Zombie no Afureta Sekai de Ore dake ga Osowarenai",
+     "english": "In a World Full of Zombies I'm the Only One Who Doesn't Get Attacked",
+     "anilist": 174427,
+     "skip": null,
+     "video": "ky1EjKvGMrA",
+     "videoTitle": "アニメ『ゾンビのあふれた世界で俺だけが襲われない』メインPV｜2027年1月AT-Xで放送開始！",
+     "channel": "FRONTIERWORKS",
+     "searched": "2026-11-11T13:38:13.325Z"
+    },
+    {
+     "romaji": "Isshiki-san wa Koi wo Shiritai.",
+     "english": "Isshiki-san Wants to Know About Love",
+     "anilist": 200578,
+     "skip": null,
+     "video": "A86REZ-veV8",
+     "videoTitle": "TVアニメ『一式さんは恋を知りたい。』本PV | OPテーマ：えなこ「剛よく恋を制す！？」【2027年1月放送開始】",
+     "channel": "KADOKAWAanime",
+     "subs": [],
+     "searched": "2026-11-11T13:38:13.862Z"
+    },
+    {
+     "romaji": "MARRIAGETOXIN Season 2",
+     "english": "MARRIAGETOXIN Season 2",
+     "anilist": 213752,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:13.937Z"
+    },
+    {
+     "romaji": "Himekishi-sama no Himo",
+     "english": "The Kept Man of the Princess Knight",
+     "anilist": 186741,
+     "skip": null,
+     "video": "yavypPvVcnw",
+     "videoTitle": "TVアニメ『姫騎士様のヒモ』メインPV第1弾",
+     "channel": "KADOKAWAanime",
+     "subs": [],
+     "searched": "2026-11-11T13:38:14.560Z"
+    },
+    {
+     "romaji": "Futsutsuka na Akujo dewa Gozaimasu ga ~Suuguu Chouso Torikae Den~ Cour 2",
+     "english": "Though I Am an Inept Villainess Cour 2",
+     "anilist": null,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:38:14.639Z"
+    },
+    {
+     "romaji": "Doukyo Shiteiru Kensei no Onna Shishou ga Kawaisugite Mainichi Shiawase desu",
+     "english": "My Sword Saint Master Is Too Cute to Live With!",
+     "anilist": 206798,
+     "skip": null,
+     "video": "Bh4XDVDUZKc",
+     "videoTitle": "『同居している剣聖の女師匠が可愛すぎて毎日幸せです』ティザーPV｜2027年1月放送開始！",
+     "channel": "デレギュラ【新アニメレーベル】",
+     "searched": "2026-11-11T13:38:15.214Z"
+    },
+    {
+     "romaji": "Majutsu wo Kiwamete Tabi ni Deta Tensei Elf, Moteamashita Jumyou de Ikeru Densetsu to Naru",
+     "english": "The Reincarnated Elf Left on a Journey to Master His Magic and With His Extra Lifespan Became a Living Legend",
+     "anilist": 202503,
+     "skip": null,
+     "video": "swAIVfYAZDQ",
+     "videoTitle": "TVアニメ「魔術を極めて旅に出た転生エルフ、持て余した寿命で生ける伝説となる」第1話冒頭映像 | 2027年1月放送予定",
+     "channel": "Asmik Ace Anime Channel",
+     "searched": "2026-11-11T13:38:15.711Z"
+    },
+    {
+     "romaji": "Kekkaishi no Ichirinka",
+     "english": "Bride of the Barrier Master",
+     "anilist": 197619,
+     "skip": null,
+     "video": "QCC-PqpQCCo",
+     "videoTitle": "TVアニメ『結界師の一輪華』ティザーPV｜2027年1月放送開始",
+     "channel": "KADOKAWAanime",
+     "subs": [],
+     "searched": "2026-11-11T13:38:16.268Z"
+    },
+    {
+     "romaji": "Kaketa Tsuki no Mercedes",
+     "english": "Mercedes and the Waning Moon",
+     "anilist": 197095,
+     "skip": null,
+     "video": "BeBqd3yuV9U",
+     "videoTitle": "TVアニメ「欠けた月のメルセデス」PV第2弾｜2027年1月放送開始",
+     "channel": "博報堂DY ミュージック&ピクチャーズ【Showgate】ch",
+     "searched": "2026-11-11T13:39:16.983Z"
+    },
+    {
+     "romaji": "Sudachi no Maoujou",
+     "english": "The Fledgling Demon Lord's Starter Shop",
+     "anilist": 213497,
+     "skip": null,
+     "video": "DX_XBDUo1P0",
+     "videoTitle": "The Fledgling Demon Lord's Starter Shop - New Anime Official Trailer (With Eng Subtitles)",
+     "channel": "MiracuStream",
+     "subs": [],
+     "searched": "2026-11-11T13:39:17.490Z"
+    },
+    {
+     "romaji": "Shishite Ikiru SSS-kyuu Hunter",
+     "english": "SSS-Class Revival Hunter",
+     "anilist": 216624,
+     "skip": null,
+     "video": "C6ecZk2mHqA",
+     "videoTitle": "TVアニメ『死して生きるSSS級ハンター』第2弾PV｜2027年1月放送",
+     "channel": "HAYATE Inc.チャンネル",
+     "searched": "2026-11-11T13:39:18.006Z"
+    },
+    {
+     "romaji": "Isekai Tensei Soudouki",
+     "english": "Multi-mind Mayhem",
+     "anilist": 209221,
+     "skip": null,
+     "video": "G7ddo_2gKXE",
+     "videoTitle": "「異世界転生騒動記」PV第1弾 ｜ 2027年1月から放送開始！",
+     "channel": "アルファポリス公式",
+     "subs": [],
+     "searched": "2026-11-11T13:39:18.506Z"
+    },
+    {
+     "romaji": "Odebu Akujo ni Tensei shitara, Nazeka Last Boss Oujisama ni Shuuchaku sareteimasu",
+     "english": "The Final-Boss Prince is Somehow Obsessed with the Chubby Villainess: Reincarnated Me",
+     "anilist": null,
+     "skip": null,
+     "video": "k36ip8-Wn5E",
+     "videoTitle": "The FinalBoss Prince is Somehow Obsessed with the Chubby Villainess Reincarnated Me Official Trailer",
+     "channel": "Anime Update 0",
+     "searched": "2026-11-11T13:39:19.178Z"
+    },
+    {
+     "romaji": "Game Sekai Tensei \"Dankatsu\": Gamer wa \"Dungeon Shuukatsu no Susume\" wo \"Hajime kara\" Play suru",
+     "english": "Reincarnation in the Game World Dankatsu: Game Addict Plays \"Encouragement for Job Hunting in Dungeons\" from a \"New Game\"",
+     "anilist": 209224,
+     "skip": null,
+     "video": "4BFObPUXf2E",
+     "videoTitle": "TVアニメ『ダン活』スーパーティザーPV ｜ 2027年1月放送開始！",
+     "channel": "ABC Animation Channel",
+     "subs": [],
+     "searched": "2026-11-11T13:39:19.618Z"
+    },
+    {
+     "romaji": "Boukensha License wo Hakudatsu sareta Ossan dakedo, Manamusume ga Dekita node Nonbiri Jinsei wo Ouka suru",
+     "english": "I Lost My Adventurer's License, but It's Fine Because I Have an Adorable Daughter Now",
+     "anilist": null,
+     "skip": null,
+     "video": "4ltv8Jm1j5U",
+     "videoTitle": "I Lost My Adventurer's License, but It's Fine Because... - New Anime Trailer (With Eng Subtitles)",
+     "channel": "MiracuStream",
+     "subs": [],
+     "searched": "2026-11-11T13:39:20.074Z"
+    },
+    {
+     "romaji": "Giant Ojou-sama",
+     "english": "GIANT OJOSAMA",
+     "anilist": 187303,
+     "skip": null,
+     "video": "yOGfDfMGIO8",
+     "videoTitle": "Anime 『GIANT OJOSAMA』 – Teaser Trailer",
+     "channel": "DMM pictures",
+     "subs": [],
+     "searched": "2026-11-11T13:39:20.573Z"
+    },
+    {
+     "romaji": "MONOGATARI Series: OFF & MONSTER Season - Wazamonogatari: Karen Ogre",
+     "english": "MONOGATARI Series: OFF & MONSTER Season - Wazamonogatari: Karen Ogre",
+     "anilist": 195448,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:39:20.639Z"
+    },
+    {
+     "romaji": "Arafoo Kenja no Isekai Seikatsu Nikki",
+     "english": "The Diary of a Middle-Aged Sage's Carefree Life in Another World",
+     "anilist": null,
+     "skip": null,
+     "video": "q_UGyAntkMk",
+     "videoTitle": "PV | Around 40 Kenja no Isekai Seikatsu Nikki - official trailer",
+     "channel": "TR anime",
+     "searched": "2026-11-11T13:39:21.111Z"
+    },
+    {
+     "romaji": "Akane-banashi Season 2",
+     "english": "Akane-banashi Season 2",
+     "anilist": 213360,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:39:21.183Z"
+    },
+    {
+     "romaji": "Golden Kamuy (Saishuushou): Bousou ressha-hen",
+     "english": "Golden Kamuy Final Season: Runaway Train Arc",
+     "anilist": 210073,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T13:39:21.244Z"
+    },
+    {
+     "romaji": "Matsurika Kanriden",
+     "english": "Tales of Matsurika: The Girl Who Never Forgets",
+     "anilist": 199590,
+     "skip": null,
+     "video": "7ja8PqzctBg",
+     "videoTitle": "TVアニメ『茉莉花官吏伝』メインPV第1弾｜OPテーマ：KANA-BOON「花噺」【2027年1月放送開始】",
+     "channel": "KADOKAWAanime",
+     "subs": [],
+     "searched": "2026-11-11T13:39:21.684Z"
+    },
+    {
+     "romaji": "Historie",
+     "english": "Historié",
+     "anilist": 205130,
+     "skip": null,
+     "video": "GM1Y206Unwg",
+     "videoTitle": "TVアニメ『ヒストリエ』PV第1弾",
+     "channel": "MBS animation 公式チャンネル",
+     "subs": [],
+     "searched": "2026-11-11T13:39:22.211Z"
+    },
+    {
+     "romaji": "Shin no Seijo de Aru Watashi wa Tsuihou saremashita. Dakara Kono Kuni wa Mou Owari desu",
+     "english": "Because I, the True Saint, was Banished, that Country is Done For!",
+     "anilist": 214461,
+     "skip": null,
+     "video": "AgwEj6-rVdw",
+     "videoTitle": "【ティザーPV】TVアニメ『真の聖女である私は追放されました。だからこの国はもう終わりです』｜2027年1月放送開始！",
+     "channel": "バンダイナムコフィルムワークス チャンネル",
+     "searched": "2026-11-11T13:39:22.858Z"
+    },
+    {
+     "romaji": "Sekiro: No Defeat (TV)",
+     "english": "Sekiro: No Defeat (TV)",
+     "anilist": null,
+     "skip": null,
+     "video": "IanqpvZsp_s",
+     "videoTitle": "Sekiro: No Defeat | Official Trailer 2 | Crunchyroll",
+     "channel": "Crunchyroll",
+     "subs": [],
+     "searched": "2026-11-11T13:40:23.491Z"
+    },
+    {
+     "romaji": "Hirayasumi",
+     "english": "Hirayasumi",
+     "anilist": 196333,
+     "skip": null,
+     "video": "ZoVtjJsdyB4",
+     "videoTitle": "TVアニメ「ひらやすみ」ティザーPV",
+     "channel": "ShoProアニメチャンネル",
+     "searched": "2026-11-11T13:40:23.989Z"
+    },
+    {
+     "romaji": "Dengeki Daisy",
+     "english": "Dengeki Daisy",
+     "anilist": 213052,
+     "skip": null,
+     "video": "9wIJGKQKqZY",
+     "videoTitle": "TVアニメ『電撃デイジー』メインPV第１弾｜2027年1月より連続2クールにて放送開始",
+     "channel": "アニプレックス チャンネル",
+     "searched": "2026-11-11T13:40:24.554Z"
+    },
+    {
+     "romaji": "ARCANADEA",
+     "english": "ARCANADEA",
+     "anilist": 185697,
+     "skip": null,
+     "video": "9aF_e6hclTw",
+     "videoTitle": "\"Arcanadea\" | OFFICIAL TRAILER // New PV | SUBBED",
+     "channel": "Anime Overview ",
+     "searched": "2026-11-11T13:40:25.047Z"
+    },
+    {
+     "romaji": "MURCIÉLAGO",
+     "english": "MURCIÉLAGO",
+     "anilist": null,
+     "skip": null,
+     "video": "Z09Hk6AE3Bg",
+     "videoTitle": "\"Murciélago\" Yuri Action TV ANIME | OFFICIAL TRAILER ",
+     "channel": "Anime Update 0",
+     "searched": "2026-11-11T13:40:25.535Z"
+    },
+    {
+     "romaji": "Pen to Wappa to Jijitsukon",
+     "english": "A Pen, Handcuffs, and a Common-Law Marriage",
+     "anilist": 211070,
+     "skip": null,
+     "video": "GpsgYnS0p8I",
+     "videoTitle": "TVアニメ『ペンと手錠と事実婚』2027年1月放送決定！｜ティザーPV",
+     "channel": "「KING AMUSEMENT CREATIVE」公式チャンネル",
+     "searched": "2026-11-11T13:40:26.042Z"
+    },
+    {
+     "romaji": "Kaze wo Tsugu Mono",
+     "english": "Inherit the Winds",
+     "anilist": null,
+     "skip": null,
+     "video": "MKOar69AefY",
+     "videoTitle": "Inherit The Winds New Anime Official Trailer (With Eng Subtitles)",
+     "channel": "MiracuStream",
+     "subs": [],
+     "searched": "2026-11-11T13:40:26.509Z"
+    },
+    {
+     "romaji": "Yuukyuu no Gusha Asley no, Kenja no Susume",
+     "english": "The Eternal Fool's Words of Wisdom: A Pawsitively Fantastic Adventure",
+     "anilist": 207328,
+     "skip": null,
+     "video": "FwBIfpNSV4E",
+     "videoTitle": "The Eternal Fool's Words of Wisdom: A Pawsitively Fantastic Adventure | Official Teaser",
+     "channel": "Crunchyroll",
+     "searched": "2026-11-11T13:40:26.993Z"
+    },
+    {
+     "romaji": "Ore to Yu nii!",
+     "english": "Ore to Yu nii!",
+     "anilist": null,
+     "skip": null,
+     "video": "5t73vYlujsg",
+     "videoTitle": "Ore to Yu nii! - Official Trailer",
+     "channel": "Anime Officials Trailer",
+     "searched": "2026-11-11T13:40:27.471Z"
+    },
+    {
+     "romaji": "Akazukin, Tabi no Tochuu de Shitai to Deau.",
+     "english": "Red Riding Hood: A Detective Story"
+    },
+    {
+     "romaji": "Ramen Akaneko Season 2",
+     "english": "Ramen Akaneko Season 2"
+    },
+    {
+     "romaji": "Everyday Host (Sequel)",
+     "english": "Everyday HOST CLUB (Sequel)"
+    },
+    {
+     "romaji": "Peropero Sparkles",
+     "english": "Peropero Sparkles"
+    }
+   ]
+  }
+ },
+ "updated": "2026-11-11T13:40:27.589Z"
+}

@@ -1,44 +1,368 @@
 {
-  "schemaVersion": 5,
-  "description": "One approved video per non-sequel show; short-form anime eligible. Prefer a substantive full trailer. Only when no suitable full trailer can be found may a teaser with meaningful show footage be used as a clearly labeled last-resort fallback (type:'teaser', verified:true, footageVerified:true, sequelStatus:'not_sequel', fallbackApproved:true, fullTrailerUnavailable:true). Automatically prefer full trailers when available, including in candidates. Never show announcement-only videos or fan edits.",
-  "seasons": {},
-  "entryExample": {
+ "schemaVersion": 5,
+ "description": "Written by tools/trailers.mjs: one automatic trailer per new show of each season list ahead; sequels marked. A wrong pick goes into trailer-picks.json.",
+ "seasons": {
+  "winter-2027": {
+   "title": "Winter 2027",
+   "trailers": {
+    "zatsuyou fuyo jutsushi ga jibun no saikyou ni kizuku made: meiwaku wo kakenai you ni shite kimashita ga, tsuihou sareta node suki ni ikiru koto ni shimashita": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "1wCIF-ypn5g",
+     "title": "Magical Buffs: The Support Caster is Stronger Than He Realized! | Official Trailer | Crunchyroll"
+    },
+    "mairimashita! iruma-kun: if episode of mafia": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "kA7yYnW9gpM",
+     "title": "Welcome to Demon School! Iruma-kun Season 4 Cour 2 | Official Trailer | Crunchyroll"
+    },
+    "mera × death: shinigami to boku no ijou na koi": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "atN57-EYoww",
+     "title": "Mera x Death: Shinigami to Boku no Ijou na Koi | Official Trailer "
+    },
+    "gacha wo mawashite nakama wo fuyasu: saikyou no bishoujo gundan wo tsukuriagero": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "HJFvCv3h6ag",
+     "title": "Gacha Girls Corps | Official Trailer | Crunchyroll"
+    },
+    "charisma": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "hgnPsDQnsrQ",
+     "title": "Charisma - New Anime Official Trailer (With Eng Subtitles)"
+    },
+    "jirai nan desu ka? chihara-san": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "9MXzPz2cOYk",
+     "title": "TVアニメ「地雷なんですか？地原さん」Teaser PV | 2027年1月より全国同時放送"
+    },
+    "kininatteru hito ga otoko ja nakatta": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "2KPFnP1othM",
+     "title": "The Guy She Was Interested In Wasn't a Guy at All | Official Trailer | Crunchyroll"
+    },
+    "bless": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "gkWMfMgCuP8",
+     "title": "Bless | Official Trailer (2026)"
+    },
+    "bang dream! mygo!!!!! // ave mujica": {
+     "sequelStatus": "sequel"
+    },
+    "shin samurai-den yaiba 2nd season": {
+     "sequelStatus": "sequel"
+    },
+    "kizuguchi to houtai": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "DyimnIi9nJk",
+     "title": "TVアニメ『傷口と包帯』本PV"
+    },
+    "the fable 2nd season": {
+     "sequelStatus": "sequel"
+    },
+    "shangri-la frontier 3rd season": {
+     "sequelStatus": "sequel"
+    },
+    "love live! hasunosora jogakuin school idol club": {
+     "sequelStatus": "sequel"
+    },
+    "spirit circle": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "JRfCKFnvtOE",
+     "title": "SPIRIT CIRCLE — OFFICIAL TRAILER「4K」"
+    },
+    "sekai saikou no ansatsusha, isekai kizoku ni tensei suru season2": {
+     "sequelStatus": "sequel"
+    },
+    "mashle sanma taisou shinkakusha saishu shiken-hen": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "R67NmkIwhco",
+     "title": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc | Official Trailer"
+    },
+    "isekai de cheat skill wo te ni shita ore wa, genjitsu sekai wo mo musou suru ~level up wa jinsei wo kaeta~ 2nd season": {
+     "sequelStatus": "sequel"
+    },
+    "sakamoto days season 2": {
+     "sequelStatus": "sequel"
+    },
+    "kuroiwa medaka ni watashi no kawaii ga tsuujinai season2": {
+     "sequelStatus": "sequel"
+    },
+    "one-punch man season 3 cour 2": {
+     "sequelStatus": "sequel"
+    },
+    "kakunaru ue wa": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "u05QQa7wun4",
+     "title": "【2027年1月放送】TVアニメ「描くなるうえは」第1弾PV"
+    },
+    "zombie no afureta sekai de ore dake ga osowarenai": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "ky1EjKvGMrA",
+     "title": "アニメ『ゾンビのあふれた世界で俺だけが襲われない』メインPV｜2027年1月AT-Xで放送開始！"
+    },
+    "isshiki-san wa koi wo shiritai.": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "A86REZ-veV8",
+     "title": "TVアニメ『一式さんは恋を知りたい。』本PV | OPテーマ：えなこ「剛よく恋を制す！？」【2027年1月放送開始】"
+    },
+    "marriagetoxin season 2": {
+     "sequelStatus": "sequel"
+    },
+    "himekishi-sama no himo": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "yavypPvVcnw",
+     "title": "TVアニメ『姫騎士様のヒモ』メインPV第1弾"
+    },
+    "futsutsuka na akujo dewa gozaimasu ga ~suuguu chouso torikae den~ cour 2": {
+     "sequelStatus": "sequel"
+    },
+    "doukyo shiteiru kensei no onna shishou ga kawaisugite mainichi shiawase desu": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "Bh4XDVDUZKc",
+     "title": "『同居している剣聖の女師匠が可愛すぎて毎日幸せです』ティザーPV｜2027年1月放送開始！"
+    },
+    "majutsu wo kiwamete tabi ni deta tensei elf, moteamashita jumyou de ikeru densetsu to naru": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "swAIVfYAZDQ",
+     "title": "TVアニメ「魔術を極めて旅に出た転生エルフ、持て余した寿命で生ける伝説となる」第1話冒頭映像 | 2027年1月放送予定"
+    },
+    "kekkaishi no ichirinka": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "QCC-PqpQCCo",
+     "title": "TVアニメ『結界師の一輪華』ティザーPV｜2027年1月放送開始"
+    },
+    "kaketa tsuki no mercedes": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "BeBqd3yuV9U",
+     "title": "TVアニメ「欠けた月のメルセデス」PV第2弾｜2027年1月放送開始"
+    },
+    "sudachi no maoujou": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "DX_XBDUo1P0",
+     "title": "The Fledgling Demon Lord's Starter Shop - New Anime Official Trailer (With Eng Subtitles)"
+    },
+    "shishite ikiru sss-kyuu hunter": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "C6ecZk2mHqA",
+     "title": "TVアニメ『死して生きるSSS級ハンター』第2弾PV｜2027年1月放送"
+    },
+    "isekai tensei soudouki": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "G7ddo_2gKXE",
+     "title": "「異世界転生騒動記」PV第1弾 ｜ 2027年1月から放送開始！"
+    },
+    "odebu akujo ni tensei shitara, nazeka last boss oujisama ni shuuchaku sareteimasu": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "k36ip8-Wn5E",
+     "title": "The FinalBoss Prince is Somehow Obsessed with the Chubby Villainess Reincarnated Me Official Trailer"
+    },
+    "game sekai tensei \"dankatsu\": gamer wa \"dungeon shuukatsu no susume\" wo \"hajime kara\" play suru": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "4BFObPUXf2E",
+     "title": "TVアニメ『ダン活』スーパーティザーPV ｜ 2027年1月放送開始！"
+    },
+    "boukensha license wo hakudatsu sareta ossan dakedo, manamusume ga dekita node nonbiri jinsei wo ouka suru": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "4ltv8Jm1j5U",
+     "title": "I Lost My Adventurer's License, but It's Fine Because... - New Anime Trailer (With Eng Subtitles)"
+    },
+    "giant ojou-sama": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "yOGfDfMGIO8",
+     "title": "Anime 『GIANT OJOSAMA』 – Teaser Trailer"
+    },
+    "monogatari series: off & monster season - wazamonogatari: karen ogre": {
+     "sequelStatus": "sequel"
+    },
+    "arafoo kenja no isekai seikatsu nikki": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "q_UGyAntkMk",
+     "title": "PV | Around 40 Kenja no Isekai Seikatsu Nikki - official trailer"
+    },
+    "akane-banashi season 2": {
+     "sequelStatus": "sequel"
+    },
+    "golden kamuy (saishuushou): bousou ressha-hen": {
+     "sequelStatus": "sequel"
+    },
+    "matsurika kanriden": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "7ja8PqzctBg",
+     "title": "TVアニメ『茉莉花官吏伝』メインPV第1弾｜OPテーマ：KANA-BOON「花噺」【2027年1月放送開始】"
+    },
+    "historie": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "GM1Y206Unwg",
+     "title": "TVアニメ『ヒストリエ』PV第1弾"
+    },
+    "shin no seijo de aru watashi wa tsuihou saremashita. dakara kono kuni wa mou owari desu": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "AgwEj6-rVdw",
+     "title": "【ティザーPV】TVアニメ『真の聖女である私は追放されました。だからこの国はもう終わりです』｜2027年1月放送開始！"
+    },
+    "sekiro: no defeat (tv)": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "IanqpvZsp_s",
+     "title": "Sekiro: No Defeat | Official Trailer 2 | Crunchyroll"
+    },
+    "hirayasumi": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "ZoVtjJsdyB4",
+     "title": "TVアニメ「ひらやすみ」ティザーPV"
+    },
+    "dengeki daisy": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "9wIJGKQKqZY",
+     "title": "TVアニメ『電撃デイジー』メインPV第１弾｜2027年1月より連続2クールにて放送開始"
+    },
+    "arcanadea": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "9aF_e6hclTw",
+     "title": "\"Arcanadea\" | OFFICIAL TRAILER // New PV | SUBBED"
+    },
+    "murciélago": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "Z09Hk6AE3Bg",
+     "title": "\"Murciélago\" Yuri Action TV ANIME | OFFICIAL TRAILER "
+    },
+    "pen to wappa to jijitsukon": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "GpsgYnS0p8I",
+     "title": "TVアニメ『ペンと手錠と事実婚』2027年1月放送決定！｜ティザーPV"
+    },
+    "kaze wo tsugu mono": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "MKOar69AefY",
+     "title": "Inherit The Winds New Anime Official Trailer (With Eng Subtitles)"
+    },
+    "yuukyuu no gusha asley no, kenja no susume": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "FwBIfpNSV4E",
+     "title": "The Eternal Fool's Words of Wisdom: A Pawsitively Fantastic Adventure | Official Teaser"
+    },
+    "ore to yu nii!": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "5t73vYlujsg",
+     "title": "Ore to Yu nii! - Official Trailer"
+    }
+   }
+  }
+ },
+ "entryExample": {
+  "type": "full_trailer",
+  "verified": true,
+  "footageVerified": true,
+  "sequelStatus": "not_sequel",
+  "youtubeId": "REPLACE_WITH_VALID_ID",
+  "subtitles": "en",
+  "title": "Official full PV (main trailer)",
+  "candidates": [
+   {
     "type": "full_trailer",
     "verified": true,
     "footageVerified": true,
     "sequelStatus": "not_sequel",
-    "youtubeId": "REPLACE_WITH_VALID_ID",
-    "subtitles": "en",
-    "title": "Official full PV (main trailer)",
-    "candidates": [
-      {
-        "type": "full_trailer",
-        "verified": true,
-        "footageVerified": true,
-        "sequelStatus": "not_sequel",
-        "youtubeId": "ALTERNATE_ID_HERE",
-        "title": "Alternative official full trailer",
-        "subtitles": "de"
-      }
-    ],
-    "note": "Documentation only: normally use type full_trailer. If only a teaser exists after checking for full trailers, use type teaser together with fallbackApproved:true and fullTrailerUnavailable:true. Never use both in the playlist."
-  },
-  "previousPlaylistReference": "https://www.youtube.com/watch?v=XER9knL33-8&list=PLT2F_qa8DPPY&pp=sAgC",
-  "youtubeStatusReference": {
-    "not_found": "Checked, no suitable full trailer available",
-    "unavailable": "Formerly approved trailer no longer accessible",
-    "checking": "In review",
-    "note": "Do not mark unreviewed shows as missing."
-  },
-  "teaserFallbackExample": {
-    "type": "teaser",
-    "verified": true,
-    "footageVerified": true,
-    "sequelStatus": "not_sequel",
-    "fallbackApproved": true,
-    "fullTrailerUnavailable": true,
-    "youtubeId": "REPLACE_WITH_VALID_ID",
-    "title": "Official teaser (fallback only)",
-    "note": "Example only; a teaser must still show actual show footage and be replaced if a full trailer becomes available."
-  }
+    "youtubeId": "ALTERNATE_ID_HERE",
+    "title": "Alternative official full trailer",
+    "subtitles": "de"
+   }
+  ],
+  "note": "Documentation only: normally use type full_trailer. If only a teaser exists after checking for full trailers, use type teaser together with fallbackApproved:true and fullTrailerUnavailable:true. Never use both in the playlist."
+ },
+ "previousPlaylistReference": "https://www.youtube.com/watch?v=XER9knL33-8&list=PLT2F_qa8DPPY&pp=sAgC",
+ "youtubeStatusReference": {
+  "not_found": "Checked, no suitable full trailer available",
+  "unavailable": "Formerly approved trailer no longer accessible",
+  "checking": "In review",
+  "note": "Do not mark unreviewed shows as missing."
+ },
+ "teaserFallbackExample": {
+  "type": "teaser",
+  "verified": true,
+  "footageVerified": true,
+  "sequelStatus": "not_sequel",
+  "fallbackApproved": true,
+  "fullTrailerUnavailable": true,
+  "youtubeId": "REPLACE_WITH_VALID_ID",
+  "title": "Official teaser (fallback only)",
+  "note": "Example only; a teaser must still show actual show footage and be replaced if a full trailer becomes available."
+ }
 }
