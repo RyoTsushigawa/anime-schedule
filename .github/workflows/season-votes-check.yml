@@ -1,0 +1,28 @@
+name: Season Preview voting checks
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'workers/season-votes/**'
+      - 'season-preview.js'
+      - 'season-preview.html'
+      - 'tests/season-votes-worker.test.mjs'
+      - 'tests/season-preview-vote-ui.test.mjs'
+      - '.github/votes-test-request.txt'
+permissions:
+  contents: read
+jobs:
+  voting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate UI and Worker syntax
+        run: |
+          node --check season-preview.js
+          node --check workers/season-votes/index.js
+      - name: Check member votes, shared code and Sheets restrictions
+        run: node --test tests/season-votes-worker.test.mjs tests/season-preview-vote-ui.test.mjs
