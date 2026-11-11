@@ -185,3 +185,14 @@
  .preview-choices .preview-choice{flex:1 1 auto}
 }
 @media(prefers-reduced-motion:reduce){.preview-choices .preview-choice{transition:none}}
+
+
+/* Lightweight group-code vote access; follows the main schedule's pill controls. */
+.preview-access{display:flex;align-items:end;flex-wrap:wrap;gap:9px}
+.preview-access label{display:flex;flex-direction:column;align-items:stretch;gap:5px;font-size:12px;color:var(--muted)}
+.preview-access input{min-width:190px;min-height:40px;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit}
+.preview-access input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.preview-access button,.preview-member>#previewLock{min-height:40px}
+.preview-member>#previewPersonLabel{display:flex;align-items:center;gap:8px}
+.preview-member>#previewPersonLabel select{min-width:140px;max-width:100%}
+@media(max-width:600px){.preview-access{width:100%}.preview-access label{flex:1 1 180px}.preview-access input{width:100%}.preview-member>#previewPersonLabel{flex:1 1 100%;justify-content:space-between}.preview-member>#previewPersonLabel select{flex:1 1 auto;min-width:0}}
