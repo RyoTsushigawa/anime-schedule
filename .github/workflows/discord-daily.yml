@@ -38,7 +38,8 @@ concurrency:
 
 jobs:
   post:
-    runs-on: ubuntu-latest
+    # Fixed runner image avoids unexpected apt changes on ubuntu-latest.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned: a moved tag can't change what runs
@@ -51,7 +52,9 @@ jobs:
         if: ${{ !inputs.test_warning }}
         run: |
           npm install --no-save --no-package-lock playwright@1.49.1
-          npx playwright install --with-deps chromium
+          # GitHub's Ubuntu image already ships the common Chromium libraries.
+          # Avoid apt mirror/DNS failures from --with-deps during each daily post.
+          npx playwright install chromium
       - name: Post today's schedule
         if: ${{ !inputs.test_warning }}
         env:
