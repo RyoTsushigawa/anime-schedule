@@ -3590,6 +3590,43 @@ return people.length ? [{ ...x, people }] : [];
 storeAway(next, days, `${run.p}: entfernt.`);
 });
 let dayEdit = null;
+// Wochenübersicht: every show one person watches, by weekday and time. Regular slots from the
+// Guckplan with permanent moves ("Dauerhaft"); this week's one-off changes don't count.
+function overviewShows(person) {
+const found = new Map();
+for (const sheet of lastWeekRender?.[2]?.values() || []) {
+if (!sheet.people.includes(person)) continue;
+for (const [show, slot] of picks(sheet, person)) {
+const key = norm(show.romaji || show.english);
+if (found.has(key)) continue;
+const mv = moves.find(m => m.show === key && !m.week);
+const tag = mv?.tag || slot.tag || '', time = clockOf(mv?.time || slot.time);
+const hm = parseTime(time);
+const others = [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people.filter(p => p !== person && [...picks(s, p).keys()].some(x => norm(x.romaji || x.english) === key))))];
+found.set(key, { title: show.english || show.romaji, tag, time, day: DAY_TAGS.indexOf(tag), minute: hm ? (hm[0] < 6 ? 24 + hm[0] : hm[0]) * 60 + hm[1] : 9999, others });
+}
+}
+return [...found.values()].sort((a, b) => (a.day < 0 ? 7 : a.day) - (b.day < 0 ? 7 : b.day) || a.minute - b.minute || a.title.localeCompare(b.title));
+}
+function drawOverview() {
+const person = $('overviewPerson').value;
+const shows = overviewShows(person);
+let day = null;
+$('overviewList').innerHTML = shows.map(s => {
+const head = s.tag !== day ? `<li class="overview-day">${esc(s.day < 0 ? (s.tag || 'Ohne Tag') : s.tag.slice(0, 2))}</li>` : '';
+day = s.tag;
+return `${head}<li><span class="overview-time">${esc(s.time || '–')}</span><span class="overview-title">${esc(s.title)}</span>${s.others.length ? `<span class="overview-who" title="${esc('Mit ' + s.others.join(', '))}">${s.others.length === 1 ? esc(s.others[0]) : `+${s.others.length}`}</span>` : '<span class="overview-who">allein</span>'}</li>`;
+}).join('') || '<li class="muted">Keine Serien im Guckplan.</li>';
+$('overviewCount').textContent = shows.length ? `${shows.length} ${shows.length === 1 ? 'Serie' : 'Serien'} pro Woche.` : '';
+}
+$('overviewButton').onclick = () => {
+const people = allPeople();
+const pick = mode === 'solo' && soloPerson ? soloPerson : ownPerson();
+$('overviewPerson').innerHTML = people.map(p => `<option${p === pick ? ' selected' : ''}>${esc(p)}</option>`).join('');
+drawOverview();
+$('overviewDlg').showModal();
+};
+$('overviewPerson').onchange = drawOverview;
 const DAY_TAGS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const clockOf = time => { const hm = parseTime(time); return hm ? `${String(hm[0]).padStart(2, '0')}:${String(hm[1]).padStart(2, '0')}` : ''; };
 function weekShows() {
