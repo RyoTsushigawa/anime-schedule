@@ -569,8 +569,6 @@ header.away { transform: translateY(-100%); }
 }
 .plan-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 16px; }
 .plan-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
-.plan-trailers { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; background: var(--card); border: 1px solid var(--line); color: var(--text); text-decoration: none; }
-.plan-trailers:hover { border-color: var(--accent); }
 .plan-start { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .plan-start input { padding: 4px 10px; }
 .plan-go { margin-left: auto; background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
