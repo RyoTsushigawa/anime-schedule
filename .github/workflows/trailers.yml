@@ -6,7 +6,7 @@ name: Trailer playlists
 # without the YouTube secrets it does nothing.
 on:
   schedule:
-    - cron: '23 5 * * *'   # GitHub may start it hours late; that doesn't matter here
+    - cron: '23 9 * * *'   # after YouTube's daily limits reset (midnight US Pacific = 09:00 German time); GitHub may start it late
   workflow_dispatch:
     inputs:
       dry_run:
