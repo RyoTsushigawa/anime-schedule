@@ -78,7 +78,11 @@
      "sequelStatus": "sequel"
     },
     "love live! hasunosora jogakuin school idol club": {
-     "sequelStatus": "sequel"
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "uTKFZWcZIBY",
+     "title": "Concert Trailer||Love Live! Hasunosora Jogakuin School Idol Club Movie: Bloom Garden Party||Movie "
     },
     "spirit circle": {
      "auto": true,
