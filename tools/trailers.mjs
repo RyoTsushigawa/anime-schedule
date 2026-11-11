@@ -1,6 +1,8 @@
 // Trailer playlists: for every season list in the Google Sheet ("Winter 2027", "Frühling 2027", …) that
-// hasn't started yet, an unlisted YouTube playlist "Trailer Winter 2027" with one trailer per show, in the
-// list's order. Runs daily on GitHub (.github/workflows/trailers.yml); the planner links the playlist.
+// hasn't started yet, an unlisted YouTube playlist "Trailer Winter 2027" with one trailer per NEW show, in the
+// list's order. Sequels (AniList lists a prequel, or "Season 2" etc. in the title) and shows already in the
+// previous season's list get none. Runs daily on GitHub (.github/workflows/trailers.yml); the planner links
+// the playlist and the Season Preview page (season-preview.html) shows the trailers (season-trailers.json).
 //
 //   node tools/trailers.mjs             pick trailers for new shows, then bring the playlist in line
 //   node tools/trailers.mjs --dry-run   only print the picks (still uses search quota, writes nothing)
@@ -37,15 +39,21 @@ state.seasons ||= {};
 const fixed = await readJson(PICKS, {});
 
 // ---- season lists in the sheet that haven't started yet (or started less than three weeks ago)
+let allLists = [];
 async function seasonLists() {
   const html = await (await fetch(SHEET + '/htmlview')).text();
-  return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
+  allLists = [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
     .map(([, name, gid]) => ({ name: JSON.parse(`"${name}"`).trim(), gid }))
     .map(t => ({ ...t, m: t.name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i) }))
     .filter(t => t.m)
-    .map(({ name, gid, m }) => ({ name, gid, start: new Date(Number(m[2]), SEASON_MONTH[m[1].toLowerCase()], 1).getTime() }))
-    .filter(t => t.start + 21 * DAY > Date.now() && (!onlySeason || t.name.toLowerCase() === onlySeason.toLowerCase()));
+    .map(({ name, gid, m }) => ({ name, gid, start: new Date(Number(m[2]), SEASON_MONTH[m[1].toLowerCase()], 1).getTime() }));
+  return allLists.filter(t => t.start + 21 * DAY > Date.now() && (!onlySeason || t.name.toLowerCase() === onlySeason.toLowerCase()));
 }
+const SEASON_KEY = { winter: 'winter', frühling: 'spring', sommer: 'summer', herbst: 'fall' };
+const seasonId = name => { const m = name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i); return m ? `${SEASON_KEY[m[1].toLowerCase()]}-${m[2]}` : null; };
+// the list three months earlier ("Herbst 2026" for "Winter 2027"), if it is in the sheet
+const previousList = tab => allLists.find(t => { const d = new Date(tab.start); d.setMonth(d.getMonth() - 3); return t.start === d.getTime(); });
+const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv)\b/i;
 async function listShows(gid) {
   const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
   if (!res.ok) throw new Error('Google Sheet answered ' + res.status);
@@ -81,7 +89,7 @@ async function anilist(show, start) {
   const d = new Date(start), season = ['WINTER', 'SPRING', 'SUMMER', 'FALL'][Math.floor(d.getMonth() / 3)];
   const q = `query ($s: String, $season: MediaSeason, $year: Int) { a: Page(perPage: 1) { media(search: $s, type: ANIME, season: $season, seasonYear: $year, sort: SEARCH_MATCH) { ...f } }
     b: Page(perPage: 1) { media(search: $s, type: ANIME, status_in: [NOT_YET_RELEASED, RELEASING], sort: SEARCH_MATCH) { ...f } } }
-    fragment f on Media { id title { romaji english native } synonyms trailer { id site } }`;
+    fragment f on Media { id title { romaji english native } synonyms trailer { id site } relations { edges { relationType } } }`;
   for (let tries = 0; tries < 3; tries++) {
     const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ query: q, variables: { s: show.romaji || show.english, season, year: d.getFullYear() } }) });
@@ -143,6 +151,8 @@ async function subtitleLanguages(id) {
 }
 async function pick(show, start) {
   const al = await anilist(show, start);
+  if (al?.relations?.edges?.some(e => e.relationType === 'PREQUEL') || SEQUEL_TITLE.test(`${show.romaji} ${show.english}`))
+    return { anilist: al?.id || null, video: null, skip: 'sequel', searched: new Date().toISOString() };
   const titles = [show.romaji, show.english, al?.title?.romaji, al?.title?.english, ...(al?.synonyms || [])];
   const alTrailer = al?.trailer?.site === 'youtube' ? al.trailer.id : '';
   const name = al?.title?.english || show.english || al?.title?.romaji || show.romaji;
@@ -157,7 +167,7 @@ async function pick(show, start) {
   }
   ranked.sort((a, b) => b.s - a.s);
   const best = ranked[0];
-  return { anilist: al?.id || null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '',
+  return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '',
     ...(best?.subs && { subs: best.subs }), searched: new Date().toISOString() };
 }
 
@@ -219,6 +229,26 @@ const save = async () => {
   for (const name of Object.keys(state.seasons)) if (!lists.some(t => t.name === name) && Date.now() - Date.parse(state.seasons[name].synced || 0) > 120 * DAY) delete state.seasons[name];
   state.updated = new Date().toISOString();
   await writeFile(STATE, JSON.stringify(state, null, 1) + '\n');
+  // the Season Preview page's file: one automatic trailer per new show, sequels marked
+  const page = await readJson('season-trailers.json', {});
+  page.seasons ||= {};
+  for (const [name, season] of Object.entries(state.seasons)) {
+    const id = seasonId(name);
+    if (!id) continue;
+    const trailers = {};
+    for (const s of season.shows) {
+      const key = String(s.romaji || '').trim().toLocaleLowerCase();
+      if (!key || s.skip === 'carryover') continue;
+      if (s.skip === 'sequel') trailers[key] = { sequelStatus: 'sequel' };
+      else if (s.video) trailers[key] = { auto: true, type: 'full_trailer', sequelStatus: 'not_sequel', youtubeId: s.video, title: s.videoTitle || '',
+        ...(s.subs?.includes('de') ? { subtitles: 'de' } : s.subs?.includes('en') ? { subtitles: 'en' } : {}) };
+      else if (s.searched || s.fixed) trailers[key] = { sequelStatus: 'not_sequel', youtubeStatus: 'not_found' };
+    }
+    page.seasons[id] = { title: name, ...(season.playlist && { youtubePlaylistId: season.playlist }), trailers };
+  }
+  for (const id of Object.keys(page.seasons)) if (!Object.keys(state.seasons).some(n => seasonId(n) === id)) delete page.seasons[id];
+  page.description = 'Written by tools/trailers.mjs: one automatic trailer per new show of each season list ahead; sequels marked. A wrong pick goes into trailer-picks.json.';
+  await writeFile('season-trailers.json', JSON.stringify(page, null, 1) + '\n');
 };
 try { for (const tab of lists) {
   const season = state.seasons[tab.name] ||= { gid: tab.gid, shows: [] };
@@ -226,15 +256,21 @@ try { for (const tab of lists) {
   const own = Object.fromEntries(Object.entries(fixed[tab.name] || {}).map(([k, v]) => [norm(k), v]));
   season.gid = tab.gid;
   season.shows = (await listShows(tab.gid)).map(s => ({ ...known.get(norm(s.romaji || s.english)), ...s }));
-  log(`${tab.name}: ${season.shows.length} shows in the list.`);
+  const prev = previousList(tab);
+  const before = prev ? new Set((await listShows(prev.gid)).flatMap(s => [s.romaji, s.english]).filter(Boolean).map(norm)) : null;
+  for (const s of season.shows) {
+    if (before && [s.romaji, s.english].filter(Boolean).some(t => before.has(norm(t)))) Object.assign(s, { video: null, skip: 'carryover' });
+    else if (s.skip === 'carryover') { delete s.skip; delete s.searched; }
+  }
+  log(`${tab.name}: ${season.shows.length} shows in the list${prev ? `, ${season.shows.filter(s => s.skip === 'carryover').length} already in ${prev.name}` : ' (no previous list to compare)'}.`);
   try {
     for (const s of season.shows) {
       const key = norm(s.romaji || s.english);
-      if (key in own) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true }); delete s.subs; continue; }
+      if (key in own) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; continue; }
       if (s.fixed) { delete s.fixed; delete s.searched; }
-      if (s.searched) continue;
+      if (s.searched || s.skip === 'carryover') continue;
       Object.assign(s, await pick(s, tab.start));
-      log(`  ${s.english || s.romaji}: ${s.video ? `${s.videoTitle} · ${s.channel}${s.subs?.length ? ' · subs ' + s.subs.join('/') : ''}` : 'no trailer found'}`);
+      log(`  ${s.english || s.romaji}: ${s.skip === 'sequel' ? 'sequel, no trailer' : s.video ? `${s.videoTitle} · ${s.channel}${s.subs?.length ? ' · subs ' + s.subs.join('/') : ''}` : 'no trailer found'}`);
     }
     if (!dry) await sync(tab.name, season);
   } catch (e) {

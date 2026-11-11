@@ -323,7 +323,9 @@ from "Verspätungen für alle" starts this run (the run then waits for 09:00):
 
 As soon as a season list ("Winter 2027", "Frühling 2027" …, the tab with all of the season's shows) is in the
 sheet, the daily workflow "Trailer playlists" makes an **unlisted** YouTube playlist "Trailer Winter 2027" on the
-owner's channel: one trailer per show, in the list's order. New, moved or removed shows follow on the next run.
+owner's channel: one trailer per **new** show, in the list's order. Sequels (AniList lists a prequel, or "Season 2",
+"Part 2", "II" … in the title) and shows already in the previous season's list get none. The same picks fill the
+Season Preview page (`season-trailers.json`); there is no approval step. New, moved or removed shows follow on the next run.
 The planner shows "▶ Trailers" next to the list once the playlist exists. Lists that started more than three
 weeks ago are left alone.
 
