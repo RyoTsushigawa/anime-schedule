@@ -144,6 +144,7 @@ function score(v, titles, fromAniList, start, channelPref) {
   if (/vostfr|legendado|sub(titulado)? español|sub ita|\bfr\b|crunchyroll (fr|br|es|de dub)|latino/i.test(t + ' ' + v.snippet.channelTitle)) s -= 5;
   if (fromAniList) s += 2;
   if (v.contentDetails.caption === 'true') s += 2;
+  if (SUBS_TITLE.test(t)) s += 2;
   if (/english sub|eng ?sub|english subtitles/i.test(t)) s += 2;
   if (/german|deutsch/i.test(t + ' ' + v.snippet.channelTitle) && !/dub/i.test(t)) s += 1;
   if (/\bdub\b|吹替/i.test(t)) s -= 1;
@@ -156,6 +157,10 @@ const playable = v => v && v.status?.embeddable !== false && v.status?.privacySt
   && !(v.contentDetails?.regionRestriction?.blocked || []).includes('DE')
   && !(v.contentDetails?.regionRestriction?.allowed && !v.contentDetails.regionRestriction.allowed.includes('DE'));
 
+// English or German subtitles: an official English-language channel, the title says so, or a subtitle track
+const SUBS_TITLE = /eng(lish)?[ .-]?sub|english subtitles?|\bsubbed\b|\bsub(titles)?\b.*\b(en|eng|english|de|deutsch|german)\b|untertitel|\[eng?\]/i;
+const hasSubs = s => ENGLISH_OFFICIAL.test((s.channel || '').trim()) || SUBS_TITLE.test(s.videoTitle || '') || s.caption === true
+  || (s.subs || []).some(l => l === 'en' || l === 'de');
 async function videos(ids) {
   const out = [];
   for (let i = 0; i < ids.length; i += 50)
@@ -186,7 +191,7 @@ async function pick(show, start) {
     const t = v?.snippet.title || '';
     if (v && !show.notSequel && SEQUEL_VIDEO.test(t)) return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: t, searched: new Date().toISOString() };
     if (v && score(v, titles, true, start) >= 9 && !/teaser|ティザー|特報|announcement/i.test(t))
-      return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, channel: v.snippet.channelTitle, via: 'anilist', searched: new Date().toISOString() };
+      return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, channel: v.snippet.channelTitle, caption: v.contentDetails.caption === 'true', via: 'anilist', searched: new Date().toISOString() };
   }
   const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} ${show.channelPref || 'anime'} trailer`, relevanceLanguage: 'en' }, 100);
   const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
@@ -203,7 +208,7 @@ async function pick(show, start) {
   if (!best && show.channelPref) for (const v of all) log(`    candidate: ${v.snippet.title} · ${v.snippet.channelTitle} (${score(v, titles, v.id === alTrailer, start, show.channelPref)})`);
   if (best && !show.notSequel && SEQUEL_VIDEO.test(best.v.snippet.title))
     return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: best.v.snippet.title, searched: new Date().toISOString() };
-  return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '',
+  return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '', caption: best?.v.contentDetails.caption === 'true',
     ...(best?.subs && { subs: best.subs }), searched: new Date().toISOString() };
 }
 
@@ -324,8 +329,10 @@ try { for (const tab of lists) {
       // picked from a re-upload channel before official channels ranked first: search once more
       if (s.video && !s.fixed && !s.channelPref && s.searched && !s.officialCheck && !official(s.channel || '')) { delete s.searched; s.officialCheck = true; }
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
-      const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
-        && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || ''));
+      // and the same for trailers without English or German subtitles, so a subtitled version can replace them
+      if (s.video && !s.fixed && !s.channelPref && s.searched && !s.subsCheck && !hasSubs(s)) { delete s.searched; s.subsCheck = true; }
+      const again = s.searched && s.skip !== 'sequel' && !s.fixed && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
+        && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || '') || !hasSubs(s));
       if (!s.fixed && !s.notSequel && s.video && (SEQUEL_VIDEO.test(s.videoTitle || '') || SEQUEL_TITLE.test(`${s.romaji} ${s.english}`))) { Object.assign(s, { video: null, skip: 'sequel' }); log(`  ${s.english || s.romaji}: title or trailer names a later season or an arc, counted as a sequel now`); continue; }
       if ((s.searched && !again) || s.skip === 'carryover' || searchBlocked) continue;
       try { Object.assign(s, await pick(s, tab.start)); }
