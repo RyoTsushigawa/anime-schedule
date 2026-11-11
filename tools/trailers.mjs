@@ -63,6 +63,9 @@ async function listShows(gid) {
 // ---- YouTube
 let units = 0;
 class Quota extends Error {}
+// YouTube's separate daily limit for searches (about 100): picking stops, the playlist can still be changed
+class SearchQuota extends Quota {}
+let searchBlocked = '';
 let access = '';
 async function login() {
   const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', body: new URLSearchParams({
@@ -79,7 +82,8 @@ async function yt(path, params, cost, method = 'GET', body = null) {
   const res = await fetch(url, { method, headers: { Authorization: `Bearer ${access}`, ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
   if (res.status === 204) return {};
   const json = await res.json().catch(() => ({}));
-  if ((res.status === 403 || res.status === 429) && /quota/i.test(JSON.stringify(json.error || ''))) throw new Quota('YouTube quota for today used up');
+  if ((res.status === 403 || res.status === 429) && /quota/i.test(JSON.stringify(json.error || '')))
+    throw /search quer/i.test(JSON.stringify(json.error || '')) ? new SearchQuota('YouTube search limit for today reached') : new Quota('YouTube quota for today used up');
   if (!res.ok) throw new Error(`YouTube ${method} ${path}: ${res.status} ${json.error?.message || ''}`);
   return json;
 }
@@ -160,6 +164,14 @@ async function pick(show, start) {
   const titles = [show.romaji, show.english, al?.title?.romaji, al?.title?.english, ...(al?.synonyms || [])];
   const alTrailer = al?.trailer?.site === 'youtube' ? al.trailer.id : '';
   const name = al?.title?.english || show.english || al?.title?.romaji || show.romaji;
+  // AniList's own trailer is enough when it is clearly a full official trailer: no search needed
+  // (a video lookup costs 1 unit and doesn't count toward the daily search limit)
+  if (alTrailer) {
+    const [v] = (await videos([alTrailer])).filter(playable);
+    const t = v?.snippet.title || '';
+    if (v && score(v, titles, true, start) >= 9 && !/teaser|ティザー|特報|announcement/i.test(t))
+      return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, channel: v.snippet.channelTitle, via: 'anilist', searched: new Date().toISOString() };
+  }
   const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} anime trailer`, relevanceLanguage: 'en' }, 100);
   const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
   const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer, start) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
@@ -275,8 +287,9 @@ try { for (const tab of lists) {
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
       const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
         && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || ''));
-      if ((s.searched && !again) || s.skip === 'carryover') continue;
-      Object.assign(s, await pick(s, tab.start));
+      if ((s.searched && !again) || s.skip === 'carryover' || searchBlocked) continue;
+      try { Object.assign(s, await pick(s, tab.start)); }
+      catch (e) { if (!(e instanceof SearchQuota)) throw e; searchBlocked = e.message; log(`  ${e.message}; the remaining shows follow tomorrow.`); continue; }
       log(`  ${s.english || s.romaji}: ${s.skip === 'sequel' ? 'sequel, no trailer' : s.video ? `${s.videoTitle} · ${s.channel}${s.subs?.length ? ' · subs ' + s.subs.join('/') : ''}` : 'no trailer found'}`);
     }
     if (!dry) await sync(tab.name, season);
@@ -288,5 +301,5 @@ try { for (const tab of lists) {
 } } catch (e) { failure = e; }
 // whatever was picked or changed so far is kept, also when something failed
 await save();
-log(`YouTube units used: ${units}.${stopped ? ` Stopped: ${stopped}; the next run carries on.` : ''}`);
+log(`YouTube units used: ${units}.${stopped || searchBlocked ? ` Stopped: ${stopped || searchBlocked}; the next run carries on.` : ''}`);
 if (failure) throw failure;

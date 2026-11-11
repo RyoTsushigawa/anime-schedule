@@ -329,7 +329,7 @@ Season Preview page (`season-trailers.json`); there is no approval step. New, mo
 The planner shows "▶ Trailers" next to the list once the playlist exists. Lists that started more than three
 weeks ago are left alone.
 
-Picking (`tools/trailers.mjs`): AniList's trailer plus a YouTube search per show. Full trailers ("Main Trailer",
+Picking (`tools/trailers.mjs`): AniList's trailer, and a YouTube search only when that isn't clearly a full official trailer. Full trailers ("Main Trailer",
 "Trailer", "PV 2") beat teasers, 1–4 minutes, official channels, German/English subtitle tracks (burned-in
 subtitles can't be seen by the tool); videos blocked in Germany or not embeddable are out. Each show is searched
 once; a teaser (or nothing) is looked up again once a week until the season starts, since main trailers come later.
