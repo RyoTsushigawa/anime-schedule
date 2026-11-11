@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-11-11T12:11:11.305Z",
+  "generated": "2026-11-11T12:27:13.710Z",
   "seasons": {
     "fall-2026": {
       "title": "Herbst 2026",
@@ -534,9 +534,15 @@
           "key": "tensei goblin dakedo shitsumon aru?",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13548",
-          "livechartUrl": "https://www.livechart.me/anime/13548"
+          "livechartUrl": "https://www.livechart.me/anime/13548",
+          "anilistId": 209219,
+          "malId": 63712,
+          "sequelStatus": "unknown",
+          "youtubeId": "ynr8tFWrK4c",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:23.346Z"
         },
         {
           "order": 36,
@@ -545,9 +551,15 @@
           "key": "psyren",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13426",
-          "livechartUrl": "https://www.livechart.me/anime/13426"
+          "livechartUrl": "https://www.livechart.me/anime/13426",
+          "anilistId": 204011,
+          "malId": 63098,
+          "sequelStatus": "unknown",
+          "youtubeId": "fmUpSXFbSK0",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:24.252Z"
         },
         {
           "order": 37,
@@ -556,9 +568,15 @@
           "key": "mahou shoujo ikusei keikaku restart",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "11802",
-          "livechartUrl": "https://www.livechart.me/anime/11802"
+          "livechartUrl": "https://www.livechart.me/anime/11802",
+          "anilistId": 160803,
+          "malId": 54344,
+          "sequelStatus": "sequel",
+          "youtubeId": "34ubb-j0kbI",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:25.161Z"
         },
         {
           "order": 38,
@@ -567,9 +585,15 @@
           "key": "shiotaiou no satou-san ga ore ni dake amai",
           "carriedOver": null,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13559",
-          "livechartUrl": "https://www.livechart.me/anime/13559"
+          "livechartUrl": "https://www.livechart.me/anime/13559",
+          "anilistId": 209502,
+          "malId": 63754,
+          "sequelStatus": "unknown",
+          "youtubeId": "8XgKVzuLmJw",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:26.067Z"
         },
         {
           "order": 39,
@@ -1427,9 +1451,15 @@
           "key": "giant ojou-sama",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13066",
-          "livechartUrl": "https://www.livechart.me/anime/13066"
+          "livechartUrl": "https://www.livechart.me/anime/13066",
+          "anilistId": 187303,
+          "malId": 61135,
+          "sequelStatus": "unknown",
+          "youtubeId": "yOGfDfMGIO8",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:34.017Z"
         },
         {
           "order": 42,
@@ -1438,9 +1468,15 @@
           "key": "monogatari series: off & monster season - wazamonogatari: karen ogre",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13221",
-          "livechartUrl": "https://www.livechart.me/anime/13221"
+          "livechartUrl": "https://www.livechart.me/anime/13221",
+          "anilistId": 195448,
+          "malId": 61968,
+          "sequelStatus": "sequel",
+          "youtubeId": "8P2QF7ReJQE",
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:34.926Z"
         },
         {
           "order": 43,
@@ -1449,7 +1485,7 @@
           "key": "arafoo kenja no isekai seikatsu nikki",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList HTTP 404",
           "livechartId": "13609",
           "livechartUrl": "https://www.livechart.me/anime/13609"
         },
@@ -1460,9 +1496,10 @@
           "key": "akane-banashi season 2",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "AniList title match uncertain",
           "livechartId": "13675",
-          "livechartUrl": "https://www.livechart.me/anime/13675"
+          "livechartUrl": "https://www.livechart.me/anime/13675",
+          "checkedAt": "2026-11-11T12:27:36.750Z"
         },
         {
           "order": 45,
@@ -1471,9 +1508,15 @@
           "key": "golden kamuy (saishuushou): bousou ressha-hen",
           "carriedOver": false,
           "review": "pending",
-          "reason": "Awaiting AniList lookup",
+          "reason": "Verify official source, actual anime footage, full trailer vs teaser, subtitles, and sequel status before approval",
           "livechartId": "13589",
-          "livechartUrl": "https://www.livechart.me/anime/13589"
+          "livechartUrl": "https://www.livechart.me/anime/13589",
+          "anilistId": 210073,
+          "malId": 63850,
+          "sequelStatus": "sequel",
+          "youtubeId": null,
+          "source": "AniList metadata (candidate only)",
+          "checkedAt": "2026-11-11T12:27:37.656Z"
         },
         {
           "order": 46,
