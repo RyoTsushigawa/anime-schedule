@@ -46,3 +46,7 @@
 - **By 31 Dec:** Freeze and validate Winter 2027 release candidate. If the credentials or manual video reviews are not complete, do **not** present the feature as finished.
 
 GitHub Actions schedules can be delayed or missed; check the workflow history. Never rely on cron alone for the final pre-season acceptance check.
+
+## LiveChart subtitle-first trailer review
+
+LiveChart's per-anime video selector is the preferred **manual review source** for German/English subtitle choices. On the next LiveChart seasons refresh, the parser now records `livechartId` in `seasons.json`, enabling precise LiveChart anime links in the Preview rather than repeated homepage links. YouTube's API still manages the playlist; a LiveChart video listing alone does not verify meaningful footage, captions or sequel classification. LiveChart has no documented public API for exporting its subtitle-filtered video choices, so do not infer or auto-approve videos from unofficial endpoints. Review actual links and record approved entries in the trailer catalog.
