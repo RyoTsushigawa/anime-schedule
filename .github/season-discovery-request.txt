@@ -3,3 +3,5 @@ Source: standalone Google Sheets season list, plus reviewed LiveChart season met
 Unverified trailers must never be auto-published.
 
 Retry 2026-11-11: commit-step shell syntax fixed; discovery already passed.
+
+Retry after excluding Amount summary footer (2026-11-11).
