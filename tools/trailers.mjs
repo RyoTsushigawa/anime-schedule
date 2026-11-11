@@ -122,7 +122,7 @@ function score(v, titles, fromAniList, start, channelPref) {
   const t = v.snippet.title, len = seconds(v.contentDetails.duration);
   const preferred = channelPref && norm(v.snippet.channelTitle).includes(norm(channelPref));
   // from a preferred channel one distinctive word of the title is enough ("Hasunosora")
-  const loose = preferred && titles.filter(Boolean).some(x => [...tokens(x)].filter(w => w.length >= 6 && !/^(school|season|anime)$/.test(w)).some(w => tokens(t).has(w)));
+  const loose = preferred && titles.filter(Boolean).some(x => [...tokens(x)].filter(w => w.length >= 6 && !/^(school|season|anime)$/.test(w)).some(w => norm(t).includes(w)));  // norm drops spaces: "Hasu No Sora" = "hasunosora"
   if (!fromAniList && !loose && !matches(titles, t)) return -99;
   if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(t) && !/trailer|pv/i.test(t)) return -50;
   let s = 0;
