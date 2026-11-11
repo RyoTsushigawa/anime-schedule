@@ -100,6 +100,27 @@ async function prepareShows(tab){
   excluded?excluded+' Übernahmen aus der vorherigen Season ausgeblendet.':'';
  return eligible.map((show,i)=>({...show,order:i+1}));
 }
+function reviewEntry(show){
+ return previewCandidates.seasons?.[seasonKey(current)]?.entries?.find(e=>e.key===show.key)||null;
+}
+function trailerSuggestions(show){
+ if(carryoverStatus(show)!==false || reviewEntry(show)?.sequelStatus==='sequel')return '';
+ const entry=reviewEntry(show);
+ if(!entry)return '';
+ const list=[...(entry.youtubeId?[{youtubeId:entry.youtubeId,title:'AniList-Trailer-Kandidat',channel:'AniList'}]:[]),
+  ...(Array.isArray(entry.youtubeSearch)?entry.youtubeSearch:[])];
+ const seen=new Set();
+ const filtered=list.filter(v=>{
+  if(!/^[a-zA-Z0-9_-]{11}$/.test(v.youtubeId||'')||seen.has(v.youtubeId))return false;
+  seen.add(v.youtubeId);return true;
+ }).slice(0,5);
+ if(!filtered.length)return '';
+ const links=filtered.map(v=>'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+
+  v.youtubeId+'">'+safeText(v.title||'YouTube-Kandidat')+(v.channel?' · '+safeText(v.channel):'')+'</a>').join('');
+ return '<details class="preview-suggestions"><summary>'+filtered.length+' mögliche Trailer prüfen</summary>'+
+  '<p>Nur Suchtreffer – weder die richtige Serie noch vollständiges Bildmaterial sind bestätigt.</p>'+
+  '<div class="preview-links">'+links+'</div></details>';
+}
 function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
  return data.trailers?.[show.key] || null;
@@ -134,7 +155,7 @@ function trailerStatus(show){
  if(carryover===true)return 'Übernahme aus vorheriger Season · kein Trailer';
  if(carryover===null)return 'Vorherige Season noch nicht abgeglichen';
  const entry=detailsFor(show);
- if(entry?.sequelStatus==='sequel')return 'Fortsetzung · kein Trailer';
+ if(entry?.sequelStatus==='sequel'||reviewEntry(show)?.sequelStatus==='sequel')return 'Fortsetzung · kein Trailer';
  if(entry?.sequelStatus!=='not_sequel')return 'Einordnung noch offen · kein Trailer';
  if(entry.youtubeStatus==='not_found')return 'Kein passender Trailer auf YouTube gefunden';
  if(entry.youtubeStatus==='unavailable')return 'Auf YouTube nicht verfügbar';
@@ -305,14 +326,15 @@ function render(){
   const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),external=localExternal(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ '+(trailer.type==='teaser'?'Teaser ansehen (Ersatz)':'Vollständigen Trailer ansehen')+'</a>':'';
   const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.type==='teaser'?' · Teaser (Ersatz)':'')+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
-  const fallback=!trailer&&carryoverStatus(s)!==true&&detailsFor(s)?.sequelStatus!=='sequel'?'<div class="preview-external">'+
+  const suggestions=!trailer?trailerSuggestions(s):'';
+  const fallback=!trailer&&carryoverStatus(s)!==true&&detailsFor(s)?.sequelStatus!=='sequel'&&reviewEntry(s)?.sequelStatus!=='sequel'?'<div class="preview-external">'+
   (external?'<p>Eigener Trailer (ungeprüft): <a href="'+safeText(external)+'" target="_blank" rel="noopener noreferrer">Trailer öffnen</a> <button type="button" class="preview-reset" data-remove-external="'+safeText(s.key)+'">Entfernen</button></p>':'')+
   '<form data-external-anime="'+safeText(s.key)+'"><label>Trailer von einer anderen Seite (nur für dich)<input type="url" name="externalTrailer" required placeholder="https://…" value="'+safeText(external)+'"></label><button type="submit" class="preview-choice">Link speichern</button></form><small>Nur echte Trailer mit Szenen des Anime. Der Link wird in diesem Browser gespeichert, nicht veröffentlicht oder der YouTube-Playlist hinzugefügt.</small></div>':'';
   const decided=s.votes.filter(v=>v.value&&v.value.toLowerCase()!=='default');
   const votes=decided.length?decided.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Stimmen</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2>'+safeText(s.english||s.title)+'</h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+
   '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?(trailer.type==='teaser'?'Nur Teaser verfügbar · Ersatz':'Vollständiger Trailer verfügbar'):trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
-  '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="'+safeText(mal.url)+'">'+mal.label+'</a></div>'+choices+fallback+
+  '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="'+safeText(mal.url)+'">'+mal.label+'</a></div>'+choices+suggestions+fallback+
   '<div class="preview-votes"><div class="preview-vote-title">Gruppen-Entscheidung · aus Google Sheets</div><div class="preview-vote-chips">'+votes+'</div>'+votingControls(s)+'</div></div>';
   parent.append(article);
  }
