@@ -56,6 +56,8 @@ const STREAMS = {
 const json = (body, status = 200) => ({ ok: status < 300, status, json: async () => body, text: async () => JSON.stringify(body) });
 const text = (body, status = 200) => ({ ok: status < 300, status, json: async () => JSON.parse(body), text: async () => body });
 
+// opts.media: { id: fields } changes a show in the viewer's list (e.g. an older, finished one for Non-seasonal);
+// opts.listNext: { id: next airing | null };
 // opts.storage: localStorage to start with; opts.list: the viewer's AniList entries; opts.search: title → AniList's answer to a title search
 // { mediaId: { progress, status } }; opts.fail: Set of 'anilist' | 'sheets' | 'site' | 'streams'.
 // A different week or season: opts.now (the clock), opts.sheets ({ tabs: [[name, gid]], csv: { gid: text } }),
@@ -95,7 +97,7 @@ export async function openPage(opts = {}) {
       // No status filter (Wrapped) → the whole list, like AniList
       const wanted = query.includes('DROPPED') ? ['DROPPED'] : query.includes('COMPLETED') ? ['COMPLETED'] : query.includes('CURRENT') ? ['CURRENT', 'REPEATING'] : ['CURRENT', 'REPEATING', 'COMPLETED', 'DROPPED', 'PAUSED', 'PLANNING'];
       const entries = Object.entries(list).filter(([, e]) => wanted.includes(e.status))
-        .map(([id, e]) => ({ score: 0, ...e, media: { ...MEDIA[id], nextAiringEpisode: opts.listNext?.[id] || { episode: 5, airingAt: sec(2026, 10, 4, 14) } } }));
+        .map(([id, e]) => ({ score: 0, ...e, media: { ...MEDIA[id], ...opts.media?.[id], nextAiringEpisode: opts.listNext?.[id] === null ? null : opts.listNext?.[id] || { episode: 5, airingAt: sec(2026, 10, 4, 14) } } }));
       return { MediaListCollection: { lists: [{ entries }] } };
     }
     if (query.includes('idMal_in')) return { Page: { media:(v.malIds || []).map(id => MEDIA[id-100]).filter(Boolean).map(m => ({...m,nextAiringEpisode:{episode:5,airingAt:sec(2026,10,4,14)}})) } };

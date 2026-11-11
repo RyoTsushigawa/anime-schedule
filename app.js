@@ -2451,11 +2451,12 @@ const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? dropButton(m.id) + (selecting || out <= first || !auth ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
     </div>`;
-// Several open episodes: − / + choose how many to mark (all by default); only the ✓ saves
-const stepper = (m, first, out, missing) => `<span class="ep-stepper" data-first="${first}" data-out="${out}">`
-  + `<button type="button" data-step="-1" aria-label="Eine Folge weniger" title="Eine Folge weniger">−</button>`
-  + `<span class="ep-count" title="So viele Folgen markiert ✓ als gesehen">${out - first + 1}</span>`
-  + `<button type="button" data-step="1" aria-label="Eine Folge mehr" title="Eine Folge mehr" disabled>+</button></span>${check(m, out, missing)}`;
+// Several open episodes: − / + choose how many to mark (Catch-up starts with all, Non-seasonal with one);
+// only the ✓ saves
+const stepper = (m, first, out, missing, count = out - first + 1) => `<span class="ep-stepper" data-first="${first}" data-out="${out}">`
+  + `<button type="button" data-step="-1" aria-label="Eine Folge weniger" title="Eine Folge weniger"${count <= 1 ? ' disabled' : ''}>−</button>`
+  + `<span class="ep-count" title="So viele Folgen markiert ✓ als gesehen">${count}</span>`
+  + `<button type="button" data-step="1" aria-label="Eine Folge mehr" title="Eine Folge mehr"${count >= out - first + 1 ? ' disabled' : ''}>+</button></span>${check(m, first + count - 1, missing)}`;
 const perEpisode = ({ m, first, out, nextAt, missing, links, progress }) => {
 const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
 if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, progress });
@@ -2480,7 +2481,7 @@ const paced = ({ m, first, out, progress, links }) => `
         <div class="ep">${progress} von ${m.episodes || out} gesehen</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, first)) : ''}
+      ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : out > first && auth ? stepper(m, first, out, false, 1) : watchButton(m.id, first)) : ''}
     </div>`;
 if (!mine || shown === 'pace') selecting = false;
 const restore = preserveListPosition();

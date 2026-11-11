@@ -170,6 +170,7 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
 | `planner.html`, `planner.js`, `xlsx.js` | Watch planner |
+| `games.html`, `games.js`, `games.css`, `games-words.json` | Spiele (Tools menu): Titel-Rätsel, one word a day from the Guckplan titles (6 tries, share as emoji grid). New words go at the END of `games-words.json` so earlier days never change |
 | `tools/trailers.mjs`, `.github/workflows/trailers.yml` | Daily: trailer playlist for each season list still ahead ("Winter 2027"), unlisted, in the list's order; picks and link in `trailers.json` |
 | `trailer-picks.json` | Optional, by hand: `{"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}}` replaces a wrong pick (`""` = no trailer for that show, `"auto"` = a new show although it looks like a sequel: picked automatically; `{"channel": "Team ONIBE"}` = like "auto", and that channel's videos are searched for and preferred) |
 | `tools/youtube-login.mjs` | **PC only.** One-time YouTube login for the trailer playlists (see "Trailer-Playlist") |
