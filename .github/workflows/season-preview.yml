@@ -24,6 +24,8 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: node scripts/season-preview-discover.mjs
       - name: Sync real YouTube playlists (only with authorization)
+        id: playlist_sync
+        continue-on-error: true
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
@@ -42,4 +44,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update upcoming season trailer candidates and playlists"
             git push
+      - name: Signal incomplete playlist sync after preserving progress
+        if: steps.playlist_sync.outcome == 'failure'
+        run: exit 1
           fi
