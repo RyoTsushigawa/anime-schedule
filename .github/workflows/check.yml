@@ -34,3 +34,5 @@ jobs:
         run: node --test tests/season-votes-worker.test.mjs
       - name: Test Season Preview sequel suggestions
         run: node --test tests/season-preview-sequel.test.mjs
+      - name: Test Season Preview artwork
+        run: node --test tests/season-preview-covers.test.mjs
