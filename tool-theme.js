@@ -14,5 +14,6 @@
     const l = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
     root.style.setProperty('--accent', c);
     root.style.setProperty('--accent-text', (l + 0.05) / 0.0556 > 1.05 / (l + 0.05) ? '#111' : '#fff');
+    root.style.setProperty('--today', `color-mix(in srgb, ${c} 14%, var(--bg))`);
   } catch {}
 })();
