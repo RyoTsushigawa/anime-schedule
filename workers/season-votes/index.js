@@ -75,6 +75,7 @@ async function saveVote(body,member,env){
  if(!/^\d{1,12}$/.test(gid)||!title||title.length>250||!person||person.length>100||
     !OPTIONS.includes(choice)||!['string','undefined'].includes(typeof body.expected))
   fail(400,'Ungültige Abstimmung.');
+ if(title.toLowerCase()==='amount')fail(403,'Die Summenzeile ist keine Anime-Abstimmung.');
  if(person!==member.person&&!member.delegates.includes(person))fail(403,'Für diese Person darfst du nicht abstimmen.');
  if(choice==='Okinawa 3'&&!['quecks','rei','terra'].includes(person.toLowerCase()))
   fail(403,'Okinawa 3 ist nur für Quecks, Rei und Terra erlaubt.');
