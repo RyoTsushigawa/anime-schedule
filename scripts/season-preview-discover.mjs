@@ -22,7 +22,7 @@ export function parseShows(rows){
  const h=rows.findIndex(row=>row.some(c=>String(c).trim()==='Anime Titel'));
  if(h<0)throw Error('Sheet missing Anime Titel header');
  const title=rows[h].indexOf('Anime Titel'), english=rows[h].indexOf('Eng Anime Titel');
- return rows.slice(h+1).filter(r=>String(r[title]||'').trim()).map((r,i)=>({
+ return rows.slice(h+1).filter(r=>{const name=String(r[title]||'').trim();return name && !(name.toLowerCase()==='amount'&&/^\d+$/.test(String(r[english]||'').trim()));}).map((r,i)=>({
   order:i+1,title:String(r[title]).trim(),english:english<0?'':String(r[english]||'').trim(),
   key:String(r[title]).trim().toLocaleLowerCase()
  }));
