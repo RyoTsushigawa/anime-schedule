@@ -182,7 +182,8 @@ async function subtitleLanguages(id) {
 }
 async function pick(show, start) {
   const al = await anilist(show, start);
-  if (!show.notSequel && (al?.relations?.edges?.some(e => e.relationType === 'PREQUEL' || e.relationType === 'PARENT') || SEQUEL_TITLE.test(`${show.romaji} ${show.english}`)))
+  // only PREQUEL, not PARENT: a spin-off (Mera × Death of Monster Strike) is a new show
+  if (!show.notSequel && (al?.relations?.edges?.some(e => e.relationType === 'PREQUEL') || SEQUEL_TITLE.test(`${show.romaji} ${show.english}`)))
     return { anilist: al?.id || null, video: null, skip: 'sequel', searched: new Date().toISOString() };
   const titles = [show.romaji, show.english, al?.title?.romaji, al?.title?.english, ...(al?.synonyms || [])];
   const alTrailer = al?.trailer?.site === 'youtube' ? al.trailer.id : '';

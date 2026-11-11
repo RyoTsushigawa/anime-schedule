@@ -178,7 +178,7 @@
 
 /* compact cards: a short note on the right when a show has no trailer */
 .preview-item h2{margin:0}
-.preview-none{font-size:12px;color:var(--muted);white-space:nowrap}
+.preview-none{display:block;margin-bottom:1px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .preview-list{gap:8px}
 p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px 0}
 
