@@ -6,6 +6,7 @@
 //
 //   node tools/trailers.mjs             pick trailers for new shows, then bring the playlist in line
 //   node tools/trailers.mjs --dry-run   only print the picks (still uses search quota, writes nothing)
+//   node tools/trailers.mjs --refresh   also search again now for teasers, missing trailers and trailers without subtitles
 //
 // Secrets (GitHub): YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN (README, "Trailer-Playlist").
 // Without them the run says so and stops without an error.
@@ -23,6 +24,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const dry = process.argv.includes('--dry-run');
+// --refresh: search again now for every teaser, missing trailer and trailer without subtitles (not only weekly)
+const refresh = process.argv.includes('--refresh');
 const onlySeason = (() => { const i = process.argv.indexOf('--season'); return i > 0 ? process.argv[i + 1] : ''; })();
 const BUDGET = Number(process.env.TRAILER_BUDGET || 9000);
 const STATE = 'trailers.json', PICKS = 'trailer-picks.json';
@@ -331,7 +334,7 @@ try { for (const tab of lists) {
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
       // and the same for trailers without English or German subtitles, so a subtitled version can replace them
       if (s.video && !s.fixed && !s.channelPref && s.searched && !s.subsCheck && !hasSubs(s)) { delete s.searched; s.subsCheck = true; }
-      const again = s.searched && s.skip !== 'sequel' && !s.fixed && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
+      const again = s.searched && s.skip !== 'sequel' && !s.fixed && (refresh || (Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start))
         && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || '') || !hasSubs(s));
       if (!s.fixed && !s.notSequel && s.video && (SEQUEL_VIDEO.test(s.videoTitle || '') || SEQUEL_TITLE.test(`${s.romaji} ${s.english}`))) { Object.assign(s, { video: null, skip: 'sequel' }); log(`  ${s.english || s.romaji}: title or trailer names a later season or an arc, counted as a sequel now`); continue; }
       if ((s.searched && !again) || s.skip === 'carryover' || searchBlocked) continue;

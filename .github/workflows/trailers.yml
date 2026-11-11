@@ -13,6 +13,10 @@ on:
         description: 'Only show the picks in the log, change no playlist (still uses search quota)'
         type: boolean
         default: false
+      refresh:
+        description: 'Search again now for every teaser, missing trailer and trailer without subtitles (e.g. right before trailer night)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # trailers.json: the picks and the playlist link
@@ -37,7 +41,7 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: node tools/trailers.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: node tools/trailers.mjs ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.refresh && '--refresh' || '' }}
       - name: Save the picks
         if: ${{ always() && !inputs.dry_run }}
         run: |
