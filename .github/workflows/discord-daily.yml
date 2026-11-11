@@ -54,7 +54,8 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.49.1
           # GitHub's Ubuntu image already ships the common Chromium libraries.
           # Avoid apt mirror/DNS failures from --with-deps during each daily post.
-          npx playwright install chromium
+          for i in 1 2 3; do npx playwright install chromium && exit 0; echo "Browser download failed ($i/3), retrying"; sleep 30; done
+          exit 1
       - name: Post today's schedule
         if: ${{ !inputs.test_warning }}
         env:
@@ -83,7 +84,7 @@ jobs:
         run: |
           [ -n "$DISCORD_WEBHOOK_LOGS" ] || { echo "No DISCORD_WEBHOOK_LOGS secret; no warning sent."; exit 0; }
           curl -sS -o /dev/null -H 'Content-Type: application/json' \
-            -d "{\"content\":\"<@255387990136848385> ⚠️ Der Tagespost konnte heute nicht erstellt werden. (<$RUN_URL>)\",\"allowed_mentions\":{\"users\":[\"255387990136848385\"]}}" \
+            -d "{\"content\":\"<@255387990136848385> ⚠️ Der Tagespost konnte heute nicht ${{ github.event_name == 'push' && 'aktualisiert' || 'erstellt' }} werden. (<$RUN_URL>)\",\"allowed_mentions\":{\"users\":[\"255387990136848385\"]}}" \
             "$DISCORD_WEBHOOK_LOGS"
       # "Run workflow" with test_warning ticked: shows that the warning reaches the logs channel. Posts no schedule.
       - name: Send the warning as a test
