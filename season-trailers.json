@@ -4,6 +4,7 @@
  "seasons": {
   "winter-2027": {
    "title": "Winter 2027",
+   "youtubePlaylistId": "PLMKUhokF0XN8",
    "trailers": {
     "zatsuyou fuyo jutsushi ga jibun no saikyou ni kizuku made: meiwaku wo kakenai you ni shite kimashita ga, tsuihou sareta node suki ni ikiru koto ni shimashita": {
      "auto": true,
@@ -322,6 +323,23 @@
      "sequelStatus": "not_sequel",
      "youtubeId": "5t73vYlujsg",
      "title": "Ore to Yu nii! - Official Trailer"
+    },
+    "akazukin, tabi no tochuu de shitai to deau.": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "dRYjeN1IDcA",
+     "title": "TVアニメ「赤ずきん、旅の途中で死体と出会う。」PV第1弾｜2027年1月TOKYO MX、ＢＳ日テレ、読売テレビにて放送開始！"
+    },
+    "ramen akaneko season 2": {
+     "sequelStatus": "sequel"
+    },
+    "everyday host (sequel)": {
+     "sequelStatus": "sequel"
+    },
+    "peropero sparkles": {
+     "sequelStatus": "not_sequel",
+     "youtubeStatus": "not_found"
     }
    }
   }

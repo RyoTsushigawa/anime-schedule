@@ -547,22 +547,45 @@
     },
     {
      "romaji": "Akazukin, Tabi no Tochuu de Shitai to Deau.",
-     "english": "Red Riding Hood: A Detective Story"
+     "english": "Red Riding Hood: A Detective Story",
+     "anilist": 214969,
+     "skip": null,
+     "video": "dRYjeN1IDcA",
+     "videoTitle": "TVアニメ「赤ずきん、旅の途中で死体と出会う。」PV第1弾｜2027年1月TOKYO MX、ＢＳ日テレ、読売テレビにて放送開始！",
+     "channel": "ぽにきゃん-Anime PONY CANYON",
+     "via": "anilist",
+     "searched": "2026-11-11T17:08:00.732Z"
     },
     {
      "romaji": "Ramen Akaneko Season 2",
-     "english": "Ramen Akaneko Season 2"
+     "english": "Ramen Akaneko Season 2",
+     "anilist": 185699,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T17:08:00.820Z"
     },
     {
      "romaji": "Everyday Host (Sequel)",
-     "english": "Everyday HOST CLUB (Sequel)"
+     "english": "Everyday HOST CLUB (Sequel)",
+     "anilist": null,
+     "video": null,
+     "skip": "sequel",
+     "searched": "2026-11-11T17:08:00.905Z"
     },
     {
      "romaji": "Peropero Sparkles",
-     "english": "Peropero Sparkles"
+     "english": "Peropero Sparkles",
+     "anilist": null,
+     "skip": null,
+     "video": null,
+     "videoTitle": "",
+     "channel": "",
+     "searched": "2026-11-11T17:08:01.320Z"
     }
-   ]
+   ],
+   "playlist": "PLMKUhokF0XN8",
+   "url": "https://www.youtube.com/playlist?list=PLMKUhokF0XN8"
   }
  },
- "updated": "2026-11-11T13:40:27.589Z"
+ "updated": "2026-11-11T17:08:01.646Z"
 }
