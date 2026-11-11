@@ -27,14 +27,14 @@
 ## Pre-launch acceptance checks
 
 - Winter 2027 appears automatically only after a standalone `Winter 2027` tab exists; use the exact Sheet row order including short-form anime.
-- A sequel or a series carried over from the previous standalone Season tab can be viewed and voted on but has no trailer or playlist slot. Carryovers are detected using matching original/English titles against the immediately preceding Season tab. If that tab is unavailable, mark the carryover check as unknown and do not approve videos until verified.
+- A sequel remains in Season Preview for voting but receives no trailer. A series carried over from the previous standalone Season tab is **hidden entirely from Season Preview** (cards, filters, counts and voting UI); it remains intact in both Google Sheets and the normal schedule. The page compares original/English titles directly with the previous tab, while discovery excludes carried-over titles from playlist approval. If the prior tab is unavailable, only already confirmed carryovers are hidden and the preview displays a warning.
 - Each eligible anime yields at most one video in the shared playlist; a teaser is labeled as a fallback and is superseded by a verified full trailer.
 - A missing YouTube trailer appears as unreviewed or checked/not found; users can add another site's HTTPS trailer link locally without public publication.
 - A viewer can select among manually verified alternatives locally, while the shared YouTube playlist remains one-video-per-show.
 - A verified AniList account can save its **own** exact vote to a standalone Season list, not the active Guckplan; restricted Okinawa 3 and authorized delegation rules apply server-side.
 - Manual changes in Google Sheets appear on the website after refresh. When a sheet cell changes between viewing and saving, the site reports a conflict rather than silently claiming success.
 - An invalid AniList token, unknown person, outdated show row, permission failure or unavailable worker must never show a fake save confirmation.
-- Test desktop and mobile at widths around 360, 390 and 430 px; test keyboard focus and dialogs. Run `node --test tests/season-preview.test.mjs`.
+- Test desktop and mobile at widths around 360, 390 and 430 px; test keyboard focus and dialogs. Verify Season Preview uses the main site's saved light/dark theme, accent color, compact card and pill styles. Run `node --test tests/season-preview.test.mjs`.
 - Test playlist sync twice with no edits: second run should do zero YouTube mutations. Remove/restore one test trailer, then verify unavailable marking and recovery.
 
 ## Practical checkpoints toward 31 December 2026
