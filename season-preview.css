@@ -88,7 +88,14 @@
 .preview-vote-title{margin:0;font-size:12px;color:var(--muted);font-weight:650;line-height:1.4}
 .preview-voting>.preview-vote-title{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .preview-own-vote{color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-weight:700}
-.preview-choices{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.preview-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:7px}
+.preview-vote-secondary{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.preview-extra-votes{min-width:0;flex:1 1 180px}
+.preview-extra-votes summary{cursor:pointer;font-size:12px;font-weight:650;color:var(--muted);padding:5px 0}
+.preview-extra-votes summary:hover{color:var(--text)}
+.preview-extra-choices{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.preview-extra-choices .preview-choice{min-height:36px}
+.preview-vote-secondary .preview-reset{min-height:32px;padding:5px 10px}
 .preview-choice,.preview-reset{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:650;min-height:39px;padding:8px 12px;line-height:1.35}
 .preview-choice:hover:not(:disabled),.preview-reset:hover:not(:disabled){border-color:var(--accent)}
 .preview-choice.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text);font-weight:750}
@@ -159,8 +166,10 @@
  .preview-item{padding:12px;grid-template-columns:26px minmax(0,1fr);gap:9px}
  .preview-order{width:26px;height:28px;font-size:11px}
  .preview-item h2{font-size:15px}
- .preview-choices .preview-choice{flex:1 1 calc(50% - 8px)}
- .preview-choices .preview-reset{flex:1 1 100%}
+ .preview-choices .preview-choice{min-width:0;padding:9px 5px}
+ .preview-vote-secondary{align-items:start}
+ .preview-extra-votes{flex:1 1 100%}
+ .preview-vote-secondary .preview-reset{margin-left:auto}
  .preview-links a{flex:1 1 auto}
 }
 @media(prefers-reduced-motion:reduce){.preview-page *{scroll-behavior:auto}}
