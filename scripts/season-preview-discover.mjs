@@ -144,7 +144,7 @@ async function main(){
    try{
     const media=await queryAniList(s.title);
     const match=normalizeCandidate(media,s);
-    entries.push({...s,...(match||{review:'pending',reason:'AniList title match uncertain'}),carriedOver,checkedAt:new Date().toISOString()});
+    entries.push({...old,...s,...(match||{review:'pending',reason:'AniList title match uncertain'}),carriedOver,checkedAt:new Date().toISOString()});
    }catch(error){entries.push({...old,...s,carriedOver,review:'pending',reason:error.message});}
    await new Promise(resolve=>setTimeout(resolve,850));
   }
