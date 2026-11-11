@@ -23,6 +23,7 @@ const setup=[
  "const member={person:'Quecks'};",
  "const current={gid:'123'};",
  "const saving=new Set();",
+ "const pendingVotes=new Map();",
  "const voteFeedback=new Map();",
  "const voteFeedbackKey=(gid,key,person)=>gid+'|'+key+'|'+person;",
  "const clean=x=>String(x||'').trim();",
@@ -62,7 +63,7 @@ test('saving state disables controls and is visible on the card',()=>{
 });
 test('failed save is shown on the corresponding anime card',()=>{
  const result=run(show(),{error:true,message:'Nicht gespeichert'},false);
- assert.match(result.html,/class="error"/);
+ assert.match(result.html,/preview-vote error/);
  assert.match(result.html,/Nicht gespeichert/);
 });
 test('special options remain available behind a compact "…" menu',()=>{

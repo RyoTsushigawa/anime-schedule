@@ -198,13 +198,11 @@ p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px
 .preview-vote{display:flex;flex-wrap:nowrap;align-items:center;gap:2px;padding:2px;border:1px solid var(--line);border-radius:99px;background:var(--bg)}
 .preview-vote button{font:inherit;font-size:12px;min-height:28px;padding:0 10px;border:0;border-radius:99px;background:none;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center}
 .preview-vote button:hover{color:var(--text)}
-.preview-vote button.on{background:var(--accent);color:var(--accent-text,#111);font-weight:650}
+.preview-vote button.on{background:var(--accent);color:var(--accent-text,#111)}  /* no bold: the width stays the same */
 .preview-more{position:relative;display:flex}
 .preview-more-menu[hidden]{display:none!important}
 .preview-more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:5;display:grid;gap:2px;min-width:170px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--card);box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .preview-more-menu button{justify-content:flex-start;border-radius:7px}
-.preview-vote small{font-size:11px;color:var(--muted);padding:0 6px}
-.preview-vote small.error{color:#e5484d;font-weight:700}
 
 /* one slim toolbar: voting name + progress on the left, search, my-votes filter and refresh on the right */
 .preview-toolbar{align-items:center;gap:8px;padding:7px 8px;border-radius:12px}
@@ -224,3 +222,8 @@ p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px
 .preview-help:hover{color:var(--text);border-color:var(--accent)}
 /* cards the chosen name hasn't voted on yet */
 .preview-item.open{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 70%,transparent)}
+
+/* saving: dim the whole control (no extra elements, no size change); error: red edge, reason on hover */
+.preview-vote.saving{opacity:.65}
+.preview-vote button:disabled{cursor:progress;opacity:1}
+.preview-vote.error{border-color:#e5484d}
