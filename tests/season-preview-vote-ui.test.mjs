@@ -65,3 +65,20 @@ test('failed save is shown on the corresponding anime card',()=>{
  assert.match(result.html,/preview-vote-feedback error/);
  assert.match(result.html,/Nicht gespeichert/);
 });
+
+test('special options remain available behind a compact expandable section',()=>{
+ const result=run(show(),null,false);
+ assert.match(result.html,/data-vote="Ja"/);
+ assert.match(result.html,/data-vote="Nein"/);
+ assert.match(result.html,/data-vote="Vielleicht"/);
+ assert.match(result.html,/<details class="preview-extra-votes"/);
+ assert.match(result.html,/data-vote="Demons"/);
+ assert.match(result.html,/data-vote="Allein"/);
+ assert.match(result.html,/data-vote="Wenn Belly dabei ist"/);
+ assert.match(result.html,/data-vote="Okinawa 3"/);
+});
+test('selected special vote expands the option section to show the selection',()=>{
+ const result=run(show('Demons'),null,false);
+ assert.match(result.html,/<details class="preview-extra-votes" open>/);
+ assert.match(result.html,/data-vote="Demons"[^>]*aria-pressed="true"/);
+});
