@@ -1431,3 +1431,8 @@ body.dense #list .row > img { width: 34px; height: 48px; aspect-ratio: auto; bor
 body.dense #list .row.pause > img { height: 34px; }
 body.dense .day .row .title { font-size: 14px; }
 body.dense .day .row .ep { margin-top: 2px; }
+
+/* one streaming button; other services behind "+N" */
+.stream-more { flex: none; min-height: 30px; padding: 0 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); color: var(--muted); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.stream-more:hover, .stream-more[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
+.stream-alternatives:not([hidden]) { display: contents; }
