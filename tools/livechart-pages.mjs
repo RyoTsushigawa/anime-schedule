@@ -67,7 +67,7 @@ export function parseSeason(html) {
       anilist: (body.match(/anilist\.co\/anime\/(\d+)/) || [])[1],
       titles: [romaji, english, ...alternate],
       list: {
-        romaji, english,
+        romaji, english, livechartId: attr('anime-id'),
         premiere, precision,
         rough: precision >= 3 ? '' : decode(shown), // 3 is a whole date, 4 also has the time
         short: /__badge[^>]*>\s*Short-form\s*</.test(body),
