@@ -151,9 +151,11 @@
      "anilist": 210157,
      "video": null,
      "notSequel": true,
-     "skip": null,
      "videoTitle": "",
-     "channel": ""
+     "channel": "",
+     "channelPref": "Team ONIBE",
+     "skip": null,
+     "searched": "2026-11-11T17:31:17.625Z"
     },
     {
      "romaji": "Spirit Circle",
@@ -587,8 +589,8 @@
    ],
    "playlist": "PLMKUhokF0XN8",
    "url": "https://www.youtube.com/playlist?list=PLMKUhokF0XN8",
-   "synced": "2026-11-11T17:28:31.132Z"
+   "synced": "2026-11-11T17:31:18.238Z"
   }
  },
- "updated": "2026-11-11T17:28:31.132Z"
+ "updated": "2026-11-11T17:31:18.239Z"
 }
