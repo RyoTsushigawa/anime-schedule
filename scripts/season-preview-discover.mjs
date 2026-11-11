@@ -70,7 +70,7 @@ async function getTabs(){
  const response=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/htmlview');
  if(!response.ok)throw Error('Cannot read Sheet tabs from HTML (HTTP '+response.status+')');
  const html=await response.text();
- return [...html.matchAll(/\\{name: "([^"]+)", pageUrl: "[^"]*gid=(\\d+)/g)].map(([,title,sheetId])=>({title,sheetId:Number(sheetId)})).filter(p=>seasonId(p.title));
+ return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].map(([,title,sheetId])=>({title,sheetId:Number(sheetId)})).filter(p=>seasonId(p.title));
 }
 async function queryAniList(title){
  const body={query:'query ($search:String) { Media(search:$search,type:ANIME) { id idMal title { romaji english } trailer { id site } relations { edges { relationType } } } }',variables:{search:title}};
