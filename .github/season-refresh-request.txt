@@ -1,0 +1,4 @@
+One-time refresh request — 2026-11-11
+Target: fall-2026 and winter-2027
+Purpose: enrich seasons.json with per-anime LiveChart IDs for direct trailer/subtitle review.
+The push trigger runs only the seasons-only job and must not update streams or Google Sheets.
