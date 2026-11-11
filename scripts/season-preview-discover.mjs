@@ -94,7 +94,7 @@ async function main(){
    const old=previously.find(e=>e.key===s.key);
    const approved=catalog.seasons?.[key]?.trailers?.[s.key];
    if(approved?.verified && approved?.footageVerified){entries.push({...old,...s,review:'approved',sequelStatus:approved.sequelStatus});continue;}
-   if(old?.anilistId||old?.checkedAt && Date.now()-Date.parse(old.checkedAt)<7*86400000){
+   if(old?.checkedAt && Date.now()-Date.parse(old.checkedAt)<(old.youtubeId?7:2)*86400000){
     entries.push({...old,...s,review:old.review==='approved'?'pending':old.review});continue;
    }
    if(requests>=12){entries.push({...old,...s,review:'pending',reason:'Awaiting AniList lookup'});continue;}
