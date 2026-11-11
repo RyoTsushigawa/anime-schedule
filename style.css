@@ -1407,3 +1407,18 @@ body.catchup #list > .catchup-season > .not-listed > summary h2{position:static}
  body.catchup #list > .catchup-season > .row,
  body.catchup #list > .catchup-season > .shared{margin:7px}
 }
+
+/* Bulk watched actions remain available even when a season is collapsed.
+   The latest-only view omits its redundant season heading and border. */
+body.catchup #list .catchup-season-tools{display:flex;justify-content:flex-end;align-items:center;padding:7px 12px 10px;gap:8px}
+body.catchup #list .catchup-season-tools .catchup-season-mark{min-height:36px;font-size:12px;font-weight:650;border-color:color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--text);background:var(--today)}
+body.catchup #list .catchup-season-tools .catchup-season-mark:hover{border-color:var(--accent)}
+body.catchup #list .catchup-season-plain{display:block;min-width:0}
+body.catchup #list .catchup-season-plain > .catchup-season-tools{padding:0 0 10px}
+body.catchup #list .catchup-season-plain > .row,
+body.catchup #list .catchup-season-plain > .shared{margin-bottom:10px}
+body.catchup #list .catchup-season-plain > .not-listed{margin-top:12px}
+body.catchup #list > .catchup-season:not([open]) > .catchup-season-tools{display:none}
+@media(max-width:560px){
+ body.catchup #list .catchup-season-tools .catchup-season-mark{min-height:44px}
+}
