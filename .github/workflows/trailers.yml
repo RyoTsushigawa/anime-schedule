@@ -1,6 +1,7 @@
 name: Trailer playlists
 
-# Once a day: for a season list in the sheet that is still ahead ("Winter 2027" …) pick trailers for new shows
+# Once a day: for a season list in the sheet that is still ahead ("Winter 2027" …) pick trailers for its new shows
+# (no sequels, nothing carried over from the previous list), fill the Season Preview page (season-trailers.json)
 # and keep the unlisted YouTube playlist in the list's order (tools/trailers.mjs). Without a list ahead or
 # without the YouTube secrets it does nothing.
 on:
@@ -40,7 +41,7 @@ jobs:
       - name: Save the picks
         if: ${{ always() && !inputs.dry_run }}
         run: |
-          git add trailers.json 2>/dev/null || exit 0
+          git add trailers.json season-trailers.json 2>/dev/null || exit 0
           git diff --cached --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"

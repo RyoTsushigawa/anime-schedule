@@ -35,11 +35,11 @@ async function listSeasonTabs(){
  return raw.map(([,name,gid])=>({name:clean(name),gid})).filter(x=>PV_SEASONS.test(x.name))
  .sort((a,b)=>{const ma=a.name.match(PV_SEASONS),mb=b.name.match(PV_SEASONS);return (+mb[2]*12+PV_MONTHS[mb[1].toLowerCase()])-(+ma[2]*12+PV_MONTHS[ma[1].toLowerCase()]);});
 }
-// Teasers are permitted only after a documented search finds no suitable full trailer.
-// Both trailer types require verified footage and a non-sequel classification.
+// Trailers are picked automatically by tools/trailers.mjs (auto: true) and only for new shows (no sequels).
+// Older hand-checked entries (verified + footageVerified) still count.
 function verifiedTrailer(entry) {
- if(!entry || Array.isArray(entry) || entry.verified!==true ||
-    entry.sequelStatus!=='not_sequel' || entry.footageVerified!==true)return null;
+ if(!entry || Array.isArray(entry) || entry.sequelStatus!=='not_sequel' ||
+    !(entry.auto===true || (entry.verified===true && entry.footageVerified===true)))return null;
  const teaser=entry.type==='teaser';
  if(entry.type!=='full_trailer' && !(teaser&&entry.fallbackApproved===true&&entry.fullTrailerUnavailable===true))return null;
  const id=clean(entry.youtubeId);
@@ -179,11 +179,11 @@ function trailerStatus(show){
  if(carryover===null)return 'Vorherige Season noch nicht abgeglichen';
  const entry=detailsFor(show);
  if(entry?.sequelStatus==='sequel'||reviewEntry(show)?.sequelStatus==='sequel')return 'Fortsetzung · kein Trailer';
- if(entry?.sequelStatus!=='not_sequel')return 'Einordnung noch offen · kein Trailer';
+ if(entry?.sequelStatus!=='not_sequel')return 'Trailer folgt';
  if(entry.youtubeStatus==='not_found')return 'Kein passender Trailer auf YouTube gefunden';
  if(entry.youtubeStatus==='unavailable')return 'Auf YouTube nicht verfügbar';
- if(entry.youtubeStatus==='checking')return 'Trailer wird geprüft';
- return 'Trailer noch nicht geprüft';
+ if(entry.youtubeStatus==='checking')return 'Trailer wird gesucht';
+ return 'Trailer folgt';
 }
 // Personal alternative video links do not change the shared catalog or YouTube playlist.
 function externalKey(show){return 'seasonExternalTrailer:'+seasonKey(current)+':'+show.key;}
@@ -365,7 +365,7 @@ function render(){
  pv('previewTitle').textContent=current?.name||'Season Preview';
  pv('previewIntro').textContent='Reihenfolge aus der Google-Sheets-Season-Liste · '+shows.length+' Serien';
  pv('previewStats').hidden=false;
- pv('previewStats').innerHTML='<span class="preview-stat"><b>'+shows.length+'</b> Serien</span><span class="preview-stat"><b>'+trailers+'</b> geprüfte Trailer</span><span class="preview-stat"><b>'+(shows.length-trailers)+'</b> ohne bestätigten YouTube-Trailer</span><span class="preview-stat"><b>'+shows.filter(s=>['not_found','unavailable'].includes(detailsFor(s)?.youtubeStatus)&&!trailerFor(s)).length+'</b> auf YouTube fehlend</span>';
+ pv('previewStats').innerHTML='<span class="preview-stat"><b>'+shows.length+'</b> Serien</span><span class="preview-stat"><b>'+trailers+'</b> Trailer</span><span class="preview-stat"><b>'+(shows.length-trailers)+'</b> ohne Trailer</span><span class="preview-stat"><b>'+shows.filter(s=>['not_found','unavailable'].includes(detailsFor(s)?.youtubeStatus)&&!trailerFor(s)).length+'</b> auf YouTube fehlend</span>';
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{20,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);

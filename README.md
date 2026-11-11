@@ -323,7 +323,9 @@ from "Verspätungen für alle" starts this run (the run then waits for 09:00):
 
 As soon as a season list ("Winter 2027", "Frühling 2027" …, the tab with all of the season's shows) is in the
 sheet, the daily workflow "Trailer playlists" makes an **unlisted** YouTube playlist "Trailer Winter 2027" on the
-owner's channel: one trailer per show, in the list's order. New, moved or removed shows follow on the next run.
+owner's channel: one trailer per **new** show, in the list's order. Sequels (AniList lists a prequel, or "Season 2",
+"Part 2", "II" … in the title) and shows already in the previous season's list get none. The same picks fill the
+Season Preview page (`season-trailers.json`); there is no approval step. New, moved or removed shows follow on the next run.
 The planner shows "▶ Trailers" next to the list once the playlist exists. Lists that started more than three
 weeks ago are left alone.
 
@@ -341,7 +343,7 @@ Setup:
    "In production" (in "Testing" Google ends the login after 7 days). No verification is needed for your own use.
 3. **Credentials → Create credentials → OAuth client ID → Desktop app** → **Download JSON**, saved as
    `tools/youtube-client.json` on the PC.
-4. On the PC in `tools`: `node youtube-login.mjs`, log in with the YouTube account that should own the playlists
+4. On the PC in `tools`: `node youtube-login.mjs` (asks for "youtube.force-ssl" since 11 Nov, which also lets the tool read subtitle languages; an older login without it still works, just without that check), log in with the YouTube account that should own the playlists
    (Google warns that the app isn't verified: Advanced → continue). It shows the three values.
 5. GitHub secrets `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN`; then Actions →
    "Trailer playlists" → Run workflow once (with "dry run" it only shows the picks).
