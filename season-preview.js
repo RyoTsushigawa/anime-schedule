@@ -232,9 +232,9 @@ function updateMemberUI(){
  const filter=pv('previewVoteFilterLabel');
  filter.hidden=!unlocked;
  if(!unlocked)pv('previewVoteFilter').value='all';
- info.textContent=unlocked?'Gruppenabstimmung freigeschaltet · Wähle deinen Namen. Änderungen werden direkt in Google Sheets gespeichert.':
-  voteApi?'Kein AniList-Login nötig. Gruppencode einmal pro Browser-Sitzung eingeben, um abzustimmen.':
-  'Die Abstimmung wird nach Einrichtung der Google-Sheets-Verbindung freigeschaltet. Bestehende Stimmen bleiben sichtbar.';
+ // without the voting service there is nothing to show: votes still go into the Google Sheet directly
+ pv('previewMember').hidden=!voteApi;
+ info.textContent='';
  if(memberError&&!unlocked)info.textContent=memberError;
 }
 async function checkGroupAccess(code){
@@ -261,25 +261,22 @@ function votingControls(show){
  if(!person)return '';
  const picked=voteValue(show,person),disabled=saving.has(show.key);
  const feedback=voteFeedback.get(voteFeedbackKey(current.gid,show.key,person));
- const allChoices=validChoices(person);
- const quick=['Ja','Nein','Vielleicht'];
- const choiceButton=choice=>'<button type="button" class="preview-choice'+(picked===choice?' selected':'')+
-  '" data-vote="'+safeText(choice)+'" data-anime="'+safeText(show.key)+'" aria-pressed="'+(picked===choice)+
-  '"'+(disabled?' disabled':'')+'>'+safeText(choice)+'</button>';
- const buttons=quick.filter(choice=>allChoices.includes(choice)).map(choiceButton).join('');
- const more=allChoices.filter(choice=>!quick.includes(choice));
- const moreActive=more.includes(picked);
- const extra=more.length?'<details class="preview-extra-votes"'+(moreActive?' open':'')+'><summary>Weitere Optionen'+
-  (moreActive?' · '+safeText(picked):'')+'</summary><div class="preview-extra-choices">'+more.map(choiceButton).join('')+'</div></details>':'';
- const status=disabled?'Wird gespeichert …':feedback?.message||'';
- const statusClass=feedback?.error?' error':feedback?.success?' success':'';
- return '<div class="preview-voting"><div class="preview-vote-title">Stimme für '+safeText(person)+
-  ' <span class="preview-own-vote">'+(picked==='Default'?'Noch offen':safeText(picked))+'</span></div>'+
-  '<div class="preview-choices" role="group" aria-label="Abstimmung für '+safeText(show.english||show.title)+'">'+buttons+'</div>'+
-  '<div class="preview-vote-secondary">'+extra+
-  '<button type="button" class="preview-reset" data-vote="Default" data-anime="'+safeText(show.key)+
-  '"'+(disabled||picked==='Default'?' disabled':'')+'>Zurücksetzen</button></div>'+
-  (status?'<p class="preview-vote-feedback'+statusClass+'" role="status">'+safeText(status)+'</p>':'')+'</div>';
+ const allChoices=validChoices(person),quick=['Ja','Vielleicht','Nein'];
+ const button=(choice,label=choice)=>'<button type="button" class="'+(picked===choice?'on':'')+'" data-vote="'+safeText(choice)+'" data-anime="'+safeText(show.key)+'" aria-pressed="'+(picked===choice)+'"'+(disabled?' disabled':'')+'>'+safeText(label)+'</button>';
+ const more=allChoices.filter(c=>!quick.includes(c));
+ const moreOn=more.includes(picked);
+ return '<div class="preview-vote" role="group" aria-label="Stimme von '+safeText(person)+' für '+safeText(show.english||show.title)+'">'+
+  quick.filter(c=>allChoices.includes(c)).map(c=>button(c)).join('')+
+  '<span class="preview-more"><button type="button" class="'+(moreOn?'on':'')+'" data-more aria-expanded="false" title="Weitere Optionen">'+(moreOn?safeText(picked):'…')+'</button><span class="preview-more-menu" hidden>'+more.map(c=>button(c)).join('')+(picked!=='Default'?button('Default','Zurücksetzen'):'')+'</span></span>'+
+  (disabled?'<small>…</small>':feedback?.error?'<small class="error" title="'+safeText(feedback.message)+'">!</small>':'')+'</div>';
+}
+// the group's votes from the sheet, counted ("3 Ja · 1 Vielleicht"), names on hover
+function voteSummary(show){
+ const counts=new Map();
+ for(const v of show.votes){const value=v.value&&v.value.toLowerCase()!=='default'?v.value:'';if(value)counts.set(value,[...(counts.get(value)||[]),v.name]);}
+ if(!counts.size)return '';
+ const order=['Ja','Vielleicht','Nein'];
+ return '<p class="preview-tally">'+[...counts].sort((a,b)=>(order.indexOf(a[0])+1||9)-(order.indexOf(b[0])+1||9)).map(([value,names])=>'<span title="'+safeText(names.join(', '))+'">'+names.length+' '+safeText(value)+'</span>').join(' · ')+'</p>';
 }
 async function refreshSheet(silent=false){
  if(!current||saving.size)return;
@@ -345,6 +342,10 @@ pv('previewList').addEventListener('submit',event=>{
  render();
 });
 pv('previewList').addEventListener('click',event=>{
+ // "…": the special vote options in a small menu; any other click closes open menus
+ const more=event.target.closest('button[data-more]');
+ for(const menu of pv('previewList').querySelectorAll('.preview-more-menu:not([hidden])'))if(menu.previousElementSibling!==more){menu.hidden=true;menu.previousElementSibling.setAttribute('aria-expanded','false');}
+ if(more){const menu=more.nextElementSibling;menu.hidden=!menu.hidden;more.setAttribute('aria-expanded',String(!menu.hidden));return;}
  const remove=event.target.closest('button[data-remove-external]');
  if(remove){
   const show=shows.find(s=>s.key===remove.dataset.removeExternal);
@@ -426,7 +427,7 @@ function render(){
   const sequel=detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel';
   // the trailers are streamed as one playlist; a card only notes when a show has none
   const action=trailer?'':'<span class="preview-none">'+(sequel?'Fortsetzung':'Noch kein Trailer')+'</span>';
-  article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+'</div>'+action;
+  article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+action+'</div>';
   parent.append(article);
  }
 }
