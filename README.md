@@ -188,6 +188,7 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `tools/live-check.mjs` | **PC only.** Weekly, read-only: every live page keeps its security rules, no key and no unexpected file is in the repo, GitHub Pages shows the latest upload |
 | `tools/discord-daily.mjs` | Posts today's schedule to Discord every day at 09:00 (GitHub run `discord-daily.yml`, started by the Cloudflare helper, see below) |
 | `tools/delays-worker.js` | **PC only.** The Cloudflare helper: saves delays and absences for everyone and starts the daily Discord post |
+| `tools/fetch-helper.mjs`, `fetch-helper.cmd` | **PC only.** Download the helper as deployed on Cloudflare and overwrite `tools/delays-worker.js` (only when it changed; log in `fetch-helper.log`). Needs `tools/cloudflare-token.txt`: a Cloudflare token with only *Account → Workers Scripts → Read*. Windows runs it at every logon (task "Helfer herunterladen") |
 | `tools/delay-check.mjs` | **PC only.** Weekly, read-only: the helper answers, refuses strangers and is the current version |
 | `tabs.json`, `tools/tab-list.mjs` | (`tab-list.mjs` is **PC only**.) The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
 | `tests/` | **PC only.** The page clicked through in a simulated browser (`node --test` there) |
