@@ -1,0 +1,66 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+
+const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+function extract(name) {
+ const start = source.indexOf('function ' + name + '(');
+ assert.ok(start >= 0, name + ' exists');
+ const begin = source.indexOf('{', start);
+ let depth = 0;
+ for (let i = begin; i < source.length; i++) {
+  if (source[i] === '{') depth++;
+  else if (source[i] === '}' && --depth === 0) return source.slice(start, i + 1);
+ }
+ throw Error('Unclosed function: ' + name);
+}
+const implementation = ['catchupSeasonKey','catchupSeasonLabel','catchupSeasonGroups'].map(extract).join('\n');
+const group = new Function('rows','offset','lag',`
+ const streamsDe = {release: {1: {offset}}};
+ const lagOf = () => lag;
+ ${implementation}
+ return catchupSeasonGroups(rows);
+`);
+const at = (year, month, day) => Date.UTC(year, month - 1, day, 16) / 1000;
+const show = (id, first, out, next, started) => ({
+ m: {id, startDate: started, nextAiringEpisode: next},
+ first, out, since: 0, nextAt: 0, progress: first - 1, missing: false, links: []
+});
+
+test('splits unwatched episodes at the summer/autumn boundary, newest season first', () => {
+ const next = {episode: 4, airingAt: at(2026, 10, 21)};
+ const result = group([show(1, 1, 3, next, {year: 2026, month: 9, day: 30})], 0, 0);
+ assert.deepEqual(result.map(s => [s.label,s.rows.map(r => [r.first,r.out])]), [
+  ['Herbst 2026', [[2,3]]],
+  ['Sommer 2026', [[1,1]]]
+ ]);
+ assert.equal(result.reduce((n,g) => n + g.rows.reduce((a,r) => a+r.out-r.first+1,0),0),3);
+});
+
+test('finished anime without airing timestamps falls back to its start season', () => {
+ const result = group([
+  show(2, 6, 8, null, {year: 2026, month: 7, day: 12}),
+  show(3, 1, 2, null, {year: 2026, month: 10, day: 5})
+ ],0,0);
+ assert.deepEqual(result.map(x => x.label),['Herbst 2026','Sommer 2026']);
+ assert.deepEqual(result[1].rows.map(x => [x.first,x.out]),[[6,8]]);
+});
+
+test('a Berlin midnight boundary uses local time and unknown seasons sort last', () => {
+ const next = {episode: 2, airingAt: Date.UTC(2026,8,30,22,30) / 1000 + 7*86400};
+ const result = group([
+  show(1,1,1,next,{year:2026,month:9}),
+  show(4,1,1,null,null)
+ ],0,0);
+ assert.deepEqual(result.map(g=>g.label),['Herbst 2026','Season unbekannt']);
+});
+
+test('keeps each anime independent and never modifies the original backlog rows', () => {
+ const row = show(1,1,3,{episode:4,airingAt:at(2026,10,21)},{year:2026,month:9,day:30});
+ const original = structuredClone(row);
+ const result = group([row],0,0);
+ assert.deepEqual(row,original);
+ assert.equal(result[0].rows[0].m,row.m);
+ assert.equal(result[0].rows[0].out,3);
+ assert.equal(result[1].rows[0].out,1);
+});
