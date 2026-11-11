@@ -31,6 +31,20 @@ export function seasonId(name){
  const match=String(name).match(SEASON);
  return match?KEY[match[1].toLowerCase()]+'-'+match[2]:null;
 }
+export function isCarryover(show,previous){
+ const titles=[show.title,show.english].filter(Boolean).map(norm);
+ return previous.some(p=>[p.title,p.english].filter(Boolean).some(t=>titles.includes(norm(t))));
+}
+function previousSeasonId(name){
+ const m=String(name).match(SEASON);if(!m)return null;
+ const order=['winter','frühling','sommer','herbst'],i=order.indexOf(m[1].toLowerCase());
+ return KEY[order[(i+3)%4]]+'-'+(+m[2]-(i===0?1:0));
+}
+async function seasonRows(tab){
+ const res=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+tab.sheetId);
+ if(!res.ok)throw Error('Cannot read '+tab.title+' (HTTP '+res.status+')');
+ return parseShows(parseCSV(await res.text()));
+}
 export function likelySequel(media,title){
  if(media?.relations?.edges?.some(e=>e.relationType==='PREQUEL'))return 'sequel';
  // Names can indicate probable sequels, but never qualify an entry as *not* a sequel.
@@ -94,7 +108,8 @@ async function searchYoutube(title){
 }
 async function main(){
  const now=new Date(),month=now.getUTCFullYear()*12+now.getUTCMonth();
- const tabs=(await getTabs()).filter(t=>{
+ const allTabs=await getTabs();
+ const tabs=allTabs.filter(t=>{
   const m=t.title.match(SEASON),start=+m[2]*12+MONTHS[m[1].toLowerCase()];
   return start>=month-3 && start<=month+8;
  });
@@ -103,27 +118,34 @@ async function main(){
  const report={schemaVersion:1,generated:new Date().toISOString(),seasons:{}};
  for(const tab of tabs){
   const key=seasonId(tab.title);
-  const res=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&gid='+tab.sheetId);
-  if(!res.ok)throw Error('Cannot read '+tab.title+' (HTTP '+res.status+')');
-  const shows=parseShows(parseCSV(await res.text()));
+  const shows=await seasonRows(tab);
+  const priorName=previousSeasonId(tab.title);
+  const priorTab=allTabs.find(t=>seasonId(t.title)===priorName);
+  let previous=null;
+  if(priorTab){try{previous=await seasonRows(priorTab);}catch(error){console.warn('Previous season could not be checked: '+error.message);}}
   const previously=prior.seasons?.[key]?.entries||[];
   const entries=[];
   // Hard limit daily lookups; reuse cached IDs to avoid AniList rate limits.
   let requests=0;
   for(const s of shows){
+   const carriedOver=previous?isCarryover(s,previous):null;
    const old=previously.find(e=>e.key===s.key);
-   const approved=catalog.seasons?.[key]?.trailers?.[s.key];
-   if(approved?.verified && approved?.footageVerified){entries.push({...old,...s,review:'approved',sequelStatus:approved.sequelStatus});continue;}
-   if(old?.checkedAt && Date.now()-Date.parse(old.checkedAt)<(old.youtubeId?7:2)*86400000){
-    entries.push({...old,...s,review:old.review==='approved'?'pending':old.review});continue;
+   if(carriedOver===true){
+    entries.push({...s,carriedOver:true,carriedOverFrom:priorName,review:'excluded',reason:'Already listed in previous season'});
+    continue;
    }
-   if(requests>=12){entries.push({...old,...s,review:'pending',reason:'Awaiting AniList lookup'});continue;}
+   const approved=catalog.seasons?.[key]?.trailers?.[s.key];
+   if(approved?.verified && approved?.footageVerified){entries.push({...old,...s,carriedOver,review:'approved',sequelStatus:approved.sequelStatus});continue;}
+   if(old?.checkedAt && Date.now()-Date.parse(old.checkedAt)<(old.youtubeId?7:2)*86400000){
+    entries.push({...old,...s,carriedOver,review:old.review==='approved'?'pending':old.review});continue;
+   }
+   if(requests>=12){entries.push({...old,...s,carriedOver,review:'pending',reason:'Awaiting AniList lookup'});continue;}
    requests++;
    try{
     const media=await queryAniList(s.title);
     const match=normalizeCandidate(media,s);
-    entries.push({...s,...(match||{review:'pending',reason:'AniList title match uncertain'}),checkedAt:new Date().toISOString()});
-   }catch(error){entries.push({...old,...s,review:'pending',reason:error.message});}
+    entries.push({...s,...(match||{review:'pending',reason:'AniList title match uncertain'}),carriedOver,checkedAt:new Date().toISOString()});
+   }catch(error){entries.push({...old,...s,carriedOver,review:'pending',reason:error.message});}
    await new Promise(resolve=>setTimeout(resolve,850));
   }
   // Search is quota-limited: max 6 YouTube queries per run, candidates ONLY.
@@ -131,6 +153,7 @@ async function main(){
   let searched=0;
   for(const item of entries){
    if(searched>=6||!process.env.YOUTUBE_API_KEY)break;
+   if(item.carriedOver===true)continue;
    const approved=catalog.seasons?.[key]?.trailers?.[item.key];
    if(approved?.verified&&approved?.footageVerified)continue;
    if(item.lastYoutubeSearch&&Date.now()-Date.parse(item.lastYoutubeSearch)<7*86400000)continue;
@@ -140,7 +163,7 @@ async function main(){
     item.lastYoutubeSearch=new Date().toISOString();
    }catch(error){item.youtubeSearchError=String(error.message).slice(0,150);}
   }
-  report.seasons[key]={title:tab.title,gid:String(tab.sheetId),entries};
+  report.seasons[key]={title:tab.title,gid:String(tab.sheetId),previousSeason:priorName,previousSeasonChecked:!!previous,entries};
  }
  await writeFile('season-trailer-candidates.json',JSON.stringify(report,null,2)+'\n');
  console.log('Checked '+tabs.length+' season sheets; wrote review candidates (no automatic publication)');
