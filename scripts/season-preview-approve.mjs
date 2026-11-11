@@ -18,6 +18,7 @@ const subs=arg('subs');if(subs&&!['de','en'].includes(subs))throw Error('Subtitl
 const candidates=JSON.parse(await readFile('season-trailer-candidates.json','utf8'));
 const row=candidates.seasons?.[season]?.entries?.find(e=>e.key===key);
 if(!row)throw Error('Series not found in the season Sheet candidate list. No invented entries allowed.');
+if(row.carriedOver!==false)throw Error('Cannot approve: previous-season carryover or previous-season check incomplete.');
 if(row.sequelStatus==='sequel')throw Error('AniList lists a prequel / sequel indicator. Investigate classification before allowing any trailer.');
 const file='season-trailers.json',data=JSON.parse(await readFile(file,'utf8'));
 data.seasons||={};
