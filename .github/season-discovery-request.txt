@@ -13,3 +13,5 @@ Retry with safe Git rebase for the corrected Amount-row filter.
 Run only Season Preview test suites for trailer review (2026-11-11).
 
 Verify authenticated voting Worker test coverage in Season Preview CI.
+
+Verify read-back confirmation for Sheet vote writes and conflict response (2026-11-11).
