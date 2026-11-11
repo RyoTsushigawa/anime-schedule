@@ -61,9 +61,16 @@ async function getJSON(url){
 }
 async function getTabs(){
  const key=JSON.parse(await readFile('config.json','utf8')).sheetsKey;
- if(!key)throw Error('Missing sheetsKey from public config.json');
- const data=await getJSON('https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(SHEET_ID)+'?fields=sheets(properties(sheetId,title))&key='+encodeURIComponent(key));
- return (data.sheets||[]).map(s=>s.properties).filter(p=>seasonId(p.title));
+ if(key){
+  try{
+   const data=await getJSON('https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(SHEET_ID)+'?fields=sheets(properties(sheetId,title))&key='+encodeURIComponent(key));
+   return (data.sheets||[]).map(s=>s.properties).filter(p=>seasonId(p.title));
+  }catch(error){console.warn('Sheets API unavailable; trying public Sheet HTML view:',error.message);}
+ }
+ const response=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/htmlview');
+ if(!response.ok)throw Error('Cannot read Sheet tabs from HTML (HTTP '+response.status+')');
+ const html=await response.text();
+ return [...html.matchAll(/\\{name: "([^"]+)", pageUrl: "[^"]*gid=(\\d+)/g)].map(([,title,sheetId])=>({title,sheetId:Number(sheetId)})).filter(p=>seasonId(p.title));
 }
 async function queryAniList(title){
  const body={query:'query ($search:String) { Media(search:$search,type:ANIME) { id idMal title { romaji english } trailer { id site } relations { edges { relationType } } } }',variables:{search:title}};
