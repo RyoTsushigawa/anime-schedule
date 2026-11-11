@@ -2039,6 +2039,7 @@ return;
 load(true);
 });
 let catchupTargets = [];
+let catchupSeasonTargets = new Map();
 let selecting = false;
 let revealMarkBar = false;
 const skipped = new Set();
@@ -2093,6 +2094,36 @@ remember(records, `${records.length} ${records.length === 1 ? 'Serie' : 'Serien'
 bulkSaving = false;
 syncSavingButtons();
 load(true);
+});
+// "Alle gesehen" for one catch-up season. Keep the global bulk action unchanged.
+$('list').addEventListener('click', async e => {
+ const b = e.target.closest('[data-mark-season]');
+ if (!b || !auth || b.disabled || bulkSaving || pendingChanges.size ||
+     view !== 'catchup' || friendList.value || !listUser() ||
+     auth.name?.toLowerCase() !== listUser().toLowerCase()) return;
+ const season = b.dataset.markSeason;
+ const targets = catchupSeasonTargets.get(season) || [];
+ if (!targets.length) return;
+ b.disabled = true;
+ bulkSaving = true;
+ syncSavingButtons();
+ const records = [];
+ let stopped = '';
+ for (const [i, {mediaId, progress, add}] of targets.entries()) {
+  b.textContent = `Speichert ${i + 1}/${targets.length} …`;
+  try {
+   records.push(await change(mediaId, {progress, status: add ? 'CURRENT' : undefined}));
+  } catch (err) { stopped = err.message; break; }
+  await new Promise(r => setTimeout(r, 700));
+ }
+ bulkSaving = false;
+ syncSavingButtons();
+ const label = catchupSeasonLabel(season);
+ if (records.length) remember(records, stopped
+  ? `${records.length} von ${targets.length} Serien in ${label} als gesehen markiert. Gestoppt: ${stopped}`
+  : `${records.length} ${records.length === 1 ? 'Serie' : 'Serien'} aus ${label} als gesehen markiert`);
+ else notice(`Nichts gespeichert: ${stopped || 'Keine Änderungen'}`);
+ load(true);
 });
 // "Alle gesehen" on today's heading: every open tick of the day, one after the other (Rückgängig takes them all back)
 $('list').addEventListener('click', async e => {
@@ -2204,6 +2235,20 @@ function catchupSeasonGroups(rows) {
  }
  return [...groups].sort(([a], [b]) => a === 'unknown' ? 1 : b === 'unknown' ? -1 : b.localeCompare(a))
   .map(([key, entries]) => ({key, label: catchupSeasonLabel(key), rows: entries}));
+}
+// Mark only the episodes belonging to this season, never later episodes from
+// the same series. AniList/MAL progress is sequential, so older episodes below
+// a later progress value are implicitly watched as well.
+function seasonWatchTargets(rows) {
+ const byMedia = new Map();
+ for (const r of rows) {
+  const id = Number(r.m.id);
+  if (!Number.isSafeInteger(id) || id <= 0 || r.out <= r.progress) continue;
+  const prior = byMedia.get(id);
+  if (!prior || r.out > prior.progress)
+   byMedia.set(id, {mediaId: id, progress: r.out, add: !!r.missing});
+ }
+ return [...byMedia.values()];
 }
 function showCatchupCount(rows) {
 const count = rows.filter(r => !r.missing).reduce((sum, r) => sum + r.out - r.first + 1, 0);
@@ -2342,6 +2387,12 @@ const top = !mine || !rows.length || !selecting ? ''
 : `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure" title="Als gesehen markieren">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
 const seasonGroups = catchupSeasonGroups(rows);
+catchupSeasonTargets = new Map(seasonGroups.map(g => [g.key, seasonWatchTargets(g.rows)]));
+const today = new Date();
+const currentSeasonKey = catchupSeasonKey(today.getTime() / 1000);
+const hideSeasonHeader = seasonGroups.length === 1 && seasonGroups[0].key === currentSeasonKey;
+const seasonBulkButton = group => mine && !selecting && catchupSeasonTargets.get(group.key)?.length
+ ? `<button type="button" class="pill catchup-season-mark" data-mark-season="${group.key}" title="Alle offenen Folgen dieser Season als gesehen markieren">Alle gesehen ✓</button>` : '';
 const newestSeason = seasonGroups.find(g => g.key !== 'unknown')?.key || seasonGroups[0]?.key;
 const seasonSection = group => {
  const entries = group.rows;
@@ -2354,10 +2405,13 @@ const seasonSection = group => {
   savedOpen = localStorage.getItem('catchupSeasonOpen:' + group.key);
  } catch {}
  const open = selecting || searching() || (savedOpen === null ? group.key === newestSeason : savedOpen === '1');
+ const content = listed.map(show).join('') +
+  (notListed.length ? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '');
+ if (hideSeasonHeader) return `<section class="catchup-season-plain" aria-label="Aktuelle Season">${seasonBulkButton(group) ? `<div class="catchup-season-tools">${seasonBulkButton(group)}</div>` : ''}${content}</section>`;
  return `<details class="day catchup-season" data-catchup-season="${group.key}"${open ? ' open' : ''}>
    <summary><h2>${group.label}<i class="fold" aria-hidden="true"></i></h2><span class="catchup-season-count">${seriesCount} ${seriesCount === 1 ? 'Serie' : 'Serien'} · ${episodeCount} ${episodeCount === 1 ? 'Folge' : 'Folgen'}</span></summary>
-   ${listed.map(show).join('')}
-   ${notListed.length ? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : ''}
+   ${seasonBulkButton(group) ? `<div class="catchup-season-tools">${seasonBulkButton(group)}</div>` : ''}
+   ${content}
   </details>`;
 };
 $('list').innerHTML = rows.length ? top + seasonGroups.map(seasonSection).join('')
