@@ -1,0 +1,3 @@
+Winter 2027 first candidate discovery requested 2026-11-11.
+Source: standalone Google Sheets season list, plus reviewed LiveChart season metadata.
+Unverified trailers must never be auto-published.
