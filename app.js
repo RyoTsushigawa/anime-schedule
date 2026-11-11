@@ -102,6 +102,8 @@ try {
 view = ['catchup', 'pace'].includes(localStorage.getItem('view')) ? localStorage.getItem('view') : 'week';
 $('anilistUser').value = localStorage.getItem('anilistUser') ?? DEFAULT_ANILIST;
 } catch {}
+// Explicit navigation from Season Preview should open the requested weekly view.
+if (new URLSearchParams(location.search).get('view') === 'week') view = 'week';
 let streamsDe = null;
 titleSource = id => streamsDe?.status?.[id]?.titles;
 let fallbackLinks = { byAnilist: {} };
