@@ -1,5 +1,13 @@
 {
-  "schemaVersion": 1,
-  "description": "Only approved full trailers with substantial show footage. Never add teasers, announcements, or unverified YouTube IDs.",
-  "seasons": {}
+  "schemaVersion": 2,
+  "description": "One official full trailer with meaningful show footage per non-sequel anime; short-form anime are eligible. Never use teasers. sequelStatus must be explicitly 'not_sequel' before publishing; 'sequel' or unreviewed entries show no trailer.",
+  "seasons": {},
+  "entryExample": {
+    "note": "Documentation only, not an actual video",
+    "type": "full_trailer",
+    "verified": true,
+    "sequelStatus": "not_sequel",
+    "youtubeId": "REPLACE_WITH_VALID_ID",
+    "subtitles": "en"
+  }
 }
