@@ -750,10 +750,13 @@ const LOADING_HTML = '<div class="status loading">Lädt…</div><div class="skel
 var enter = null;
 // whether the overview chip above the week is open (kept across redraws)
 var alertsOpen = false;
-function episodeTags(episodes, total) {
-const tag = text => `<span class="ep-tag">${text}</span>`;
-if (total === 1) return '';
-return (Math.min(...episodes) === 1 ? tag('Premiere') : '') + (total && Math.max(...episodes) === total ? tag('Finale') : '');
+function episodeTags(episodes, total, long = false) {
+const finale = total > 1 && Math.max(...episodes) === total;
+const premiere = total !== 1 && Math.min(...episodes) === 1;
+const label = finale ? (long ? 'Extended Finale' : 'Finale')
+  : premiere ? (long ? 'Extended Premiere' : 'Premiere')
+  : long ? 'Lang' : '';
+return label ? `<span class="ep-tag"${long ? ' title="Lange Folge: braucht zwei Slots"' : ''}>${label}</span>` : '';
 }
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
 const calmMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1145,7 +1148,7 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, ex
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes)}${long ? '<span class="ep-tag" title="Lange Folge: braucht zwei Slots">Lang</span>' : ''}${whoChips(who, away, maybe)}</div>
+          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes, long)}${whoChips(who, away, maybe)}</div>
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen" aria-label="Nachholen ändern"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h15l-4-4M20 16H5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '') : moveButton(show, slot)}
