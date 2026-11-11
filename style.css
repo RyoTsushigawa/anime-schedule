@@ -307,6 +307,9 @@ font-weight: 650;
 .ep .behind { margin-left: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--accent) 75%, var(--text)); cursor: pointer; }
 .ep .behind:hover { text-decoration: underline; text-underline-offset: 2px; }
 .ep .behind::before { content: "·"; margin-right: 6px; color: var(--muted); font-weight: 400; }
+/* Airing progress; unknown totals deliberately have no bar. */
+.season-progress { width: min(220px, 100%); height: 3px; margin-top: 5px; border-radius: 99px; overflow: hidden; background: var(--line); }
+.season-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .ep-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 99px; font-size: 11px; font-weight: 600; line-height: 16px;
 background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
 .daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; margin: 0 0 6px; }
