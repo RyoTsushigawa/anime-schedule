@@ -6,7 +6,7 @@ const PV_MONTHS = {winter:0,'frühling':3,sommer:6,herbst:9};
 const pv = id => document.getElementById(id);
 const clean = s => String(s || '').trim();
 const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let seasonTabs = [], seasonIndex = {seasons:{}}, current = null, shows = [], people = [];
+let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, current = null, shows = [], people = [];
 let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
 function state(msg) {pv('previewStatus').textContent=msg;}
 function seasonKey(tab){const m=tab.name.match(PV_SEASONS);return m ? m[1].toLowerCase()+'-'+m[2] : '';}
@@ -42,6 +42,16 @@ function verifiedTrailer(entry) {
   id, subtitles:entry.subtitles==='de'?'DE':entry.subtitles==='en'?'EN':null,
   title:clean(entry.title)||'Offizieller Trailer'
  }:null;
+}
+function malLink(show){
+ const key=seasonKey(current).replace(/^herbst-/,'fall-').replace(/^frühling-/,'spring-').replace(/^sommer-/,'summer-');
+ const entries=animeIndex.seasons?.[key]||[];
+ const normTitle=title=>clean(title).toLocaleLowerCase().normalize('NFKC');
+ const title=normTitle(show.title),english=normTitle(show.english);
+ const matched=entries.find(e=>normTitle(e.romaji)===title || (english && normTitle(e.english)===english));
+ const direct=matched?.mal;
+ if(typeof direct==='string' && /^https:\/\/myanimelist\.net\/anime\/\d+(?:\/[^?#]*)?$/.test(direct))return {url:direct,label:'MyAnimeList'};
+ return {url:'https://myanimelist.net/anime.php?q='+encodeURIComponent(show.english||show.title)+'&cat=anime',label:'Auf MyAnimeList suchen'};
 }
 function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
@@ -200,14 +210,14 @@ function render(){
  const parent=pv('previewList');parent.replaceChildren();
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent='Keine passenden Serien gefunden.';parent.append(empty);return;}
  for(const s of shown){
-  const trailer=pickedTrailer(s),candidates=trailerCandidates(s),article=document.createElement('article');article.className='preview-item';
+  const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ Vollständigen Trailer ansehen</a>':'';
   const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
   const decided=s.votes.filter(v=>v.value&&v.value.toLowerCase()!=='default');
   const votes=decided.length?decided.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Stimmen</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2>'+safeText(s.title)+'</h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.english)+'</p>':'')+
   '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?'Vollständiger Trailer verfügbar':trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
-  '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="https://www.livechart.me/">LiveChart öffnen</a></div>'+choices+
+  '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="'+safeText(mal.url)+'">'+mal.label+'</a></div>'+choices+
   '<div class="preview-votes"><div class="preview-vote-title">Gruppen-Entscheidung · aus Google Sheets</div><div class="preview-vote-chips">'+votes+'</div>'+votingControls(s)+'</div></div>';
   parent.append(article);
  }
@@ -225,8 +235,13 @@ async function selectSeason(gid){
 }
 async function start(){
  try{
-  const [tabs,metadata]=await Promise.all([listSeasonTabs(),fetch('season-trailers.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}}))]);
+  const [tabs,metadata,animeData]=await Promise.all([
+   listSeasonTabs(),
+   fetch('season-trailers.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}})),
+   fetch('seasons.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}}))
+  ]);
   seasonTabs=tabs;seasonIndex=metadata&&typeof metadata==='object'?metadata:{seasons:{}};
+  animeIndex=animeData&&typeof animeData==='object'?animeData:{seasons:{}};
   const sel=pv('previewSeason');
   if(!tabs.length){state('Noch keine eigenständige Season-Liste gefunden. Sobald z. B. „Winter 2027“ im Google Sheet angelegt wird, erscheint sie hier.');return;}
   for(const t of tabs){const opt=document.createElement('option');opt.value=t.gid;opt.textContent=t.name;sel.append(opt);}
