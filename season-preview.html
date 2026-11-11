@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.anilist.co; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#121216">
+<title>Season Preview · Anime Schedule</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="season-preview.css">
+<script defer src="common.js"></script><script defer src="season-preview.js"></script>
+</head>
+<body class="preview-page">
+<header class="preview-header"><a href="./" class="preview-back" aria-label="Zurück zum Zeitplan">‹ <span>Zeitplan</span></a><div class="preview-brand"><b>Season Preview</b><small>Trailer · Abstimmung · nächste Season</small></div><span class="preview-label">Anime Schedule</span></header>
+<main class="preview-shell">
+<section class="preview-hero"><div><span class="preview-kicker">NÄCHSTE SEASON</span><h1 id="previewTitle">Season Preview</h1><p id="previewIntro">Die Serienreihenfolge kommt direkt aus der Season-Liste in Google Sheets.</p></div><div class="preview-actions"><label for="previewSeason">Season</label><select id="previewSeason" aria-label="Season auswählen"></select><a id="previewPlaylist" class="pill" href="#" target="_blank" rel="noopener" hidden>▶ YouTube Playlist</a></div></section>
+<div id="previewStatus" class="preview-status" role="status" aria-live="polite">Season-Listen werden geladen …</div>
+<div id="previewStats" class="preview-stats" hidden></div>
+<div class="preview-toolbar"><label class="preview-search">Serien suchen <input id="previewSearch" type="search" placeholder="Titel filtern …" autocomplete="off"></label><label class="preview-filter">Trailer <select id="previewFilter"><option value="all">Alle</option><option value="ready">Mit Trailer</option><option value="missing">Noch ohne Trailer</option></select></label></div>
+<div id="previewList" class="preview-list" aria-live="polite"></div>
+<section class="preview-info"><h2>Trailer &amp; Planung</h2><p>Wir zeigen bevorzugt <strong>offizielle vollständige Trailer</strong>, die tatsächlich Szenen der Serie zeigen. Teaser, reine Titelankündigungen und Fan-Edits werden nicht übernommen. Deutsch oder Englisch untertitelte Videos werden bevorzugt, wenn das verlässlich geprüft werden kann.</p><p>LiveChart ist eine hilfreiche Quelle für die Suche nach Trailern mit passenden Untertiteln. Ist noch kein geprüfter Trailer hinterlegt, bleibt die Serie in der Liste und wird nicht durch einen zufälligen YouTube-Treffer ersetzt.</p><p><strong>Abstimmung:</strong> Ja, Nein, Vielleicht, Demons, Allein, Default, Wenn Belly dabei ist und Okinawa 3 sind die Optionen deiner Gruppe. Die vorhandenen Google-Sheet-Stimmen können hier angezeigt werden. Neue Stimmen sind bis zur Einrichtung einer sicheren Anmeldung gesperrt; die Seite ändert den aktuellen Zeitplan nicht.</p></section>
+</main></body></html>
