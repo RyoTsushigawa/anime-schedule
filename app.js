@@ -542,8 +542,13 @@ if (streaming && !listed.length && aniWorldDown() && Number(mediaId) > 0) altern
 else if (streaming && !listed.length) alternatives.push(/^https:\/\/aniworld\.to\/anime\/stream\/[^\s"<>]+$/.test(source.aniworld || '')
 ? { label: 'AniWorld', url: source.aniworld }
 : { label: 'AniWorld-Suche', url: 'https://aniworld.to/search?q=' + encodeURIComponent(title) });
-return shown.map(button).join('') + alternatives.map(alternativeButton).join('');
+// one button: the preferred service first (settings → Bevorzugter Dienst), then the fixed order; the rest behind "+N"
+const rank = l => l.label === preferredService() ? -1 : (i => i < 0 ? 99 : i)(SERVICES.findIndex(sv => sv.label === l.label));
+const [first, ...rest] = [...shown].sort((a, b) => rank(a) - rank(b));
+const more = rest.length ? `<button type="button" class="stream-more" data-stream-more aria-expanded="false" title="Auch bei ${esc(rest.map(l => l.label).join(', '))}">+${rest.length}</button><span class="stream-alternatives" hidden>${rest.map(button).join('')}</span>` : '';
+return (first ? button(first) : '') + more + alternatives.map(alternativeButton).join('');
 }
+const preferredService = () => { try { return localStorage.getItem('servicePriority') || 'Crunchyroll'; } catch { return 'Crunchyroll'; } };
 const searchKey = (...titles) => `data-search="${esc(titles.filter(Boolean).map(norm).join(' '))}"`;
 function applySearch() {
 const q = norm($('search').value);
@@ -609,6 +614,13 @@ function rememberSearch() {
 drawRecentSearches();
 $('search').addEventListener('input', () => { clearTimeout(recentTimer); recentTimer = setTimeout(rememberSearch, 1500); });
 $('search').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(recentTimer); rememberSearch(); } });
+$('list').addEventListener('click', e => {
+const more = e.target.closest('[data-stream-more]');
+if (!more) return;
+const others = more.nextElementSibling;
+others.hidden = !others.hidden;
+more.setAttribute('aria-expanded', String(!others.hidden));
+});
 $('list').addEventListener('click', e => {
 const chip = e.target.closest('#airingWarnings');
 if (!chip) return;
@@ -1509,9 +1521,15 @@ if (id === 'moveButtons') syncMoveEditor();
 };
 }
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
-const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
+const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'servicePriority', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
   'who', 'behind', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
   'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
+{
+  const select = $('servicePriority');
+  select.replaceChildren(...SERVICES.filter(sv => sv.main).map(sv => new Option(sv.label, sv.label)));
+  select.value = preferredService();
+  select.onchange = () => { try { localStorage.setItem('servicePriority', select.value); } catch {} load(true); };
+}
 $('settingsExport').onclick = () => {
   const settings = {};
   for (const key of EXPORTED_SETTINGS) { try { const v = localStorage.getItem(key); if (v != null) settings[key] = v; } catch {} }
