@@ -67,7 +67,8 @@ function trailerCandidates(show){
  const seen=new Set();
  const videos=all.flatMap(item=>{
   const video=verifiedTrailer(item);
-  if(!video||seen.has(video.id))return [];
+  const availability=seasonIndex.seasons?.[seasonKey(current)]?.videoStatus?.[video?.id];
+  if(!video||availability?.available===false||seen.has(video.id))return [];
   if(shows.some(s=>s!==show && verifiedTrailer(detailsFor(s))?.id===video.id))return [];
   seen.add(video.id);return [video];
  });
