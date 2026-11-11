@@ -8,6 +8,7 @@ const clean = s => String(s || '').trim();
 const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, previewCandidates = {seasons:{}}, current = null, shows = [], people = [];
 let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
+let carryoverNotice = '', seasonRequest = 0;
 function state(msg) {pv('previewStatus').textContent=msg;}
 function seasonKey(tab){const m=tab.name.match(PV_SEASONS);return m ? m[1].toLowerCase()+'-'+m[2] : '';}
 function parseSeasonRows(rows){
@@ -57,6 +58,43 @@ function malLink(show){
 function carryoverStatus(show){
  const entries=previewCandidates.seasons?.[seasonKey(current)]?.entries;
  return entries?.find(e=>e.key===show.key)?.carriedOver ?? null;
+}
+// Hide continuing titles from the preview, not from the Google Sheet.
+function previousTab(tab){
+ const match=tab?.name.match(PV_SEASONS);
+ if(!match)return null;
+ const month=PV_MONTHS[match[1].toLowerCase()],year=Number(match[2]);
+ const previousMonth=(month+9)%12,previousYear=year-(month===0?1:0);
+ return seasonTabs.find(t=>{
+  const candidate=t.name.match(PV_SEASONS);
+  return candidate&&Number(candidate[2])===previousYear&&PV_MONTHS[candidate[1].toLowerCase()]===previousMonth;
+ })||null;
+}
+function comparableTitles(show){
+ return [show.title,show.english].map(s=>clean(s).normalize('NFKC').toLocaleLowerCase()
+  .replace(/[\s\p{P}\p{S}]+/gu,' ').trim()).filter(Boolean);
+}
+function withoutCarryovers(items,previous){
+ const oldTitles=new Set(previous.flatMap(comparableTitles));
+ return items.filter(item=>!comparableTitles(item).some(name=>oldTitles.has(name)));
+}
+async function prepareShows(tab){
+ const oldTab=previousTab(tab);
+ const [items,previous]=await Promise.all([
+  sheetRows(tab.gid).then(parseSeasonRows),
+  oldTab?sheetRows(oldTab.gid).then(parseSeasonRows).catch(error=>{
+   console.warn('Previous season list unavailable:',error);
+   return null;
+  }):Promise.resolve(null)
+ ]);
+ // A missing previous-season list is not proof that a show is new.
+ // Exclude only positively identified carryovers from the review report in that case.
+ const eligible=previous?withoutCarryovers(items,previous):
+  items.filter(item=>previewCandidates.seasons?.[seasonKey(tab)]?.entries?.find(e=>e.key===item.key)?.carriedOver!==true);
+ const excluded=items.length-eligible.length;
+ carryoverNotice=previous===null?'Vorherige Season nicht abgeglichen; bestätigte Übernahmen bleiben ausgeblendet.':
+  excluded?excluded+' Übernahmen aus der vorherigen Season ausgeblendet.':'';
+ return eligible.map((show,i)=>({...show,order:i+1}));
 }
 function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
@@ -180,10 +218,10 @@ async function refreshSheet(silent=false){
  if(!current||saving.size)return;
  const gid=current.gid;
  try{
-  const latest=parseSeasonRows(await sheetRows(gid));
+  const latest=await prepareShows(current);
   if(current?.gid!==gid)return;
   shows=latest;
-  if(!silent)state('Google Sheets aktualisiert.');
+  if(!silent)state('Google Sheets aktualisiert.'+(carryoverNotice?' '+carryoverNotice:''));
   updateMemberUI();render();
  }catch(error){if(!silent)state('Aktualisierung fehlgeschlagen: '+error.message);}
 }
@@ -276,15 +314,22 @@ function render(){
  }
 }
 async function selectSeason(gid){
- current=seasonTabs.find(t=>t.gid===gid);if(!current)return;
- state('Lade '+current.name+' …');
+ const next=seasonTabs.find(t=>t.gid===gid);if(!next)return;
+ current=next;
+ const request=++seasonRequest;
+ state('Lade '+next.name+' …');
  try{
-  const rows=await sheetRows(current.gid);
-  shows=parseSeasonRows(rows);
-  state('Live aus der Season-Liste · Google Sheets ist die gemeinsame Datenquelle.');
+  const latest=await prepareShows(next);
+  if(request!==seasonRequest||current?.gid!==gid)return;
+  shows=latest;
+  state('Live aus der Season-Liste · Google Sheets ist die gemeinsame Datenquelle.'+(carryoverNotice?' '+carryoverNotice:''));
   updateMemberUI();
   render();
- }catch(e){shows=[];pv('previewList').replaceChildren();pv('previewStats').hidden=true;state('Season konnte nicht geladen werden: '+e.message);}
+ }catch(e){
+  if(request!==seasonRequest)return;
+  shows=[];pv('previewList').replaceChildren();pv('previewStats').hidden=true;
+  state('Season konnte nicht geladen werden: '+e.message);
+ }
 }
 async function start(){
  try{
