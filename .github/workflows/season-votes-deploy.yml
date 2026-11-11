@@ -1,0 +1,39 @@
+name: Deploy Season Preview voting Worker
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+      GOOGLE_PRIVATE_KEY: ${{ secrets.SEASON_GOOGLE_PRIVATE_KEY }}
+      SHEET_ID: ${{ secrets.SEASON_SHEET_ID }}
+      VOTER_MAP_JSON: ${{ secrets.SEASON_VOTER_MAP_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check required secrets
+        run: |
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GOOGLE_SERVICE_ACCOUNT_EMAIL GOOGLE_PRIVATE_KEY SHEET_ID VOTER_MAP_JSON; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required secret: $name"
+              exit 1
+            fi
+          done
+      - name: Deploy voting Worker
+        run: npx --yes wrangler@4 deploy --config workers/season-votes/wrangler.toml
+      - name: Apply Worker secrets
+        run: |
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_EMAIL" | npx --yes wrangler@4 secret put GOOGLE_SERVICE_ACCOUNT_EMAIL --config workers/season-votes/wrangler.toml
+          printf '%s' "$GOOGLE_PRIVATE_KEY" | npx --yes wrangler@4 secret put GOOGLE_PRIVATE_KEY --config workers/season-votes/wrangler.toml
+          printf '%s' "$SHEET_ID" | npx --yes wrangler@4 secret put SHEET_ID --config workers/season-votes/wrangler.toml
+          printf '%s' "$VOTER_MAP_JSON" | npx --yes wrangler@4 secret put VOTER_MAP_JSON --config workers/season-votes/wrangler.toml
+      - name: Deployment instructions
+        run: echo "After deployment, add the worker's URL to config.json as previewVotesUrl. Do not put secrets in config.json."
