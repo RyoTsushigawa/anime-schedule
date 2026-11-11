@@ -32,7 +32,7 @@ test('skipped episodes become due when aired, while ordinary episodes retain the
 
 test('a skipped schedule row retains streaming links and the watched checkmark', () => {
  const pause = source.slice(source.indexOf('const pause = ('), source.indexOf('const rewatch = ('));
- assert.match(pause, /skipped && links\?\.length \? linkButtons\(links, alId, who\)/);
+ assert.match(pause, /skipped && alId \? linkButtons\(links \|\| \[\], alId, who\)/);
  assert.match(pause, /skipped && alId && episode > 0/);
  assert.match(pause, /watchButton\(alId, episode\)/);
  assert.match(source, /skipped: true, show, slot, when, episode, alId: m\.id, links/);
