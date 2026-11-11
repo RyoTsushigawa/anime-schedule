@@ -1,0 +1,26 @@
+/* Spiele: Titel-Rätsel */
+.game { max-width: 520px; margin: 18px auto 40px; padding: 0 16px; display: grid; gap: 14px; justify-items: center; }
+.game-head { display: flex; align-items: center; gap: 10px; width: 100%; }
+.game-head b { font-size: 18px; }
+.game-hint { color: var(--muted); font-size: 13px; }
+.game-help { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-weight: 700; cursor: help; }
+.board { display: grid; gap: 6px; }
+.board-row { display: grid; grid-template-columns: repeat(var(--len), 52px); gap: 6px; }
+.tile { height: 52px; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 8px; font-size: 24px; font-weight: 750; text-transform: uppercase; color: var(--text); background: var(--card); }
+.tile.typed { border-color: var(--muted); }
+.tile.hit, .key.hit { background: #2f9e57; border-color: #2f9e57; color: #fff; }
+.tile.near, .key.near { background: #c9a227; border-color: #c9a227; color: #fff; }
+.tile.miss, .key.miss { background: color-mix(in srgb, var(--muted) 45%, var(--bg)); border-color: transparent; color: #fff; }
+.game-msg { min-height: 20px; margin: 0; color: var(--muted); font-size: 13px; text-align: center; white-space: pre-line; }
+.game-end { display: grid; gap: 12px; justify-items: center; text-align: center; }
+.game-answer { margin: 0; font-size: 15px; }
+.game-stats { display: flex; gap: 18px; }
+.game-stats span { display: grid; font-size: 12px; color: var(--muted); }
+.game-stats b { font-size: 20px; color: var(--text); }
+.game-next { margin: 0; font-size: 12px; color: var(--muted); }
+.keyboard { display: grid; gap: 6px; width: 100%; }
+.key-row { display: flex; justify-content: center; gap: 5px; }
+.key { flex: 0 1 42px; height: 48px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+.key.wide { flex-basis: 66px; font-size: 13px; }
+.key:hover { border-color: var(--accent); }
+@media (max-width: 480px) { .board-row { grid-template-columns: repeat(var(--len), minmax(30px, 42px)); } .tile { height: 42px; font-size: 20px; } }

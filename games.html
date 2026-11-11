@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Spiele</title>
+<link rel="icon" type="image/png" href="icon-72.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="games.css">
+</head>
+<body class="games-page">
+<header>
+<div class="bar">
+<a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
+<h1>Spiele</h1>
+<div>Titel-Rätsel · jeden Tag ein neuer Anime aus dem Guckplan</div>
+</div>
+</div>
+</header>
+<main class="game">
+<div class="game-head"><b id="gameNumber">Titel-Rätsel</b><span id="gameHint" class="game-hint"></span><button type="button" id="gameHelp" class="game-help" aria-label="So geht's" title="Errate das Wort aus einem Anime-Titel im Guckplan, in 6 Versuchen. Grün: Buchstabe an der richtigen Stelle. Gelb: kommt vor, aber woanders. Grau: kommt nicht vor. Jeden Tag ein neues Wort, für alle dasselbe.">?</button></div>
+<div id="board" class="board" role="grid" aria-label="Spielfeld"></div>
+<p id="gameMsg" class="game-msg" role="status" aria-live="polite"></p>
+<div id="gameEnd" class="game-end" hidden>
+<p id="gameAnswer" class="game-answer"></p>
+<div class="game-stats" id="gameStats"></div>
+<button type="button" id="gameShare" class="pill primary">Teilen</button>
+<p class="game-next" id="gameNext"></p>
+</div>
+<div id="keyboard" class="keyboard" aria-label="Tastatur"></div>
+</main>
+<script src="games.js"></script>
+</body>
+</html>
