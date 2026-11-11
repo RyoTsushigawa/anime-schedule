@@ -6,18 +6,19 @@ import { readFile, writeFile } from 'node:fs/promises';
 const file='season-trailers.json';
 const yt='https://www.googleapis.com/youtube/v3/';
 const safeId=id=>typeof id==='string'&&/^[\w-]{11}$/.test(id);
-export function chooseVideo(entry){
+export function chooseVideo(entry,unavailable=new Set()){
  if(!entry||entry.sequelStatus!=='not_sequel')return null;
  const valid=c=>c&&c.verified===true&&c.footageVerified===true&&
    c.sequelStatus==='not_sequel'&&safeId(c.youtubeId)&&
    (c.type==='full_trailer'||(c.type==='teaser'&&c.fallbackApproved===true&&c.fullTrailerUnavailable===true));
- const all=[entry,...(Array.isArray(entry.candidates)?entry.candidates:[])].filter(valid);
+ const all=[entry,...(Array.isArray(entry.candidates)?entry.candidates:[])].filter(v=>valid(v)&&!unavailable.has(v.youtubeId));
  return all.find(e=>e.type==='full_trailer')||all.find(e=>e.type==='teaser')||null;
 }
 export function desiredVideos(season,entries){
  const chosen=new Set(),result=[];
+ const unavailable=new Set(Object.entries(season?.videoStatus||{}).filter(([,v])=>v?.available===false).map(([id])=>id));
  for(const row of entries){
-  const video=chooseVideo(season?.trailers?.[row.key]);
+  const video=chooseVideo(season?.trailers?.[row.key],unavailable);
   if(!video||chosen.has(video.youtubeId))continue;
   chosen.add(video.youtubeId);result.push(video.youtubeId);
  }
@@ -41,6 +42,22 @@ async function auth(){
  const data=await res.json();
  if(!res.ok||!data.access_token)throw Error('YouTube OAuth failed: '+JSON.stringify(data).slice(0,300));
  accessToken=data.access_token;
+}
+async function checkVideoAvailability(season,entries){
+ const ids=[...new Set(entries.flatMap(row=>{
+  const entry=season?.trailers?.[row.key];
+  return [entry,...(Array.isArray(entry?.candidates)?entry.candidates:[])].filter(x=>
+   x?.verified===true&&x?.footageVerified===true&&x?.sequelStatus==='not_sequel'&&safeId(x.youtubeId)
+  ).map(x=>x.youtubeId);
+ }))];
+ season.videoStatus||={};
+ for(let i=0;i<ids.length;i+=50){
+  const batch=ids.slice(i,i+50);
+  const response=await request('videos?'+qs({part:'status',id:batch.join(','),maxResults:50}));
+  const accessible=new Set((response.items||[]).filter(v=>['public','unlisted'].includes(v.status?.privacyStatus)).map(v=>v.id));
+  for(const id of batch)season.videoStatus[id]={available:accessible.has(id),lastChecked:new Date().toISOString()};
+ }
+ return ids.length;
 }
 async function createPlaylist(title){
  const result=await request('playlists?part=snippet,status','POST',{
@@ -97,7 +114,15 @@ async function main(){
   if(!rows?.entries?.length)continue;
   const destination=catalog.seasons[name]||{trailers:{}};
   destination.trailers||={};
+  await checkVideoAvailability(destination,rows.entries);
   const desired=desiredVideos(destination,rows.entries);
+  for(const row of rows.entries){
+   const entry=destination.trailers?.[row.key];
+   if(!entry||!entry.youtubeId)continue;
+   const live=destination.videoStatus[entry.youtubeId]?.available;
+   if(live===false)entry.youtubeStatus='unavailable';
+   else if(live===true&&entry.youtubeStatus==='unavailable')delete entry.youtubeStatus;
+  }
   let playlistId=destination.youtubePlaylistId;
   if(!playlistId){
    playlistId=await createPlaylist(rows.title||name);
