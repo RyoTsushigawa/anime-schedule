@@ -69,14 +69,14 @@
 
 /* Anime cards */
 .preview-list{display:grid;gap:12px}
-.preview-item{display:grid;grid-template-columns:36px minmax(0,1fr);gap:13px;padding:18px 19px;border:1px solid var(--line);border-radius:13px;background:var(--card);min-width:0}
+.preview-item{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:13px;padding:12px 16px;border:1px solid var(--line);border-radius:13px;background:var(--card);min-width:0}
 .preview-item:hover{border-color:color-mix(in srgb,var(--accent) 27%,var(--line))}
-.preview-item>div:last-child{min-width:0}
+.preview-item>div:nth-child(2){min-width:0}
 .preview-order{height:36px;width:36px;display:grid;place-items:center;background:var(--bg);border-radius:9px;font-size:12px;font-weight:750;color:var(--muted);font-variant-numeric:tabular-nums}
 .preview-item h2{margin:0 0 4px;line-height:1.3;font-size:17px;font-weight:750;letter-spacing:-.015em;overflow-wrap:anywhere}
 .preview-title-link{color:var(--text);text-decoration:none;text-underline-offset:3px}
 .preview-title-link:hover{color:var(--accent);text-decoration:underline}
-.preview-eng{color:var(--muted);font-size:12px;line-height:1.4;margin:0 0 10px;overflow-wrap:anywhere}
+.preview-eng{color:var(--muted);font-size:12px;line-height:1.4;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .preview-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
 .preview-chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:11px;line-height:1.4;color:var(--muted);max-width:100%;overflow-wrap:anywhere}
 .preview-chip.ready{background:color-mix(in srgb,var(--accent) 9%,var(--card));border-color:color-mix(in srgb,var(--accent) 32%,var(--line));color:var(--text)}
@@ -140,7 +140,7 @@
  .preview-toolbar{gap:9px}
  .preview-toolbar .preview-search{flex:1 1 100%}
  .preview-toolbar .preview-filter,.preview-toolbar .preview-vote-filter{flex:1 1 145px}
- .preview-item{padding:14px;grid-template-columns:32px minmax(0,1fr);gap:10px}
+ .preview-item{padding:11px 12px;grid-template-columns:32px minmax(0,1fr) auto;gap:10px}
  .preview-order{width:32px;height:32px}
  .preview-item h2{font-size:16px}
  .preview-votes{padding:12px}
@@ -165,7 +165,7 @@
  .preview-toolbar{padding:10px}
  .preview-toolbar .preview-filter,.preview-toolbar .preview-vote-filter{flex:1 1 100%}
  .preview-toolbar>button{order:0;flex:1 1 100%}
- .preview-item{padding:12px;grid-template-columns:26px minmax(0,1fr);gap:9px}
+ .preview-item{padding:10px;grid-template-columns:26px minmax(0,1fr) auto;gap:9px}
  .preview-order{width:26px;height:28px;font-size:11px}
  .preview-item h2{font-size:15px}
  .preview-choices .preview-choice{min-width:0;padding:9px 5px}
@@ -175,3 +175,12 @@
  .preview-links a{flex:1 1 auto}
 }
 @media(prefers-reduced-motion:reduce){.preview-page *{scroll-behavior:auto}}
+
+/* compact cards: the trailer button or a short note on the right */
+.preview-item h2{margin:0}
+.preview-watch{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--text);text-decoration:none;font-size:13px;font-weight:650;white-space:nowrap}
+.preview-watch:hover{border-color:var(--accent);color:var(--accent)}
+.preview-watch small{font-size:10px;font-weight:700;color:var(--muted)}
+.preview-none{font-size:12px;color:var(--muted);white-space:nowrap}
+.preview-list{gap:8px}
+p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px 0}
