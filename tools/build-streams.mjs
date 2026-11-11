@@ -211,7 +211,12 @@ async function breakNews(livechartId) {
 // Notes on LiveChart's timetable ("There will be no broadcast today due to sports coverage."),
 // for this week and next: LiveChart id → [{at, text}] (at = the slot's time).
 const LONG_EPISODE = /\b(?:double[- ]length|extended|expanded|special[- ]length|(?:one|1)[- ]hour|hour[- ]long|(?:4[5-9]|[5-9]\d|1[0-2]\d)[- ]?min(?:ute)?s?\b)/i;
-const NOT_LONG = /\b(?:delay(?:ed|s)?|later|earlier|postpone[sd]?|pushed|moved|break|hiatus|no (?:episode|broadcast)|will not air|won'?t air)\b/i;
+const NOT_LONG = /\b(?:delay(?:ed|s)?|later|earlier|postpone[sd]?|pushed|moved|break|hiatus|no (?:episode|broadcast)|will not air|won'?t air|recap|compilation)\b/i;
+// An extended broadcast is not necessarily an extended episode.
+const NON_EPISODE_BROADCAST = /\b(?:recap|compilation|cast special|voice actor|talk show|behind[- ]the[- ]scenes|interview|special (?:program(?:me)?|broadcast|event)|variety show)\b/i;
+const REGULAR_EPISODE_NOTE = /\b(?:episode|premiere|finale)\b|\bep\.?\s*\d+\b/i;
+const confirmedLongNote = text => LONG_EPISODE.test(text) && !NOT_LONG.test(text)
+  && !NON_EPISODE_BROADCAST.test(text) && REGULAR_EPISODE_NOTE.test(text);
 async function timetableNotes() {
   const notes = {};
   for (const days of [0, 7]) {
@@ -359,22 +364,28 @@ for (const t of titles) {
   // A recap is a broadcast, but not a regular episode. Preserve confirmed
   // annotations across daily builds because timetable notes are short-lived.
   const oldRecaps = previous?.status?.[card.anilist]?.recaps || [];
-  const recapNotes = notes.filter(n => /\\brecap(?: episode)?\\b/i.test(n.text));
+  const recapNotes = notes.filter(n => /\brecap(?: episode)?\b/i.test(n.text));
   const recaps = [...oldRecaps];
   for (const note of recapNotes) {
     const episode = next && Math.abs(next.at - note.at) < 2 * 86400 ? next.episode : null;
     if (episode && !recaps.some(r => r.episode === episode))
       recaps.push({ episode, at: next.at });
   }
-  // An overlong episode ("one-hour special", "double-length premiere", "extended 45-minute episode")
-  // takes two watch slots on the page. Kept across builds like recaps.
+  // Replacement programming is a break, not an extended main episode.
+  const breaks = [...(previous?.status?.[card.anilist]?.broadcastBreaks || [])];
+  for (const note of notes.filter(n => NON_EPISODE_BROADCAST.test(n.text) && !/\brecap\b/i.test(n.text))) {
+    const episode = next && Math.abs(next.at - note.at) < 2 * 86400 ? next.episode : null;
+    if (episode && !breaks.some(r => r.episode === episode && r.at === next.at))
+      breaks.push({ episode, at: next.at, text: note.text });
+  }
+  // Only confirmed long regular episodes consume two slots.
   const long = [...(previous?.status?.[card.anilist]?.long || [])];
-  for (const note of notes.filter(n => LONG_EPISODE.test(n.text) && !NOT_LONG.test(n.text))) {
+  for (const note of notes.filter(n => confirmedLongNote(n.text))) {
     const episode = next && Math.abs(next.at - note.at) < 2 * 86400 ? next.episode : null;
     if (episode && !long.some(r => r.episode === episode)) long.push({ episode, at: next.at });
   }
-  // LiveChart's "※ NOTE: Double-length premiere" on the show's card: the first (or last) episode
-  for (const note of (card.list?.notes || []).filter(n => LONG_EPISODE.test(n) && !NOT_LONG.test(n))) {
+  // LiveChart's card notes identify extended premieres and finales.
+  for (const note of (card.list?.notes || []).filter(confirmedLongNote)) {
     const mark = /premiere|first episode|\bep(?:isode)?\.? ?1\b/i.test(note) ? { episode: 1 }
       : /finale|final episode|last episode/i.test(note) ? { finale: true } : null;
     if (mark && !long.some(r => mark.finale ? r.finale : r.episode === 1)) long.push(mark);
@@ -386,7 +397,7 @@ for (const t of titles) {
     .filter(a => Number.isInteger(a.episode) && a.at > Date.now() / 1000 - 42 * 86400)
     .map(a => [a.episode, a]));
   status[card.anilist] = { titles: t, url: `https://www.livechart.me/anime/${card.id}`, next,
-    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(recaps.length && { recaps }), ...(long.length && { long }), ...(notes.length && { notes }), ...(video && { video }) };
+    airings: [...observed.values()].sort((a, b) => a.at - b.at).slice(-200), news, ...(recaps.length && { recaps }), ...(breaks.length && { broadcastBreaks: breaks }), ...(long.length && { long }), ...(notes.length && { notes }), ...(video && { video }) };
   console.log(`${t[1] || t[0]}: ${byAnilist[card.anilist].map(s => s.name + (s.extra ? ` (+${s.extra})` : '')).join(', ') || '(none)'}` +
     (offset ? ` · ${offset.service} ${offset.offset >= 0 ? '+' : ''}${Math.round(offset.offset / 60)} min${offset.lag ? `, ${offset.lag} weeks behind` : ''}` : '') +
     (next ? '' : ' · nothing scheduled') + (video ? `\n    newest on YouTube: Episode ${video.episode}` : '') + news.map(n => `\n    news: ${n.title}`).join('') + notes.map(n => `\n    note: ${n.text}`).join(''));
