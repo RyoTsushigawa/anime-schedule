@@ -1099,7 +1099,7 @@ const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missin
           <div class="title">${esc(show.english || show.romaji)}${skipped || recap ? `<span class="ep-tag">${skipped ? (missing?.length ? 'Abwesend' : 'Skip') : 'Recap'}</span>` : ''}</div>
           <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? missing.every(p => maybe?.includes(p)) ? `${missing.map(esc).join(', ')} spontan da` : `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' <span class="keep-time-note">Zeiten beibehalten</span>' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>
         </div>
-        <div class="links">${skipped && links?.length ? linkButtons(links, alId, who) : ''}</div>
+        <div class="links">${skipped && alId ? linkButtons(links || [], alId, who) : ''}</div>
         ${skipped && alId && episode > 0 ? `${auth ? dropButton(alId) : ''}${watchButton(alId, episode)}` : checkSpace}${moveButton(show, slot)}
       </div>`;
 const rewatch = ({ m, links, watchAt, who, show, slot }) => `
