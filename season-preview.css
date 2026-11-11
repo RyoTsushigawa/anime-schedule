@@ -164,3 +164,24 @@
  .preview-results{align-items:flex-start}
 }
 @media(prefers-reduced-motion:reduce){.preview-item{transition:none}}
+
+
+/* Personal voting: visible choice state, balanced tap targets, and inline save feedback. */
+.preview-vote-filter{flex:1 1 145px}
+.preview-vote-filter select{width:100%;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:42px}
+.preview-voting{display:grid;gap:8px}
+.preview-voting .preview-vote-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin:0}
+.preview-own-vote{font-weight:600;color:var(--accent);background:var(--today);border-radius:99px;padding:3px 9px;line-height:1.5}
+.preview-choices{gap:7px}
+.preview-choices .preview-choice{border-radius:99px;min-height:40px;padding:8px 14px;transition:border-color .12s ease,background .12s ease}
+.preview-choices .preview-choice.selected{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:700}
+.preview-choices .preview-reset{min-height:40px}
+.preview-vote-feedback{font-size:12px;color:var(--muted);margin:0}
+.preview-vote-feedback.success{color:var(--green)}
+.preview-vote-feedback.error{color:var(--text);font-weight:600}
+.preview-vote-filter[hidden]{display:none!important}
+@media(max-width:700px){
+ .preview-vote-filter{flex:1 1 100%}
+ .preview-choices .preview-choice{flex:1 1 auto}
+}
+@media(prefers-reduced-motion:reduce){.preview-choices .preview-choice{transition:none}}
