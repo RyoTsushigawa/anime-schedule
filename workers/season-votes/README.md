@@ -11,12 +11,13 @@ Google login (the same OAuth client as the trailer playlists, but a separate key
 2. On the PC in `tools`: `node youtube-login.mjs --sheets`, log in with the account that owns the Guckplan sheet.
    It saves `tools/sheets-refresh-token.txt` (PC only, never uploaded or pasted anywhere).
 3. GitHub **Actions** secrets: `SEASON_GOOGLE_REFRESH_TOKEN` (that file's line), `SEASON_SHEET_ID`,
-   `SEASON_GROUP_ACCESS_CODE` (16+ random characters, shared privately with the group), `CLOUDFLARE_API_TOKEN`
+   `CLOUDFLARE_API_TOKEN`
    (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`. `YOUTUBE_CLIENT_ID`/`YOUTUBE_CLIENT_SECRET` are
    reused. (A service account still works where allowed: `SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL` + `SEASON_GOOGLE_PRIVATE_KEY`.)
 4. Run the manual GitHub Actions workflow **Deploy Season Preview voting Worker**.
 5. Add the Worker's URL as `previewVotesUrl` in `config.json`; the voting bar then appears on the Season Preview.
-6. Enter the group code there once per browser session, choose a name, vote.
+6. Choose a name, vote. Voting is open (the owner's choice); an optional `SEASON_GROUP_ACCESS_CODE` (16+ random
+   characters) would ask for a shared code once per browser session.
 
 ## What the Worker enforces
 

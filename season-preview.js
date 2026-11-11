@@ -214,13 +214,15 @@ function currentVoter(){return pv('previewPerson').value||member?.person||'';}
 function storedGroupCode(){
  try{return sessionStorage.getItem('previewGroupCode')||'';}catch{return '';}
 }
+// the name chosen here before, else the person from the schedule's Solo view
 function selectedGroupPerson(){
- try{return localStorage.getItem('previewVotePerson')||'';}catch{return '';}
+ try{return localStorage.getItem('previewVotePerson')||localStorage.getItem('ownPerson')||localStorage.getItem('soloPerson')||'';}catch{return '';}
 }
 function updateMemberUI(){
  const info=pv('previewVotingInfo'),selector=pv('previewPerson'),label=pv('previewPersonLabel');
  const form=pv('previewAccessForm'),lock=pv('previewLock');
- const unlocked=!!member&&!!groupCode;
+ // open voting (no group code on the service) or unlocked with the code
+ const unlocked=!!member;
  const previous=selector.value||selectedGroupPerson();
  const available=unlocked?people:[];
  selector.replaceChildren(...available.map(p=>new Option(p,p)));
@@ -228,7 +230,7 @@ function updateMemberUI(){
  else if(available.length)selector.value=available[0];
  label.hidden=selector.hidden=!available.length;
  form.hidden=!voteApi||unlocked;
- lock.hidden=!unlocked;
+ lock.hidden=!unlocked||!groupCode;
  const filter=pv('previewVoteFilterLabel');
  filter.hidden=!unlocked;
  if(!unlocked)pv('previewVoteFilter').value='all';
@@ -248,9 +250,12 @@ async function configureVoting(){
   settings.previewVotesUrl.replace(/\/$/,''):'';
  groupCode=voteApi?storedGroupCode():'';
  member=null;memberError='';
- if(voteApi&&groupCode){
+ if(voteApi){
+  // first without a code: if the service has none, voting is open right away
   try{await checkGroupAccess(groupCode);member={account:'Gruppe'};}
-  catch(error){groupCode='';try{sessionStorage.removeItem('previewGroupCode');}catch{}memberError=error.message;}
+  catch(error){
+   if(groupCode){groupCode='';try{sessionStorage.removeItem('previewGroupCode');}catch{}memberError=error.message;}
+  }
  }
  updateMemberUI();
  if(current)render();
@@ -290,7 +295,7 @@ async function refreshSheet(silent=false){
  }catch(error){if(!silent)state('Aktualisierung fehlgeschlagen: '+error.message);}
 }
 async function saveVote(show,choice){
- if(!member||!voteApi||!groupCode||saving.has(show.key))return;
+ if(!member||!voteApi||saving.has(show.key))return;
  const person=currentVoter();
  if(!validChoices(person).includes(choice)&&choice!=='Default')return;
  const old=voteValue(show,person),gid=current.gid;

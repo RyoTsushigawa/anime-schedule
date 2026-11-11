@@ -26,7 +26,7 @@ jobs:
           node-version: '22'
       - name: Check required secrets
         run: |
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SHEET_ID GROUP_ACCESS_CODE; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SHEET_ID; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing required secret: $name"
               exit 1
@@ -45,6 +45,7 @@ jobs:
             printf '%s' "${!name}" | npx --yes wrangler@4 secret put "$name" --config workers/season-votes/wrangler.toml
           done
           printf '%s' "$SHEET_ID" | npx --yes wrangler@4 secret put SHEET_ID --config workers/season-votes/wrangler.toml
-          printf '%s' "$GROUP_ACCESS_CODE" | npx --yes wrangler@4 secret put GROUP_ACCESS_CODE --config workers/season-votes/wrangler.toml
+          # optional: without a group code voting is open
+          if [ -n "$GROUP_ACCESS_CODE" ]; then printf '%s' "$GROUP_ACCESS_CODE" | npx --yes wrangler@4 secret put GROUP_ACCESS_CODE --config workers/season-votes/wrangler.toml; fi
       - name: Deployment instructions
         run: echo "After deployment, add the worker's URL to config.json as previewVotesUrl. Do not put secrets in config.json."
