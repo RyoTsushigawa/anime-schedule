@@ -9,16 +9,17 @@ const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, previewCandidates = {seasons:{}}, current = null, shows = [], people = [];
 let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
 let carryoverNotice = '', seasonRequest = 0;
+const checkedNewTitles = new Map();
 function state(msg) {pv('previewStatus').textContent=msg;}
 function seasonKey(tab){const m=tab.name.match(PV_SEASONS);return m ? m[1].toLowerCase()+'-'+m[2] : '';}
-function parseSeasonRows(rows){
+function parseSeasonRows(rows, updatePeople=true){
   const h = rows.findIndex(r=>r.some(c=>clean(c)==='Anime Titel'));
   if(h<0)throw Error('Die Season-Liste enthält keine Spalte „Anime Titel“.');
   const cols=rows[h].map(clean), title=cols.indexOf('Anime Titel'), english=cols.indexOf('Eng Anime Titel');
   const reserved=new Set(['Anime Titel','Eng Anime Titel','Wo','Tag','Uhrzeit','Startdatum','Sort','Slot','Genre','Studio','Staffel','Episode','Folgen']);
   const firstPerson=cols.indexOf('Uhrzeit')+1;
   const voters=cols.map((name,i)=>({name,i})).filter(x=>x.i>=firstPerson&&x.name&&!reserved.has(x.name));
-  people=voters.map(v=>v.name);
+  if(updatePeople)people=voters.map(v=>v.name);
   return rows.slice(h+1).filter(r=>clean(r[title])).map((r,i)=>({
     key:clean(r[title]).toLocaleLowerCase(),title:clean(r[title]),english:english<0?'':clean(r[english]),order:i+1,
     votes:voters.flatMap(({name,i})=>clean(r[i])?[{name,value:clean(r[i]).replace(/,$/,'')}]:[])
@@ -56,6 +57,7 @@ function malLink(show){
  return {url:'https://myanimelist.net/anime.php?q='+encodeURIComponent(show.english||show.title)+'&cat=anime',label:'Auf MyAnimeList suchen'};
 }
 function carryoverStatus(show){
+ if(checkedNewTitles.get(current?.gid)?.has(show.key))return false;
  const entries=previewCandidates.seasons?.[seasonKey(current)]?.entries;
  return entries?.find(e=>e.key===show.key)?.carriedOver ?? null;
 }
@@ -82,7 +84,7 @@ async function prepareShows(tab){
  const oldTab=previousTab(tab);
  const [items,previous]=await Promise.all([
   sheetRows(tab.gid).then(parseSeasonRows),
-  oldTab?sheetRows(oldTab.gid).then(parseSeasonRows).catch(error=>{
+  oldTab?sheetRows(oldTab.gid).then(rows=>parseSeasonRows(rows,false)).catch(error=>{
    console.warn('Previous season list unavailable:',error);
    return null;
   }):Promise.resolve(null)
@@ -92,6 +94,8 @@ async function prepareShows(tab){
  const eligible=previous?withoutCarryovers(items,previous):
   items.filter(item=>previewCandidates.seasons?.[seasonKey(tab)]?.entries?.find(e=>e.key===item.key)?.carriedOver!==true);
  const excluded=items.length-eligible.length;
+ if(previous)checkedNewTitles.set(tab.gid,new Set(eligible.map(item=>item.key)));
+ else checkedNewTitles.delete(tab.gid);
  carryoverNotice=previous===null?'Vorherige Season nicht abgeglichen; bestätigte Übernahmen bleiben ausgeblendet.':
   excluded?excluded+' Übernahmen aus der vorherigen Season ausgeblendet.':'';
  return eligible.map((show,i)=>({...show,order:i+1}));
