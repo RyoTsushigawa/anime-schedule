@@ -2236,8 +2236,17 @@ if (hm) day.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
 else day.setDate(day.getDate() + 1);
 return Math.max(released, day.getTime() / 1000);
 }
+// Shows the group sets out this week because too few watchers are there (Abwesend): like a manual skip,
+// their episode belongs in Catch-up as soon as it airs. Read from the shown week's group schedule.
+function absenceSkips() {
+const out = new Set();
+if (!lastWeekRender) return out;
+try { for (const d of render(...lastWeekRender, true)) for (const r of d.rows) if (r.pause && r.skipped && r.missing?.length && r.alId) out.add(r.alId + ':' + r.episode); } catch {}
+return out;
+}
 function catchupRows(entries, planShows, plan, person = soloPerson) {
 const now = Date.now() / 1000;
+const away = absenceSkips();
 const week = 7 * 86400;
 const mySlots = plan && person ? [...picks(plan, person)] : [];
 const recent = m => {
@@ -2255,7 +2264,7 @@ const slot = mine?.[1] || show;
 const lag = lagOf(m.id);
 const released = ep => next.airingAt - (next.episode - lag - ep) * week + offset;
 let out = next ? next.episode - lag - 1 : m.status === 'FINISHED' ? m.episodes : 0;
-while (next && out > progress && dueAt(released(out), slot, mine?.[0] || show) > now) out--;
+while (next && out > progress && (away.has(m.id + ':' + out) ? released(out) : dueAt(released(out), slot, mine?.[0] || show)) > now) out--;
 if (!out || out <= progress) continue;
 const first = progress + 1;
 const since = next ? released(first) : 0;
