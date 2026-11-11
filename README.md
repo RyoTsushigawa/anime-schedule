@@ -326,7 +326,7 @@ sheet, the daily workflow "Trailer playlists" makes an **unlisted** YouTube play
 owner's channel: one trailer per **new** show, in the list's order. Sequels (AniList lists a prequel, or "Season 2",
 "Part 2", "II" … in the title) and shows already in the previous season's list get none. The same picks fill the
 Season Preview page (`season-trailers.json`); there is no approval step. New, moved or removed shows follow on the next run.
-The planner shows "▶ Trailers" next to the list once the playlist exists. Lists that started more than three
+The Season Preview page (season-preview.html) shows "YouTube Playlist" once the playlist exists. Lists that started more than three
 weeks ago are left alone.
 
 Picking (`tools/trailers.mjs`): AniList's trailer, and a YouTube search only when that isn't clearly a full official trailer. Full trailers ("Main Trailer",
@@ -334,7 +334,7 @@ Picking (`tools/trailers.mjs`): AniList's trailer, and a YouTube search only whe
 subtitles can't be seen by the tool); videos blocked in Germany or not embeddable are out. Each show is searched
 once; a teaser, nothing, or a trailer without English/German subtitles is looked up again once a week until the
 season starts, since main trailers and subtitled versions come later.
-Before trailer night: the **↻** next to "▶ Trailers" in the planner (only with the GitHub key; it writes
+Before trailer night: **"Trailer neu suchen"** next to "YouTube Playlist" on the Season Preview (only with the GitHub key; it writes
 `.github/trailer-refresh.txt`, which starts the workflow), or Actions → "Trailer playlists" → Run workflow with
 **refresh**, searches all of those again
 right away (YouTube allows about 100 searches a day; whatever is left follows the next day).

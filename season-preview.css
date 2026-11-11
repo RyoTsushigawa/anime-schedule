@@ -31,9 +31,11 @@
 .preview-actions label{font-size:12px;color:var(--muted);font-weight:600;display:grid;gap:5px}
 .preview-actions select,.preview-toolbar input,.preview-toolbar select,.preview-member select,.preview-access input,.preview-external input{min-height:40px;max-width:100%;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px 11px}
 .preview-actions select{min-width:158px}
-.preview-actions a{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;background:var(--card);border:1px solid var(--line);color:var(--text);text-decoration:none;white-space:nowrap}
-.preview-actions a:hover{border-color:var(--accent)}
-.preview-actions a svg{flex:none}
+.preview-actions a,.preview-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;background:var(--card);border:1px solid var(--line);color:var(--text);text-decoration:none;white-space:nowrap}
+.preview-actions a:hover,.preview-actions button:hover:not(:disabled){border-color:var(--accent)}
+.preview-actions a svg,.preview-actions button svg{flex:none}
+.preview-actions button{font:inherit;font-size:13px;padding:5px 14px;cursor:pointer}
+.preview-actions button:disabled{opacity:.6;cursor:default}
 
 /* Status, overview */
 .preview-status{margin:0 0 16px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 80%,transparent);border-radius:9px;padding:9px 12px;color:var(--muted);font-size:12px;line-height:1.5}

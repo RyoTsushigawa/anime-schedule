@@ -1,7 +1,7 @@
 // Trailer playlists: for every season list in the Google Sheet ("Winter 2027", "Frühling 2027", …) that
 // hasn't started yet, an unlisted YouTube playlist "Trailer Winter 2027" with one trailer per NEW show, in the
 // list's order. Sequels (AniList lists a prequel, or "Season 2" etc. in the title) and shows already in the
-// previous season's list get none. Runs daily on GitHub (.github/workflows/trailers.yml); the planner links
+// previous season's list get none. Runs daily on GitHub (.github/workflows/trailers.yml); the Season Preview links
 // the playlist and the Season Preview page (season-preview.html) shows the trailers (season-trailers.json).
 //
 //   node tools/trailers.mjs             pick trailers for new shows, then bring the playlist in line

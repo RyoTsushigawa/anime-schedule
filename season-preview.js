@@ -408,6 +408,8 @@ function render(){
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{10,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
+ let ghKey='';try{ghKey=localStorage.getItem('movesKey')||'';}catch{}
+ pv('previewTrailerRefresh').hidden=playlist.hidden||!ghKey;
  const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
   (filter==='all'||(filter==='ready')===!!trailerFor(s))&&
   (voteFilter==='all'||(voteFilter==='open')===(voteValue(s,voter)==='Default')));
@@ -484,3 +486,20 @@ pv('previewClear').addEventListener('click',()=>{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSheet(true);});
 reloadTimer=setInterval(()=>{if(!document.hidden)refreshSheet(true);},90000);
 start();
+
+// "Trailer neu suchen" (only with the site's GitHub key): writing .github/trailer-refresh.txt starts the
+// trailer workflow with refresh (the key may change files, not start workflows directly)
+pv('previewTrailerRefresh').addEventListener('click',async()=>{
+ const button=pv('previewTrailerRefresh');let key='';try{key=localStorage.getItem('movesKey')||'';}catch{}
+ if(!key)return;
+ const api='https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/.github/trailer-refresh.txt';
+ const headers={Authorization:'Bearer '+key,Accept:'application/vnd.github+json'};
+ button.disabled=true;
+ try{
+  const old=await fetch(api+'?ref=main&_='+Date.now(),{headers,cache:'no-store'});
+  const sha=old.ok?(await old.json()).sha:undefined;
+  const res=await fetch(api,{method:'PUT',headers,body:JSON.stringify({message:'Search trailers again',branch:'main',content:btoa(new Date().toISOString()+'\n'),...(sha&&{sha})})});
+  if(!res.ok)throw new Error('GitHub '+res.status);
+  state('Trailer werden neu gesucht. Die Playlist ist in ein paar Minuten aktuell.');
+ }catch(error){state('Trailer-Suche konnte nicht gestartet werden: '+error.message);button.disabled=false;}
+});

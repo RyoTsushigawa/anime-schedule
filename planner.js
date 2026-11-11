@@ -66,11 +66,8 @@ return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
 .map(({ name, gid, season }) => ({ name, gid, list: true, start: new Date(Number(season[2]), SEASON_MONTH[season[1].toLowerCase()], 1).getTime() }))
 .sort((a, b) => b.start - a.start);
 }
-// trailer playlists per season list ("Winter 2027"), made by tools/trailers.mjs
-let trailers = {};
 const ready = Promise.all([
 fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json()).then(json => { streamsDe = json; }, () => {}),
-fetch('trailers.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).then(json => { trailers = json.seasons || {}; }, () => {}),
 Promise.all([guckplanTabs(), seasonListTabs().catch(() => [])])
 .then(([guckplans, lists]) => { tabs = [...guckplans, ...lists]; }, e => console.warn('Sheet tabs not loaded:', e)),
 ]);
@@ -400,33 +397,6 @@ bindPlannerSetup(data);
 if (planOutcome?.tab === tab.gid) showPlan(data, planOutcome.plan);
 else generatePlan(data);
 }
-function trailerLink(tab) {
-const url = trailers[tab.name.replace(/^Guckplan\s+/i, '')]?.url;
-if (!/^https:\/\/www\.youtube\.com\/playlist\?list=[\w-]+$/.test(url || '')) return '';
-let key = '';
-try { key = localStorage.getItem('movesKey') || ''; } catch {}
-return `<a class="pill plan-trailers" href="${esc(url)}" target="_blank" rel="noopener" title="Trailers for this season's list, in the list's order (YouTube)">▶ Trailers</a>`
-  + (key ? '<button type="button" id="trailerRefresh" class="pill plan-trailers" title="Search again now for teasers, missing trailers and trailers without subtitles (only with the GitHub key)" aria-label="Search trailers again">↻</button>' : '');
-}
-// Starts the trailer workflow with "refresh": writing the request file triggers it (the site's key may
-// change files, not start workflows directly)
-const REFRESH_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/.github/trailer-refresh.txt';
-async function refreshTrailers(button) {
-let key = '';
-try { key = localStorage.getItem('movesKey') || ''; } catch {}
-if (!key) return;
-button.disabled = true;
-try {
-  const headers = { Authorization: `Bearer ${key}`, Accept: 'application/vnd.github+json' };
-  const old = await fetch(REFRESH_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
-  const sha = old.ok ? (await old.json()).sha : undefined;
-  const res = await fetch(REFRESH_API, { method: 'PUT', headers, body: JSON.stringify({ message: 'Search trailers again', branch: 'main',
-    content: btoa(new Date().toISOString() + '\n'), ...(sha && { sha }) }) });
-  if (!res.ok) throw new Error('GitHub ' + res.status);
-  notice('Searching trailers again. The playlist updates in a few minutes.');
-} catch (e) { notice("Couldn't start the trailer search: " + e.message); button.disabled = false; }
-}
-document.addEventListener('click', e => { const b = e.target.closest('#trailerRefresh'); if (b) refreshTrailers(b); });
 function plannerSetup(data) {
 const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
 `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');
@@ -442,7 +412,7 @@ const grid = [EVERYONE, ...data.people].map(p => `
         aria-label="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by" title="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by (empty = no limit)">`).join('');
 return `<section class="plan-card">
     <div class="plan-head">
-      <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>${trailerLink(data.tab)}
+      <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>
       <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard start"></label>
       <button id="planRun" class="pill plan-go">Generate plan</button>
     </div>
