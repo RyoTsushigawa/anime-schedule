@@ -7,3 +7,5 @@ Retry 2026-11-11: commit-step shell syntax fixed; discovery already passed.
 Retry after excluding Amount summary footer (2026-11-11).
 
 Retry with safe Git rebase for the corrected Amount-row filter.
+
+2026-11-11: verify manual trailer review tests and workflow.
