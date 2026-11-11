@@ -199,6 +199,17 @@ async function playlistItems(id) {
   return items;
 }
 async function sync(name, season) {
+  let have = null;
+  if (season.playlist) {
+    // a playlist made moments ago can still be "not found" for a while; one deleted on YouTube stays so
+    for (let i = 0; i < 3 && !have; i++) {
+      try { have = await playlistItems(season.playlist); }
+      catch (e) { if (!/cannot be found|playlistNotFound|404/.test(e.message)) throw e; log(`  Playlist not found yet (${i + 1}/3)`); await new Promise(r => setTimeout(r, 20000)); }
+    }
+    // never make a new one by itself (that could add a playlist every day): to start over, delete the
+    // season's "playlist" and "url" in trailers.json
+    if (!have) throw new Error(`Playlist ${season.playlist} not found on YouTube. If it was deleted, remove "playlist" and "url" for ${name} in trailers.json.`);
+  }
   if (!season.playlist) {
     const made = await yt('playlists', { part: 'snippet,status' }, 50, 'POST', {
       snippet: { title: `Trailer ${name}`, description: `Trailer zur Liste „${name}“, in der Reihenfolge der Liste. Wird automatisch aktualisiert.` },
@@ -206,9 +217,9 @@ async function sync(name, season) {
     season.playlist = made.id;
     season.url = `https://www.youtube.com/playlist?list=${made.id}`;
     log(`Playlist made: ${season.url}`);
+    have = [];
   }
   const want = [...new Set(season.shows.map(s => s.video).filter(Boolean))];
-  let have = await playlistItems(season.playlist);
   // gone from the list (or another pick): out
   for (const x of have.filter(x => !want.includes(x.video) || have.findIndex(y => y.video === x.video) !== have.indexOf(x))) {
     await yt('playlistItems', { id: x.item }, 50, 'DELETE');
