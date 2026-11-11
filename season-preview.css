@@ -176,11 +176,8 @@
 }
 @media(prefers-reduced-motion:reduce){.preview-page *{scroll-behavior:auto}}
 
-/* compact cards: the trailer button or a short note on the right */
+/* compact cards: a short note on the right when a show has no trailer */
 .preview-item h2{margin:0}
-.preview-watch{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--bg);color:var(--text);text-decoration:none;font-size:13px;font-weight:650;white-space:nowrap}
-.preview-watch:hover{border-color:var(--accent);color:var(--accent)}
-.preview-watch small{font-size:10px;font-weight:700;color:var(--muted)}
 .preview-none{font-size:12px;color:var(--muted);white-space:nowrap}
 .preview-list{gap:8px}
 p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px 0}

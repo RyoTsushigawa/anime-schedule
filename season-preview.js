@@ -421,11 +421,11 @@ function render(){
  const parent=pv('previewList');parent.replaceChildren();
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent=hasFilter?'Keine passenden Serien. Suche oder Filter zurücksetzen.':'Keine Serien in dieser Season gefunden.';parent.append(empty);return;}
  for(const s of shown){
-  // compact card: number, title (romaji below), and either the trailer or why there is none
+  // compact card: number, title (romaji below), and why a show has no trailer
   const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item';
   const sequel=detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel';
-  const action=trailer?'<a class="preview-watch" target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'" title="'+safeText(trailer.title)+'">▶ Trailer'+(trailer.subtitles?' <small>'+trailer.subtitles+'</small>':'')+'</a>'
-   :'<span class="preview-none">'+(sequel?'Fortsetzung':'Noch kein Trailer')+'</span>';
+  // the trailers are streamed as one playlist; a card only notes when a show has none
+  const action=trailer?'':'<span class="preview-none">'+(sequel?'Fortsetzung':'Noch kein Trailer')+'</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+'</div>'+action;
   parent.append(article);
  }
