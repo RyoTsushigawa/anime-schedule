@@ -2,7 +2,7 @@ name = "anime-season-preview-votes"
 main = "index.js"
 compatibility_date = "2026-11-11"
 workers_dev = true
-# The four Sheets / member secrets are provided by GitHub Actions at deployment.
+# Four private secrets: service account email/key, sheet ID and shared group access code.
 # Restrict CORS to the GitHub Pages origin.
 [vars]
 SITE_ORIGIN = "https://ryotsushigawa.github.io"
