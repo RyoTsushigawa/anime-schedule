@@ -402,9 +402,31 @@ else generatePlan(data);
 }
 function trailerLink(tab) {
 const url = trailers[tab.name.replace(/^Guckplan\s+/i, '')]?.url;
-return /^https:\/\/www\.youtube\.com\/playlist\?list=[\w-]+$/.test(url || '')
-  ? `<a class="pill plan-trailers" href="${esc(url)}" target="_blank" rel="noopener" title="Trailers for this season's list, in the list's order (YouTube)">▶ Trailers</a>` : '';
+if (!/^https:\/\/www\.youtube\.com\/playlist\?list=[\w-]+$/.test(url || '')) return '';
+let key = '';
+try { key = localStorage.getItem('movesKey') || ''; } catch {}
+return `<a class="pill plan-trailers" href="${esc(url)}" target="_blank" rel="noopener" title="Trailers for this season's list, in the list's order (YouTube)">▶ Trailers</a>`
+  + (key ? '<button type="button" id="trailerRefresh" class="pill plan-trailers" title="Search again now for teasers, missing trailers and trailers without subtitles (only with the GitHub key)" aria-label="Search trailers again">↻</button>' : '');
 }
+// Starts the trailer workflow with "refresh": writing the request file triggers it (the site's key may
+// change files, not start workflows directly)
+const REFRESH_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/.github/trailer-refresh.txt';
+async function refreshTrailers(button) {
+let key = '';
+try { key = localStorage.getItem('movesKey') || ''; } catch {}
+if (!key) return;
+button.disabled = true;
+try {
+  const headers = { Authorization: `Bearer ${key}`, Accept: 'application/vnd.github+json' };
+  const old = await fetch(REFRESH_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
+  const sha = old.ok ? (await old.json()).sha : undefined;
+  const res = await fetch(REFRESH_API, { method: 'PUT', headers, body: JSON.stringify({ message: 'Search trailers again', branch: 'main',
+    content: btoa(new Date().toISOString() + '\n'), ...(sha && { sha }) }) });
+  if (!res.ok) throw new Error('GitHub ' + res.status);
+  notice('Searching trailers again. The playlist updates in a few minutes.');
+} catch (e) { notice("Couldn't start the trailer search: " + e.message); button.disabled = false; }
+}
+document.addEventListener('click', e => { const b = e.target.closest('#trailerRefresh'); if (b) refreshTrailers(b); });
 function plannerSetup(data) {
 const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
 `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');

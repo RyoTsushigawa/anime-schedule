@@ -7,6 +7,9 @@ name: Trailer playlists
 on:
   schedule:
     - cron: '23 9 * * *'   # after YouTube's daily limits reset (midnight US Pacific = 09:00 German time); GitHub may start it late
+  push:   # the planner's ↻ button (GitHub key holders) writes this file to ask for a refresh
+    branches: [main]
+    paths: [.github/trailer-refresh.txt]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -41,7 +44,7 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: node tools/trailers.mjs ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.refresh && '--refresh' || '' }}
+        run: node tools/trailers.mjs ${{ inputs.dry_run && '--dry-run' || '' }} ${{ (inputs.refresh || github.event_name == 'push') && '--refresh' || '' }}
       - name: Save the picks
         if: ${{ always() && !inputs.dry_run }}
         run: |
