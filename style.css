@@ -1376,3 +1376,13 @@ body:has(#notice:not([hidden])) #refreshFeedback { bottom: calc(86px + env(safe-
  .day h2::after { display: none; }
  .day h2 > span:first-child { margin-inline-end: auto; }
 }
+
+/* Wochenübersicht */
+.overview-dlg .away-head select { margin-left: auto; }
+.overview-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.overview-list li { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px; font-size: 13px; min-width: 0; }
+.overview-list li + li:not(.overview-day) { border-top: 1px solid var(--line); }
+.overview-list .overview-day { padding: 6px 10px 4px; background: var(--chip, rgba(127,127,127,.12)); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.overview-time { flex: none; width: 40px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.overview-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overview-who { flex: none; font-size: 11px; color: var(--muted); }
