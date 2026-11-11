@@ -20,7 +20,7 @@ function parseSeasonRows(rows, updatePeople=true){
   const firstPerson=cols.indexOf('Uhrzeit')+1;
   const voters=cols.map((name,i)=>({name,i})).filter(x=>x.i>=firstPerson&&x.name&&!reserved.has(x.name));
   if(updatePeople)people=voters.map(v=>v.name);
-  return rows.slice(h+1).filter(r=>clean(r[title])).map((r,i)=>({
+  return rows.slice(h+1).filter(r=>{const name=clean(r[title]);return name && !(name.toLowerCase()==='amount'&&/^\d+$/.test(clean(r[english])));}).map((r,i)=>({
     key:clean(r[title]).toLocaleLowerCase(),title:clean(r[title]),english:english<0?'':clean(r[english]),order:i+1,
     votes:voters.flatMap(({name,i})=>clean(r[i])?[{name,value:clean(r[i]).replace(/,$/,'')}]:[])
   }));
