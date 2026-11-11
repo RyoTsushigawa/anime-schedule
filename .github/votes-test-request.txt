@@ -1,0 +1,1 @@
+Request voting-only checks for shared-code access and Google Sheets restrictions (2026-11-11).
