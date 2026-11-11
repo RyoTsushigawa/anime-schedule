@@ -21,7 +21,7 @@ on:
         type: boolean
         default: true
       test_edit:
-        description: 'Only test editing: a test line in the bot test channel that is edited once'
+        description: 'Only test editing and pinning: a test line in the bot test channel, edited once, pinned and unpinned'
         type: boolean
         default: false
       test_warning:
@@ -58,6 +58,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_SCHEDULE }}
           WAIT_FOR_NINE: ${{ github.event_name == 'repository_dispatch' }}
           DISCORD_WEBHOOK_LOGS: ${{ secrets.DISCORD_WEBHOOK_LOGS }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}   # optional: pins the post (see tools/discord-daily.mjs)
         run: node tools/discord-daily.mjs ${{ (inputs.dry_run || github.event.client_payload.dry_run) && !inputs.test_edit && '--dry-run' || '' }} ${{ github.event_name == 'push' && '--update' || '' }} ${{ inputs.test_edit && '--test-edit' || '' }}
       - name: Remember today's post
         if: ${{ !inputs.test_warning && !inputs.test_edit }}
