@@ -1,0 +1,44 @@
+name: Refresh LiveChart season metadata
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/season-refresh-request.txt
+permissions:
+  contents: write
+concurrency:
+  group: season-livechart-refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Refresh LiveChart Autumn 2026 and Winter 2027 titles and IDs
+        run: node tools/build-streams.mjs --seasons-only fall-2026 winter-2027
+      - name: Validate enriched metadata
+        run: |
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            const data=JSON.parse(fs.readFileSync('seasons.json','utf8'));
+            for (const key of ['fall-2026','winter-2027']) {
+              const list=data.seasons[key];
+              if (!Array.isArray(list) || list.length<30) throw Error(key+' season list missing or incomplete');
+              const withIds=list.filter(x=>/^\d+$/.test(String(x.livechartId||'')));
+              if (withIds.length < list.length * .75) throw Error(key+' LiveChart IDs too sparse: '+withIds.length+'/'+list.length);
+              console.log(key+': '+list.length+' entries, '+withIds.length+' with LiveChart IDs');
+            }
+          "
+      - name: Commit metadata refresh only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seasons.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh LiveChart season metadata and direct anime links"
+            git push
+          fi
