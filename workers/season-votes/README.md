@@ -1,26 +1,27 @@
-# Season Preview voting Worker
+# Season Preview group voting Worker
 
-This Cloudflare Worker is **not deployed automatically**. Until deployment and configuration, the Season Preview stays read-only. Do not put credentials into GitHub Pages files.
+Season Preview voting is designed for a small friend group. **No AniList login or account mapping is needed.** One shared private group code unlocks voting for the current browser session, after which friends select any existing group member column. This is intentionally **not an individual identity system**: anyone with the code may cast or change any group member's vote.
 
-## Deploy / configuration
+## Setup
 
-1. Create a Cloudflare Worker using `index.js`. Set the allowed origin to `https://ryotsushigawa.github.io` (default).
-2. Create a Google Cloud service account, enable the Sheets API, and share the existing spreadsheet with its service-account email as **Editor**. Keep the service account private key outside the public repository.
-3. Configure Worker secrets `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `SHEET_ID`, and `VOTER_MAP_JSON`.
-4. `VOTER_MAP_JSON` uses **AniList numeric Viewer IDs** as keys, with a verified person's exact Google Sheets column header and optional delegate names. Example (placeholders only): `{"123456":{"person":"MaRyo","delegates":["Belly"]},"234567":{"person":"Rei"}}`. Get each member's ID from their authenticated AniList Viewer response; never rely on local browser person selection.
-5. Only after the Worker responds to `GET /me` with a verified member should `config.json` contain `"previewVotesUrl":"https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev"`. The static site will then offer vote buttons to approved AniList members. The existing AniList login is reused; no second login is required.
-6. Restrict Worker access and check logs and rate limits before production rollout.
+1. Create a Google Cloud service account, enable Google Sheets API, and share the target spreadsheet with its email address as Editor. The service-account private key must never be published in front-end files.
+2. Add these **GitHub Actions repository secrets**: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL`, `SEASON_GOOGLE_PRIVATE_KEY`, `SEASON_SHEET_ID` and `SEASON_GROUP_ACCESS_CODE`.
+3. Choose a randomly generated shared access code of at least **16 characters**; 24–32 random characters is better. Share it privately with the group. Do **not** commit it to GitHub, put it in `config.json`, or paste it into a public chat. Anyone who learns it can vote as any member.
+4. Run the manual GitHub Actions workflow **Deploy Season Preview voting Worker**. It deploys `workers/season-votes/index.js` and applies `GROUP_ACCESS_CODE`, `SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, and `GOOGLE_PRIVATE_KEY` as private Worker secrets.
+5. Add the public deployed Worker URL (not the secret code) as `previewVotesUrl` in `config.json`, preserving other fields; for example `"previewVotesUrl":"https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev"`.
+6. Open Season Preview, enter the group code, select a member, and test a vote. The code stays only in `sessionStorage` and disappears when that browser session ends; the selected member name can remain saved locally.
 
-## Behavior
+## What the Worker enforces
 
-- `GET /me` verifies the AniList bearer token through AniList's Viewer API, then returns the exact assigned person and explicitly permitted delegates.
-- `POST /vote` accepts a Season list `gid`, unique anime title, target person, choice, and expected prior value; the Worker ignores client claims of identity and resolves the sheet tab, row and column server-side.
-- Only standalone tabs named `Winter YYYY`, `Frühling YYYY`, `Sommer YYYY`, or `Herbst YYYY` can be changed. **Guckplan** tabs are blocked.
-- The site offers only the current member's buttons plus explicitly delegated people; `Default` is the reset/unselected value.
-- `Okinawa 3` is restricted in the Worker to `Quecks`, `Rei`, and `Terra`.
-- Google Sheets remains authoritative. Edits through the sheet are visible when the website reloads the list, including periodic refresh while the page is open.
-- The client uses optimistic concurrency via `expected` and instructs users to reload if the sheet was changed. Google Sheets' values API is not a transactional compare-and-swap; truly simultaneous edits to the *same cell* can still race. If that becomes a concern, serialize updates through a Durable Object.
+- `GET /access` checks the private code in the `X-Group-Code` header. `POST /vote` verifies the code on **every** request.
+- Only the existing spreadsheet and its standalone `Winter YYYY`, `Frühling YYYY`, `Sommer YYYY`, or `Herbst YYYY` tabs are writable. Active `Guckplan` tabs are blocked.
+- Only exact person column headers after `Uhrzeit` are allowed. `Default` remains a reset state, not an ordinary vote option.
+- `Okinawa 3` is allowed only for `Quecks`, `Rei` and `Terra`, even if another name is supplied.
+- Each requested cell is compared against the browser's previously read value before writing. The Worker requires confirmation of one updated cell and reads it back afterward. Google Sheets values are not an atomic compare-and-swap, so extremely close simultaneous votes on the same cell can still race.
+- Users see updated Sheet values on reload and during periodic foreground refreshes.
 
-## Security
+## Security / tradeoffs
 
-The Worker secret maps are **never** published to the website. Tokens are sent over HTTPS for `GET /me` and `POST /vote`, and the Worker checks identity on every request. The existing AniList client stores tokens in browser localStorage; use trusted devices, and review token handling separately if hardening the whole site. Restrict CORS to the one site origin (CORS is not authorization). Service account access should be limited to the one spreadsheet, and production deployments should add a rate limiter.
+This is **lightweight shared access**, not anonymous public editing. The key is never embedded in the static site, and the Cloudflare service-account credentials never reach the browser. A code is a bearer secret: anyone with it can select a friend's column, and the Worker cannot determine which friend actually voted. Share only with trusted group members and rotate the code if it leaks. Browser dev tools, browser extensions, or an XSS attack may access a code stored in sessionStorage. Restrict Worker CORS to the GitHub Pages origin; CORS alone is not authentication and direct HTTP clients can still send requests if they have the code. Configure rate limiting and review logs as appropriate before wider public use. Never set `GROUP_ACCESS_CODE` to a publicly known value.
+
+Run `node --test tests/season-votes-worker.test.mjs` to verify the access and vote restrictions.
