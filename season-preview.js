@@ -1,5 +1,6 @@
 'use strict';
 // 'Default' denotes an untouched vote in Google Sheets; it is not a selectable choice.
+const INFO = 'Ein Trailer pro neuer Serie, automatisch gewählt: bevorzugt offizielle Trailer (Crunchyroll, Netflix & Co.), mit Untertiteln, wenn es sie gibt. Sequels bekommen keinen Trailer, Serien aus der vorherigen Season erscheinen hier nicht.';
 const PV_OPTIONS = ['Ja','Nein','Vielleicht','Demons','Allein','Wenn Belly dabei ist','Okinawa 3'];
 const PV_SEASONS = /^(Winter|Frühling|Sommer|Herbst)\s+(20\d{2})$/i;
 const PV_MONTHS = {winter:0,'frühling':3,sommer:6,herbst:9};
@@ -111,8 +112,8 @@ async function prepareShows(tab){
  const excluded=items.length-eligible.length;
  if(previous)checkedNewTitles.set(tab.gid,new Set(eligible.map(item=>item.key)));
  else checkedNewTitles.delete(tab.gid);
- carryoverNotice=previous===null?'Vorherige Season nicht abgeglichen; bestätigte Übernahmen bleiben ausgeblendet.':
-  excluded?excluded+' Übernahmen aus der vorherigen Season ausgeblendet.':'';
+ carryoverNotice=previous===null?'vorherige Season nicht abgeglichen':
+  excluded?excluded+' aus '+oldTab.name+' ausgeblendet':'';
  return eligible.map((show,i)=>({...show,order:i+1}));
 }
 function reviewEntry(show){
@@ -231,7 +232,7 @@ function updateMemberUI(){
  label.hidden=selector.hidden=!available.length;
  form.hidden=!voteApi||unlocked;
  lock.hidden=!unlocked||!groupCode;
- const filter=pv('previewVoteFilterLabel');
+ const filter=pv('previewVoteFilter');
  filter.hidden=!unlocked;
  if(!unlocked)pv('previewVoteFilter').value='all';
  // without the voting service there is nothing to show: votes still go into the Google Sheet directly
@@ -290,7 +291,7 @@ async function refreshSheet(silent=false){
   const latest=await prepareShows(current);
   if(current?.gid!==gid)return;
   shows=latest;
-  if(!silent)state('Google Sheets aktualisiert.'+(carryoverNotice?' '+carryoverNotice:''));
+  if(!silent)state('Google Sheets aktualisiert.');
   updateMemberUI();render();
  }catch(error){if(!silent)state('Aktualisierung fehlgeschlagen: '+error.message);}
 }
@@ -317,7 +318,7 @@ async function saveVote(show,choice){
    if(existing)existing.value=choice;else show.votes.push({name:person,value:choice});
   }
   voteFeedback.set(feedbackKey,{success:true,message:choice==='Default'?'Stimme zurückgesetzt.':'Stimme gespeichert.'});
-  state('Gespeichert ✓ · '+person+' · '+show.title);
+  state(''); // the highlighted button on the card shows it; no box that pushes the list down
  }catch(error){
   voteFeedback.set(feedbackKey,{error:true,message:'Nicht gespeichert: '+error.message});
   state('Nicht gespeichert: '+error.message+' · Bitte erneut versuchen.');
@@ -403,32 +404,36 @@ pv('previewLock').addEventListener('click',()=>{
 pv('previewVoteFilter').addEventListener('change',()=>{if(current)render();});
 pv('previewRefresh').addEventListener('click',()=>refreshSheet(false));
 function render(){
- const q=clean(pv('previewSearch').value).toLocaleLowerCase(),filter=pv('previewFilter').value;
+ const q=clean(pv('previewSearch').value).toLocaleLowerCase();
  const voter=member?currentVoter():'';
  const voteFilter=voter?pv('previewVoteFilter').value:'all';
  const data=seasonIndex.seasons?.[seasonKey(current)]||{}, trailers=shows.filter(x=>trailerFor(x)).length;
  pv('previewTitle').textContent=current?.name||'Season Preview';
- pv('previewIntro').textContent='Reihenfolge aus der Google-Sheets-Season-Liste · '+shows.length+' Serien';
- pv('previewStats').hidden=false;
  // sequels get no trailer on purpose; the rest without one is what is really missing
  const sequels=shows.filter(s=>!trailerFor(s)&&(detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel')).length;
- pv('previewStats').innerHTML='<span class="preview-stat"><b>'+shows.length+'</b> Serien</span><span class="preview-stat"><b>'+trailers+'</b> Trailer</span><span class="preview-stat"><b>'+sequels+'</b> Sequels</span><span class="preview-stat" title="Neue Serien, für die noch kein passender Trailer gefunden wurde"><b>'+(shows.length-trailers-sequels)+'</b> fehlende Trailer</span>';
+ // one line: counts, carry-overs, and a "?" with how the trailers are picked
+ const missing=shows.length-trailers-sequels;
+ pv('previewIntro').innerHTML=[shows.length+' Serien',trailers+' Trailer',sequels+' Sequels',...(missing?['<span title="Neue Serien, für die noch kein passender Trailer gefunden wurde">'+missing+' fehlend</span>']:[]),...(carryoverNotice?[safeText(carryoverNotice)]:[])].join(' · ')+
+  ' <button type="button" class="preview-help" title="'+safeText(INFO)+'" aria-label="So werden die Trailer gewählt">?</button>';
+ // voting progress for the chosen name
+ const open=voter?shows.filter(x=>voteValue(x,voter)==='Default').length:0;
+ pv('previewOpen').hidden=!voter;
+ pv('previewOpen').textContent=open?'noch '+open+' offen':'alles abgestimmt ✓';
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{10,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
  let ghKey='';try{ghKey=localStorage.getItem('movesKey')||'';}catch{}
  pv('previewTrailerRefresh').hidden=playlist.hidden||!ghKey;
  const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
-  (filter==='all'||(filter==='ready')===!!trailerFor(s))&&
   (voteFilter==='all'||(voteFilter==='open')===(voteValue(s,voter)==='Default')));
- const hasFilter=!!q||filter!=='all'||voteFilter!=='all';
+ const hasFilter=!!q||voteFilter!=='all';
  pv('previewResults').textContent=hasFilter?shown.length+' von '+shows.length+' Serien angezeigt':'';pv('previewResults').parentElement.hidden=!hasFilter;
  pv('previewClear').hidden=!hasFilter;
  const parent=pv('previewList');parent.replaceChildren();
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent=hasFilter?'Keine passenden Serien. Suche oder Filter zurücksetzen.':'Keine Serien in dieser Season gefunden.';parent.append(empty);return;}
  for(const s of shown){
   // compact card: number, title (romaji below), and why a show has no trailer
-  const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item';
+  const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item'+(voter&&voteValue(s,voter)==='Default'?' open':'');
   const sequel=detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel';
   // the trailers are streamed as one playlist; a card only notes when a show has none
   // above the title, so the vote buttons line up on every card
@@ -446,12 +451,12 @@ async function selectSeason(gid){
   const latest=await prepareShows(next);
   if(request!==seasonRequest||current?.gid!==gid)return;
   shows=latest;
-  state(carryoverNotice||'');
+  state('');
   updateMemberUI();
   render();
  }catch(e){
   if(request!==seasonRequest)return;
-  shows=[];pv('previewList').replaceChildren();pv('previewStats').hidden=true;
+  shows=[];pv('previewList').replaceChildren();
   state('Season konnte nicht geladen werden: '+e.message);
  }
 }
@@ -476,10 +481,8 @@ async function start(){
  }catch(e){state('Season-Listen sind gerade nicht verfügbar: '+e.message);}
 }
 pv('previewSearch').addEventListener('input',()=>{if(current)render();});
-pv('previewFilter').addEventListener('change',()=>{if(current)render();});
 pv('previewClear').addEventListener('click',()=>{
  pv('previewSearch').value='';
- pv('previewFilter').value='all';
  pv('previewVoteFilter').value='all';
  if(current)render();
  pv('previewSearch').focus();
