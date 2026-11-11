@@ -2947,7 +2947,10 @@ const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', mi
 return `${time} ${names.join(' / ')}${tags.length ? ' ' + tags.join(' ') : ''}`;
 });
 const out = [...new Map(skipped.map(r => [nickKey(r), r])).values()].map(r => `${nickOf(r)} – ${skipReason(r)}`);
+// who is away that day ("Rei, Terra (ab 20:00)"); only when something is planned, an empty day needs no list
+const away = lines.length ? awayText(isoDay(date)) : [];
 return withEmotes((lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\nPasst?` : `${when} steht nichts an. ${DEFAULT_EMOTES.kek}`)
++ (away.length ? `\n\nAbwesend: ${away.join(', ')}` : '')
 + (out.length ? `\n\nFällt aus:\n${out.join('\n')}` : ''));
 }
 function discordDay(iso) {
