@@ -16,6 +16,9 @@ function originHeaders(origin,env){
 // Never expose GROUP_ACCESS_CODE or Google service-account credentials to the static site.
 async function authorized(request,env){
  const expected=str(env.GROUP_ACCESS_CODE);
+ // No code set: voting is open (the owner's choice for a small friend group). Writes stay limited to the
+ // season lists' existing name columns and valid choices.
+ if(!expected)return true;
  if(expected.length<16)fail(503,'Gruppenzugang wurde noch nicht eingerichtet.');
  const supplied=str(request.headers.get('X-Group-Code'));
  if(supplied.length<16||supplied.length>256)fail(401,'Gruppencode fehlt oder ist ungültig.');

@@ -46,9 +46,14 @@ test('wrong, missing or short code is denied',async()=>{
   assert.equal(res.status,401);
  }
 });
-test('refuses access when the code is not configured securely',async()=>{
- const res=await worker.fetch(request('/access'),{...env,GROUP_ACCESS_CODE:''});
+test('refuses access when the code is too short to be safe',async()=>{
+ const res=await worker.fetch(request('/access'),{...env,GROUP_ACCESS_CODE:'short'});
  assert.equal(res.status,503);
+});
+test('without a group code voting is open (still only from the site)',async()=>{
+ const open={...env,GROUP_ACCESS_CODE:''};
+ assert.equal((await worker.fetch(request('/access','GET',undefined,''),open)).status,200);
+ assert.equal((await worker.fetch(request('/access','GET',undefined,'','https://other.example'),open)).status,403);
 });
 test('cross-origin browser requests are rejected',async()=>{
  const res=await worker.fetch(request('/access','GET',undefined,code,'https://other.example'),env);
