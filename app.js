@@ -936,7 +936,7 @@ if (!day) continue;
 found.add(show);
 if (droppedByMe(m.id)) continue;
 if (slot.skip) {
-if (!day.rows.some(r => r.skipped && r.show === show)) day.rows.push({ pause: true, skipped: true, show, slot, when, episode, alId: m.id });
+if (!day.rows.some(r => r.skipped && r.show === show)) day.rows.push({ pause: true, skipped: true, show, slot, when, episode, alId: m.id, links, who: whoBySheet.get(sheet)?.get(show) });
 continue;
 }
 // LiveChart's recap broadcasts still appear in AniList's airing schedule. They
@@ -984,7 +984,7 @@ const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p)
 if (!missing.length) return r;
 const maybe = missing.filter(p => absent.some(x => x.day === isoDay(day.date) && x.maybe && x.people?.includes(p)));
 if (left > 1) return { ...r, away: missing, maybe };
-return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, maybe, alId: r.m?.id };
+return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, maybe, alId: r.m?.id, links: r.links, who: r.who };
 });
 }
 const weekTabs = new Set(days.map(d => tabFor(tabs, d.date).gid));
@@ -1091,7 +1091,7 @@ const pauseOn = pauseShiftEnabled(isoDay(date));
 const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseOn ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseOn}" aria-label="Pause überspringen" title="Pause überspringen: ${pauseOn ? 'an · spätere Serien rücken in den freien Slot vor (feste Uhrzeiten bleiben)' : 'aus · alle behalten ihre geplante Zeit'}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
 const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).getTime()) ? `Zurück am ${shortDayDate(when)}` : '', reasonHtml(note, news, '')].filter(Boolean).join(' · ');
-const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, maybe, recap, alId }) => `
+const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, maybe, recap, alId, links, who }) => `
       <div class="row pause${skipped ? ' skipped' : ''}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         ${coverFor(alId) ? `<img src="${safeUrl(coverFor(alId))}" alt="" loading="lazy">` : '<span class="no-cover"></span>'}
@@ -1099,8 +1099,8 @@ const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missin
           <div class="title">${esc(show.english || show.romaji)}${skipped || recap ? `<span class="ep-tag">${skipped ? (missing?.length ? 'Abwesend' : 'Skip') : 'Recap'}</span>` : ''}</div>
           <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? missing.every(p => maybe?.includes(p)) ? `${missing.map(esc).join(', ')} spontan da` : `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' <span class="keep-time-note">Zeiten beibehalten</span>' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>
         </div>
-        <div class="links"></div>
-        ${checkSpace}${moveButton(show, slot)}
+        <div class="links">${skipped && links?.length ? linkButtons(links, alId, who) : ''}</div>
+        ${skipped && alId && episode > 0 ? `${auth ? dropButton(alId) : ''}${watchButton(alId, episode)}` : checkSpace}${moveButton(show, slot)}
       </div>`;
 const rewatch = ({ m, links, watchAt, who, show, slot }) => `
       <div class="row" ${artStyle(m)} data-watch-time="${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}" data-fade-at="${watchAt}" ${searchKey(m.title.english, m.title.romaji)}>
@@ -2125,7 +2125,10 @@ const monday = new Date(released * 1000);
 monday.setHours(0, 0, 0, 0);
 monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
 const mv = show && moveFor(show, monday);
-if (mv && !mv.skip) slot = { tag: mv.tag, time: mv.time };
+// Skipped episodes enter Catch-up once aired; their cancelled viewing slot
+// must not delay them. Already-watched episodes are filtered by progress.
+if (mv?.skip) return released;
+if (mv) slot = { tag: mv.tag, time: mv.time };
 const day = watchDay(new Date(released * 1000), slot?.tag, slot?.time);
 const hm = parseTime(slot?.time);
 if (hm) day.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
