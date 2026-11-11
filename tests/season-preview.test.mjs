@@ -5,7 +5,8 @@ import {chooseVideo,desiredVideos} from '../scripts/season-preview-playlist.mjs'
 
 test('CSV parser preserves quotes and show ordering',()=>{
  const rows=parseCSV('Anime Titel,Eng Anime Titel,Uhrzeit,MaRyo\n"Foo, Bar",Foo Bar,19:00,Ja\nNext,Next,20:00,Default\n');
- const shows=parseShows(rows);
+ const shows=parseShows([...rows,['Amount','2','', '']]);
+ assert.equal(shows.length,2);
  assert.equal(shows[0].title,'Foo, Bar');assert.equal(shows[0].order,1);
  assert.equal(shows[1].key,'next');assert.equal(shows[1].order,2);
 });
