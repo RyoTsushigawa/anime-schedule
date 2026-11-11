@@ -79,7 +79,7 @@ async function yt(path, params, cost, method = 'GET', body = null) {
   const res = await fetch(url, { method, headers: { Authorization: `Bearer ${access}`, ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
   if (res.status === 204) return {};
   const json = await res.json().catch(() => ({}));
-  if (res.status === 403 && /quota/i.test(JSON.stringify(json.error || ''))) throw new Quota('YouTube quota for today used up');
+  if ((res.status === 403 || res.status === 429) && /quota/i.test(JSON.stringify(json.error || ''))) throw new Quota('YouTube quota for today used up');
   if (!res.ok) throw new Error(`YouTube ${method} ${path}: ${res.status} ${json.error?.message || ''}`);
   return json;
 }
