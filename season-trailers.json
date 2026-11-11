@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 4,
-  "description": "One approved canonical YouTube full trailer per non-sequel show (short-form included). Use youtubeStatus 'not_found' only after checking YouTube for a substantive full trailer, 'unavailable' when a previously approved video disappears. Other-site links can be saved locally by any visitor when no YouTube trailer is selected; not a public submission.",
+  "schemaVersion": 5,
+  "description": "One approved video per non-sequel show; short-form anime eligible. Prefer a substantive full trailer. Only when no suitable full trailer can be found may a teaser with meaningful show footage be used as a clearly labeled last-resort fallback (type:'teaser', verified:true, footageVerified:true, sequelStatus:'not_sequel', fallbackApproved:true, fullTrailerUnavailable:true). Automatically prefer full trailers when available, including in candidates. Never show announcement-only videos or fan edits.",
   "seasons": {},
   "entryExample": {
     "type": "full_trailer",
@@ -21,7 +21,7 @@
         "subtitles": "de"
       }
     ],
-    "note": "Documentation only. A per-show candidates array may contain other approved full trailers. Playlist sync must use only canonical youtubeId."
+    "note": "Documentation only: normally use type full_trailer. If only a teaser exists after checking for full trailers, use type teaser together with fallbackApproved:true and fullTrailerUnavailable:true. Never use both in the playlist."
   },
   "previousPlaylistReference": "https://www.youtube.com/watch?v=XER9knL33-8&list=PLT2F_qa8DPPY&pp=sAgC",
   "youtubeStatusReference": {
@@ -29,5 +29,16 @@
     "unavailable": "Formerly approved trailer no longer accessible",
     "checking": "In review",
     "note": "Do not mark unreviewed shows as missing."
+  },
+  "teaserFallbackExample": {
+    "type": "teaser",
+    "verified": true,
+    "footageVerified": true,
+    "sequelStatus": "not_sequel",
+    "fallbackApproved": true,
+    "fullTrailerUnavailable": true,
+    "youtubeId": "REPLACE_WITH_VALID_ID",
+    "title": "Official teaser (fallback only)",
+    "note": "Example only; a teaser must still show actual show footage and be replaced if a full trailer becomes available."
   }
 }
