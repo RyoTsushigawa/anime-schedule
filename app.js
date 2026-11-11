@@ -944,13 +944,16 @@ continue;
 }
 // LiveChart's recap broadcasts still appear in AniList's airing schedule. They
 // are not regular episodes, even when watched on a different weekday.
-const recap = (streamsDe?.status?.[m.id]?.recaps || []).find(r =>
-  r.episode === it.episode && Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000);
-const long = slot.long || (streamsDe?.status?.[m.id]?.long || []).some(r => r.finale ? it.episode === m.episodes
-  : r.episode === it.episode && (!r.at || Math.abs(r.at * 1000 - it.airingAt * 1000) < 2 * 86400000));
-if (recap) {
+const status = streamsDe?.status?.[m.id];
+const sameBroadcast = r => r.episode === it.episode && (!r.at || Math.abs(r.at - it.airingAt) < 2 * 86400);
+const recap = (status?.recaps || []).find(sameBroadcast);
+const broadcastBreak = (status?.broadcastBreaks || []).find(sameBroadcast);
+const long = slot.long || (status?.long || []).some(r => r.finale ? it.episode === m.episodes
+  : sameBroadcast(r));
+if (recap || broadcastBreak) {
   if (!day.rows.some(r => r.show === show))
-    day.rows.push({ pause: true, recap: true, show, slot, when, episode, alId: m.id, note: { text: 'Recap episode', at: it.airingAt }, news: [] });
+    day.rows.push({ pause: true, recap: !!recap, show, slot, when, episode, alId: m.id,
+      note: { text: recap ? 'Recap episode' : broadcastBreak.text, at: it.airingAt }, news: [] });
   continue;
 }
 const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
