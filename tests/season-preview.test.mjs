@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCSV,parseShows,seasonId,likelySequel,normalizeCandidate} from '../scripts/season-preview-discover.mjs';
+import {parseCSV,parseShows,seasonId,isCarryover,likelySequel,normalizeCandidate} from '../scripts/season-preview-discover.mjs';
 import {chooseVideo,desiredVideos} from '../scripts/season-preview-playlist.mjs';
 
 test('CSV parser preserves quotes and show ordering',()=>{
@@ -35,7 +35,7 @@ test('teaser only as documented fallback; full trailer always wins',()=>{
  assert.equal(chooseVideo({...teaser,candidates:[base]})?.type,'full_trailer');
 });
 test('playlist follows sheet order, skips missing, excluded and duplicate videos',()=>{
- const shows=[{key:'a'},{key:'b'},{key:'c'},{key:'d'}];
+ const shows=[{key:'a',carriedOver:false},{key:'b',carriedOver:false},{key:'c',carriedOver:false},{key:'d',carriedOver:false}];
  const season={trailers:{a:base,b:{...base,youtubeId:'BBBBBBBBBBB'},c:{...base,sequelStatus:'sequel'},d:base}};
  assert.deepEqual(desiredVideos(season,shows),['AAAAAAAAAAA','BBBBBBBBBBB']);
 });
@@ -43,5 +43,15 @@ test('playlist follows sheet order, skips missing, excluded and duplicate videos
 test('unavailable canonical video falls back to verified alternative, with one playlist entry',()=>{
  const first={...base,candidates:[{...base,youtubeId:'CCCCCCCCCCC'}]};
  const sheet={trailers:{a:first},videoStatus:{AAAAAAAAAAA:{available:false},CCCCCCCCCCC:{available:true}}};
- assert.deepEqual(desiredVideos(sheet,[{key:'a'}]),['CCCCCCCCCCC']);
+ assert.deepEqual(desiredVideos(sheet,[{key:'a',carriedOver:false}]),['CCCCCCCCCCC']);
+});
+
+test('carryovers are excluded even if approved trailer metadata exists',()=>{
+ const shows=[{key:'returning',carriedOver:true},{key:'new',carriedOver:false},{key:'unchecked',carriedOver:null}];
+ const season={trailers:{returning:base,new:{...base,youtubeId:'BBBBBBBBBBB'},unchecked:{...base,youtubeId:'CCCCCCCCCCC'}}};
+ assert.deepEqual(desiredVideos(season,shows),['BBBBBBBBBBB']);
+});
+test('carryover matching uses identical romaji or English titles rather than seasonal position',()=>{
+ assert.equal(isCarryover({title:'Series X',english:'Series X'},[{title:'Series X',english:''}]),true);
+ assert.equal(isCarryover({title:'New Series',english:'New Show'},[{title:'Old Series',english:'Different'}]),false);
 });
