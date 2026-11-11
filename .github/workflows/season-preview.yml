@@ -47,7 +47,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update upcoming season trailer candidates and playlists"
             git push
+          fi
       - name: Signal incomplete playlist sync after preserving progress
         if: steps.playlist_sync.outcome == 'failure'
         run: exit 1
-          fi
