@@ -66,8 +66,11 @@ return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
 .map(({ name, gid, season }) => ({ name, gid, list: true, start: new Date(Number(season[2]), SEASON_MONTH[season[1].toLowerCase()], 1).getTime() }))
 .sort((a, b) => b.start - a.start);
 }
+// trailer playlists per season list ("Winter 2027"), made by tools/trailers.mjs
+let trailers = {};
 const ready = Promise.all([
 fetch('streams-de.json', { cache: 'no-cache' }).then(r => r.json()).then(json => { streamsDe = json; }, () => {}),
+fetch('trailers.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).then(json => { trailers = json.seasons || {}; }, () => {}),
 Promise.all([guckplanTabs(), seasonListTabs().catch(() => [])])
 .then(([guckplans, lists]) => { tabs = [...guckplans, ...lists]; }, e => console.warn('Sheet tabs not loaded:', e)),
 ]);
@@ -397,6 +400,11 @@ bindPlannerSetup(data);
 if (planOutcome?.tab === tab.gid) showPlan(data, planOutcome.plan);
 else generatePlan(data);
 }
+function trailerLink(tab) {
+const url = trailers[tab.name.replace(/^Guckplan\s+/i, '')]?.url;
+return /^https:\/\/www\.youtube\.com\/playlist\?list=[\w-]+$/.test(url || '')
+  ? `<a class="pill plan-trailers" href="${esc(url)}" target="_blank" rel="noopener" title="Trailers for this season's list, in the list's order (YouTube)">▶ Trailers</a>` : '';
+}
 function plannerSetup(data) {
 const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
 `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');
@@ -412,7 +420,7 @@ const grid = [EVERYONE, ...data.people].map(p => `
         aria-label="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by" title="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by (empty = no limit)">`).join('');
 return `<section class="plan-card">
     <div class="plan-head">
-      <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>
+      <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>${trailerLink(data.tab)}
       <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard start"></label>
       <button id="planRun" class="pill plan-go">Generate plan</button>
     </div>

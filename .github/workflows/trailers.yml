@@ -1,0 +1,59 @@
+name: Trailer playlists
+
+# Once a day: for a season list in the sheet that is still ahead ("Winter 2027" …) pick trailers for new shows
+# and keep the unlisted YouTube playlist in the list's order (tools/trailers.mjs). Without a list ahead or
+# without the YouTube secrets it does nothing.
+on:
+  schedule:
+    - cron: '23 5 * * *'   # GitHub may start it hours late; that doesn't matter here
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only show the picks in the log, change no playlist (still uses search quota)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # trailers.json: the picks and the playlist link
+
+concurrency:
+  group: trailers
+  cancel-in-progress: false
+
+jobs:
+  trailers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned
+        with:
+          ref: main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
+        with:
+          node-version: 22
+      - name: Pick trailers and update the playlists
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node tools/trailers.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Save the picks
+        if: ${{ always() && !inputs.dry_run }}
+        run: |
+          git add trailers.json 2>/dev/null || exit 0
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git commit -qm "Trailer playlists"
+          git pull --rebase origin main
+          git push
+      - name: Say that it failed
+        if: ${{ failure() && !inputs.dry_run }}
+        env:
+          DISCORD_WEBHOOK_LOGS: ${{ secrets.DISCORD_WEBHOOK_LOGS }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$DISCORD_WEBHOOK_LOGS" ] || exit 0
+          curl -sS -o /dev/null -H 'Content-Type: application/json' \
+            -d "{\"content\":\"<@255387990136848385> ⚠️ Die Trailer-Playlist konnte nicht aktualisiert werden. (<$RUN_URL>)\",\"allowed_mentions\":{\"users\":[\"255387990136848385\"]}}" \
+            "$DISCORD_WEBHOOK_LOGS"
