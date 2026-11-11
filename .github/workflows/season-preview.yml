@@ -46,7 +46,17 @@ jobs:
           git add season-trailer-candidates.json season-trailers.json
           if ! git diff --cached --quiet; then
             git commit -m "Update upcoming season trailer candidates and playlists"
-            git push
+            for attempt in 1 2 3; do
+              git fetch origin main
+              git rebase origin/main
+              if git push origin HEAD:main; then
+                exit 0
+              fi
+              echo "Branch advanced during discovery; retrying ($attempt/3)"
+              sleep 2
+            done
+            echo "::error::Could not publish the review report after three attempts"
+            exit 1
           fi
       - name: Signal incomplete playlist sync after preserving progress
         if: steps.playlist_sync.outcome == 'failure'
