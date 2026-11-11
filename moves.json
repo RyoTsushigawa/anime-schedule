@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-11T12:02:08.509Z",
+ "updated": "2026-11-11T13:33:48.002Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -195,6 +195,17 @@
    "skip": true
   }
  ],
+ "delays": [
+  {
+   "id": "1pc6zf3l",
+   "day": "2026-11-10",
+   "show": "shiotaiounosatousangaorenidakeamai",
+   "title": "The Cold Sato-san is Only Sweet to Me",
+   "minutes": 15,
+   "reason": "Solutions30 macht 30 Probleme",
+   "at": "19:00"
+  }
+ ],
  "absent": [
   {
    "day": "2026-11-10",
@@ -207,7 +218,8 @@
   {
    "day": "2026-11-11",
    "people": [
-    "Terra"
+    "Terra",
+    "Quecks"
    ]
   },
   {
@@ -301,16 +313,5 @@
   "Zuschauer im falschen Discord-Kanal",
   "Ein Zuschauer muss noch „nur kurz“ etwas erledigen",
   "Escanor"
- ],
- "delays": [
-  {
-   "id": "1pc6zf3l",
-   "day": "2026-11-10",
-   "show": "shiotaiounosatousangaorenidakeamai",
-   "title": "The Cold Sato-san is Only Sweet to Me",
-   "minutes": 15,
-   "reason": "Solutions30 macht 30 Probleme",
-   "at": "19:00"
-  }
  ]
 }
