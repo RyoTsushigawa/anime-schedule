@@ -14,7 +14,8 @@
 // beat teasers; 1–4 minutes; official channels; German/English subtitle tracks; blocked in Germany or not
 // embeddable = out. A show is searched once; its pick is kept in trailers.json.
 // A wrong pick: trailer-picks.json {"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}} ("" = no trailer,
-// "auto" = a new show although it looks like a sequel: its trailer is picked automatically).
+// "auto" = a new show although it looks like a sequel: its trailer is picked automatically,
+// {"channel": "Team ONIBE"} = like "auto", and videos from that channel are searched for and preferred).
 //
 // Quota: YouTube allows 10,000 units a day; a search costs 100, a playlist change 50. The run stops before the
 // limit and the next day's run carries on.
@@ -117,7 +118,7 @@ function matches(titles, text) {
   return titles.filter(Boolean).some(t => { const want = [...tokens(t)]; return want.length && want.filter(w => have.has(w)).length / want.length >= 0.6; });
 }
 const seconds = iso => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '') || []; return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0); };
-function score(v, titles, fromAniList, start) {
+function score(v, titles, fromAniList, start, channelPref) {
   const t = v.snippet.title, len = seconds(v.contentDetails.duration);
   if (!fromAniList && !matches(titles, t)) return -99;
   if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(t) && !/trailer|pv/i.test(t)) return -50;
@@ -128,6 +129,7 @@ function score(v, titles, fromAniList, start) {
   if (/pv ?[2-9]|trailer ?[2-9]|第[2-9]弾/i.test(t)) s += 1;
   if (len >= 60 && len <= 240) s += 2; else if (len < 40) s -= 4; else if (len > 360) s -= 6;
   if (OFFICIAL.test(v.snippet.channelTitle) && !COLLECTOR.test(v.snippet.channelTitle)) s += 3;
+  if (channelPref && norm(v.snippet.channelTitle) === norm(channelPref)) s += 8;
   // a film or concert of the franchise is not this show's trailer (unless the show itself is a film)
   if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(t) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) return -50;
   // subtitles in another language than German or English
@@ -171,16 +173,16 @@ async function pick(show, start) {
   const name = al?.title?.english || show.english || al?.title?.romaji || show.romaji;
   // AniList's own trailer is enough when it is clearly a full official trailer: no search needed
   // (a video lookup costs 1 unit and doesn't count toward the daily search limit)
-  if (alTrailer) {
+  if (alTrailer && !show.channelPref) {
     const [v] = (await videos([alTrailer])).filter(playable);
     const t = v?.snippet.title || '';
     if (v && !show.notSequel && SEQUEL_VIDEO.test(t)) return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: t, searched: new Date().toISOString() };
     if (v && score(v, titles, true, start) >= 9 && !/teaser|ティザー|特報|announcement/i.test(t))
       return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, channel: v.snippet.channelTitle, via: 'anilist', searched: new Date().toISOString() };
   }
-  const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} anime trailer`, relevanceLanguage: 'en' }, 100);
+  const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} ${show.channelPref || 'anime'} trailer`, relevanceLanguage: 'en' }, 100);
   const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
-  const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer, start) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
+  const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer, start, show.channelPref) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
   // subtitles in German or English decide among the best few
   // (at most two checks, 50 units each, and only for candidates close to the best)
   for (const x of ranked.slice(0, 2)) if (x.v.contentDetails.caption === 'true' && x.s >= ranked[0].s - 4) {
@@ -301,11 +303,13 @@ try { for (const tab of lists) {
   try {
     for (const s of season.shows) {
       const key = norm(s.romaji || s.english);
-      if (own[key] === 'auto') {
-        // counted as new by hand: forget an earlier "sequel" and pick normally
-        if (!s.notSequel) { delete s.skip; delete s.searched; delete s.fixed; s.notSequel = true; }
-      } else if (s.notSequel) { delete s.notSequel; delete s.searched; }
-      if (key in own && own[key] !== 'auto') { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; continue; }
+      const auto = own[key] === 'auto' || (own[key] && typeof own[key] === 'object');
+      const channel = typeof own[key]?.channel === 'string' ? own[key].channel : undefined;
+      if (auto) {
+        // counted as new by hand: forget an earlier "sequel" (or another preferred channel) and pick normally
+        if (!s.notSequel || s.channelPref !== channel) { delete s.skip; delete s.searched; delete s.fixed; s.notSequel = true; s.channelPref = channel; }
+      } else if (s.notSequel) { delete s.notSequel; delete s.channelPref; delete s.searched; }
+      if (key in own && !auto) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; continue; }
       if (s.fixed) { delete s.fixed; delete s.searched; }
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
       const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
