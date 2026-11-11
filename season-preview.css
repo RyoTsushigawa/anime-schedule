@@ -61,3 +61,11 @@
  .preview-actions select{width:100%}
  .preview-links a{min-height:36px;display:inline-flex;align-items:center}
 }
+
+/* Candidate inspection is opt-in: never style unchecked search hits as approved trailers. */
+.preview-suggestions{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--card)}
+.preview-suggestions summary{cursor:pointer;color:var(--muted);font-size:12px;font-weight:600;list-style-position:inside}
+.preview-suggestions summary:hover{color:var(--text)}
+.preview-suggestions p{font-size:12px;color:var(--muted);margin:8px 0 2px}
+.preview-suggestions .preview-links{margin-top:7px}
+.preview-suggestions .preview-links a{max-width:100%;overflow-wrap:anywhere;text-align:left}
