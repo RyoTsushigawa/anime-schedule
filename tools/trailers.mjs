@@ -54,6 +54,8 @@ const seasonId = name => { const m = name.match(/^(Winter|Frühling|Sommer|Herbs
 // the list three months earlier ("Herbst 2026" for "Winter 2027"), if it is in the sheet
 const previousList = tab => allLists.find(t => { const d = new Date(tab.start); d.setMonth(d.getMonth() - 3); return t.start === d.getTime(); });
 const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv|final season)\b|\(sequel\)/i;
+// a trailer whose own title names a later season gives a sequel away even when AniList and the list don't
+const SEQUEL_VIDEO = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:nd|rd|th)\s+season|cour\s*[2-9]|part\s*[2-9]|final season)\b|第[2-9二三四五]期|[2-9]期/i;
 async function listShows(gid) {
   const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);
   if (!res.ok) throw new Error('Google Sheet answered ' + res.status);
@@ -159,7 +161,7 @@ async function subtitleLanguages(id) {
 }
 async function pick(show, start) {
   const al = await anilist(show, start);
-  if (al?.relations?.edges?.some(e => e.relationType === 'PREQUEL') || SEQUEL_TITLE.test(`${show.romaji} ${show.english}`))
+  if (al?.relations?.edges?.some(e => e.relationType === 'PREQUEL' || e.relationType === 'PARENT') || SEQUEL_TITLE.test(`${show.romaji} ${show.english}`))
     return { anilist: al?.id || null, video: null, skip: 'sequel', searched: new Date().toISOString() };
   const titles = [show.romaji, show.english, al?.title?.romaji, al?.title?.english, ...(al?.synonyms || [])];
   const alTrailer = al?.trailer?.site === 'youtube' ? al.trailer.id : '';
@@ -169,6 +171,7 @@ async function pick(show, start) {
   if (alTrailer) {
     const [v] = (await videos([alTrailer])).filter(playable);
     const t = v?.snippet.title || '';
+    if (v && SEQUEL_VIDEO.test(t)) return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: t, searched: new Date().toISOString() };
     if (v && score(v, titles, true, start) >= 9 && !/teaser|ティザー|特報|announcement/i.test(t))
       return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, channel: v.snippet.channelTitle, via: 'anilist', searched: new Date().toISOString() };
   }
@@ -183,6 +186,8 @@ async function pick(show, start) {
   }
   ranked.sort((a, b) => b.s - a.s);
   const best = ranked[0];
+  if (best && SEQUEL_VIDEO.test(best.v.snippet.title))
+    return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: best.v.snippet.title, searched: new Date().toISOString() };
   return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '',
     ...(best?.subs && { subs: best.subs }), searched: new Date().toISOString() };
 }
@@ -298,6 +303,7 @@ try { for (const tab of lists) {
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
       const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
         && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || ''));
+      if (!s.fixed && s.video && SEQUEL_VIDEO.test(s.videoTitle || '')) { Object.assign(s, { video: null, skip: 'sequel' }); log(`  ${s.english || s.romaji}: trailer names a later season, now counted as a sequel`); continue; }
       if ((s.searched && !again) || s.skip === 'carryover' || searchBlocked) continue;
       try { Object.assign(s, await pick(s, tab.start)); }
       catch (e) { if (!(e instanceof SearchQuota)) throw e; searchBlocked = e.message; log(`  ${e.message}; the remaining shows follow tomorrow.`); continue; }
