@@ -64,3 +64,43 @@ test('keeps each anime independent and never modifies the original backlog rows'
  assert.equal(result[0].rows[0].out,3);
  assert.equal(result[1].rows[0].out,1);
 });
+
+test('season bulk action stops at that season’s final episode, not a newer one', () => {
+ const sourceFns = ['seasonWatchTargets'].map(extract).join('\n');
+ const targets = new Function('rows',sourceFns+'\nreturn seasonWatchTargets(rows);');
+ const autumn = show(1,4,7,null,{year:2026,month:10,day:1});
+ autumn.progress=1;
+ const summer = show(1,2,3,null,{year:2026,month:7,day:1});
+ summer.progress=1;
+ assert.deepEqual(targets([summer]),[{mediaId:1,progress:3,add:false}]);
+ assert.deepEqual(targets([autumn]),[{mediaId:1,progress:7,add:false}]);
+ assert.deepEqual(targets([summer,summer]),[{mediaId:1,progress:3,add:false}]);
+});
+
+test('season bulk action includes not-listed anime and ignores already-watched ones',()=>{
+ const fn = new Function('rows',extract('seasonWatchTargets')+'\nreturn seasonWatchTargets(rows);');
+ const a=show(2,1,4,null,{year:2026,month:7});
+ a.missing=true;
+ const b=show(3,2,3,null,{year:2026,month:7});
+ b.progress=3;
+ assert.deepEqual(fn([a,b]),[{mediaId:2,progress:4,add:true}]);
+});
+
+test('only the current season has no header; older or multiple seasons retain headers',()=>{
+ const fn = new Function('groups','now',extract('catchupSeasonKey')+'\n'+extract('showCatchupSeasonHeaders')+
+  '\nreturn showCatchupSeasonHeaders(groups,now);');
+ const now=at(2026,11,11);
+ assert.equal(fn([{key:'2026-3'}],now),false);
+ assert.equal(fn([{key:'2026-2'}],now),true);
+ assert.equal(fn([{key:'2026-3'},{key:'2026-2'}],now),true);
+ assert.equal(fn([{key:'unknown'}],now),true);
+ assert.equal(fn([],now),true);
+});
+
+test('per-season action and ungrouped view retain watched controls',()=>{
+ assert.match(source,/data-mark-season=/);
+ assert.match(source,/seasonWatchTargets\(g\.rows\)/);
+ assert.match(source,/if \(hideSeasonHeader\) return/);
+ assert.match(source,/const content = listed\.map\(show\)\.join\(''\)/);
+ assert.match(source,/change\(mediaId, \{progress, status: add \? 'CURRENT' : undefined\}\)/);
+});
