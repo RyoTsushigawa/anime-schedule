@@ -545,13 +545,12 @@ function render(){
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent=hasFilter?'Keine passenden Serien. Suche oder Filter zurücksetzen.':'Keine Serien in dieser Season gefunden.';parent.append(empty);return;}
  for(const s of shown){
   // compact card: number, title (romaji below), and why a show has no trailer
-  const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item'+(voter&&voteValue(s,voter)==='Default'?' open':'');
+  const trailer=pickedTrailer(s),mal=malLink(s),cover=coverForPreview(s),article=document.createElement('article');article.className='preview-item'+(cover?' has-cover':'')+(voter&&voteValue(s,voter)==='Default'?' open':'');
   const sequel=detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel';
   // the trailers are streamed as one playlist; a card only notes when a show has none
   // above the title, so the vote buttons line up on every card
   const note=trailer?'':'<span class="preview-none">'+(sequel?'Sequel':'Noch kein Trailer')+'</span>';
-  const cover=coverForPreview(s);
-  const coverHtml=cover?'<img class="preview-cover" src="'+safeText(cover)+'" alt="" loading="lazy" decoding="async">':'<span class="preview-cover-blank" aria-hidden="true"></span>';
+  const coverHtml=cover?'<img class="preview-cover" src="'+safeText(cover)+'" alt="" loading="lazy" decoding="async">':'';
   const suggestion=voter&&voteValue(s,voter)==='Default'&&!saving.has(s.key)?sequelSuggestions.get(s.key):'';
   const auto=suggestion?'<button type="button" class="preview-auto" data-auto-vote="'+suggestion+'" data-anime="'+safeText(s.key)+'" title="AniList: direkter Vorgänger '+(suggestion==='Ja'?'abgeschlossen':'abgebrochen')+'. Klicken, um diesen Vorschlag zu speichern.">Vorschlag: '+suggestion+' ✓</button>':'';
   article.innerHTML='<div class="preview-order">'+s.order+'</div>'+coverHtml+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+auto+votingControls(s)+'</div>';
