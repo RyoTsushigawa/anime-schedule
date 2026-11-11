@@ -215,8 +215,11 @@ const NOT_LONG = /\b(?:delay(?:ed|s)?|later|earlier|postpone[sd]?|pushed|moved|b
 // An extended broadcast is not necessarily an extended episode.
 const NON_EPISODE_BROADCAST = /\b(?:recap|compilation|cast special|voice actor|talk show|behind[- ]the[- ]scenes|interview|special (?:program(?:me)?|broadcast|event)|variety show)\b/i;
 const REGULAR_EPISODE_NOTE = /\b(?:episode|premiere|finale)\b|\bep\.?\s*\d+\b/i;
+// Unqualified "one-hour special" describes a broadcast, not necessarily a main episode.
+const isReplacementBroadcast = text => NON_EPISODE_BROADCAST.test(text)
+  || (/\b(?:one|1)[- ]hour special\b/i.test(text) && !REGULAR_EPISODE_NOTE.test(text));
 const confirmedLongNote = text => LONG_EPISODE.test(text) && !NOT_LONG.test(text)
-  && !NON_EPISODE_BROADCAST.test(text) && REGULAR_EPISODE_NOTE.test(text);
+  && !isReplacementBroadcast(text) && REGULAR_EPISODE_NOTE.test(text);
 async function timetableNotes() {
   const notes = {};
   for (const days of [0, 7]) {
@@ -373,7 +376,7 @@ for (const t of titles) {
   }
   // Replacement programming is a break, not an extended main episode.
   const breaks = [...(previous?.status?.[card.anilist]?.broadcastBreaks || [])];
-  for (const note of notes.filter(n => NON_EPISODE_BROADCAST.test(n.text) && !/\brecap\b/i.test(n.text))) {
+  for (const note of notes.filter(n => isReplacementBroadcast(n.text) && !/\brecap\b/i.test(n.text))) {
     const episode = next && Math.abs(next.at - note.at) < 2 * 86400 ? next.episode : null;
     if (episode && !breaks.some(r => r.episode === episode && r.at === next.at))
       breaks.push({ episode, at: next.at, text: note.text });
