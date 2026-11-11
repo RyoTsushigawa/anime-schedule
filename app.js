@@ -1491,6 +1491,33 @@ document.body.classList.toggle(cls, !$(id).checked);
 if (id === 'moveButtons') syncMoveEditor();
 };
 }
+// Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
+const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
+  'who', 'behind', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
+  'notListedOpen', 'listProvider', 'anilistUser'];
+$('settingsExport').onclick = () => {
+  const settings = {};
+  for (const key of EXPORTED_SETTINGS) { try { const v = localStorage.getItem(key); if (v != null) settings[key] = v; } catch {} }
+  const blob = new Blob([JSON.stringify({ app: 'anime-schedule', version: 1, exported: new Date().toISOString(), settings }, null, 1)], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'anime-schedule-einstellungen.json' });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  notice('Einstellungen exportiert.');
+};
+$('settingsImport').onclick = () => $('settingsFile').click();
+$('settingsFile').onchange = async () => {
+  const file = $('settingsFile').files[0];
+  $('settingsFile').value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (data?.app !== 'anime-schedule' || typeof data.settings !== 'object') throw new Error('keine Einstellungsdatei');
+    const take = Object.entries(data.settings).filter(([k, v]) => EXPORTED_SETTINGS.includes(k) && typeof v === 'string' && v.length < 4000);
+    if (!take.length) throw new Error('nichts zu übernehmen');
+    for (const [k, v] of take) localStorage.setItem(k, v);
+    notice(`${take.length} Einstellungen übernommen. Die Seite lädt neu …`);
+    setTimeout(() => location.reload(), 900);
+  } catch (e) { notice(`Import fehlgeschlagen: ${e.message}.`); }
+};
 $('list').addEventListener('click', e => {
   const button = e.target.closest('[data-pause-shift]');
   if (!button) return;
