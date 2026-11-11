@@ -89,6 +89,42 @@ function catalogIds(tab,show){
   .map(e=>String(e.mal||'').match(/^https:\/\/myanimelist\.net\/anime\/(\d+)/)?.[1])
   .filter(Boolean);
 }
+// Covers use the same AniList artwork as the weekly schedule. Match with a
+// catalog MAL ID, not a title guess; failures leave the compact card intact.
+const PREVIEW_COVERS_QUERY = `query ($ids:[Int]) { Page(page:1,perPage:50) { media(idMal_in:$ids,type:ANIME) { idMal coverImage { medium } } } }`;
+const previewCoverCache=new Map();
+let previewCovers=new Map(),previewCoverRequest=0;
+function previewCoverUrl(value){
+ const url=String(value||'');
+ return /^https:\/\/(?:[a-z0-9-]+\.anilist\.co|img\.anili\.st)\//i.test(url)?url:'';
+}
+function coverForPreview(show){
+ const ids=catalogIds(current,show);
+ return ids.length===1?previewCovers.get(Number(ids[0]))||'':'';
+}
+async function loadPreviewCovers(){
+ const tab=current,request=++previewCoverRequest;
+ previewCovers=new Map();
+ if(!tab)return;
+ if(!previewCoverCache.has(tab.gid))previewCoverCache.set(tab.gid,(async()=>{
+  const ids=[...new Set(shows.flatMap(show=>catalogIds(tab,show)).map(Number).filter(Number.isSafeInteger))];
+  const covers=new Map();
+  for(let i=0;i<ids.length;i+=40){
+   const data=await anilist(PREVIEW_COVERS_QUERY,{ids:ids.slice(i,i+40)});
+   for(const media of data.Page?.media||[]){
+    const url=previewCoverUrl(media.coverImage?.medium);
+    if(Number.isSafeInteger(media.idMal)&&url)covers.set(media.idMal,url);
+   }
+  }
+  return covers;
+ })().catch(error=>{previewCoverCache.delete(tab.gid);throw error;}));
+ try{
+  const covers=await previewCoverCache.get(tab.gid);
+  if(request!==previewCoverRequest||current?.gid!==tab.gid)return;
+  previewCovers=covers;
+  render();
+ }catch(error){console.warn('Season-Cover nicht verfügbar:',error);}
+}
 function withoutCarryovers(items,previous,tab,priorTab){
  const oldTitles=new Set(previous.flatMap(comparableTitles));
  const oldIds=new Set(previous.flatMap(show=>catalogIds(priorTab,show)));
@@ -514,9 +550,11 @@ function render(){
   // the trailers are streamed as one playlist; a card only notes when a show has none
   // above the title, so the vote buttons line up on every card
   const note=trailer?'':'<span class="preview-none">'+(sequel?'Sequel':'Noch kein Trailer')+'</span>';
+  const cover=coverForPreview(s);
+  const coverHtml=cover?'<img class="preview-cover" src="'+safeText(cover)+'" alt="" loading="lazy" decoding="async">':'<span class="preview-cover-blank" aria-hidden="true"></span>';
   const suggestion=voter&&voteValue(s,voter)==='Default'&&!saving.has(s.key)?sequelSuggestions.get(s.key):'';
   const auto=suggestion?'<button type="button" class="preview-auto" data-auto-vote="'+suggestion+'" data-anime="'+safeText(s.key)+'" title="AniList: direkter Vorgänger '+(suggestion==='Ja'?'abgeschlossen':'abgebrochen')+'. Klicken, um diesen Vorschlag zu speichern.">Vorschlag: '+suggestion+' ✓</button>':'';
-  article.innerHTML='<div class="preview-order">'+s.order+'</div><div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+auto+votingControls(s)+'</div>';
+  article.innerHTML='<div class="preview-order">'+s.order+'</div>'+coverHtml+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+auto+votingControls(s)+'</div>';
   parent.append(article);
  }
 }
@@ -532,6 +570,7 @@ async function selectSeason(gid){
   state('');
   updateMemberUI();
   render();
+  loadPreviewCovers();
   loadSequelSuggestions();
  }catch(e){
   if(request!==seasonRequest)return;
