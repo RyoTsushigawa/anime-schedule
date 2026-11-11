@@ -111,7 +111,11 @@ async function anilist(show, start) {
 // ---- picking
 const OFFICIAL = /crunchyroll|aniplex|toho ?animation|muse ?asia|muse ?communication|ani-?one|kadokawa|pony ?canyon|avex|bandai ?namco|netflix|hidive|mappa|sentai|funimation|tms|king ?amuse|lantis|nbcuniversal|warner|shueisha|kodansha|square ?enix|bilibili|ufotable|toei|sunrise|cloverworks|a-1|frontier ?works|mbs|shopro|dmm|abc ?animation|公式|株式会社/i;
 // channels that only collect or re-upload trailers: no official bonus, even with "Official" in the name
-const COLLECTOR = /anime officials? trailer|animevibe|anime ?mojo|anime ?tenkai|geek realm|anime overview|tr anime/i;
+const COLLECTOR = /anime officials? trailer|animevibe|anime ?mojo|anime ?tenkai|geek realm|anime overview|tr anime|miracustream|anime update|a-ronin|anime web|ign\b/i;
+// first choice: official English-language channels (the group picks trailers from Crunchyroll, Netflix & co.)
+const ENGLISH_OFFICIAL = /^(crunchyroll|netflix( anime)?|hidive|aniplex usa|muse asia|ani-one asia|ani-one|medialink|toho animation|sentai|funimation|gkids|viz)$/i;
+// an official channel: a known name, or a Japanese studio/publisher channel (Japanese name, "公式", "チャンネル", "Inc", "Channel")
+const official = name => !COLLECTOR.test(name) && (OFFICIAL.test(name) || ENGLISH_OFFICIAL.test(name.trim()) || /[\u3040-\u30ff\u4e00-\u9fff]|\binc\b|channel/i.test(name));
 const tokens = s => new Set(String(s || '').normalize('NFKD').toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 1 && !/^(the|no|wa|ga|wo|to|ni|de|of|a|an|season|part|cour|2nd|3rd|\d+th)$/.test(t)));
 function matches(titles, text) {
   const have = tokens(text);
@@ -131,7 +135,8 @@ function score(v, titles, fromAniList, start, channelPref) {
   if (/teaser|ティザー|特報|announcement|first look/i.test(t)) s -= 3;
   if (/pv ?[2-9]|trailer ?[2-9]|第[2-9]弾/i.test(t)) s += 1;
   if (len >= 60 && len <= 240) s += 2; else if (len < 40) s -= 4; else if (len > 360) s -= 6;
-  if (OFFICIAL.test(v.snippet.channelTitle) && !COLLECTOR.test(v.snippet.channelTitle)) s += 3;
+  const ch = v.snippet.channelTitle || '';
+  if (ENGLISH_OFFICIAL.test(ch.trim())) s += 6; else if (official(ch)) s += 3; else s -= 3;
   if (preferred) s += 8;
   // a film or concert of the franchise is not this show's trailer (unless the show itself is a film)
   if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(t) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) return -50;
@@ -316,6 +321,8 @@ try { for (const tab of lists) {
       } else if (s.notSequel) { delete s.notSequel; delete s.channelPref; delete s.searched; }
       if (key in own && !auto) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; continue; }
       if (s.fixed) { delete s.fixed; delete s.searched; }
+      // picked from a re-upload channel before official channels ranked first: search once more
+      if (s.video && !s.fixed && !s.channelPref && s.searched && !s.officialCheck && !official(s.channel || '')) { delete s.searched; s.officialCheck = true; }
       // a teaser or nothing yet: look again once a week until the season starts (main trailers come later)
       const again = s.searched && s.skip !== 'sequel' && Date.now() - Date.parse(s.searched) > 7 * DAY && Date.now() < tab.start
         && (!s.video || /teaser|ティザー|特報|super ?teaser|announcement/i.test(s.videoTitle || ''));
