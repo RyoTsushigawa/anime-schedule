@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "description": "Canonical ONE full trailer per non-sequel anime. Verified alternatives may be offered in candidates for a local-only viewer choice. Include short-form anime, exclude sequels and teasers. Every displayed video must have verified:true, footageVerified:true, type:'full_trailer', sequelStatus:'not_sequel'.",
+  "schemaVersion": 4,
+  "description": "One approved canonical YouTube full trailer per non-sequel show (short-form included). Use youtubeStatus 'not_found' only after checking YouTube for a substantive full trailer, 'unavailable' when a previously approved video disappears. Other-site links can be saved locally by any visitor when no YouTube trailer is selected; not a public submission.",
   "seasons": {},
   "entryExample": {
     "type": "full_trailer",
@@ -22,5 +22,12 @@
       }
     ],
     "note": "Documentation only. A per-show candidates array may contain other approved full trailers. Playlist sync must use only canonical youtubeId."
+  },
+  "previousPlaylistReference": "https://www.youtube.com/watch?v=XER9knL33-8&list=PLT2F_qa8DPPY&pp=sAgC",
+  "youtubeStatusReference": {
+    "not_found": "Checked, no suitable full trailer available",
+    "unavailable": "Formerly approved trailer no longer accessible",
+    "checking": "In review",
+    "note": "Do not mark unreviewed shows as missing."
   }
 }
