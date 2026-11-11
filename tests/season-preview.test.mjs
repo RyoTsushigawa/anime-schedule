@@ -39,3 +39,9 @@ test('playlist follows sheet order, skips missing, excluded and duplicate videos
  const season={trailers:{a:base,b:{...base,youtubeId:'BBBBBBBBBBB'},c:{...base,sequelStatus:'sequel'},d:base}};
  assert.deepEqual(desiredVideos(season,shows),['AAAAAAAAAAA','BBBBBBBBBBB']);
 });
+
+test('unavailable canonical video falls back to verified alternative, with one playlist entry',()=>{
+ const first={...base,candidates:[{...base,youtubeId:'CCCCCCCCCCC'}]};
+ const sheet={trailers:{a:first},videoStatus:{AAAAAAAAAAA:{available:false},CCCCCCCCCCC:{available:true}}};
+ assert.deepEqual(desiredVideos(sheet,[{key:'a'}]),['CCCCCCCCCCC']);
+});
