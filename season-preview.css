@@ -14,3 +14,6 @@
 .preview-choice:disabled,.preview-reset:disabled{opacity:.5;cursor:not-allowed}
 .preview-choice:focus-visible,.preview-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:560px){.preview-member{align-items:stretch}.preview-choices .preview-choice{flex:1 1 40%}.preview-alternates .preview-choice{flex:1 1 100%}}
+
+/* Ensure native hidden state takes precedence over component display rules. */
+.preview-page [hidden]{display:none!important}
