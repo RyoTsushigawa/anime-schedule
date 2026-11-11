@@ -223,6 +223,9 @@ p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px
 /* cards the chosen name hasn't voted on yet */
 .preview-item.open{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 70%,transparent)}
 
+.preview-auto { flex:none; border:1px solid var(--line); border-radius:99px; background:color-mix(in srgb,var(--accent) 10%,var(--card)); color:var(--text); min-height:28px; padding:3px 9px; font:inherit; font-size:11px; cursor:pointer; }
+.preview-auto:hover { border-color:var(--accent); }
+@media(max-width:800px){.preview-side { flex-wrap:wrap; justify-content:flex-end; }}
 /* saving: dim the whole control (no extra elements, no size change); error: red edge, reason on hover */
 .preview-vote.saving{opacity:.65}
 .preview-vote button:disabled{cursor:progress;opacity:1}
