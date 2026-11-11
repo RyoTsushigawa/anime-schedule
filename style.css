@@ -1422,3 +1422,12 @@ body.catchup #list > .catchup-season:not([open]) > .catchup-season-tools{display
 @media(max-width:560px){
  body.catchup #list .catchup-season-tools .catchup-season-mark{min-height:44px}
 }
+
+/* Kompakt (settings → Dichte): more shows on screen, smaller covers */
+body.dense .day { margin-bottom: 14px; }
+body.dense .day h2 { padding-block: 5px; margin-bottom: 5px; }
+body.dense #list .row { padding: 4px 10px 4px 5px; margin-bottom: 5px; gap: 10px; border-radius: 10px; }
+body.dense #list .row > img { width: 34px; height: 48px; aspect-ratio: auto; border-radius: 6px; }
+body.dense #list .row.pause > img { height: 34px; }
+body.dense .day .row .title { font-size: 14px; }
+body.dense .day .row .ep { margin-top: 2px; }
