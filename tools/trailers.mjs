@@ -129,7 +129,7 @@ function score(v, titles, fromAniList, start) {
   if (len >= 60 && len <= 240) s += 2; else if (len < 40) s -= 4; else if (len > 360) s -= 6;
   if (OFFICIAL.test(v.snippet.channelTitle) && !COLLECTOR.test(v.snippet.channelTitle)) s += 3;
   // a film or concert of the franchise is not this show's trailer (unless the show itself is a film)
-  if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(t) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) s -= 8;
+  if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(t) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) return -50;
   // subtitles in another language than German or English
   if (/vostfr|legendado|sub(titulado)? español|sub ita|\bfr\b|crunchyroll (fr|br|es|de dub)|latino/i.test(t + ' ' + v.snippet.channelTitle)) s -= 5;
   if (fromAniList) s += 2;
