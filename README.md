@@ -91,11 +91,12 @@ about a long finale) and timetable notes ("one-hour special") are stored by the 
 
 **Abwesenheiten:** the calendar button in the top bar (or "Abwesend" on a day) opens a month calendar.
 Tap a day, or a first and last day for a range, pick the people, and choose the whole day, "Ab …" (away
-from that time on) or "Bis …" (there only from that time). A show is set out when at most one person is
+from that time on), "Bis …" (there only from that time) or "Spontan da" (`maybe: true`: planned without
+them like an absence, but they might turn up; dashed dot and name, "(spontan da)" in the posts). A show is set out when at most one person is
 left at the time it is really watched (after delays and long episodes); the schedule, the Discord message
 and the 9:00 post all follow it. On a show that still runs, absent watchers' names are struck through.
 Absences can also repeat weekly (12 weeks). Saved in `moves.json` (`absent`); everyone can enter them, without
-the GitHub key through the Cloudflare helper (v9 or later).
+the GitHub key through the Cloudflare helper (v9 or later; "Spontan da" needs v17, older ones save it as a whole day).
 
 **Verspätung:** the clock on today's heading adds a delay from one show on; it and every later show move,
 and delays add up. **Edit** on the delay line changes or removes it. Everyone can add one (see
