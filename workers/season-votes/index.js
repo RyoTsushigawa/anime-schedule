@@ -10,28 +10,22 @@ function originHeaders(origin,env){
  const allowed=env.SITE_ORIGIN||DEFAULT_ORIGIN;
  if(origin!==allowed)return null;
  return {'Access-Control-Allow-Origin':allowed,'Access-Control-Allow-Methods':'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers':'Authorization, Content-Type','Vary':'Origin'};
+  'Access-Control-Allow-Headers':'X-Group-Code, Content-Type','Vary':'Origin'};
 }
-async function aniListViewer(token){
- const response=await fetch('https://graphql.anilist.co',{
-  method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json',Accept:'application/json'},
-  body:JSON.stringify({query:'query { Viewer { id name } }'})});
- if(!response.ok)fail(401,'AniList-Anmeldung abgelaufen oder ungültig.');
- const data=await response.json();
- if(!Number.isSafeInteger(data?.data?.Viewer?.id))fail(401,'AniList-Konto konnte nicht bestätigt werden.');
- return data.data.Viewer;
-}
+// Shared access code is a group-level permission, NOT verified individual identity.
+// Never expose GROUP_ACCESS_CODE or Google service-account credentials to the static site.
 async function authorized(request,env){
- const token=(request.headers.get('Authorization')||'').match(/^Bearer ([A-Za-z0-9._~+/-]{12,4096})$/)?.[1];
- if(!token)fail(401,'Bitte mit AniList verbinden.');
- const viewer=await aniListViewer(token);
- const accounts=JSON.parse(env.VOTER_MAP_JSON||'{}');
- const entry=accounts[String(viewer.id)];
- if(!entry||typeof entry.person!=='string')fail(403,'AniList-Konto für diese Gruppe nicht freigeschaltet.');
- const person=str(entry.person);
- const delegates=Array.isArray(entry.delegates)?entry.delegates.filter(p=>typeof p==='string').map(str):[];
- if(!person)fail(403,'Mitglied hat keine zugewiesene Person.');
- return {person,delegates:[...new Set(delegates)].filter(p=>p&&p!==person),account:viewer.name};
+ const expected=str(env.GROUP_ACCESS_CODE);
+ if(expected.length<16)fail(503,'Gruppenzugang wurde noch nicht eingerichtet.');
+ const supplied=str(request.headers.get('X-Group-Code'));
+ if(supplied.length<16||supplied.length>256)fail(401,'Gruppencode fehlt oder ist ungültig.');
+ const bytes=new TextEncoder();
+ const [a,b]=await Promise.all([expected,supplied].map(s=>crypto.subtle.digest('SHA-256',bytes.encode(s))));
+ const left=new Uint8Array(a),right=new Uint8Array(b);
+ let diff=0;
+ for(let i=0;i<left.length;i++)diff|=left[i]^right[i];
+ if(diff!==0)fail(401,'Gruppencode fehlt oder ist ungültig.');
+ return true;
 }
 function base64url(data){
  const bytes=data instanceof Uint8Array?data:new TextEncoder().encode(data);
@@ -70,13 +64,12 @@ async function google(path,token,options={}){
 const columnName=index=>{
  let letters='';for(let n=index;n>0;n=Math.floor((n-1)/26))letters=String.fromCharCode(65+(n-1)%26)+letters;return letters;
 };
-async function saveVote(body,member,env){
+async function saveVote(body,env){
  const gid=str(body.gid),title=str(body.title),person=str(body.person),choice=str(body.choice);
  if(!/^\d{1,12}$/.test(gid)||!title||title.length>250||!person||person.length>100||
     !OPTIONS.includes(choice)||!['string','undefined'].includes(typeof body.expected))
   fail(400,'Ungültige Abstimmung.');
  if(title.toLowerCase()==='amount')fail(403,'Die Summenzeile ist keine Anime-Abstimmung.');
- if(person!==member.person&&!member.delegates.includes(person))fail(403,'Für diese Person darfst du nicht abstimmen.');
  if(choice==='Okinawa 3'&&!['quecks','rei','terra'].includes(person.toLowerCase()))
   fail(403,'Okinawa 3 ist nur für Quecks, Rei und Terra erlaubt.');
  if(!env.SHEET_ID)fail(503,'Google Sheet ist noch nicht konfiguriert.');
@@ -124,13 +117,16 @@ export default {
   const path=new URL(request.url).pathname.replace(/\/$/,'');
   try{
    if(request.method==='GET'&&path==='/health')return json({ok:true},200,cors);
-   if(request.method==='GET'&&path==='/me')return json(await authorized(request,env),200,cors);
+   if(request.method==='GET'&&path==='/access'){
+    await authorized(request,env);
+    return json({ok:true},200,cors);
+   }
    if(request.method==='POST'&&path==='/vote'){
     if(Number(request.headers.get('Content-Length')||0)>2048)fail(413,'Anfrage zu groß.');
-    const member=await authorized(request,env);
+    await authorized(request,env);
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
-    return json(await saveVote(body,member,env),200,cors);
+    return json(await saveVote(body,env),200,cors);
    }
    return json({error:'Nicht gefunden.'},404,cors);
   }catch(error){return json({error:error?.status?error.message:'Die Abstimmung konnte nicht verarbeitet werden.'},error?.status||500,cors);}
