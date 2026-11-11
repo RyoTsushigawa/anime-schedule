@@ -24,3 +24,22 @@ test('− / + choose how many open episodes the ✓ saves', async () => {
   assert.equal(save.variables.progress, first + open - 3);
   p.close();
 });
+// Non-seasonal (older shows at your own pace): the counter starts at one episode, + goes up to the last one out
+test('Non-seasonal: the counter starts at the next episode and + adds more', async () => {
+  const p = await openPage({ storage: { anilistAccounts: JSON.stringify([{ name: 'Tester', token: 'fixture-only' }]), anilistActive: 'Tester', anilistUser: 'Tester' },
+    list: { 4: { status: 'CURRENT', progress: 2 } }, listNext: { 4: null },
+    media: { 4: { status: 'FINISHED', episodes: 12, startDate: { year: 2019, month: 4, day: 1 } } } });
+  await p.click(p.$('viewPace'));
+  const row = [...p.$('list').querySelectorAll('.row')].find(r => r.textContent.includes('Delta EN'));
+  assert.ok(row, 'Delta is in Non-seasonal');
+  const box = row.querySelector('.ep-stepper');
+  assert.ok(box, 'stepper shown');
+  assert.equal(box.querySelector('.ep-count').textContent, '1');
+  assert.equal(Number(row.querySelector('.watch').dataset.ep), 3);
+  const plus = box.querySelector('[data-step="1"]');
+  await p.click(plus); await p.click(plus);
+  assert.equal(Number(row.querySelector('.watch').dataset.ep), 5);
+  await p.click(row.querySelector('.watch'));
+  assert.equal(p.calls.find(c => /SaveMediaListEntry/.test(c.query))?.variables.progress, 5);
+  p.close();
+});
