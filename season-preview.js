@@ -6,7 +6,7 @@ const PV_MONTHS = {winter:0,'frühling':3,sommer:6,herbst:9};
 const pv = id => document.getElementById(id);
 const clean = s => String(s || '').trim();
 const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, current = null, shows = [], people = [];
+let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, previewCandidates = {seasons:{}}, current = null, shows = [], people = [];
 let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
 function state(msg) {pv('previewStatus').textContent=msg;}
 function seasonKey(tab){const m=tab.name.match(PV_SEASONS);return m ? m[1].toLowerCase()+'-'+m[2] : '';}
@@ -54,6 +54,10 @@ function malLink(show){
  if(typeof direct==='string' && /^https:\/\/myanimelist\.net\/anime\/\d+(?:\/[^?#]*)?$/.test(direct))return {url:direct,label:'MyAnimeList'};
  return {url:'https://myanimelist.net/anime.php?q='+encodeURIComponent(show.english||show.title)+'&cat=anime',label:'Auf MyAnimeList suchen'};
 }
+function carryoverStatus(show){
+ const entries=previewCandidates.seasons?.[seasonKey(current)]?.entries;
+ return entries?.find(e=>e.key===show.key)?.carriedOver ?? null;
+}
 function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
  return data.trailers?.[show.key] || null;
@@ -62,7 +66,7 @@ function detailsFor(show){
 // are verified options for viewers, not additional playlist entries.
 function trailerCandidates(show){
  const entry=detailsFor(show);
- if(!entry || entry.sequelStatus==='sequel')return [];
+ if(carryoverStatus(show)!==false || !entry || entry.sequelStatus==='sequel')return [];
  const all=[entry,...(Array.isArray(entry.candidates)?entry.candidates:[])];
  const seen=new Set();
  const videos=all.flatMap(item=>{
@@ -84,6 +88,9 @@ function pickedTrailer(show){
 }
 function trailerFor(show){return trailerCandidates(show)[0]||null;}
 function trailerStatus(show){
+ const carryover=carryoverStatus(show);
+ if(carryover===true)return 'Übernahme aus vorheriger Season · kein Trailer';
+ if(carryover===null)return 'Vorherige Season noch nicht abgeglichen';
  const entry=detailsFor(show);
  if(entry?.sequelStatus==='sequel')return 'Fortsetzung · kein Trailer';
  if(entry?.sequelStatus!=='not_sequel')return 'Einordnung noch offen · kein Trailer';
@@ -105,7 +112,7 @@ function externalUrl(input){
  }catch{return '';}
 }
 function localExternal(show){
- if(detailsFor(show)?.sequelStatus==='sequel'||trailerFor(show))return '';
+ if(carryoverStatus(show)===true||detailsFor(show)?.sequelStatus==='sequel'||trailerFor(show))return '';
  try{return externalUrl(localStorage.getItem(externalKey(show)));}catch{return '';}
 }
 function voteValue(show,person){
@@ -208,7 +215,7 @@ pv('previewList').addEventListener('submit',event=>{
  if(!form)return;
  event.preventDefault();
  const show=shows.find(s=>s.key===form.dataset.externalAnime);
- if(!show||detailsFor(show)?.sequelStatus==='sequel'||trailerFor(show))return;
+ if(!show||carryoverStatus(show)===true||detailsFor(show)?.sequelStatus==='sequel'||trailerFor(show))return;
  const link=externalUrl(form.querySelector('input[name="externalTrailer"]')?.value);
  if(!link){state('Bitte einen gültigen HTTPS-Link zu einem echten Trailer angeben.');return;}
  try{localStorage.setItem(externalKey(show),link);}
@@ -256,7 +263,7 @@ function render(){
   const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),external=localExternal(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ '+(trailer.type==='teaser'?'Teaser ansehen (Ersatz)':'Vollständigen Trailer ansehen')+'</a>':'';
   const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.type==='teaser'?' · Teaser (Ersatz)':'')+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
-  const fallback=!trailer&&detailsFor(s)?.sequelStatus!=='sequel'?'<div class="preview-external">'+
+  const fallback=!trailer&&carryoverStatus(s)!==true&&detailsFor(s)?.sequelStatus!=='sequel'?'<div class="preview-external">'+
   (external?'<p>Eigener Trailer (ungeprüft): <a href="'+safeText(external)+'" target="_blank" rel="noopener noreferrer">Trailer öffnen</a> <button type="button" class="preview-reset" data-remove-external="'+safeText(s.key)+'">Entfernen</button></p>':'')+
   '<form data-external-anime="'+safeText(s.key)+'"><label>Trailer von einer anderen Seite (nur für dich)<input type="url" name="externalTrailer" required placeholder="https://…" value="'+safeText(external)+'"></label><button type="submit" class="preview-choice">Link speichern</button></form><small>Nur echte Trailer mit Szenen des Anime. Der Link wird in diesem Browser gespeichert, nicht veröffentlicht oder der YouTube-Playlist hinzugefügt.</small></div>':'';
   const decided=s.votes.filter(v=>v.value&&v.value.toLowerCase()!=='default');
@@ -281,13 +288,15 @@ async function selectSeason(gid){
 }
 async function start(){
  try{
-  const [tabs,metadata,animeData]=await Promise.all([
+  const [tabs,metadata,animeData,candidateData]=await Promise.all([
    listSeasonTabs(),
    fetch('season-trailers.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}})),
-   fetch('seasons.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}}))
+   fetch('seasons.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}})),
+   fetch('season-trailer-candidates.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}}))
   ]);
   seasonTabs=tabs;seasonIndex=metadata&&typeof metadata==='object'?metadata:{seasons:{}};
   animeIndex=animeData&&typeof animeData==='object'?animeData:{seasons:{}};
+  previewCandidates=candidateData&&typeof candidateData==='object'?candidateData:{seasons:{}};
   const sel=pv('previewSeason');
   if(!tabs.length){state('Noch keine eigenständige Season-Liste gefunden. Sobald z. B. „Winter 2027“ im Google Sheet angelegt wird, erscheint sie hier.');return;}
   for(const t of tabs){const opt=document.createElement('option');opt.value=t.gid;opt.textContent=t.name;sel.append(opt);}
