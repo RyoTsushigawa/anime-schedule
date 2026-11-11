@@ -3,7 +3,7 @@
 // is fetched as a whole and offers "Reload" (app.js). Data files still come fresh, with the saved copy
 // standing in when the network is slow or down. AniList, Google and LiveChart requests aren't touched:
 // the page keeps its own copies.
-const CACHE = 'schedule-v389';
+const CACHE = 'schedule-v390';
 const FILES = ['./', 'index.html', 'season-preview.html', 'season-preview.css', 'season-preview.js', 'season-trailers.json', 'services/crunchyroll.svg', 'services/netflix.svg', 'services/prime-video.svg', 'services/disney.svg', 'services/adn.svg', 'services/youtube.svg', 'services/akiba.svg', 'services/hidive.svg', 'services/aniworld.png', 'services/subsplease.png', 'services/nyaa.png', 'services/0neko.ico', 'style.css', 'frame-guard.js', 'early.js', 'tool-theme.js', 'common.js', 'mal.js', 'app.js', 'drag-moves.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'nicknames.json', 'manifest.webmanifest', 'icon-72.png'];
 
 self.addEventListener('install', event => {
@@ -16,7 +16,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => /^schedule-vNaN+$/.test(k) && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => /^schedule-v\d+$/.test(k) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -38,6 +38,13 @@ self.addEventListener('fetch', event => {
   const saved = caches.open(CACHE).then(cache => cache.match(key)); // asked first, so this visit gets the older copy
   const network = fresh();
   event.waitUntil(network.catch(() => {})); // finishes saving even after the page has its answer
+  // Season Preview changes frequently; prefer the network for the page and its
+  // dedicated UI assets. Offline users still get the saved version.
+  const previewAsset = /\/(?:season-preview\.html|season-preview\.css|season-preview\.js)$/.test(url.pathname);
+  if (previewAsset) {
+    event.respondWith(network.catch(async () => (await saved) || Response.error()));
+    return;
+  }
   event.respondWith(saved.then(cached => {
     if (pageFile) {
       if (cached) return cached;
