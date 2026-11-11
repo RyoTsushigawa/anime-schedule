@@ -54,3 +54,15 @@ LiveChart's per-anime video selector is the preferred **manual review source** f
 ## LiveChart refresh status (11 November 2026)
 
 LiveChart season metadata was successfully refreshed through [GitHub Actions run #43013545850](https://github.com/RyoTsushigawa/anime-schedule/actions/runs/43013545850). `seasons.json` contains **71/71 LiveChart IDs for Winter 2027** and **109/109 for Autumn 2026**. The workflow `season-livechart-refresh.yml` also runs weekly for current/previous/next seasons. This metadata is public **title and anime link information**, not proof of a verified trailer or subtitles. The first `season-preview.yml` candidate-discovery run was triggered separately; only its completed job outcome can confirm candidate generation.
+
+## Trailer review without editing JSON
+
+The [Review Season Preview trailer](https://github.com/RyoTsushigawa/anime-schedule/actions/workflows/season-trailer-review.yml) manual GitHub Actions workflow lets a repository editor select a season and an **exact Anime Titel** from the sheet, then:
+- **approve-full:** Approve one confirmed official full video with meaningful anime footage, no sequel, and optionally confirmed DE/EN subtitles.
+- **approve-alternate:** Add another verified full trailer as a viewer-selectable option; the YouTube playlist still contains only one video per show.
+- **approve-teaser:** Only after confirming no adequate full trailer can be found, approve a clearly labeled fallback teaser showing actual footage.
+- **mark-missing:** Record that an actual search found no suitable full YouTube trailer. Add a concrete review note. This is distinct from an unreviewed title or a removed video.
+- **mark-sequel:** Exclude a verified sequel, supplying the review evidence.
+- **clear-status:** Undo an unapproved classification or missing status.
+
+Every action validates against the latest `season-trailer-candidates.json`, rejects carryovers and unknown previous-season checks, and commits only `season-trailers.json`. Video approvals require explicit reviewer confirmations. The daily playlist sync then includes reviewed videos if the YouTube owner OAuth has been authorized. This is a manual review mechanism for repository editors, **not** a public submission endpoint. Visitors can still pick approved alternatives or save an external link locally.
