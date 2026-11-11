@@ -10,6 +10,7 @@ const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, previewCandidates = {seasons:{}}, current = null, shows = [], people = [];
 let voteApi = '', member = null, memberError = '', groupCode = '', saving = new Set(), reloadTimer = 0;
 let carryoverNotice = '', seasonRequest = 0;
+const pendingVotes = new Map(); // show key → the choice being saved (shown right away)
 const checkedNewTitles = new Map();
 const voteFeedback = new Map();
 const voteFeedbackKey = (gid,key,person)=>gid+'|'+key+'|'+person;
@@ -265,22 +266,25 @@ function votingControls(show){
  if(!member)return '';
  const person=currentVoter();
  if(!person)return '';
- const picked=voteValue(show,person),disabled=saving.has(show.key);
+ // while saving, the clicked choice shows at once and the control only dims: its size never changes
+ const disabled=saving.has(show.key),picked=disabled&&pendingVotes.has(show.key)?pendingVotes.get(show.key):voteValue(show,person);
  const feedback=voteFeedback.get(voteFeedbackKey(current.gid,show.key,person));
  const allChoices=validChoices(person),quick=['Ja','Vielleicht','Nein'];
  const button=(choice,label=choice)=>'<button type="button" class="'+(picked===choice?'on':'')+'" data-vote="'+safeText(choice)+'" data-anime="'+safeText(show.key)+'" aria-pressed="'+(picked===choice)+'"'+(disabled?' disabled':'')+'>'+safeText(label)+'</button>';
  const more=allChoices.filter(c=>!quick.includes(c));
  const moreOn=more.includes(picked);
- return '<div class="preview-vote" role="group" aria-label="Stimme von '+safeText(person)+' für '+safeText(show.english||show.title)+': '+(picked==='Default'?'Noch offen':safeText(picked))+'">'+
+ const error=!disabled&&feedback?.error;
+ const status=disabled?'Wird gespeichert':error?feedback.message:picked==='Default'?'Noch offen':picked;
+ return '<div class="preview-vote'+(disabled?' saving':'')+(error?' error':'')+'" role="group" title="'+(error?safeText(feedback.message):'')+'" aria-label="Stimme von '+safeText(person)+' für '+safeText(show.english||show.title)+': '+safeText(status)+'">'+
   quick.filter(c=>allChoices.includes(c)).map(c=>button(c)).join('')+
-  '<span class="preview-more"><button type="button" class="'+(moreOn?'on':'')+'" data-more aria-expanded="false" title="Weitere Optionen">'+(moreOn?safeText(picked):'…')+'</button><span class="preview-more-menu" hidden>'+more.map(c=>button(c)).join('')+(picked!=='Default'?button('Default','Zurücksetzen'):'')+'</span></span>'+
-  (disabled?'<small title="Wird gespeichert">…</small>':feedback?.error?'<small class="error" title="'+safeText(feedback.message)+'">!</small>':'')+'</div>';
+  '<span class="preview-more"><button type="button" class="'+(moreOn?'on':'')+'" data-more aria-expanded="false" title="Weitere Optionen"'+(disabled?' disabled':'')+'>'+(moreOn?safeText(picked):'…')+'</button><span class="preview-more-menu" hidden>'+more.map(c=>button(c)).join('')+(picked!=='Default'?button('Default','Zurücksetzen'):'')+'</span></span></div>';
 }
 // the group's votes from the sheet, counted ("3 Ja · 1 Vielleicht"), names on hover
 function voteSummary(show){
  const counts=new Map();
  for(const v of show.votes){const value=v.value&&v.value.toLowerCase()!=='default'?v.value:'';if(value)counts.set(value,[...(counts.get(value)||[]),v.name]);}
- if(!counts.size)return '';
+ // always one line, so a first vote doesn't make the card taller
+ if(!counts.size)return '<p class="preview-tally">Noch keine Stimmen</p>';
  const order=['Ja','Vielleicht','Nein'];
  return '<p class="preview-tally">'+[...counts].sort((a,b)=>(order.indexOf(a[0])+1||9)-(order.indexOf(b[0])+1||9)).map(([value,names])=>'<span title="'+safeText(names.join(', '))+'">'+names.length+' '+safeText(value)+'</span>').join(' · ')+'</p>';
 }
@@ -303,8 +307,7 @@ async function saveVote(show,choice){
  if(old===choice)return;
  const feedbackKey=voteFeedbackKey(gid,show.key,person);
  voteFeedback.delete(feedbackKey);
- saving.add(show.key);render();
- state('Speichert '+person+' · '+show.title+' …');
+ saving.add(show.key);pendingVotes.set(show.key,choice);render();
  let conflict=false;
  try{
   const response=await fetch(voteApi+'/vote',{
@@ -324,7 +327,7 @@ async function saveVote(show,choice){
   state('Nicht gespeichert: '+error.message+' · Bitte erneut versuchen.');
  }
  finally{
-  saving.delete(show.key);
+  saving.delete(show.key);pendingVotes.delete(show.key);
   render();
   if(conflict&&current?.gid===gid){
    await refreshSheet(true);
