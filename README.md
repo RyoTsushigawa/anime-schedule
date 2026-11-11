@@ -341,7 +341,7 @@ Setup:
    "In production" (in "Testing" Google ends the login after 7 days). No verification is needed for your own use.
 3. **Credentials → Create credentials → OAuth client ID → Desktop app** → **Download JSON**, saved as
    `tools/youtube-client.json` on the PC.
-4. On the PC in `tools`: `node youtube-login.mjs`, log in with the YouTube account that should own the playlists
+4. On the PC in `tools`: `node youtube-login.mjs` (asks for "youtube.force-ssl" since 11 Nov, which also lets the tool read subtitle languages; an older login without it still works, just without that check), log in with the YouTube account that should own the playlists
    (Google warns that the app isn't verified: Advanced → continue). It shows the three values.
 5. GitHub secrets `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN`; then Actions →
    "Trailer playlists" → Run workflow once (with "dry run" it only shows the picks).

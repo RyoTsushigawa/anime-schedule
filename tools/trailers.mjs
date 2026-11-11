@@ -100,7 +100,7 @@ function matches(titles, text) {
   return titles.filter(Boolean).some(t => { const want = [...tokens(t)]; return want.length && want.filter(w => have.has(w)).length / want.length >= 0.6; });
 }
 const seconds = iso => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '') || []; return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0); };
-function score(v, titles, fromAniList) {
+function score(v, titles, fromAniList, start) {
   const t = v.snippet.title, len = seconds(v.contentDetails.duration);
   if (!fromAniList && !matches(titles, t)) return -99;
   if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(t) && !/trailer|pv/i.test(t)) return -50;
@@ -116,6 +116,9 @@ function score(v, titles, fromAniList) {
   if (/english sub|eng ?sub|english subtitles/i.test(t)) s += 2;
   if (/german|deutsch/i.test(t + ' ' + v.snippet.channelTitle) && !/dub/i.test(t)) s += 1;
   if (/\bdub\b|吹替/i.test(t)) s -= 1;
+  // a trailer for this season is new: much older videos are usually from an earlier season
+  const age = start - Date.parse(v.snippet.publishedAt || 0);
+  if (age > 400 * DAY) s -= 5; else if (age < 270 * DAY) s += 1;
   return s;
 }
 const playable = v => v && v.status?.embeddable !== false && v.status?.privacyStatus === 'public'
@@ -128,8 +131,14 @@ async function videos(ids) {
     out.push(...(await yt('videos', { part: 'snippet,contentDetails,status', id: ids.slice(i, i + 50).join(',') }, 1)).items || []);
   return out;
 }
+// Reading subtitle tracks needs the login's "youtube.force-ssl" permission; without it this check is skipped
+// (then only YouTube's "has subtitles" flag and titles like "English Subtitles" count).
+let captionsAllowed = true;
 async function subtitleLanguages(id) {
-  const res = await yt('captions', { part: 'snippet', videoId: id }, 50);
+  if (!captionsAllowed) return [];
+  let res;
+  try { res = await yt('captions', { part: 'snippet', videoId: id }, 50); }
+  catch (e) { if (!/insufficient authentication scopes|insufficientPermissions/i.test(e.message)) throw e; captionsAllowed = false; log('  (subtitle languages not readable with this login; using the subtitle flag only)'); return []; }
   return [...new Set((res.items || []).filter(c => c.snippet.trackKind !== 'asr').map(c => c.snippet.language.slice(0, 2)))];
 }
 async function pick(show, start) {
@@ -139,7 +148,7 @@ async function pick(show, start) {
   const name = al?.title?.english || show.english || al?.title?.romaji || show.romaji;
   const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} anime trailer`, relevanceLanguage: 'en' }, 100);
   const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
-  const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
+  const ranked = (await videos(ids)).filter(playable).map(v => ({ v, s: score(v, titles, v.id === alTrailer, start) })).filter(x => x.s > -10).sort((a, b) => b.s - a.s);
   // subtitles in German or English decide among the best few
   // (at most two checks, 50 units each, and only for candidates close to the best)
   for (const x of ranked.slice(0, 2)) if (x.v.contentDetails.caption === 'true' && x.s >= ranked[0].s - 4) {
