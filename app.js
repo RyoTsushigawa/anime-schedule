@@ -785,6 +785,15 @@ const label = finale ? (long ? 'Extended Finale' : 'Finale')
   : long ? 'Lang' : '';
 return label ? `<span class="ep-tag"${long ? ' title="Lange Folge: braucht zwei Slots"' : ''}>${label}</span>` : '';
 }
+// Airing progress, not the signed-in viewer's watch progress. AniList may not
+// provide a final episode count; in that case do not invent a denominator.
+function seasonProgress(episodes, total) {
+ const current = Math.max(...episodes);
+ if (!Number.isSafeInteger(total) || total <= 0 ||
+     !Number.isSafeInteger(current) || current <= 0 || current > total) return '';
+ const percent = Math.round(current / total * 100);
+ return `<div class="season-progress" role="progressbar" aria-label="Staffelverlauf" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${current}" title="Staffelverlauf: Folge ${current} von ${total} (${percent} %)"><span style="width:${percent}%"></span></div>`;
+}
 const artStyle = m => m?.coverImage?.medium ? `style="--art:url(&quot;${safeUrl(m.coverImage.medium)}&quot;)"` : '';
 const calmMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 var lastWeekRender = null;
@@ -1179,6 +1188,7 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, ex
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
           <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes, long)}${whoChips(who, away, maybe)}</div>
+          ${extra ? '' : seasonProgress(episodes, m.episodes)}
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>
         ${auth ? dropButton(m.id) : ''}${watchButton(m.id, Math.max(...episodes))}${extra ? (movesKey ? `<button class="move" data-extra="${esc(extra.show)}" title="Nachholen: Tag, Uhrzeit oder Folgen ändern, oder entfernen" aria-label="Nachholen ändern"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h15l-4-4M20 16H5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '') : moveButton(show, slot)}
