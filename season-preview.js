@@ -348,22 +348,26 @@ function render(){
  playlist.hidden=!/^[\w-]{20,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
  const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&(filter==='all'||(filter==='ready')===!!trailerFor(s)));
+ const hasFilter=!!q||filter!=='all';
+ pv('previewResults').textContent=hasFilter?shown.length+' von '+shows.length+' Serien angezeigt':shows.length+' Serien in dieser Season';
+ pv('previewClear').hidden=!hasFilter;
  const parent=pv('previewList');parent.replaceChildren();
- if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent='Keine passenden Serien gefunden.';parent.append(empty);return;}
+ if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent=hasFilter?'Keine passenden Serien. Suche oder Filter zurücksetzen.':'Keine Serien in dieser Season gefunden.';parent.append(empty);return;}
  for(const s of shown){
   const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),livechart=liveChartLink(s),external=localExternal(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ '+(trailer.type==='teaser'?'Teaser ansehen (Ersatz)':'Vollständigen Trailer ansehen')+'</a>':'';
   const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.type==='teaser'?' · Teaser (Ersatz)':'')+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
   const suggestions=!trailer?trailerSuggestions(s):'';
-  const fallback=!trailer&&carryoverStatus(s)!==true&&detailsFor(s)?.sequelStatus!=='sequel'&&reviewEntry(s)?.sequelStatus!=='sequel'?'<div class="preview-external">'+
+  const fallback=!trailer&&carryoverStatus(s)!==true&&detailsFor(s)?.sequelStatus!=='sequel'&&reviewEntry(s)?.sequelStatus!=='sequel'?'<details class="preview-external"'+(external?' open':'')+'><summary>'+(external?'Eigener Trailer-Link':'Eigenen Trailer-Link hinzufügen')+'</summary>'+
   (external?'<p>Eigener Trailer (ungeprüft): <a href="'+safeText(external)+'" target="_blank" rel="noopener noreferrer">Trailer öffnen</a> <button type="button" class="preview-reset" data-remove-external="'+safeText(s.key)+'">Entfernen</button></p>':'')+
-  '<form data-external-anime="'+safeText(s.key)+'"><label>Trailer von einer anderen Seite (nur für dich)<input type="url" name="externalTrailer" required placeholder="https://…" value="'+safeText(external)+'"></label><button type="submit" class="preview-choice">Link speichern</button></form><small>Nur echte Trailer mit Szenen des Anime. Der Link wird in diesem Browser gespeichert, nicht veröffentlicht oder der YouTube-Playlist hinzugefügt.</small></div>':'';
+  '<form data-external-anime="'+safeText(s.key)+'"><label>Trailer von einer anderen Seite (nur für dich)<input type="url" name="externalTrailer" required placeholder="https://…" value="'+safeText(external)+'"></label><button type="submit" class="preview-choice">Link speichern</button></form><small>Nur echte Trailer mit Szenen des Anime. Der Link wird in diesem Browser gespeichert, nicht veröffentlicht oder der YouTube-Playlist hinzugefügt.</small></details>':'';
   const decided=s.votes.filter(v=>v.value&&v.value.toLowerCase()!=='default');
   const votes=decided.length?decided.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Stimmen</span>';
+  const voteSummary='<details class="preview-group-votes"><summary>Gruppenstimmen ('+decided.length+')</summary><div class="preview-vote-chips">'+votes+'</div></details>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+
   '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?(trailer.type==='teaser'?'Nur Teaser verfügbar · Ersatz':'Vollständiger Trailer verfügbar'):trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
   '<div class="preview-links">'+links+(livechart?'<a target="_blank" rel="noopener noreferrer" href="'+safeText(livechart)+'">LiveChart · Videos & Untertitel</a>':'')+'</div>'+choices+suggestions+fallback+
-  '<div class="preview-votes"><div class="preview-vote-title">Gruppen-Entscheidung · aus Google Sheets</div><div class="preview-vote-chips">'+votes+'</div>'+votingControls(s)+'</div></div>';
+  '<div class="preview-votes">'+votingControls(s)+voteSummary+'</div></div>';
   parent.append(article);
  }
 }
@@ -407,6 +411,12 @@ async function start(){
 }
 pv('previewSearch').addEventListener('input',()=>{if(current)render();});
 pv('previewFilter').addEventListener('change',()=>{if(current)render();});
+pv('previewClear').addEventListener('click',()=>{
+ pv('previewSearch').value='';
+ pv('previewFilter').value='all';
+ if(current)render();
+ pv('previewSearch').focus();
+});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSheet(true);});
 reloadTimer=setInterval(()=>{if(!document.hidden)refreshSheet(true);},90000);
 start();
