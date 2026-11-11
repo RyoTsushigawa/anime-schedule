@@ -27,7 +27,7 @@
 ## Pre-launch acceptance checks
 
 - Winter 2027 appears automatically only after a standalone `Winter 2027` tab exists; use the exact Sheet row order including short-form anime.
-- A sequel can be viewed and voted on but has no trailer or playlist slot.
+- A sequel or a series carried over from the previous standalone Season tab can be viewed and voted on but has no trailer or playlist slot. Carryovers are detected using matching original/English titles against the immediately preceding Season tab. If that tab is unavailable, mark the carryover check as unknown and do not approve videos until verified.
 - Each eligible anime yields at most one video in the shared playlist; a teaser is labeled as a fallback and is superseded by a verified full trailer.
 - A missing YouTube trailer appears as unreviewed or checked/not found; users can add another site's HTTPS trailer link locally without public publication.
 - A viewer can select among manually verified alternatives locally, while the shared YouTube playlist remains one-video-per-show.
@@ -39,7 +39,7 @@
 
 ## Practical checkpoints toward 31 December 2026
 
-- **By 20 Nov:** Verify the workflow's first candidate report against the Season sheet and its order.
+- **By 20 Nov:** Run the workflow after the Winter 2027 standalone Season tab exists. Verify the first candidate report against the Season sheet, its order, and the immediately previous Season's carryovers. The old `tabs.json` listing is not the source for this preview; the workflow and page discover standalone tabs dynamically.
 - **By 30 Nov:** Deploy voting Worker and complete live AniList-to-Google-Sheets save/reload tests for a normal member, an Okinawa 3 member and a delegated member.
 - **By 10 Dec:** Configure YouTube OAuth and verify first unlisted playlist creation and automatic order synchronization.
 - **By 20 Dec:** Review missing/teaser cases and finish mobile, subtitle and multi-user testing.
