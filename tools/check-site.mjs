@@ -72,7 +72,7 @@ const click = async (page, selector, wait = 600) => { try { await page.click(sel
       else ok('the Discord message builds for all seven days');
     }
     for (const [name, steps] of [
-      ['settings', ['#settingsButton']], ['help', ['#settingsButton', '#helpButton']], ['absences', ['#awayButton']],
+      ['settings', ['#settingsButton']], ['help', ['#settingsButton', '#helpButton']], ['absences', ['#miscButton', '#awayButton']],
       ['tools', ['#miscButton']], ['edit mode', ['#editSchedule']], ['move dialog', ['#list .move:visible']],
     ]) {
       let done = true;
@@ -104,6 +104,7 @@ const click = async (page, selector, wait = 600) => { try { await page.click(sel
     await wide('week'); await shot(page, 'phone-week');
     if (await click(page, '#editSchedule')) { await wide('edit mode'); await shot(page, 'phone-edit'); await click(page, '#editSchedule'); }
     for (const [label, sel] of [['absences', '#awayButton'], ['settings', '#settingsButton'], ['tools', '#miscButton']]) {
+      if (label === 'absences') await click(page, '#miscButton', 200);
       if (await click(page, sel)) { await wide(label); await shot(page, 'phone-' + label); await page.keyboard.press('Escape'); await page.waitForTimeout(300); }
     }
     if (await click(page, '#viewCatchup', 2500)) { await wide('Catch-up'); await shot(page, 'phone-catchup'); }
