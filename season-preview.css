@@ -205,3 +205,22 @@ p.preview-info{color:var(--muted);font-size:12px;line-height:1.5;margin:14px 2px
 .preview-more-menu button{justify-content:flex-start;border-radius:7px}
 .preview-vote small{font-size:11px;color:var(--muted);padding:0 6px}
 .preview-vote small.error{color:#e5484d;font-weight:700}
+
+/* one slim toolbar: voting name + progress on the left, search, my-votes filter and refresh on the right */
+.preview-toolbar{align-items:center;gap:8px;padding:7px 8px;border-radius:12px}
+.preview-toolbar .preview-member{display:flex;align-items:center;gap:8px;margin:0;padding:0;border:0;background:none;flex:0 1 auto}
+.preview-toolbar .preview-member>#previewPersonLabel{font-size:13px;font-weight:600;color:var(--text)}
+.preview-toolbar input,.preview-toolbar select{min-height:34px;padding:4px 10px;font-size:13px}
+.preview-toolbar select{width:auto}
+.preview-toolbar .preview-member>#previewPersonLabel select{min-width:130px}
+.preview-toolbar .preview-search{flex:1 1 180px;width:auto;margin-left:auto;max-width:300px}
+.preview-open{font-size:12px;color:var(--muted);white-space:nowrap}
+.preview-toolbar>button.preview-icon{order:0;min-height:34px;width:34px;padding:0}
+.preview-results{min-height:0;margin:0 0 8px}
+.preview-results[hidden]{display:none}
+/* one summary line under the title */
+.preview-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.preview-help{display:inline-grid;place-items:center;width:18px;height:18px;padding:0;border-radius:50%;border:1px solid var(--line);background:none;color:var(--muted);font:inherit;font-size:11px;font-weight:700;cursor:help}
+.preview-help:hover{color:var(--text);border-color:var(--accent)}
+/* cards the chosen name hasn't voted on yet */
+.preview-item.open{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 70%,transparent)}
