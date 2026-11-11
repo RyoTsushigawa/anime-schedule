@@ -2048,7 +2048,9 @@ const b = e.target.closest('[data-select]');
 if (!b) return;
 const id = Number(b.dataset.select);
 skipped.has(id) ? skipped.delete(id) : skipped.add(id);
-b.classList.toggle('done', !skipped.has(id));
+// A single show can have episodes split across different season groups.
+for (const button of $('list').querySelectorAll('[data-select]'))
+ if (Number(button.dataset.select) === id) button.classList.toggle('done', !skipped.has(id));
 $('markAll').textContent = markAllLabel();
 });
 $('list').addEventListener('click', e => {
@@ -2163,6 +2165,45 @@ const row = { m, first, out, since, nextAt, missing, progress, links: streamLink
 (missing || show || recent(m) ? rows : ownPace).push(row);
 }
 return { rows, ownPace };
+}
+// Group outstanding episodes by their original airing season in Berlin time.
+// Finished series may not expose historical episode dates: use their start season.
+function catchupSeasonKey(at, startDate) {
+ let year, month;
+ if (Number.isFinite(at) && at > 0) {
+  const parts = new Intl.DateTimeFormat('en-US', {timeZone: 'Europe/Berlin', year: 'numeric', month: 'numeric'}).formatToParts(new Date(at * 1000));
+  year = Number(parts.find(p => p.type === 'year')?.value);
+  month = Number(parts.find(p => p.type === 'month')?.value);
+ } else if (startDate?.year && startDate?.month) {
+  year = Number(startDate.year);
+  month = Number(startDate.month);
+ }
+ return year && month >= 1 && month <= 12 ? year + '-' + Math.floor((month - 1) / 3) : 'unknown';
+}
+function catchupSeasonLabel(key) {
+ if (key === 'unknown') return 'Season unbekannt';
+ const [year, quarter] = key.split('-').map(Number);
+ return ['Winter', 'Frühling', 'Sommer', 'Herbst'][quarter] + ' ' + year;
+}
+function catchupSeasonGroups(rows) {
+ const groups = new Map();
+ for (const row of rows) {
+  const next = row.m.nextAiringEpisode;
+  const offset = streamsDe?.release?.[row.m.id]?.offset || 0;
+  const lag = next ? lagOf(row.m.id) : 0;
+  const at = ep => next ? next.airingAt - (next.episode - lag - ep) * 7 * 86400 + offset : 0;
+  let part = null;
+  for (let ep = row.first; ep <= row.out; ep++) {
+   const key = catchupSeasonKey(at(ep), row.m.startDate);
+   if (!part || part.key !== key) {
+    part = {...row, key, first: ep, out: ep, since: at(ep) || row.since};
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(part);
+   } else part.out = ep;
+  }
+ }
+ return [...groups].sort(([a], [b]) => a === 'unknown' ? 1 : b === 'unknown' ? -1 : b.localeCompare(a))
+  .map(([key, entries]) => ({key, label: catchupSeasonLabel(key), rows: entries}));
 }
 function showCatchupCount(rows) {
 const count = rows.filter(r => !r.missing).reduce((sum, r) => sum + r.out - r.first + 1, 0);
@@ -2300,15 +2341,35 @@ $('markAllStart').hidden = !mine || !rows.length || selecting;
 const top = !mine || !rows.length || !selecting ? ''
 : `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure" title="Als gesehen markieren">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
-const listed = rows.filter(r => !r.missing), notListed = rows.filter(r => r.missing);
-let unfolded = false;
-try { unfolded = localStorage.getItem('notListedOpen') === '1'; } catch {}
-$('list').innerHTML = rows.length ? top + listed.map(show).join('') + (notListed.length
-? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '')
+const seasonGroups = catchupSeasonGroups(rows);
+const newestSeason = seasonGroups.find(g => g.key !== 'unknown')?.key || seasonGroups[0]?.key;
+const seasonSection = group => {
+ const entries = group.rows;
+ const episodeCount = entries.reduce((sum, r) => sum + r.out - r.first + 1, 0);
+ const seriesCount = new Set(entries.map(r => r.m.id)).size;
+ const listed = entries.filter(r => !r.missing), notListed = entries.filter(r => r.missing);
+ let unfolded = false, savedOpen = null;
+ try {
+  unfolded = localStorage.getItem('notListedOpen') === '1';
+  savedOpen = localStorage.getItem('catchupSeasonOpen:' + group.key);
+ } catch {}
+ const open = selecting || searching() || (savedOpen === null ? group.key === newestSeason : savedOpen === '1');
+ return `<details class="day catchup-season" data-catchup-season="${group.key}"${open ? ' open' : ''}>
+   <summary><h2>${group.label}<i class="fold" aria-hidden="true"></i></h2><span class="catchup-season-count">${seriesCount} ${seriesCount === 1 ? 'Serie' : 'Serien'} · ${episodeCount} ${episodeCount === 1 ? 'Folge' : 'Folgen'}</span></summary>
+   ${listed.map(show).join('')}
+   ${notListed.length ? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : ''}
+  </details>`;
+};
+$('list').innerHTML = rows.length ? top + seasonGroups.map(seasonSection).join('')
 : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.<button class="pill" data-back-to-week>Zum Zeitplan</button></div>';
-$('list').querySelector('.not-listed > summary')?.addEventListener('click', e => {
-try { localStorage.setItem('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1'); } catch {}
+$('list').querySelectorAll('.catchup-season').forEach(section => {
+ section.addEventListener('toggle', () => {
+  try { localStorage.setItem('catchupSeasonOpen:' + section.dataset.catchupSeason, section.open ? '1' : '0'); } catch {}
+ });
 });
+$('list').querySelectorAll('.not-listed > summary').forEach(summary => summary.addEventListener('click', e => {
+ try { localStorage.setItem('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1'); } catch {}
+}));
 const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
 if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2 title="Beendet, noch nicht bewertet">Bewerten</h2>${unscored.map(({ media: m, completed }) => `
       <div class="row" ${searchKey(...mediaTitles(m))}>
