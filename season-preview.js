@@ -10,6 +10,8 @@ let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, prev
 let voteApi = '', member = null, memberError = '', votingToken = '', saving = new Set(), reloadTimer = 0;
 let carryoverNotice = '', seasonRequest = 0;
 const checkedNewTitles = new Map();
+const voteFeedback = new Map();
+const voteFeedbackKey = (gid,key,person)=>gid+'|'+key+'|'+person;
 function state(msg) {pv('previewStatus').textContent=msg;}
 function seasonKey(tab){const m=tab?.name.match(PV_SEASONS);if(!m)return '';const name={winter:'winter','frühling':'spring',sommer:'summer',herbst:'fall'}[m[1].toLowerCase()];return name+'-'+m[2];}
 function parseSeasonRows(rows, updatePeople=true){
@@ -225,6 +227,9 @@ function updateMemberUI(){
  if(allowed.includes(previous))selector.value=previous;
  else if(allowed.includes(member?.person))selector.value=member.person;
  label.hidden=selector.hidden=allowed.length<2;
+ const voteFilter=pv('previewVoteFilterLabel');
+ voteFilter.hidden=!allowed.length;
+ if(!allowed.length)pv('previewVoteFilter').value='all';
  info.textContent=member?'AniList: '+member.account+' · Deine Änderungen werden in Google Sheets gespeichert.':
   voteApi?'Bitte verbinde dein AniList-Konto über die Hauptseite. Nur freigeschaltete Mitglieder dürfen abstimmen.':
   'Abstimmen wird nach Einrichtung der sicheren Sheets-Verbindung freigeschaltet. Die Tabelle bleibt jederzeit bearbeitbar.';
@@ -248,17 +253,22 @@ async function configureVoting(){
  if(current)render();
 }
 function votingControls(show){
- if(!member)return '<p class="preview-vote-note">Noch keine Abstimmung über die Website möglich. Die Stimmen aus Google Sheets bleiben sichtbar.</p>';
+ if(!member)return '';
  const person=currentVoter();
  if(!person)return '';
  const picked=voteValue(show,person),disabled=saving.has(show.key);
+ const feedback=voteFeedback.get(voteFeedbackKey(current.gid,show.key,person));
  const buttons=validChoices(person).map(choice=>'<button type="button" class="preview-choice'+(picked===choice?' selected':'')+
   '" data-vote="'+safeText(choice)+'" data-anime="'+safeText(show.key)+'" aria-pressed="'+(picked===choice)+
   '"'+(disabled?' disabled':'')+'>'+safeText(choice)+'</button>').join('');
- return '<div class="preview-voting"><div class="preview-vote-title">Deine Auswahl für '+safeText(person)+
-  ' · '+(picked==='Default'?'Noch nicht abgestimmt':safeText(picked))+'</div><div class="preview-choices">'+buttons+
+ const status=disabled?'Wird gespeichert …':feedback?.message||'';
+ const statusClass=feedback?.error?' error':feedback?.success?' success':'';
+ return '<div class="preview-voting"><div class="preview-vote-title">Stimme für '+safeText(person)+
+  ' <span class="preview-own-vote">'+(picked==='Default'?'Noch offen':safeText(picked))+'</span></div>'+
+  '<div class="preview-choices" role="group" aria-label="Abstimmung für '+safeText(show.english||show.title)+'">'+buttons+
   '<button type="button" class="preview-reset" data-vote="Default" data-anime="'+safeText(show.key)+
-  '"'+(disabled||picked==='Default'?' disabled':'')+'>Zurücksetzen</button></div></div>';
+  '"'+(disabled||picked==='Default'?' disabled':'')+'>Zurücksetzen</button></div>'+
+  (status?'<p class="preview-vote-feedback'+statusClass+'" role="status">'+safeText(status)+'</p>':'')+'</div>';
 }
 async function refreshSheet(silent=false){
  if(!current||saving.size)return;
@@ -277,6 +287,8 @@ async function saveVote(show,choice){
  if(!validChoices(person).includes(choice)&&choice!=='Default')return;
  const old=voteValue(show,person),gid=current.gid;
  if(old===choice)return;
+ const feedbackKey=voteFeedbackKey(gid,show.key,person);
+ voteFeedback.delete(feedbackKey);
  saving.add(show.key);render();
  state('Speichert '+person+' · '+show.title+' …');
  let conflict=false;
@@ -291,12 +303,19 @@ async function saveVote(show,choice){
    const existing=show.votes.find(v=>v.name===person);
    if(existing)existing.value=choice;else show.votes.push({name:person,value:choice});
   }
+  voteFeedback.set(feedbackKey,{success:true,message:choice==='Default'?'Stimme zurückgesetzt.':'Stimme gespeichert.'});
   state('Gespeichert ✓ · '+person+' · '+show.title);
- }catch(error){state('Nicht gespeichert: '+error.message+' · Bitte erneut versuchen.');}
+ }catch(error){
+  voteFeedback.set(feedbackKey,{error:true,message:'Nicht gespeichert: '+error.message});
+  state('Nicht gespeichert: '+error.message+' · Bitte erneut versuchen.');
+ }
  finally{
-  saving.delete(show.key);render();
+  saving.delete(show.key);
+  render();
   if(conflict&&current?.gid===gid){
    await refreshSheet(true);
+   voteFeedback.set(feedbackKey,{error:true,message:'Zwischenzeitlich geändert. Bitte erneut abstimmen.'});
+   render();
    state('Die Stimme wurde in Google Sheets inzwischen geändert. Neuester Stand geladen – bitte erneut wählen.');
   }
  }
@@ -336,9 +355,12 @@ pv('previewList').addEventListener('click',event=>{
  }
 });
 pv('previewPerson').addEventListener('change',render);
+pv('previewVoteFilter').addEventListener('change',()=>{if(current)render();});
 pv('previewRefresh').addEventListener('click',()=>refreshSheet(false));
 function render(){
  const q=clean(pv('previewSearch').value).toLocaleLowerCase(),filter=pv('previewFilter').value;
+ const voter=member?currentVoter():'';
+ const voteFilter=voter?pv('previewVoteFilter').value:'all';
  const data=seasonIndex.seasons?.[seasonKey(current)]||{}, trailers=shows.filter(x=>trailerFor(x)).length;
  pv('previewTitle').textContent=current?.name||'Season Preview';
  pv('previewIntro').textContent='Reihenfolge aus der Google-Sheets-Season-Liste · '+shows.length+' Serien';
@@ -347,8 +369,10 @@ function render(){
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{20,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
- const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&(filter==='all'||(filter==='ready')===!!trailerFor(s)));
- const hasFilter=!!q||filter!=='all';
+ const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
+  (filter==='all'||(filter==='ready')===!!trailerFor(s))&&
+  (voteFilter==='all'||(voteFilter==='open')===(voteValue(s,voter)==='Default')));
+ const hasFilter=!!q||filter!=='all'||voteFilter!=='all';
  pv('previewResults').textContent=hasFilter?shown.length+' von '+shows.length+' Serien angezeigt':shows.length+' Serien in dieser Season';
  pv('previewClear').hidden=!hasFilter;
  const parent=pv('previewList');parent.replaceChildren();
@@ -414,6 +438,7 @@ pv('previewFilter').addEventListener('change',()=>{if(current)render();});
 pv('previewClear').addEventListener('click',()=>{
  pv('previewSearch').value='';
  pv('previewFilter').value='all';
+ pv('previewVoteFilter').value='all';
  if(current)render();
  pv('previewSearch').focus();
 });
