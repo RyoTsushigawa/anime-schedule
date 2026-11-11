@@ -261,14 +261,22 @@ function votingControls(show){
  if(!person)return '';
  const picked=voteValue(show,person),disabled=saving.has(show.key);
  const feedback=voteFeedback.get(voteFeedbackKey(current.gid,show.key,person));
- const buttons=validChoices(person).map(choice=>'<button type="button" class="preview-choice'+(picked===choice?' selected':'')+
+ const allChoices=validChoices(person);
+ const quick=['Ja','Nein','Vielleicht'];
+ const choiceButton=choice=>'<button type="button" class="preview-choice'+(picked===choice?' selected':'')+
   '" data-vote="'+safeText(choice)+'" data-anime="'+safeText(show.key)+'" aria-pressed="'+(picked===choice)+
-  '"'+(disabled?' disabled':'')+'>'+safeText(choice)+'</button>').join('');
+  '"'+(disabled?' disabled':'')+'>'+safeText(choice)+'</button>';
+ const buttons=quick.filter(choice=>allChoices.includes(choice)).map(choiceButton).join('');
+ const more=allChoices.filter(choice=>!quick.includes(choice));
+ const moreActive=more.includes(picked);
+ const extra=more.length?'<details class="preview-extra-votes"'+(moreActive?' open':'')+'><summary>Weitere Optionen'+
+  (moreActive?' · '+safeText(picked):'')+'</summary><div class="preview-extra-choices">'+more.map(choiceButton).join('')+'</div></details>':'';
  const status=disabled?'Wird gespeichert …':feedback?.message||'';
  const statusClass=feedback?.error?' error':feedback?.success?' success':'';
  return '<div class="preview-voting"><div class="preview-vote-title">Stimme für '+safeText(person)+
   ' <span class="preview-own-vote">'+(picked==='Default'?'Noch offen':safeText(picked))+'</span></div>'+
-  '<div class="preview-choices" role="group" aria-label="Abstimmung für '+safeText(show.english||show.title)+'">'+buttons+
+  '<div class="preview-choices" role="group" aria-label="Abstimmung für '+safeText(show.english||show.title)+'">'+buttons+'</div>'+
+  '<div class="preview-vote-secondary">'+extra+
   '<button type="button" class="preview-reset" data-vote="Default" data-anime="'+safeText(show.key)+
   '"'+(disabled||picked==='Default'?' disabled':'')+'>Zurücksetzen</button></div>'+
   (status?'<p class="preview-vote-feedback'+statusClass+'" role="status">'+safeText(status)+'</p>':'')+'</div>';
