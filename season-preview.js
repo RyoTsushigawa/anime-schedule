@@ -279,20 +279,27 @@ async function saveVote(show,choice){
  if(old===choice)return;
  saving.add(show.key);render();
  state('Speichert '+person+' · '+show.title+' …');
+ let conflict=false;
  try{
   const response=await fetch(voteApi+'/vote',{
    method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+votingToken},
    body:JSON.stringify({gid,title:show.title,person,choice,expected:old})
   });
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||('Speichern fehlgeschlagen (HTTP '+response.status+')'));
+  if(!response.ok){conflict=response.status===409;throw new Error(data.error||('Speichern fehlgeschlagen (HTTP '+response.status+')'));}
   if(current?.gid===gid){
    const existing=show.votes.find(v=>v.name===person);
    if(existing)existing.value=choice;else show.votes.push({name:person,value:choice});
   }
   state('Gespeichert ✓ · '+person+' · '+show.title);
  }catch(error){state('Nicht gespeichert: '+error.message+' · Bitte erneut versuchen.');}
- finally{saving.delete(show.key);render();}
+ finally{
+  saving.delete(show.key);render();
+  if(conflict&&current?.gid===gid){
+   await refreshSheet(true);
+   state('Die Stimme wurde in Google Sheets inzwischen geändert. Neuester Stand geladen – bitte erneut wählen.');
+  }
+ }
 }
 pv('previewList').addEventListener('submit',event=>{
  const form=event.target.closest('form[data-external-anime]');
