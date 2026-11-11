@@ -171,7 +171,7 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
 | `planner.html`, `planner.js`, `xlsx.js` | Watch planner |
 | `tools/trailers.mjs`, `.github/workflows/trailers.yml` | Daily: trailer playlist for each season list still ahead ("Winter 2027"), unlisted, in the list's order; picks and link in `trailers.json` |
-| `trailer-picks.json` | Optional, by hand: `{"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}}` replaces a wrong pick (`""` = no trailer for that show, `"auto"` = a new show although it looks like a sequel: picked automatically) |
+| `trailer-picks.json` | Optional, by hand: `{"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}}` replaces a wrong pick (`""` = no trailer for that show, `"auto"` = a new show although it looks like a sequel: picked automatically; `{"channel": "Team ONIBE"}` = like "auto", and that channel's videos are searched for and preferred) |
 | `tools/youtube-login.mjs` | **PC only.** One-time YouTube login for the trailer playlists (see "Trailer-Playlist") |
 | `tool-theme.js` | For Higher / Lower and the Masterset Tracker: light/dark (and the accent colour) as chosen on the main page |
 | `ranker/`, `masterset/` | Higher / Lower and the Masterset Tracker. The separate repository `anime-ranker` only forwards here and keeps the ranker's weekly data (`db.json`) |
