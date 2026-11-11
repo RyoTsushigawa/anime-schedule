@@ -38,6 +38,17 @@ function pemToBytes(pem){
  return Uint8Array.from(binary,c=>c.charCodeAt(0));
 }
 async function googleToken(env){
+ // The sheet owner's own Google login (client ID/secret + refresh token with the Sheets permission, made once
+ // with tools/youtube-login.mjs --sheets). Google blocks service-account key files by default, so this is the usual way.
+ if(env.GOOGLE_REFRESH_TOKEN){
+  if(!env.GOOGLE_CLIENT_ID||!env.GOOGLE_CLIENT_SECRET)fail(503,'Google Sheets-Zugang noch nicht konfiguriert.');
+  const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',
+   headers:{'Content-Type':'application/x-www-form-urlencoded'},
+   body:new URLSearchParams({grant_type:'refresh_token',refresh_token:env.GOOGLE_REFRESH_TOKEN,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET})});
+  if(!response.ok)fail(503,'Google-Zugang konnte nicht bestätigt werden.');
+  return (await response.json()).access_token;
+ }
+ // or a service account (key file), if the organisation allows one
  if(!env.GOOGLE_SERVICE_ACCOUNT_EMAIL||!env.GOOGLE_PRIVATE_KEY)fail(503,'Google Sheets-Zugang noch nicht konfiguriert.');
  const now=Math.floor(Date.now()/1000);
  const header=base64url(JSON.stringify({alg:'RS256',typ:'JWT'}));

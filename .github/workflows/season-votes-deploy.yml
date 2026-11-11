@@ -10,6 +10,11 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Google: the sheet owner's login (same OAuth client as the trailer playlists, own refresh token with the
+      # Sheets permission) or, where the organisation allows key files, a service account
+      GOOGLE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      GOOGLE_REFRESH_TOKEN: ${{ secrets.SEASON_GOOGLE_REFRESH_TOKEN }}
       GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL }}
       GOOGLE_PRIVATE_KEY: ${{ secrets.SEASON_GOOGLE_PRIVATE_KEY }}
       SHEET_ID: ${{ secrets.SEASON_SHEET_ID }}
@@ -21,18 +26,24 @@ jobs:
           node-version: '22'
       - name: Check required secrets
         run: |
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GOOGLE_SERVICE_ACCOUNT_EMAIL GOOGLE_PRIVATE_KEY SHEET_ID GROUP_ACCESS_CODE; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SHEET_ID GROUP_ACCESS_CODE; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing required secret: $name"
               exit 1
             fi
           done
+          if [ -z "$GOOGLE_REFRESH_TOKEN" ] && { [ -z "$GOOGLE_SERVICE_ACCOUNT_EMAIL" ] || [ -z "$GOOGLE_PRIVATE_KEY" ]; }; then
+            echo "::error::Missing Google access: SEASON_GOOGLE_REFRESH_TOKEN (plus YOUTUBE_CLIENT_ID/SECRET), or a service account"
+            exit 1
+          fi
       - name: Deploy voting Worker
         run: npx --yes wrangler@4 deploy --config workers/season-votes/wrangler.toml
       - name: Apply Worker secrets
         run: |
-          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_EMAIL" | npx --yes wrangler@4 secret put GOOGLE_SERVICE_ACCOUNT_EMAIL --config workers/season-votes/wrangler.toml
-          printf '%s' "$GOOGLE_PRIVATE_KEY" | npx --yes wrangler@4 secret put GOOGLE_PRIVATE_KEY --config workers/season-votes/wrangler.toml
+          for name in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REFRESH_TOKEN GOOGLE_SERVICE_ACCOUNT_EMAIL GOOGLE_PRIVATE_KEY; do
+            [ -n "${!name}" ] || continue
+            printf '%s' "${!name}" | npx --yes wrangler@4 secret put "$name" --config workers/season-votes/wrangler.toml
+          done
           printf '%s' "$SHEET_ID" | npx --yes wrangler@4 secret put SHEET_ID --config workers/season-votes/wrangler.toml
           printf '%s' "$GROUP_ACCESS_CODE" | npx --yes wrangler@4 secret put GROUP_ACCESS_CODE --config workers/season-votes/wrangler.toml
       - name: Deployment instructions

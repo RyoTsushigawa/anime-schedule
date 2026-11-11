@@ -98,3 +98,12 @@ test('readback mismatch does not send false success',async()=>{
   assert.equal(res.status,409);
  },{readBack:'Nein'});
 });
+test('the sheet owner\'s own Google login (refresh token) works without a service account',async()=>{
+ const own={SITE_ORIGIN:origin,GROUP_ACCESS_CODE:code,SHEET_ID:'example-sheet',GOOGLE_CLIENT_ID:'id',GOOGLE_CLIENT_SECRET:'secret',GOOGLE_REFRESH_TOKEN:'refresh'};
+ await fakeSheets(async(events,stored)=>{
+  const res=await worker.fetch(request('/vote','POST',{gid:'17',title:'Example',person:'Rei',choice:'Ja',expected:'Default'}),own);
+  assert.equal(res.status,200,JSON.stringify(await res.clone().json()));
+  assert.equal(stored(),'Ja');
+  assert.ok(events.some(e=>e.dest.includes('oauth2.googleapis.com/token')));
+ });
+});

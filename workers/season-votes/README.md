@@ -4,12 +4,19 @@ Season Preview voting is designed for a small friend group. **No AniList login o
 
 ## Setup
 
-1. Create a Google Cloud service account, enable Google Sheets API, and share the target spreadsheet with its email address as Editor. The service-account private key must never be published in front-end files.
-2. Add these **GitHub Actions repository secrets**: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL`, `SEASON_GOOGLE_PRIVATE_KEY`, `SEASON_SHEET_ID` and `SEASON_GROUP_ACCESS_CODE`.
-3. Choose a randomly generated shared access code of at least **16 characters**; 24–32 random characters is better. Share it privately with the group. Do **not** commit it to GitHub, put it in `config.json`, or paste it into a public chat. Anyone who learns it can vote as any member.
-4. Run the manual GitHub Actions workflow **Deploy Season Preview voting Worker**. It deploys `workers/season-votes/index.js` and applies `GROUP_ACCESS_CODE`, `SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, and `GOOGLE_PRIVATE_KEY` as private Worker secrets.
-5. Add the public deployed Worker URL (not the secret code) as `previewVotesUrl` in `config.json`, preserving other fields; for example `"previewVotesUrl":"https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev"`.
-6. Open Season Preview, enter the group code, select a member, and test a vote. The code stays only in `sessionStorage` and disappears when that browser session ends; the selected member name can remain saved locally.
+Google blocks key files for service accounts by default, so the Worker writes as the **sheet owner** through their own
+Google login (the same OAuth client as the trailer playlists, but a separate key that may only use Google Sheets).
+
+1. Google Cloud (the trailer playlist project): **APIs & Services → Library → Google Sheets API → Enable**.
+2. On the PC in `tools`: `node youtube-login.mjs --sheets`, log in with the account that owns the Guckplan sheet.
+   It saves `tools/sheets-refresh-token.txt` (PC only, never uploaded or pasted anywhere).
+3. GitHub **Actions** secrets: `SEASON_GOOGLE_REFRESH_TOKEN` (that file's line), `SEASON_SHEET_ID`,
+   `SEASON_GROUP_ACCESS_CODE` (16+ random characters, shared privately with the group), `CLOUDFLARE_API_TOKEN`
+   (template "Edit Cloudflare Workers") and `CLOUDFLARE_ACCOUNT_ID`. `YOUTUBE_CLIENT_ID`/`YOUTUBE_CLIENT_SECRET` are
+   reused. (A service account still works where allowed: `SEASON_GOOGLE_SERVICE_ACCOUNT_EMAIL` + `SEASON_GOOGLE_PRIVATE_KEY`.)
+4. Run the manual GitHub Actions workflow **Deploy Season Preview voting Worker**.
+5. Add the Worker's URL as `previewVotesUrl` in `config.json`; the voting bar then appears on the Season Preview.
+6. Enter the group code there once per browser session, choose a name, vote.
 
 ## What the Worker enforces
 
