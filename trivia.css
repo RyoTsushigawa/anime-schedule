@@ -1,0 +1,28 @@
+.trivia-page{color:var(--text);background:var(--bg);min-height:100vh}
+.trivia-shell{max-width:900px;margin:0 auto;padding:24px 18px 80px}
+.trivia-panel{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:clamp(18px,4vw,32px);box-shadow:var(--raise);margin:16px 0}
+.trivia-panel h2{margin:0 0 18px;line-height:1.2}
+.trivia-panel p{line-height:1.55}
+#setup label{display:block;margin:20px 0 0;font-size:13px;color:var(--muted);font-weight:600}
+#setup label select,#setup label textarea{display:block;width:100%;max-width:560px;min-height:42px;margin:7px 0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+#setup label textarea{resize:vertical;min-height:110px;line-height:1.5}
+#triviaStart{margin-top:20px}
+#triviaStatus{min-height:1.4em;color:var(--muted);font-size:13px}
+.trivia-top{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--muted);font-size:13px;margin-bottom:12px}
+.trivia-scores{display:flex;flex-wrap:wrap;gap:8px}
+.trivia-score{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 13px;display:flex;align-items:center;gap:9px;font-size:13px}
+.trivia-score.current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.trivia-score b{font-variant-numeric:tabular-nums}
+.trivia-turn{color:var(--accent);font-size:13px;font-weight:750;letter-spacing:.02em}
+.trivia-question h2{font-size:clamp(22px,4vw,32px);margin-bottom:28px}
+.trivia-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.trivia-option{border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;background:var(--bg);color:var(--text);cursor:pointer;font:inherit;min-height:64px;overflow-wrap:anywhere}
+.trivia-option:hover:not(:disabled){border-color:var(--accent)}
+.trivia-option.correct{border-color:#52b781;background:color-mix(in srgb,#52b781 18%,var(--bg));color:var(--text)}
+.trivia-option.wrong{border-color:#e87575;background:color-mix(in srgb,#e87575 18%,var(--bg));color:var(--text)}
+.trivia-option:disabled{cursor:default;opacity:1}
+.trivia-explanation{font-size:14px;color:var(--text);padding-top:10px}
+#triviaReveal{margin-top:18px}
+#triviaEnd .trivia-scores{margin:20px 0}
+#triviaEnd button{margin:7px 8px 0 0}
+@media(max-width:600px){.trivia-options{grid-template-columns:1fr}.trivia-shell{padding-inline:12px}.trivia-question h2{margin-bottom:18px}}
