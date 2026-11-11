@@ -14,7 +14,7 @@ part, so this section says what runs where and what is still open. Keep it up to
 |---|---|---|
 | GitHub (this repository, branch `main`) | The site itself (GitHub Pages), `moves.json` and `nicknames.json` written by the page | The copy here is the current one. Changes go in through pull requests. |
 | GitHub Actions | `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status), `source-health.yml`, `masterset-prices.yml` | GitHub's own timer runs hours late or skips days. The daily post is therefore started from Cloudflare. |
-| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v13** (checked 10 Nov), cron trigger set. **v14** (today's absences to the schedule channel) was handed over on 11 Nov. Its code is **not** in this repository (see below). |
+| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v13** (checked 10 Nov), cron trigger set. **v15** (absences for later days to a second channel, `DISCORD_WEBHOOK_ABSENCES`) was handed over on 11 Nov; `DISCORD_WEBHOOK` is the schedule channel. Its code is **not** in this repository (see below). |
 | The owner's PC | `tools/build-streams.mjs` (must run from Germany), `tools/publish.mjs` and the weekly checks, with the tokens | These tools exist only on the PC. Since 10 Nov `publish.mjs` uploads data only (see below). |
 | Discord bot (separate zip, v7) | `/delay`, `/abwesend` and status | Not in this repository. Whether v7 is installed is unconfirmed. |
 
@@ -243,9 +243,9 @@ Optional, both as **Secret** in the Worker's Variables and Secrets:
 - `DISCORD_WEBHOOK`: a channel's webhook address (Discord: channel settings → Integrations → Webhooks →
   New Webhook → Copy Webhook URL). Every saved, changed or removed Verspätung or absence is posted there as one line,
   without pings: how many minutes, from which show on. The reason only shows on the site. With the helper set up, the key holder's delays go through it too, so they're posted as well.
-- `DISCORD_WEBHOOK_SCHEDULE` (helper v14 or later): the schedule channel's webhook, the same address as the
-  GitHub secret of that name. An absence for **today** is posted there, because it changes tonight; absences for
-  later days go to `DISCORD_WEBHOOK`. Without it everything goes to `DISCORD_WEBHOOK`.
+- `DISCORD_WEBHOOK_ABSENCES` (helper v15 or later): a second channel's webhook, for absences on **later days**
+  (planning ahead). An absence for **today** changes tonight and stays in `DISCORD_WEBHOOK`, like the delays.
+  Without it every absence goes to `DISCORD_WEBHOOK`.
 - `DISCORD_TEST_WEBHOOK`: the bot test channel's webhook. `node tools/delay-e2e.mjs` checks the whole path
   once (a test delay a week ahead, in and out again); its two lines go only there, never into the real
   channel, and without this secret they aren't posted at all.
