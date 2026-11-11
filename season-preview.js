@@ -134,6 +134,14 @@ function trailerSuggestions(show){
   '<p>Nur Suchtreffer – weder die richtige Serie noch vollständiges Bildmaterial sind bestätigt.</p>'+
   '<div class="preview-links">'+links+'</div></details>';
 }
+function liveChartLink(show){
+ const entries=animeIndex.seasons?.[seasonKey(current)]||[];
+ const cleanTitle=s=>clean(s).normalize('NFKC').toLocaleLowerCase();
+ const match=entries.find(e=>cleanTitle(e.romaji)===cleanTitle(show.title)||
+  (show.english&&cleanTitle(e.english)===cleanTitle(show.english)));
+ const id=String(match?.livechartId||'');
+ return /^[1-9]\d*$/.test(id)?'https://www.livechart.me/anime/'+id:'';
+}
 function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
  return data.trailers?.[show.key] || null;
@@ -336,7 +344,7 @@ function render(){
  const parent=pv('previewList');parent.replaceChildren();
  if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent='Keine passenden Serien gefunden.';parent.append(empty);return;}
  for(const s of shown){
-  const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),external=localExternal(s),article=document.createElement('article');article.className='preview-item';
+  const trailer=pickedTrailer(s),candidates=trailerCandidates(s),mal=malLink(s),livechart=liveChartLink(s),external=localExternal(s),article=document.createElement('article');article.className='preview-item';
   const links=trailer?'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+trailer.id+'">▶ '+(trailer.type==='teaser'?'Teaser ansehen (Ersatz)':'Vollständigen Trailer ansehen')+'</a>':'';
   const choices=candidates.length>1?'<div class="preview-alternates"><div class="preview-vote-title">Trailer auswählen · nur für deine Ansicht</div>'+candidates.map(v=>'<button type="button" data-trailer="'+v.id+'" data-anime="'+safeText(s.key)+'" class="preview-choice'+(trailer.id===v.id?' selected':'')+'" aria-pressed="'+(trailer.id===v.id)+'">'+safeText(v.title)+(v.type==='teaser'?' · Teaser (Ersatz)':'')+(v.subtitles?' · '+v.subtitles:'')+'</button>').join('')+'</div>':'';
   const suggestions=!trailer?trailerSuggestions(s):'';
@@ -347,7 +355,7 @@ function render(){
   const votes=decided.length?decided.map(v=>'<span>'+safeText(v.name)+': '+safeText(v.value)+'</span>').join(''):'<span>Noch keine Stimmen</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div><h2>'+safeText(s.english||s.title)+'</h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+
   '<div class="preview-meta"><span class="preview-chip '+(trailer?'ready':'')+'">'+(trailer?(trailer.type==='teaser'?'Nur Teaser verfügbar · Ersatz':'Vollständiger Trailer verfügbar'):trailerStatus(s))+'</span>'+(trailer&&trailer.subtitles?'<span class="preview-chip">Untertitel: '+trailer.subtitles+'</span>':'')+'</div>'+
-  '<div class="preview-links">'+links+'<a target="_blank" rel="noopener noreferrer" href="'+safeText(mal.url)+'">'+mal.label+'</a></div>'+choices+suggestions+fallback+
+  '<div class="preview-links">'+links+(livechart?'<a target="_blank" rel="noopener noreferrer" href="'+safeText(livechart)+'">LiveChart · Videos & Untertitel</a>':'')+'<a target="_blank" rel="noopener noreferrer" href="'+safeText(mal.url)+'">'+mal.label+'</a></div>'+choices+suggestions+fallback+
   '<div class="preview-votes"><div class="preview-vote-title">Gruppen-Entscheidung · aus Google Sheets</div><div class="preview-vote-chips">'+votes+'</div>'+votingControls(s)+'</div></div>';
   parent.append(article);
  }
