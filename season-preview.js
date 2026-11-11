@@ -398,7 +398,7 @@ function render(){
  pv('previewStats').hidden=false;
  pv('previewStats').innerHTML='<span class="preview-stat"><b>'+shows.length+'</b> Serien</span><span class="preview-stat"><b>'+trailers+'</b> Trailer</span><span class="preview-stat"><b>'+(shows.length-trailers)+'</b> ohne Trailer</span><span class="preview-stat"><b>'+shows.filter(s=>['not_found','unavailable'].includes(detailsFor(s)?.youtubeStatus)&&!trailerFor(s)).length+'</b> auf YouTube fehlend</span>';
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
- playlist.hidden=!/^[\w-]{20,}$/.test(playlistId);
+ playlist.hidden=!/^[\w-]{10,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
  const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
   (filter==='all'||(filter==='ready')===!!trailerFor(s))&&
