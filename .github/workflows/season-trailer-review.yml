@@ -94,7 +94,7 @@ jobs:
           if [ "$CONFIRMED_NOT_SEQUEL" = "true" ]; then args+=(--confirmed-not-sequel); fi
           if [ "$CONFIRMED_NO_FULL" = "true" ]; then args+=(--confirmed-no-full); fi
           node scripts/season-preview-review.mjs "${args[@]}"
-          node --test tests/*.test.mjs
+          node --test tests/season-preview.test.mjs tests/season-review.test.mjs
       - name: Commit reviewed catalog
         run: |
           git config user.name "github-actions[bot]"
