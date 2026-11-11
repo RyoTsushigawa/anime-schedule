@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-10T21:10:20.654Z",
+ "updated": "2026-11-11T07:49:02.186Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -217,6 +217,13 @@
     "Matthias"
    ],
    "until": "21:00"
+  },
+  {
+   "day": "2026-11-24",
+   "people": [
+    "MaRyo"
+   ],
+   "maybe": true
   }
  ],
  "reasons": [
