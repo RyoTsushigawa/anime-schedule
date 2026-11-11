@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test Season Preview data rules
-        run: node --test tests/season-preview.test.mjs tests/season-review.test.mjs
+        run: node --test tests/season-preview.test.mjs tests/season-review.test.mjs tests/season-votes-worker.test.mjs
       - name: Discover candidate trailers from new season sheets
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
