@@ -1,7 +1,7 @@
 // Pure, reusable trivia question builder. Uses real metadata from AniList;
  // never asks a question unless its incorrect answers are known to be incorrect.
 const TriviaCore=(()=>{
- const norm=s=>String(s||'').normalize('NFKC').toLocaleLowerCase().replace(/[\\p{P}\\p{S}\\s]+/gu,' ').trim();
+ const norm=s=>String(s||'').normalize('NFKC').toLocaleLowerCase().replace(/[\p{P}\p{S}\s]+/gu,' ').trim();
  const distinct=values=>[...new Set(values.filter(Boolean))];
  const shuffle=(arr,rand=Math.random)=>{const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
  function matchShows(shows,catalog){
@@ -10,7 +10,7 @@ const TriviaCore=(()=>{
   const found=new Map();
   for(const show of shows||[]){
    const e=[show.romaji,show.english].map(n=>byName.get(norm(n))).find(Boolean);
-   const id=Number(String(e?.mal||'').match(/^https:\/\/myanimelist\.net\/anime\/(\\d+)/)?.[1]);
+   const id=Number(String(e?.mal||'').match(/^https:\/\/myanimelist\.net\/anime\/(\d+)/)?.[1]);
    if(Number.isSafeInteger(id)&&id>0&&!found.has(id))found.set(id,{id,title:show.english||show.romaji});
   }
   return [...found.values()];
