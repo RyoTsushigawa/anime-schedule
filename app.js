@@ -1463,11 +1463,12 @@ try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
 setTheme(theme);
 systemDark.addEventListener('change', () => setTheme(theme));
 for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = () => setTheme(b.dataset.themeChoice);
-const choices = { time: 'release', sort: 'oldest', accent: 'person' };
+const choices = { time: 'release', sort: 'oldest', accent: 'person', density: 'comfortable' };
 const CHOICE_OK = {
 time: v => ['release', 'watch', 'both'].includes(v),
 sort: v => ['oldest', 'behind', 'next', 'az'].includes(v),
 accent: v => v === 'person' || /^#[0-9a-f]{6}$/i.test(v),
+density: v => ['comfortable', 'compact'].includes(v),
 };
 for (const name of Object.keys(choices))
 try { const v = localStorage.getItem(name); if (CHOICE_OK[name](v)) choices[name] = v; } catch {}
@@ -1477,6 +1478,7 @@ for (const b of document.querySelectorAll(`[data-set="${name}"]`))
 b.setAttribute('aria-pressed', b.dataset.value === value);
 try { localStorage.setItem(name, value); } catch {}
 if (name === 'accent') applyAccent();
+if (name === 'density') document.body.classList.toggle('dense', value === 'compact');
 }
 function applyAccent() {
 const root = document.documentElement.style;
@@ -1495,7 +1497,7 @@ for (const b of document.querySelectorAll('[data-set]'))
 b.onclick = () => {
 setChoice(b.dataset.set, b.dataset.value);
 if (b.dataset.set === 'time') redraw();
-else if (b.dataset.set !== 'accent') load(true);
+else if (b.dataset.set !== 'accent' && b.dataset.set !== 'density') load(true);
 };
 for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]) {
 try { $(id).checked = id === 'moveButtons' ? localStorage.getItem(id) === '1' : localStorage.getItem(id) !== '0'; } catch { $(id).checked = id !== 'moveButtons'; }
@@ -1507,7 +1509,7 @@ if (id === 'moveButtons') syncMoveEditor();
 };
 }
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
-const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
+const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
   'who', 'behind', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
   'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
 $('settingsExport').onclick = () => {
