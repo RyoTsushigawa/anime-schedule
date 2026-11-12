@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Anime Cover Quiz · Spiele</title>
+<link rel="icon" type="image/png" href="icon-72.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cover-game.css">
+</head>
+<body class="cover-page">
+<header><div class="bar">
+<a class="tool-back pill" href="games.html"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>Spiele</a>
+<div class="brand"><h1>Anime Cover Quiz</h1><div>5 Cover pro Tag · 4 Antworten · 100 Punkte pro Treffer</div></div>
+</div></header>
+<main class="cover-layout">
+<div class="cover-title"><div><h2>Errate das Anime-Cover</h2><p>Das Bild ist verschwommen. Wähle den richtigen Titel.</p></div><span class="cover-daily">Täglich neu</span></div>
+<div id="coverPlay" class="cover-play" hidden>
+  <div class="cover-top"><b id="coverProgress"></b><span id="coverScore"></span></div>
+  <div class="cover-art-frame"><img id="coverArt" alt="Verpixeltes Anime-Cover zum Erraten" width="250" height="350" draggable="false"></div>
+  <div id="coverChoices" class="cover-choices" role="group" aria-label="Antwortmöglichkeiten"></div>
+  <button id="coverNext" type="button" class="pill primary cover-next" hidden>Nächstes Cover</button>
+</div>
+<div id="coverResult" class="cover-result" hidden>
+<h2>Geschafft!</h2><b id="coverFinal"></b><p id="coverFinalScore"></p>
+<button id="coverShare" class="pill primary" type="button">Ergebnis kopieren</button>
+</div>
+<p id="coverStatus" class="cover-status" role="status" aria-live="polite">Cover werden geladen …</p>
+<button id="coverRetry" class="pill" type="button" hidden>Erneut versuchen</button>
+<p class="cover-footnote">Alle erhalten jeden Tag dieselben fünf Fragen. Dein Fortschritt bleibt nur in diesem Browser.</p>
+</main>
+<script type="module" src="cover-game.mjs"></script>
+</body></html>

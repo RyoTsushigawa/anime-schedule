@@ -24,3 +24,7 @@
 .key.wide { flex-basis: 66px; font-size: 13px; }
 .key:hover { border-color: var(--accent); }
 @media (max-width: 480px) { .board-row { grid-template-columns: repeat(var(--len), minmax(30px, 42px)); } .tile { height: 42px; font-size: 20px; } }
+
+/* Keep game shortcuts in one tidy, wrapping row. */
+.game-hub-links{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:0;width:100%}
+.game-hub-links .pill{display:inline-flex;align-items:center;min-height:36px;text-decoration:none}
