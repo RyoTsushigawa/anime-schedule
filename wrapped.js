@@ -17,7 +17,7 @@ const wrappedRank = items => `<ol class="rank">${items.map(([label,n],i)=>`<li><
 const wrappedAccountKey = a => `${a.provider || 'anilist'}:${String(a.name).toLowerCase()}`;
 const wrappedQuery = `query ($user:String) { MediaListCollection(userName:$user,type:ANIME) {
   lists { entries { status progress score:score(format:POINT_100) completedAt { year month day }
-    media { id idMal episodes duration genres title { romaji english } } } }
+    media { id idMal episodes duration genres season seasonYear title { romaji english } } } }
 } }`;
 async function wrappedReadProfiles() {
   try {
@@ -98,7 +98,7 @@ async function wrappedReadPlan(tab) {
   }
 }
 async function wrappedList(profile, fresh) {
-  const key='wrappedList:'+wrappedAccountKey(profile);
+  const key='wrappedList2:'+wrappedAccountKey(profile);   // 2: with each show's season (watch time)
   let cached=null;
   try { cached=JSON.parse(localStorage.getItem(key)); } catch {}
   if (!fresh && cached && Date.now()-cached.time<3600000) return {...cached,stale:false};
@@ -217,6 +217,24 @@ async function wrappedRender(fresh=false) {
     if(!person&&summary.debate)cards.push({kicker:'Geschmacksgericht',title:summary.debate.title,color:'#ffb78d',html:'<div class="big">'+(summary.debate.gap/10).toLocaleString('de-DE')+'</div><p>Punkte Unterschied zwischen der höchsten und niedrigsten Bewertung. Da hattet ihr offenbar unterschiedliche Eindrücke.</p>',note:'Größte Bewertungsdifferenz bei derselben in dieser Season abgeschlossenen Serie. Nur die zugeordneten Konten mit Wertung zählen.'});
     if(summary.genre)cards.push({kicker:plural?'Euer häufigstes Genre':'Dein häufigstes Genre',title:summary.genre[0],color:'#c8a6ff',html:`<div class="big">${summary.genre[1]}</div><p>abgeschlossene Serien mit diesem Genre. Das hat diese Season einen guten Teil der Auswahl ausgemacht.</p>`,note:'Aus Serien mit Abschlussdatum in der gewählten Season. Serien können mehrere Genres haben; fehlende Metadaten zählen nicht.'});
     if(summary.favourites.length)cards.push({kicker:'Die Favoritenliste',title:plural?'Die kamen bei euch besonders gut an.':'Die kamen bei dir besonders gut an.',color:'#ffb78d',html:wrappedRank(summary.favourites.map(f=>[f.title,(f.score/10).toLocaleString('de-DE')+'/10'])),note:'Bewertungen der in dieser Season abgeschlossenen Serien. AniList/MAL auf 10 Punkte umgerechnet; gleich bewertete Serien sind gleichauf.'});
+    // Watch time this season, and the comparison with the season before (same lists, the three months before)
+    if(summary.watchEpisodes)cards.push({kicker:'Watch-Time',title:plural?'So viel Zeit steckt in eurer Season.':'So viel Zeit steckt in deiner Season.',color:'#94dce0',
+      html:`<div class="big">≈ ${wrappedHours(summary.watchMinutes)} Std.</div><p>${summary.watchEpisodes} Folgen aus ${summary.watchShows} Serien.</p>${summary.watchMinutes>=1440?wrappedMetrics([[new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(summary.watchMinutes/1440),'Tage am Stück']]):''}`,
+      note:'Abgeschlossene Serien dieser Season mit allen Folgen, dazu der Fortschritt bei laufenden, pausierten und abgebrochenen Serien aus dieser Season. Ältere Serien ohne Abschluss zählen nicht; fehlende Folgenlängen als 24 Min. Bei MAL nur Abschlüsse.'});
+    const before=new Date(seasonStart);before.setMonth(before.getMonth()-3);
+    const prev=WrappedStats.list(entries,before.getTime(),seasonStart);
+    if(prev.completed||prev.watchEpisodes){
+      const prevName=['Winter','Frühling','Sommer','Herbst'][Math.floor(before.getMonth()/3)]+' '+before.getFullYear();
+      const delta=(now,then,fmt=n=>String(n))=>now===then?'gleich':(now>then?'+':'−')+fmt(Math.abs(now-then));
+      const hours=n=>new Intl.NumberFormat('de-DE',{maximumFractionDigits:0}).format(n/60);
+      const more=summary.watchMinutes-prev.watchMinutes, change=prev.watchMinutes?more/prev.watchMinutes:1;
+      const metrics=[[`${hours(summary.watchMinutes)} Std. (${delta(summary.watchMinutes,prev.watchMinutes,n=>hours(n)+' Std.')})`,'Watch-Time'],
+        [`${summary.completed} (${delta(summary.completed,prev.completed)})`,'Abschlüsse']];
+      if(summary.rated&&prev.rated)metrics.push([`${(summary.mean/10).toLocaleString('de-DE',{maximumFractionDigits:1})} (${delta(Math.round(summary.mean),Math.round(prev.mean),n=>(n/10).toLocaleString('de-DE',{maximumFractionDigits:1}))})`,'Punkte im Schnitt']);
+      const genre=summary.genre&&prev.genre&&summary.genre[0]!==prev.genre[0]?`<p>Häufigstes Genre: ${wrappedSafe(summary.genre[0])} statt ${wrappedSafe(prev.genre[0])}.</p>`:'';
+      cards.push({kicker:'Im Vergleich zu '+prevName,title:change>0.1?'Mehr Anime als letzte Season.':change<-0.1?'Etwas ruhiger als letzte Season.':'Ungefähr wie letzte Season.',color:'#ffc764',
+        html:wrappedMetrics(metrics)+genre,note:`Dieselben Listen, gezählt für ${prevName} wie für diese Season.`});
+    }
     undated=summary.undated;
   } else cards.push({kicker:'Noch mehr Wrapped?',title:'Dein Plan kennt nur die halbe Story.',color:'#f4a9d1',html:'<p>Ordne unter <button class="inline-action" data-open-profiles>Profile</button> einer Person ihre AniList- oder MAL-Konten zu. Dann kommen Abschlüsse, Favoriten und Genres dazu.</p>',note:'Persönliche Plan-Statistiken funktionieren auch ohne Konto. Gruppen-Listenstatistiken sind nur so vollständig wie die zugeordneten Konten.'});
   const index=wrappedIndex;
