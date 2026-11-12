@@ -1,27 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
 img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://docs.google.com
 https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script>
-<title>Watch planner</title>
+<meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Watch-Planer</title>
 <link rel="icon" type="image/png" href="icon-72.png">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="planner.css">
 </head>
 <body>
 <header>
 <div class="bar">
-<a class="tool-back pill" href="./" lang="de"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
-<h1>Watch planner</h1>
-<div id="tabName">Suggestions only · nothing in the Guckplan changes</div>
+<a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
+<h1>Watch-Planer</h1>
+<div id="tabName">Nur ein Vorschlag · am Guckplan ändert sich nichts</div>
 </div>
 </div>
 </header>
-<main>
-<div id="list"><div class="status">Loading…</div></div>
+<main class="planner">
+<aside id="planSetup" class="plan-setup" aria-label="Einstellungen"></aside>
+<div id="planOut" class="plan-out"><div class="status">Lade…</div></div>
 </main>
 <div id="notice" role="status" hidden><span id="noticeText"></span></div>
 <script src="common.js"></script>

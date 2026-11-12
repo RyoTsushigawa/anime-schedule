@@ -1,0 +1,48 @@
+# Nightly copy of the Google Sheet into backup/sheet/ (every tab as CSV, plus hidden rows and person colours).
+# Only commits when something in the Sheet changed; the git history is the version history.
+name: Sheet backup
+
+on:
+  schedule:
+    - cron: '41 2 * * *'   # 03:41 / 04:41 German time; GitHub may start it late
+  workflow_dispatch:
+
+permissions:
+  contents: write   # backup/sheet/
+
+concurrency:
+  group: sheet-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned
+        with:
+          ref: main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
+        with:
+          node-version: 22
+      - name: Copy the Sheet
+        run: node tools/sheet-backup.mjs
+      - name: Save the copy
+        run: |
+          git add backup/sheet
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git commit -qm "Sheet backup"
+          git pull --rebase origin main
+          git push
+      - name: Say that it failed
+        if: ${{ failure() }}
+        env:
+          DISCORD_WEBHOOK_LOGS: ${{ secrets.DISCORD_WEBHOOK_LOGS }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$DISCORD_WEBHOOK_LOGS" ] || exit 0
+          curl -sS -o /dev/null -H 'Content-Type: application/json' \
+            -d "{\"content\":\"<@255387990136848385> ⚠️ Die nächtliche Sicherung des Sheets ist fehlgeschlagen. (<$RUN_URL>)\",\"allowed_mentions\":{\"users\":[\"255387990136848385\"]}}" \
+            "$DISCORD_WEBHOOK_LOGS"
