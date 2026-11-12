@@ -1544,3 +1544,7 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
   header .logo + .brand { display: none; }
   header .logo ~ .top-actions { margin-left: auto; }
 }
+
+/* Fortsetzung angekündigt (next to "Finale"): a quiet link to the sequel on AniList */
+.ep-tag.sequel-tag { background: transparent; border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent); color: var(--accent); text-decoration: none; }
+.ep-tag.sequel-tag:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
