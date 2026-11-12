@@ -1522,3 +1522,7 @@ button.header-nav-link{font-family:inherit;cursor:pointer}
 .day h2 .day-menu > button { justify-content: flex-start; min-width: 0; }
 .day h2 .day-menu > button svg { flex: none; width: 15px; height: 15px; }
 .day h2:has(.day-menu:not([hidden])) { z-index: 25; }
+
+/* Season progress: a thin line along the card's bottom edge (like a video's progress), not a bar of its own */
+#list .row .season-progress { position: absolute; left: 0; right: 0; bottom: 0; width: auto; height: 2px; margin: 0; border-radius: 0; background: transparent; z-index: 1; }
+#list .row .season-progress > span { border-radius: 0 2px 2px 0; background: color-mix(in srgb, var(--accent) 75%, transparent); }
