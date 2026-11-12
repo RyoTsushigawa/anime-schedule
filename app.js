@@ -1299,6 +1299,112 @@ const LIST_QUERY = `query ($user: String) {
 const LIST_CACHE_MS = 10 * 60 * 1000;
 const friendList = $('friendList');
 const listUser = () => friendList.value || $('anilistUser').value.trim();
+// The person selected in Solo is also the default person in Catch-up and Non-seasonal.
+const listProfiles = new Map();
+let localPlanPeople = [];
+const isLocalList = () => friendList.value.startsWith('local:');
+const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
+const localProgressKey = person => 'localAnimeProgress:v1:' + person;
+const localShowsKey = person => 'localAnimeShows:v1:' + person;
+function localShows(person) {
+  try {
+    const ids = JSON.parse(localStorage.getItem(localShowsKey(person)) || '[]');
+    return Array.isArray(ids) ? [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 50) : [];
+  } catch { return []; }
+}
+function addLocalShow(person, id) {
+  if (!person || !Number.isSafeInteger(id) || id < 1) return false;
+  try {
+    const ids = localShows(person);
+    if (!ids.includes(id)) ids.push(id);
+    if (ids.length > 50) return false;
+    localStorage.setItem(localShowsKey(person), JSON.stringify(ids));
+    return true;
+  } catch { return false; }
+}
+async function localCatalog(person) {
+  const ids = localShows(person);
+  if (!ids.length) return [];
+  const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium } externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } } } }';
+  const data = await anilist(query, { ids });
+  return (data.Page?.media || []).filter(m => Number.isSafeInteger(Number(m.id)));
+}
+$('list').addEventListener('submit', async e => {
+  const form = e.target.closest('#localAnimeAdd');
+  if (!form || !isLocalList()) return;
+  e.preventDefault();
+  const input = form.querySelector('input');
+  const name = input.value.trim();
+  if (!name) return;
+  const button = form.querySelector('button');
+  button.disabled = true;
+  try {
+    const match = name.match(/(?:^|\/anime\/)([0-9]+)(?:\/|$)/);
+    const data = await anilist('query ($search: String, $id: Int) { Media(search: $search, id: $id, type: ANIME) { id } }', {
+      ...(match ? { id:Number(match[1]) } : {search:name})
+    });
+    const id = Number(data.Media?.id);
+    if (!addLocalShow(localListPerson(), id)) throw new Error('Serie konnte nicht gespeichert werden.');
+    load(true);
+  } catch (error) { notice('Serie nicht gefunden: ' + error.message); }
+  finally { button.disabled = false; }
+});
+function localProgress(person, id) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(localProgressKey(person)) || '{}');
+    const progress = Number(saved[String(id)]);
+    return Number.isSafeInteger(progress) && progress >= 0 ? progress : 0;
+  } catch { return 0; }
+}
+function saveLocalProgress(person, id, progress) {
+  if (!person || !Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(progress) || progress < 0) return false;
+  try {
+    const key = localProgressKey(person);
+    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+    saved[String(id)] = progress;
+    localStorage.setItem(key, JSON.stringify(saved));
+    return true;
+  } catch { return false; }
+}
+function localWatchButton(id, episode) {
+  return '<button type="button" class="watch" data-local-watch="' + id + '" data-local-episode="' + episode + '" title="Bis Folge ' + episode + ' lokal als gesehen markieren" aria-label="Bis Folge ' + episode + ' lokal als gesehen markieren">✓</button>';
+}
+$('list').addEventListener('click', e => {
+  const button = e.target.closest('[data-local-watch]');
+  if (!button || !isLocalList() || !listView()) return;
+  e.stopImmediatePropagation();
+  const person = localListPerson(), id = Number(button.dataset.localWatch), episode = Number(button.dataset.localEpisode);
+  if (!saveLocalProgress(person, id, episode)) { notice('Fortschritt konnte im Browser nicht gespeichert werden.'); return; }
+  load(true);
+});
+function syncListToSolo() {
+  const person = soloPerson;
+  const accounts = listProfiles.get(person) || [];
+  const own = auth && (ownPerson() === person || accounts.some(a => auth?.name && a.name.toLowerCase() === auth.name.toLowerCase()));
+  if (own) {
+    friendList.value = '';
+    $('anilistUser').value = auth.name;
+  } else if (accounts.length) {
+    const option = [...friendList.options].find(o => o.dataset.person === person && o.value === accounts[0].name);
+    friendList.value = option?.value || '';
+    if (!option) $('anilistUser').value = accounts[0].name;
+  } else {
+    const option = [...friendList.options].find(o => o.value === 'local:' + person);
+    friendList.value = option?.value || '';
+  }
+}
+function updateLocalListOptions() {
+  for (const option of [...friendList.options])
+    if (option.value.startsWith('local:') && (listProfiles.has(option.dataset.person) || !localPlanPeople.includes(option.dataset.person))) option.remove();
+  for (const person of localPlanPeople) {
+    if (listProfiles.has(person) || [...friendList.options].some(o => o.value === 'local:' + person)) continue;
+    const option = new Option(person + ' · Lokal', 'local:' + person);
+    option.dataset.person = person;
+    friendList.add(option);
+  }
+  syncListToSolo();
+}
+
 function updateFriendOptions() {
 const ownName = auth?.provider !== 'mal' ? auth?.name?.toLowerCase() : null;
 for (const option of friendList.options) {
@@ -1309,6 +1415,7 @@ if (option.hidden && option.selected) friendList.value = '';
 fetch('wrapped-profiles.json').then(r => r.ok ? r.json() : {}).then(profiles => {
 for (const [person, accounts] of Object.entries(profiles)) {
 const ani = accounts.filter(account => account.provider === 'anilist');
+if (ani.length) listProfiles.set(person, ani);
 for (const { name } of ani) {
 const option = new Option(ani.length > 1 ? `${person} · ${name}` : person, name);
 option.dataset.person = person;
@@ -1316,6 +1423,8 @@ friendList.add(option);
 }
 }
 updateFriendOptions();
+updateLocalListOptions();
+if (listView()) load(true);
 }).catch(() => {});
 async function anilistList(user, fresh = false, publicOnly = false) {
 if (!publicOnly && auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
@@ -1344,6 +1453,7 @@ const button = $('refreshCatchup');
 if (button.disabled || !listView()) return;
 const user = listUser(), friend = friendList.value;
 if (!user) return;
+if (isLocalList()) { await loadCatchup(true); return; }
 button.disabled = true;
 button.setAttribute('aria-busy', 'true');
 button.textContent = 'Lädt…';
@@ -2025,7 +2135,7 @@ if (watch?.classList.contains('watch')) { watch.dataset.ep = first + count - 1; 
 });
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('.watch');
-if (!b || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
+if (!b || b.dataset.localWatch || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
 const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
 const key = tickKey(mediaId, episode);
 const current = myProgress.get(mediaId) || 0;
@@ -2408,18 +2518,19 @@ async function loadCatchupContent(refresh = false) {
 const generation = ++catchupGeneration, account = auth;
 updateFallbackControls();
 const user = listUser(), friend = friendList.value;
-const provider = friend ? 'AniList' : listService();
+const local = isLocalList(), person = local ? localListPerson() : soloPerson;
+const provider = local ? 'Lokal' : friend ? 'AniList' : listService();
 const shown = view;
 const current = () => generation === catchupGeneration && auth === account && view === shown && listUser() === user && friendList.value === friend;
 const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
-$('tabName').textContent = user ? `${name} · ${user} auf ${provider}${friend ? ' · Nur lesen' : ''}` : name;
+$('tabName').textContent = user ? name + ' · ' + (local ? person : user) + ' · ' + provider + (friend && !local ? ' · Nur lesen' : '') : name;
 if (!user) { $('list').innerHTML = '<div class="status">Kein AniList-Name eingetragen.</div>'; return; }
 if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
 await ready;
 if (!current()) return;
 let entries;
 try {
-entries = await anilistList(user, false, !!friend);
+entries = local ? [] : await anilistList(user, false, !!friend);
 } catch (e) {
 if (refresh && current() && document.querySelector('#list .row')) {
 notice(`${name} konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
@@ -2443,9 +2554,18 @@ setNote('catchup:plan', null);
 if (!current()) return;
 setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehlen Guck-Slots und geplante Serien, die nicht auf der Liste sind.`);
 }
-const planShows = friend ? [] : await missingPlanShows(plan, entries);
+let planShows = friend && !local ? [] : await missingPlanShows(plan, entries, local);
 if (!current()) return;
-const { rows, ownPace } = catchupRows(entries, planShows, plan, friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
+if (local) {
+  let extra = [];
+  try { extra = await localCatalog(person); }
+  catch { setNote('catchup:local', 'Zusätzliche lokale Serien konnten gerade nicht geladen werden.'); }
+  if (!current()) return;
+  const byId = new Map([...planShows.map(x => x.media), ...extra].map(m => [Number(m.id), m]));
+  entries = [...byId.values()].map(m => ({media:m, progress:localProgress(person, Number(m.id)), missing:false}));
+  planShows = [];
+}
+const { rows, ownPace } = catchupRows(entries, planShows, plan, local ? person : friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
 const openEpisodes = showCatchupCount(rows);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
@@ -2454,13 +2574,14 @@ rows.sort(choices.sort === 'az' ? byTitle
 : (a, b) => a.since - b.since);
 const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
 : `<span class="next-hint"> · ${nextAt * 1000 <= Date.now() ? `Folge ${out + 1} schon da` : 'neu ' + (new Date(nextAt * 1000).toDateString() === new Date().toDateString() ? 'heute' + savedAt(nextAt * 1000).slice(2) : savedAt(nextAt * 1000))}</span>`;
-const mine = !friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase();
-catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
+const mine = local || (!friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase());
+const canBulk = mine && !local;
+catchupTargets = canBulk && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
 catchupById = new Map(rows.map(r => [r.m.id, r]));
 const planIn = m => movesKey && !selecting ? `<button class="plan-in" data-plan="${m.id}" title="Einplanen: diese Woche in den Plan" aria-label="Einplanen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : '';
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Bei „Alle ✓“ mitnehmen">✓</button>`;
-const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
+const check = (m, ep, missing) => selecting ? selector(m) : local ? localWatchButton(m.id, ep) : watchButton(m.id, ep, missing);
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
 const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
@@ -2472,7 +2593,7 @@ const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
         <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + (selecting || out <= first || !auth ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
+      ${mine ? (local ? '' : dropButton(m.id)) + (selecting || out <= first || (!auth && !local) ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
     </div>`;
 // Several open episodes: − / + choose how many to mark (Catch-up starts with all, Non-seasonal with one);
 // only the ✓ saves
@@ -2488,12 +2609,12 @@ return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
-        ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}${planIn(m)}
+        ${mine ? (local ? '' : dropButton(m.id)) + (selecting ? selector(m) : '') : ''}${planIn(m)}
       </div>${eps.map(ep => `
       <div class="row compact">
         <div class="time">Folge ${ep}</div>
         <div class="info"></div>
-        ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, ep, missing)) : ''}
+        ${mine ? (selecting ? '<div class="watch-space"></div>' : check(m, ep, missing)) : ''}
       </div>`).join('')}</div>`;
 };
 const paced = ({ m, first, out, progress, links }) => `
@@ -2504,23 +2625,23 @@ const paced = ({ m, first, out, progress, links }) => `
         <div class="ep">${progress} von ${m.episodes || out} gesehen</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : out > first && auth ? stepper(m, first, out, false, 1) : watchButton(m.id, first)) : ''}
+      ${mine ? (local ? '' : dropButton(m.id)) + (selecting ? '<div class="watch-space"></div>' : out > first && (auth || local) ? stepper(m, first, out, false, 1) : check(m, first, false)) : ''}
     </div>`;
-if (!mine || shown === 'pace') selecting = false;
+if (!canBulk || shown === 'pace') selecting = false;
 const restore = preserveListPosition();
 if (shown === 'pace') {
 ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) : byTitle);
 $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
 : '<div class="status">Keine älteren Serien offen auf der Watching-Liste.</div>';
 } else {
-$('markAllStart').hidden = !mine || !rows.length || selecting;
+$('markAllStart').hidden = !canBulk || !rows.length || selecting;
 const top = !mine || !rows.length || !selecting ? ''
 : `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure" title="Als gesehen markieren">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
 const seasonGroups = catchupSeasonGroups(rows);
 catchupSeasonTargets = new Map(seasonGroups.map(g => [g.key, seasonWatchTargets(g.rows)]));
 const hideSeasonHeader = !showCatchupSeasonHeaders(seasonGroups);
-const seasonBulkButton = group => seasonGroups.length > 1 && mine && !selecting && catchupSeasonTargets.get(group.key)?.length
+const seasonBulkButton = group => seasonGroups.length > 1 && canBulk && !selecting && catchupSeasonTargets.get(group.key)?.length
  ? `<button type="button" class="pill catchup-season-mark" data-mark-season="${group.key}" title="Alle offenen Folgen dieser Season als gesehen markieren">Alle gesehen ✓</button>` : '';
 const newestSeason = seasonGroups.find(g => g.key !== 'unknown')?.key || seasonGroups[0]?.key;
 const seasonSection = group => {
@@ -2564,8 +2685,8 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
       </div>`).join('')}</section>`);
 }
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
-const listName = friend ? friendList.selectedOptions[0].textContent : user;
-const readOnly = friend ? '<span class="catchup-count">Nur lesen</span>' : '';
+const listName = local ? person : friend ? friendList.selectedOptions[0].textContent : user;
+const readOnly = friend && !local ? '<span class="catchup-count">Nur lesen</span>' : '';
 if (shown === 'catchup') {
 const fromPlan = rows.filter(row => row.missing).length;
 const onList = rows.length - fromPlan;
@@ -2576,6 +2697,10 @@ $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend 
     </div>`);
 } else if (friend) {
 $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
+}
+if (local) {
+  $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Lokaler Fortschritt für ' + esc(person) + ': nur auf diesem Gerät, nicht synchronisiert.</div>');
+  $('list').insertAdjacentHTML('afterbegin', '<form id="localAnimeAdd" class="local-anime-add"><input type="search" name="anime" required maxlength="160" placeholder="Anime-Titel oder AniList-Link" aria-label="Anime zum lokalen Tracker hinzufügen"><button type="submit" class="pill">Hinzufügen</button></form>');
 }
 if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Zum Abhaken und Droppen: <button type="button" class="pill" data-connect>Konto verbinden</button></div>');
 const times = [...document.querySelectorAll('.time')];
@@ -2588,10 +2713,10 @@ if (revealMarkBar) { revealMarkBar = false; window.scrollTo({ top: 0 }); }
 playEnter();
 }
 let planShowsCache = { key: '', time: 0, media: [] };
-async function missingPlanShows(plan, entries) {
+async function missingPlanShows(plan, entries, localMode = false) {
 if (!plan || !soloPerson) return [];
-const account = auth, person = soloPerson;
-const current = () => auth === account && soloPerson === person;
+const account = localMode ? null : auth, person = soloPerson;
+const current = () => (!localMode ? auth === account : true) && soloPerson === person;
 const listed = new Set(entries.map(e => e.media.id));
 const ids = [];
 for (const show of picks(plan, soloPerson).keys()) {
@@ -2599,18 +2724,18 @@ const id = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches(
 if (id && !listed.has(Number(id))) ids.push(Number(id));
 }
 if (!ids.length) return [];
-const key = ids.join() + (auth ? ':' + (auth.provider || 'anilist') + ':' + auth.name : '');
+const key = ids.join() + (account ? ':' + (account.provider || 'anilist') + ':' + account.name : ':local');
 if (planShowsCache.key !== key || Date.now() - planShowsCache.time > LIST_CACHE_MS) {
 const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) {
       id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
-      externalLinks { site url } nextAiringEpisode { episode airingAt } ${auth ? 'mediaListEntry { progress status }' : ''}
+      externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } ${account ? 'mediaListEntry { progress status }' : ''}
     } } }`;
 try {
 let data;
 if (account?.provider === 'mal') {
 data = await anilist(query.replace('mediaListEntry { progress status }', 'idMal'), { ids });
 for (const m of data.Page.media) { if (!current()) return []; MAL.rememberMedia(m); m.mediaListEntry = await MAL.entry(account, m.id); }
-} else data = auth ? await anilistAsMe(query, { ids }, account) : await anilist(query, { ids });
+} else data = account ? await anilistAsMe(query, { ids }, account) : await anilist(query, { ids });
 if (!current()) return [];
 planShowsCache = { key, time: Date.now(), media: data.Page.media };
 setNote('catchup:missing', null);
@@ -2621,12 +2746,12 @@ return [];
 }
 }
 if (!current()) return [];
-if (auth) for (const m of planShowsCache.media) {
+if (account) for (const m of planShowsCache.media) {
 if (m.mediaListEntry) knownEntries.set(m.id, { progress: m.mediaListEntry.progress, status: m.mediaListEntry.status });
 else notOnList.add(m.id);
 }
 return planShowsCache.media
-.filter(m => !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
+.filter(m => !account || !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
 .map(m => ({ progress: m.mediaListEntry?.progress || 0, media: m, missing: true }));
 }
 async function loadContent(refresh = false) {
@@ -4174,6 +4299,7 @@ setMode(mode);
 function listView() { return view === 'catchup' || view === 'pace'; }
 let jumpSearch = '';
 function setView(next) {
+if (next !== 'week') syncListToSolo();
 if (next === 'week' && jumpSearch) {
 if ($('search').value === jumpSearch) { $('search').value = ''; openSearch(false); searchedWeek = false; }
 jumpSearch = '';
@@ -4245,6 +4371,7 @@ break;
 });
 $('soloPerson').onchange = () => {
 soloPerson = $('soloPerson').value;
+syncListToSolo();
 colorSolo();
 try { localStorage.setItem('soloPerson', soloPerson); } catch {}
 redraw();
@@ -4257,6 +4384,8 @@ for (const o of select.options) o.style.cssText = personStyle(o.value)
 applyAccent();
 }
 function fillPeople(people) {
+localPlanPeople = people.slice();
+updateLocalListOptions();
 const select = $('soloPerson');
 if ([...select.options].map(o => o.value).join() !== people.join()) {
 select.replaceChildren(...people.map(p => new Option(p, p)));
@@ -4264,6 +4393,7 @@ if (!people.includes(soloPerson) && people.length) soloPerson = people.includes(
 select.value = soloPerson;
 }
 colorSolo();
+syncListToSolo();
 const box = $('people');
 const chips = () => [...box.querySelectorAll('[data-name]')];
 if (chips().map(b => b.dataset.name).join() === people.join()) {

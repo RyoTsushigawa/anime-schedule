@@ -102,7 +102,7 @@ export async function openPage(opts = {}) {
     }
     if (query.includes('idMal_in')) return { Page: { media:(v.malIds || []).map(id => MEDIA[id-100]).filter(Boolean).map(m => ({...m,nextAiringEpisode:{episode:5,airingAt:sec(2026,10,4,14)}})) } };
     // opts.planNext: { episode, airingAt } as every looked-up show's next episode (default none)
-    if (query.includes('id_in')) return { Page: { media: (v.ids || []).map(id => MEDIA[id]).filter(Boolean).map(m => opts.planNext ? { ...m, nextAiringEpisode: opts.planNext } : m) } };
+    if (query.includes('id_in')) return { Page: { media: (v.ids || []).map(id => MEDIA[id] ? { ...MEDIA[id], ...opts.media?.[id] } : null).filter(Boolean).map(m => opts.planNext ? { ...m, nextAiringEpisode: opts.planNext } : m) } };
     if (query.includes('Media(id:')) return { Media: MEDIA[v.id] };
     if (query.includes('Media(search')) return { Media: opts.search?.[v.search] ?? null };
     throw new Error('unexpected AniList query: ' + query.slice(0, 60));
