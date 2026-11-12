@@ -120,11 +120,17 @@ const fallbackSources = new Map();
 try { for (const [person,value] of Object.entries(JSON.parse(localStorage.getItem('fallbackSources') || '{}'))) if (['aniworld','torrent'].includes(value)) fallbackSources.set(person,value); } catch {}
 const fallbackChoice = person => fallbackSources.get(person) || (person.toLowerCase() === 'rei' ? 'torrent' : 'aniworld');
 function updateFallbackControls() {
-const selected = new Set(activePeople().map(fallbackChoice));
+const people = activePeople();
+const selected = new Set(people.map(fallbackChoice));
+const mixed = selected.size > 1;
 for (const b of document.querySelectorAll('[data-fallback-source]')) {
-b.setAttribute('aria-pressed',String(selected.has(b.dataset.fallbackSource)));
-b.disabled = !activePeople().length;
+b.setAttribute('aria-pressed', String(!mixed && selected.has(b.dataset.fallbackSource)));
+b.disabled = !people.length;
 }
+const group = document.querySelector('[data-fallback-group]');
+if (group) group.dataset.mixed = String(mixed);
+const note = document.getElementById('fallbackMixed');
+if (note) note.hidden = !mixed;
 updatePrimeControls();
 }
 for (const b of document.querySelectorAll('[data-fallback-source]')) b.onclick = () => {
@@ -136,11 +142,17 @@ const primeChoices = new Map();
 try { for (const [person, value] of Object.entries(JSON.parse(localStorage.getItem('primeChoices') || '{}'))) if (value === 'torrent') primeChoices.set(person, value); } catch {}
 const primeChoice = person => primeChoices.get(person) || 'prime';
 function updatePrimeControls() {
-const selected = new Set(activePeople().map(primeChoice));
+const people = activePeople();
+const selected = new Set(people.map(primeChoice));
+const mixed = selected.size > 1;
 for (const b of document.querySelectorAll('[data-prime-choice]')) {
-b.setAttribute('aria-pressed', String(selected.has(b.dataset.primeChoice)));
-b.disabled = !activePeople().length;
+b.setAttribute('aria-pressed', String(!mixed && selected.has(b.dataset.primeChoice)));
+b.disabled = !people.length;
 }
+const group = document.querySelector('[data-prime-group]');
+if (group) group.dataset.mixed = String(mixed);
+const note = document.getElementById('primeMixed');
+if (note) note.hidden = !mixed;
 }
 for (const b of document.querySelectorAll('[data-prime-choice]')) b.onclick = () => {
 for (const person of activePeople()) {
