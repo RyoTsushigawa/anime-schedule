@@ -109,3 +109,45 @@ test('Hard Mode draws a title from the public AniList and sends no mutation requ
     }
   }finally{page.close();}
 });
+
+test('Hard Wordle offers two progressive hints without consuming guesses',async()=>{
+  const page=await openGame({difficulty:'hard'});
+  try{
+    const doc=page.window.document;
+    const hintArea=doc.querySelector('#gameHardHints');
+    const hintButton=doc.querySelector('#gameHintButton');
+    const hintText=doc.querySelector('#gameHintText');
+    assert.equal(hintArea.hidden,false);
+    assert.equal(hintText.textContent,'');
+    hintButton.click();
+    assert.equal(page.run('state.hints'),1);
+    assert.match(hintText.textContent,/AniList von Belly/);
+    assert.doesNotMatch(hintText.textContent,/Buchstabe/);
+    assert.equal(page.run('state.guesses.length'),0);
+    hintButton.click();
+    assert.equal(page.run('state.hints'),2);
+    const word=page.run('puzzle.word');
+    const index=hashWord(page.run('puzzle.id')+':hint')%word.length;
+    assert.match(hintText.textContent,new RegExp('Buchstabe '+(index+1)+' ist '+word[index]));
+    assert.equal(hintButton.hidden,true);
+    assert.equal(page.run('state.guesses.length'),0);
+    await page.run('start()');
+    assert.equal(page.run('state.hints'),2);
+    assert.equal(hintButton.hidden,true);
+    assert.match(hintText.textContent,/Buchstabe/);
+    page.run("typing=puzzle.word; press('Enter')");
+    assert.equal(hintArea.hidden,true);
+    assert.equal(page.run('state.won'),true);
+  }finally{page.close();}
+});
+
+test('Normal Wordle never displays the Hard hint controls',async()=>{
+  const page=await openGame({difficulty:'normal'});
+  try{
+    assert.equal(page.window.document.querySelector('#gameHardHints').hidden,true);
+    assert.equal(page.run('state.hints'),0);
+    page.window.document.querySelector('#gameHintButton').click();
+    assert.equal(page.run('state.hints'),0);
+    assert.equal(page.window.document.querySelector('#gameHintText').textContent,'');
+  }finally{page.close();}
+});

@@ -135,6 +135,7 @@ async function start() {
   const turn=++generation;
   const mode=gameMode,level=difficulty,day=berlinDay(),round=roundNumber();
   puzzle=null;state=null;typing='';allowed=new Set();
+  $('gameHardHints').hidden=true;
   $('gameEnd').hidden=true;$('board').innerHTML='';$('keyboard').innerHTML='';
   $('gameNumber').textContent='Titel-Rätsel';
   $('gameHint').textContent='Lädt…';message('');
@@ -160,15 +161,41 @@ async function start() {
     const saved=load(currentKey()+':'+id,null);
     state=saved?.id===id && saved?.word===entry.word ? saved
       :{id,word:entry.word,guesses:[],done:false,won:false};
+    state.hints = Math.max(0,Math.min(2,Number(state.hints)||0));
     $('gameNumber').textContent=(level==='hard'?'Schwer · ':'')+
       (mode==='daily'?'Titel-Rätsel #':'Endlos #')+puzzle.number;
     $('gameHint').textContent=puzzle.word.length+' Buchstaben · '+allowed.size+' gültige Wörter';
     draw();
+    refreshHardHints();
     if(state.done) finish(false);
   }catch(e){
     if(turn===generation){$('gameHint').textContent='Nicht verfügbar';message('Rätsel konnte nicht geladen werden: '+e.message);}
   }
 }
+// Optional Hard-only hints: first identify whose AniList supplied the title;
+// second reveal one deterministic position. Never expose the whole title, since
+// the answer itself is a word in that title.
+function hardHintText() {
+  if(!puzzle || !state || puzzle.level!=='hard' || !state.hints)return '';
+  const owner = (puzzle.from || '').replace(/^AniList\s*·\s*/, '');
+  const label = owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
+  if(state.hints===1)return label;
+  const index=hashWord(puzzle.id+':hint')%puzzle.word.length;
+  return label + ' Buchstabe ' + (index+1) + ' ist ' + puzzle.word[index] + '.';
+}
+function refreshHardHints(){
+  const show=!!puzzle && !!state && puzzle.level==='hard' && !state.done;
+  $('gameHardHints').hidden=!show;
+  $('gameHintText').textContent=show?hardHintText():'';
+  $('gameHintButton').textContent=state?.hints===1?'Zweiter Hinweis': 'Hinweis anzeigen';
+  $('gameHintButton').hidden=!show || (state?.hints||0)>=2;
+}
+$('gameHintButton').onclick=()=>{
+  if(!puzzle || !state || puzzle.level!=='hard' || state.done || state.hints>=2)return;
+  state.hints++;
+  save(currentKey()+':'+puzzle.id,state);
+  refreshHardHints();
+};
 function message(text){$('gameMsg').textContent=text;}
 function draw(){
   if(!puzzle||!state)return;
@@ -209,6 +236,7 @@ function press(key){
     if(state.guesses.at(-1)===puzzle.word)state.done=state.won=true;
     else if(state.guesses.length>=TRIES)state.done=true;
     message('');save(currentKey()+':'+puzzle.id,state);draw();
+    refreshHardHints();
     if(state.done)finish(true);
     return;
   }

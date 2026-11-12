@@ -18,6 +18,10 @@
 .tile.hit, .key.hit { background: #2f9e57; border-color: #2f9e57; color: #fff; }
 .tile.near, .key.near { background: #c9a227; border-color: #c9a227; color: #fff; }
 .tile.miss, .key.miss { background: color-mix(in srgb, var(--muted) 45%, var(--bg)); border-color: transparent; color: #fff; }
+.game-hard-hints {width:100%;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);text-align:center;}
+.game-hard-hints[hidden], .game-hard-hints button[hidden] {display:none!important;}
+.game-hard-hints button {min-height:36px;font-size:12px;}
+.game-hard-hints span {line-height:1.5;overflow-wrap:anywhere;}
 .game-msg { min-height: 20px; margin: 0; color: var(--muted); font-size: 13px; text-align: center; white-space: pre-line; }
 .game-end { display: grid; gap: 12px; justify-items: center; text-align: center; }
 .game-answer { margin: 0; font-size: 15px; }

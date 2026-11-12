@@ -29,6 +29,10 @@ img-src 'self'; connect-src 'self' https://graphql.anilist.co https://sheets.goo
 </div>
 <div class="game-head"><b id="gameNumber">Titel-Rätsel</b><span id="gameHint" class="game-hint"></span><button type="button" id="gameHelp" class="game-help" aria-label="So geht's" title="6 Versuche. Nur echte englische Wörter aus Anime-Titeln: im Normalmodus aus dem Guckplan, im schweren Modus zusätzlich aus einer Gruppen-AniList. Schwer: nutze alle gelben/grünen Hinweise. Endlos: nach jedem Rätsel weiterspielen.">?</button></div>
 <div id="board" class="board" role="grid" aria-label="Spielfeld"></div>
+<div id="gameHardHints" class="game-hard-hints" hidden>
+<button type="button" class="pill" id="gameHintButton">Hinweis anzeigen</button>
+<span id="gameHintText" role="status" aria-live="polite"></span>
+</div>
 <p id="gameMsg" class="game-msg" role="status" aria-live="polite"></p>
 <div id="gameEnd" class="game-end" hidden>
 <p id="gameAnswer" class="game-answer"></p>
