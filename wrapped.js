@@ -1,4 +1,12 @@
 // A separate read-only recap, so Wrapped never gets in the way of the schedule.
+// Jahres-Wrapped: besides the seasons, one entry per year ("year:2026") with that year's season tabs
+let wrappedYears = [];
+const wrappedTab = value => wrappedYears.find(y => y.gid === value) || wrappedTabs.find(t => t.gid === value);
+// a year reads "Jahr" where a season reads "Season" (with the right article)
+const WRAPPED_YEAR_WORDS = [['Eure Season.', 'Euer Jahr.'], ['Deine Season.', 'Dein Jahr.'], ['eure gemeinsame Season', 'euer gemeinsames Jahr'],
+  ['deine Season', 'dein Jahr'], ['eurer Season', 'eurem Jahr'], ['deiner Season', 'deinem Jahr'], ['letzte Season', 'letztes Jahr'],
+  ['dieser Season', 'diesem Jahr'], ['diese Season', 'dieses Jahr'], ['der gewählten Season', 'dem gewählten Jahr'], ['Momentaufnahme der Season', 'Momentaufnahme des Jahres']];
+const wrappedYearText = text => WRAPPED_YEAR_WORDS.reduce((t, [a, b]) => t.split(a).join(b), String(text ?? ''));
 let wrappedTabs = [], wrappedPlan = null, wrappedRecords = [], wrappedProfiles = {}, wrappedAccounts = [];
 let wrappedTabNote = '', wrappedPlanNote = '';
 let wrappedCards = [], wrappedIndex = 0, wrappedGeneration = 0, wrappedLoadGeneration = 0;
@@ -134,6 +142,7 @@ function wrappedShow(index) {
   $('next').disabled=wrappedIndex===wrappedCards.length-1;
 }
 function wrappedDraw(cards) {
+  if(wrappedTab($('season').value)?.parts)cards=cards.map(c=>({...c,kicker:wrappedYearText(c.kicker),title:wrappedYearText(c.title),html:wrappedYearText(c.html),note:wrappedYearText(c.note)}));
   wrappedCards=cards;
   $('stories').innerHTML=cards.map((c,i)=>`<article class="story" style="--card:${c.color};--ink:${c.ink||'#20201c'}" aria-label="${i+1} von ${cards.length}"><p class="kicker">${wrappedSafe(c.kicker)}</p><h2>${wrappedSafe(c.title)}</h2>${c.html}<p class="caption">${wrappedSafe(c.note||'')}</p></article>`).join('');
   $('dots').replaceChildren(...cards.map((c,i)=>{
@@ -144,7 +153,7 @@ function wrappedDraw(cards) {
 }
 async function wrappedRender(fresh=false) {
   if(!wrappedPlan)return;
-  const generation=++wrappedGeneration, person=$('person').value, tab=wrappedTabs.find(t=>t.gid===$('season').value);
+  const generation=++wrappedGeneration, person=$('person').value, tab=wrappedTab($('season').value);
   const season=tab.name.replace(/^Guckplan\s+/,'');
   const selected=person?[person]:wrappedPlan.people;
   const stats=WrappedStats.plan(wrappedRecords,wrappedPlan.people,person||null);
@@ -158,7 +167,7 @@ async function wrappedRender(fresh=false) {
   const biggestDay=days[stats.busiest?.[0]]||'Abend';
   const allowLists=WrappedStats.listsAllowed(tab);
   $('profileButton').hidden=!allowLists;
-  $('introHeading').innerHTML=plural?'Eure Season.<br><em>Eine Menge Anime.</em>':'Deine Season.<br><em>Eine Menge Anime.</em>';
+  $('introHeading').innerHTML=(tab.parts?(plural?'Euer Jahr.':'Dein Jahr.'):(plural?'Eure Season.':'Deine Season.'))+'<br><em>Eine Menge Anime.</em>';
   $('introText').textContent=shared?'MaRyo: zwei Menschen, ein gemeinsamer Guckplan. Hier geht es um eure Auswahl zusammen.':person?'Ein kleiner Rückblick auf deine Auswahl — und die Leute, mit denen sie sich überschneidet.':'Ein kleiner Rückblick auf eure Pläne, gemeinsamen Serien und gut gefüllten Abende.';
   const cards=[{
     kicker:season+' · '+name+(shared?' · euer gemeinsamer Plan':''),
@@ -166,6 +175,15 @@ async function wrappedRender(fresh=false) {
     html:'<div class="big">'+stats.shows+'</div><p>Serien standen auf '+yours+' Plan. '+(shared?'Eure gemeinsame Auswahl zählt dabei einmal — schließlich teilt ihr euch den Plan.':person?'Von den gemeinsamen Runden bis zu deinen eigenen kleinen Entdeckungen.':'Manche für die große Runde, andere nur für ein paar von euch.')+'</p>'+wrappedMetrics(person?[[wrappedHours(stats.minutes)+' h','geplant pro Woche'],[activeDays,'Tage mit Anime im Plan'],[shared?2:stats.slots,shared?'Menschen, ein Plan':'Slots pro Woche']]:[[wrappedHours(stats.minutes)+' h','geplant pro Woche'],[wrappedPlan.people.length,'Plan-Einträge'],[WrappedStats.peopleCount(wrappedPlan.people),'Menschen · MaRyo zählt zwei']]),
     note:'Aus dem Guckplan, nicht aus gemessener Watchtime. Pro Slot sind 30 Minuten angesetzt; parallele Serien zählen zeitlich einmal.'
   }];
+  if(tab.parts){
+    // Jahres-Wrapped: shows per season, and the ones that stayed for more than one
+    const mineRecords=wrappedRecords.filter(r=>selected.includes(r.person));
+    const perSeason=tab.parts.map(t=>t.name.replace(/^Guckplan\s+/,'')).reverse().map(n=>[n,new Set(mineRecords.filter(r=>r.season===n).map(r=>r.key)).size]);
+    const seasonsOf=new Map();for(const r of mineRecords)seasonsOf.set(r.key,new Set([...(seasonsOf.get(r.key)||[]),r.season]));
+    const stayed=[...seasonsOf.values()].filter(x=>x.size>1).length;
+    cards.push({kicker:season+' · Season für Season',title:stayed?(stayed===1?'Eine Serie blieb über mehrere Seasons.':stayed+' Serien blieben über mehrere Seasons.'):'Jede Season ein neues Programm.',color:'#ffc764',
+      html:wrappedRank(perSeason.map(([n,c])=>[n,c+' Serien'])),note:'Aus den Guckplänen der Seasons dieses Jahres. Eine Serie, die in mehreren Guckplänen steht, zählt im Jahr einmal.'});
+  }
   if(stats.shows)cards.push({kicker:person?(shared?'Eure Woche':'Deine Woche'):'Eure Woche',title:'Am '+biggestDay+' war am meisten geplant.',color:'#c8a6ff',
     html:'<p>'+stats.busiest[1]+' Slots, also ungefähr '+wrappedHours(stats.busiest[1]*30)+' Stunden Anime. '+(stats.busiest[1]>=5?'Da konnte man es sich ruhig etwas länger gemütlich machen.':'Ein guter Anlass, es sich zusammen gemütlich zu machen.')+'</p><div class="bars">'+stats.days.map(([d,n])=>'<div class="bar-item"><b>'+n+'</b><div class="bar-fill" style="--height:'+Math.round(n/max*100)+'px"></div>'+d+'</div>').join('')+'</div>',
     note:'Geplante Slots pro Woche. Das sagt nichts darüber aus, wie viele Folgen tatsächlich geschaut wurden.'});
@@ -178,7 +196,8 @@ async function wrappedRender(fresh=false) {
   if(stats.night)cards.push({kicker:stats.night.minutes>=1320?'Für die späte Runde':'Der letzte geplante Start',title:stats.night.minutes>=1320?'Eine ging noch.':'So klang der Abend aus.',color:'#c8a6ff',html:'<div class="big">'+stats.night.time.split(':').map(v=>v.padStart(2,'0')).join(':')+'</div><p>'+wrappedSafe(stats.night.title)+' war '+(stats.night.minutes>=1320?'für die späte Runde':'als spätester Start')+' eingetragen ('+wrappedSafe(stats.night.day)+'). '+(stats.night.minutes>=1320?'Wer noch wach war, hatte also noch etwas vor.':'Ein schöner Punkt, um den Abend ausklingen zu lassen.')+'</p>',note:'Späteste Startzeit im Plan. Serien ohne Uhrzeit zählen hier nicht; eine tatsächliche Schlafenszeit wird nicht erfasst.'});
   if(person){const total=WrappedStats.plan(wrappedRecords,wrappedPlan.people).shows;cards.push({kicker:shared?'Eure eigene Mischung':'Deine eigene Mischung',title:shared?'Ein Plan nach eurem Geschmack.':'Ein Plan nach deinem Geschmack.',color:'#94dce0',html:wrappedMetrics([[stats.shows,shared?'Serien auf eurem Plan':'Serien auf deinem Plan'],[total,'Serien in der ganzen Gruppe'],[stats.partners,'andere Pläne mit Überschneidungen']])+'<p>'+ (shared?'Euer gemeinsamer Plan':'Deine Auswahl')+' muss keine Rangliste gewinnen. Hauptsache, es ist etwas dabei, auf das '+you+(plural?' Lust habt.':' Lust hast.')+'</p>',note:'Es geht um die Auswahl im Plan, nicht darum, wer mehr geschafft hat.'});}
   else cards.push({kicker:'Für jeden etwas dabei',title:'Viele Pläne. Nicht alle gleich voll.',color:'#94dce0',html:wrappedRank(stats.perPerson.map(([n,count])=>[n,count+' Serien']))+'<p>Eine kleine Übersicht eurer Auswahl. MaRyo ist ein gemeinsamer Plan für zwei Menschen und wird einmal aufgeführt.</p>',note:'Serien pro Plan-Eintrag, keine persönliche Leistungsrangliste und keine tatsächlich gesehenen Folgen.'});
-  const seasonStart=tab.start || new Date().getTime(), endDate=new Date(seasonStart);endDate.setMonth(endDate.getMonth()+3);
+  const months=tab.parts?12:3;
+  const seasonStart=tab.start || new Date().getTime(), endDate=new Date(seasonStart);endDate.setMonth(endDate.getMonth()+months);
   wrappedDraw(cards);
   $('status').textContent='Plan geladen · Listen-Statistiken werden gelesen…';
   if(!allowLists){
@@ -221,10 +240,10 @@ async function wrappedRender(fresh=false) {
     if(summary.watchEpisodes)cards.push({kicker:'Watch-Time',title:plural?'So viel Zeit steckt in eurer Season.':'So viel Zeit steckt in deiner Season.',color:'#94dce0',
       html:`<div class="big">≈ ${wrappedHours(summary.watchMinutes)} Std.</div><p>${summary.watchEpisodes} Folgen aus ${summary.watchShows} Serien.</p>${summary.watchMinutes>=1440?wrappedMetrics([[new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(summary.watchMinutes/1440),'Tage am Stück']]):''}`,
       note:'Abgeschlossene Serien dieser Season mit allen Folgen, dazu der Fortschritt bei laufenden, pausierten und abgebrochenen Serien aus dieser Season. Ältere Serien ohne Abschluss zählen nicht; fehlende Folgenlängen als 24 Min. Bei MAL nur Abschlüsse.'});
-    const before=new Date(seasonStart);before.setMonth(before.getMonth()-3);
+    const before=new Date(seasonStart);before.setMonth(before.getMonth()-months);
     const prev=WrappedStats.list(entries,before.getTime(),seasonStart);
     if(prev.completed||prev.watchEpisodes){
-      const prevName=['Winter','Frühling','Sommer','Herbst'][Math.floor(before.getMonth()/3)]+' '+before.getFullYear();
+      const prevName=tab.parts?'Jahr '+before.getFullYear():['Winter','Frühling','Sommer','Herbst'][Math.floor(before.getMonth()/3)]+' '+before.getFullYear();
       const delta=(now,then,fmt=n=>String(n))=>now===then?'gleich':(now>then?'+':'−')+fmt(Math.abs(now-then));
       const hours=n=>new Intl.NumberFormat('de-DE',{maximumFractionDigits:0}).format(n/60);
       const more=summary.watchMinutes-prev.watchMinutes, change=prev.watchMinutes?more/prev.watchMinutes:1;
@@ -248,10 +267,14 @@ async function wrappedLoad(fresh = false) {
   const previous=$('person').value;
   $('status').textContent='Guckplan wird geladen…';$('refresh').disabled=true;
   try {
-    const tab=wrappedTabs.find(t=>t.gid===$('season').value);
-    const plan=await wrappedReadPlan(tab); if(loadGeneration!==wrappedLoadGeneration)return;
-    wrappedPlan=plan;wrappedRecords=[];
-    for(const person of wrappedPlan.people)for(const [show,slot] of picks(wrappedPlan,person))wrappedRecords.push({person,key:WrappedStats.key(show.romaji||show.english),title:wrappedTitle(show),day:WrappedStats.days?.find(d=>norm(d).slice(0,2)===norm(slot.tag).slice(0,2))||slot.tag,time:parseTime(slot.time)?.join(':')||'',slot:slot.slot});
+    const tab=wrappedTab($('season').value);
+    // a year: every season's Guckplan, people and records together (each record knows its season)
+    const parts=tab.parts||[tab];
+    const plans=await Promise.all(parts.map(wrappedReadPlan)); if(loadGeneration!==wrappedLoadGeneration)return;
+    wrappedPlan=plans.length===1?plans[0]:{people:[...new Set(plans.flatMap(p=>p.people))],shows:plans.flatMap(p=>p.shows),colors:Object.assign({},...plans.map(p=>p.colors||{})),catalog:[]};
+    wrappedRecords=[];
+    plans.forEach((plan,i)=>{const seasonName=parts[i].name.replace(/^Guckplan\s+/,'');
+    for(const person of plan.people)for(const [show,slot] of picks(plan,person))wrappedRecords.push({season:seasonName,person,key:WrappedStats.key(show.romaji||show.english),title:wrappedTitle(show),day:WrappedStats.days?.find(d=>norm(d).slice(0,2)===norm(slot.tag).slice(0,2))||slot.tag,time:parseTime(slot.time)?.join(':')||'',slot:slot.slot});});
     $('person').replaceChildren(new Option('Die ganze Gruppe',''),...wrappedPlan.people.map(p=>new Option(p,p)));
     if(wrappedPlan.people.includes(previous))$('person').value=previous;
     $('profilePerson').replaceChildren(...wrappedPlan.people.map(p=>new Option(p,p)));
@@ -352,8 +375,11 @@ async function wrappedInitialize(fresh = false){
   try{
     await wrappedReadProfiles();
     wrappedTabs=await wrappedReadTabs();
-    $('season').replaceChildren(...wrappedTabs.map(t=>new Option(t.name.replace(/^Guckplan\s+/,''),t.gid)));
-    $('season').value=wrappedTabs.some(t=>t.gid===selectedTab)?selectedTab:tabFor(wrappedTabs,new Date()).gid;
+    const years=new Map();for(const t of wrappedTabs){const y=new Date(t.start).getFullYear();years.set(y,[...(years.get(y)||[]),t]);}
+    wrappedYears=[...years].sort((a,b)=>b[0]-a[0]).map(([y,parts])=>({gid:'year:'+y,name:'Jahr '+y,start:new Date(y,0,1).getTime(),parts:parts.sort((a,b)=>b.start-a.start)}));
+    const group=(label,list)=>{const g=document.createElement('optgroup');g.label=label;g.append(...list.map(t=>new Option(t.name.replace(/^Guckplan\s+/,''),t.gid)));return g;};
+    $('season').replaceChildren(group('Season',wrappedTabs),group('Ganzes Jahr',wrappedYears));
+    $('season').value=wrappedTab(selectedTab)?selectedTab:tabFor(wrappedTabs,new Date()).gid;
     await wrappedLoad(fresh);
   }catch(error){$('status').textContent='Wrapped konnte nicht geladen werden: '+error.message;}
   finally{$('refresh').disabled=false;}
