@@ -4,37 +4,105 @@
   {
    "name": "Seasonpläne",
    "gid": "1701437129",
-   "file": "Seasonpläne.csv"
+   "file": "Seasonpläne.csv",
+   "hiddenRows": [],
+   "hiddenColumns": []
   },
   {
    "name": "Herbst 2026",
    "gid": "77921696",
-   "file": "Herbst 2026.csv"
+   "file": "Herbst 2026.csv",
+   "hiddenRows": [
+    14
+   ],
+   "hiddenColumns": [
+    2,
+    13
+   ]
   },
   {
    "name": "Guckplan Herbst 2026",
    "gid": "488548700",
-   "file": "Guckplan Herbst 2026.csv"
+   "file": "Guckplan Herbst 2026.csv",
+   "hiddenRows": [
+    7,
+    12,
+    14,
+    19,
+    21,
+    28,
+    33,
+    38,
+    39,
+    44,
+    50,
+    52,
+    54,
+    57,
+    58,
+    60,
+    61,
+    62,
+    63,
+    64,
+    67
+   ],
+   "hiddenColumns": [
+    2,
+    13
+   ],
+   "colors": {
+    "Sort": "#434343",
+    "Slot": "#434343",
+    "Anime Titel": "#434343",
+    "Eng Anime Titel": "#434343",
+    "Startdatum": "#434343",
+    "Wo": "#434343",
+    "Tag": "#434343",
+    "Uhrzeit": "#434343",
+    "MaRyo": "#8e7cc3",
+    "Marius": "#b6d7a8",
+    "Belly": "#ee6fa7",
+    "Maria": "#d9d2ee",
+    "Rei": "#0000ff",
+    "Terra": "#9900ff",
+    "Blue": "#a4c2f4",
+    "Quecks": "#ec4399",
+    "Ceddl": "#38761d",
+    "Matthias": "#76a5af",
+    "Sophie": "#35dcd2"
+   }
   },
   {
    "name": "Game Zeug",
    "gid": "1991663581",
-   "file": "Game Zeug.csv"
+   "file": "Game Zeug.csv",
+   "hiddenRows": [],
+   "hiddenColumns": []
   },
   {
    "name": "Rewatches ETC",
    "gid": "1202370950",
-   "file": "Rewatches ETC.csv"
+   "file": "Rewatches ETC.csv",
+   "hiddenRows": [],
+   "hiddenColumns": []
   },
   {
    "name": "Anime Top 100",
    "gid": "1207899423",
-   "file": "Anime Top 100.csv"
+   "file": "Anime Top 100.csv",
+   "hiddenRows": [],
+   "hiddenColumns": []
   },
   {
    "name": "Winter 2027",
    "gid": "966052173",
-   "file": "Winter 2027.csv"
+   "file": "Winter 2027.csv",
+   "hiddenRows": [],
+   "hiddenColumns": [
+    2,
+    13
+   ]
   }
  ]
 }
