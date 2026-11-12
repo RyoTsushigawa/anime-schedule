@@ -128,12 +128,35 @@ mask: e.people.reduce((mask, p) => mask | (1 << people.indexOf(p)), 0),
 release,
 short: !!m?.duration && m.duration <= 15,
 current: day >= 0 ? { day, min: minutesOf(e.slot.time), slot: Number(e.slot.slot) || null } : null,
+start: showStart(e.show, m),
 };
 });
 return { tab, people, idle, shows, sheet, real };
 }
+// When a show starts (ms): the list's Startdatum, else AniList's start date, else its first episode's airing
+function showStart(row, m) {
+const d = String(row?.start || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+if (d) return new Date(+d[3], +d[2] - 1, +d[1]).getTime();
+const a = m?.startDate;
+if (a?.year && a.month && a.day) return new Date(a.year, a.month - 1, a.day).getTime();
+return m?.nextAiringEpisode?.episode === 1 ? m.nextAiringEpisode.airingAt * 1000 : null;
+}
+// Startwochen (idea 90): plan only the shows that have started by the chosen week ('' = all shows)
+let planWeek = '';
+const mondayOf = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function startWeeks(data) {
+const thisWeek = mondayOf(Date.now()).getTime();
+const weeks = [...new Set(data.shows.filter(s => s.start && mondayOf(s.start).getTime() > thisWeek).map(s => isoOf(mondayOf(s.start))))].sort();
+return weeks.map(w => { const end = new Date(w + 'T00:00'); end.setDate(end.getDate() + 7); return { week: w, count: data.shows.filter(s => !s.start || s.start < end.getTime()).length }; });
+}
+function forWeek(data) {
+if (!planWeek) return data;
+const end = new Date(planWeek + 'T00:00'); end.setDate(end.getDate() + 7);
+return { ...data, allShows: data.shows, shows: data.shows.filter(s => !s.start || s.start < end.getTime()) };
+}
 async function plannerMedia(shows) {
-const fields = 'id idMal duration title { romaji english } nextAiringEpisode { airingAt }';
+const fields = 'id idMal duration title { romaji english } nextAiringEpisode { airingAt episode } startDate { year month day }';
 const idOf = show => Object.entries(streamsDe?.status || {})
 .find(([, s]) => titleMatches([show.romaji, show.english], s.titles))?.[0];
 const ids = shows.map(idOf).map(Number);
@@ -400,6 +423,9 @@ if (!planBusy) {
 try { planBusy = await seasonplanBusy(data); } catch { planBusy = []; }
 saveSettings();
 }
+if (sharedPlan?.w !== undefined) planWeek = sharedPlan.w || '';
+if (planWeek && !startWeeks(data).some(w => w.week === planWeek)) planWeek = '';
+data = forWeek(data);
 if (sharedPlan) {
 // a shared suggestion: its start times for this visit (saved only if a setting is changed), its slots
 if (String(sharedPlan.tab) === tab.gid) {
@@ -423,6 +449,12 @@ let planOpen = { avail: true };
 try { planOpen = JSON.parse(localStorage.getItem('planOpen')) || planOpen; } catch {}
 const group = (id, title, count, body) => `<details class="plan-group" data-group="${id}"${planOpen[id] ? ' open' : ''}>
     <summary><span>${title}</span>${count ? `<span class="plan-count">${count}</span>` : ''}</summary><div class="plan-group-body">${body}</div></details>`;
+function planWeekChoice(data) {
+const full = data.allShows || data.shows, weeks = startWeeks({ shows: full });
+if (!weeks.length) return '';
+const label = w => `Woche ab ${new Date(w.week + 'T00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })} (${w.count} Serien)`;
+return `<label class="plan-week">Plan für <select id="planWeek" class="pill"><option value="">alle Serien (${full.length})</option>${weeks.map(w => `<option value="${w.week}"${w.week === planWeek ? ' selected' : ''}>${esc(label(w))}</option>`).join('')}</select></label>`;
+}
 function plannerSetup(data) {
 const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
 `<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (Abstimmung)' : ''}</option>`).join('');
@@ -442,6 +474,7 @@ return `<div class="plan-setup-head">
       <select id="planTab" class="pill" aria-label="Guckplan">${tabOptions}</select>
       <button id="planRun" class="pill plan-go">Plan erstellen</button>
     </div>
+    ${planWeekChoice(data)}
     <div class="plan-test-toggle"><button id="planTestToggle" class="pill" aria-pressed="${planTest}" title="Mit ausgedachten Stimmen planen: nichts geht ins Sheet">Testmodus</button>${planTest ? '<span>Stimmen nur in diesem Browser · Sheet bleibt unverändert</span>' : ''}</div>
     <p id="planStale" class="plan-stale" hidden>Einstellungen geändert. „Neu erstellen“ übernimmt sie.</p>
     ${group('avail', 'Wer kann wann', offDays ? `${offDays}× nicht da` : '', `
@@ -500,7 +533,8 @@ return planBusy.map((e, i) => `
     </div>`).join('');
 }
 function bindPlannerSetup(data) {
-$('planTab').onchange = () => { planTabGid = $('planTab').value; planOutcome = null; loadPlanner(); };
+$('planTab').onchange = () => { planTabGid = $('planTab').value; planOutcome = null; planWeek = ''; loadPlanner(); };
+if ($('planWeek')) $('planWeek').onchange = () => { planWeek = $('planWeek').value; planOutcome = null; planHistory = []; loadPlanner(); };
 for (const d of document.querySelectorAll('.plan-group'))
 d.ontoggle = () => { planOpen[d.dataset.group] = d.open; try { localStorage.setItem('planOpen', JSON.stringify(planOpen)); } catch {} };
 const count = (id, n) => {
@@ -779,6 +813,7 @@ const delay = d < 0 ? 0 : (d - s.release.day + 7) % 7;
 if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'Tag' : 'Tage'}</span>`);
 } else notes.push('kein wöchentlicher Release');
 if (s.short) notes.push('kurz');
+if (s.start && s.start > Date.now()) notes.push(`startet ${new Date(s.start).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}`);
 if (ctx.fixed[i]?.dayOnly) notes.push('nur Tag');
 else if (ctx.fixed[i]) notes.push('📌 festgelegt');
 if (mark && changedSet.has(i)) notes.push(`<span class="plan-was">vorher ${when(was.get(i))}</span>`);
@@ -884,7 +919,7 @@ if (compareWith === b.dataset.variantDelete) compareWith = null;
 showPlan(data, plan);
 };
 $('planLink').onclick = async () => {
-const url = location.origin + location.pathname + '#vorschlag=' + toLink({ v: 1, tab: data.tab.gid, s: planStarts, d: encodePlan(data, plan) });
+const url = location.origin + location.pathname + '#vorschlag=' + toLink({ v: 1, tab: data.tab.gid, w: planWeek, s: planStarts, d: encodePlan(data, plan) });
 try { await navigator.clipboard.writeText(url); notice('Link kopiert'); }
 catch { notice('Kopieren ging nicht (der Browser hat es nicht erlaubt)'); }
 };
