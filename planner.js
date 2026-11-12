@@ -575,6 +575,9 @@ $('planStale').hidden = false;
 $('planRun').textContent = 'Neu erstellen';
 $('planRun').classList.add('stale');
 }
+// compact rows: one line per slot, like the main plan's compact setting (taken from there until changed here)
+let planDense = false;
+try { planDense = (localStorage.getItem('planDense') ?? (localStorage.getItem('density') === 'compact' ? 'true' : 'false')) === 'true'; } catch {}
 let keepFresh = false;  // a start shift from the plan itself doesn't make the plan outdated
 let planHistory = [];   // earlier versions of the suggestion while it is edited by hand (Rückgängig)
 let planDrag = null;    // the shown plan, for drag and drop
@@ -697,6 +700,7 @@ const actions = `<div class="plan-actions plan-toolbar">
     <div class="segmented plan-views" role="group" aria-label="Ansicht">${views.map(([v, label]) =>
 `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
     ${planHistory.length ? `<span class="plan-edited">Von Hand angepasst</span><button id="planUndo" class="pill">Rückgängig</button>` : `<span class="plan-hint plan-drag-hint">Serien im Vorschlag lassen sich verschieben</span>`}
+    <button id="planDense" class="pill" aria-pressed="${planDense}" title="Eine Zeile pro Slot: alle Serien eines Tages auf einen Blick">Kompakt</button>
     <button id="planAgain" class="pill" title="Noch einmal rechnen: oft gibt es mehrere gleich gute Pläne">Anderer Vorschlag</button>
     <div class="plan-export"><button id="planExport" class="pill plan-go" aria-haspopup="true" aria-expanded="false" aria-controls="planExportMenu">Übernehmen <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <div id="planExportMenu" class="popover plan-export-menu" hidden>
@@ -704,10 +708,12 @@ const actions = `<div class="plan-actions plan-toolbar">
         <button id="planXlsx"><b>Als .xlsx herunterladen</b><small>Im Sheet: Datei → Importieren → „Neue Tabellenblätter einfügen“</small></button>
         <button id="planCopy"><b>Als Tabelle kopieren</b><small>Titel, Tag, Uhrzeit, Slot: zum Einfügen irgendwo</small></button>
       </div></div></div>`;
+$('planOut').classList.toggle('dense', planDense);
 $('planOut').innerHTML = problems + stats + changeList + actions + days + unplaced + breaks;
 const cells = [...document.querySelectorAll('#planOut .time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
 $('planAgain').onclick = () => generatePlan(data);
+$('planDense').onclick = () => { planDense = !planDense; try { localStorage.setItem('planDense', planDense); } catch {} showPlan(data, plan); };
 $('planChanges').ontoggle = () => { try { localStorage.setItem('planChangesOpen', $('planChanges').open); } catch {} };
 for (const b of document.querySelectorAll('[data-shift-day]'))
 b.onclick = () => {
