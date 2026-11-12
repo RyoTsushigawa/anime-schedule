@@ -3,7 +3,7 @@
 // strings, template literals and regular expressions, so a "//" inside one of those stays.
 // publish.mjs runs the tests a second time on this output (SLIM=1) before uploading anything.
 
-export const SLIMMED = ['index.html', 'planner.html', 'style.css', 'early.js', 'common.js', 'mal.js', 'app.js', 'drag-moves.js', 'planner.js'];
+export const SLIMMED = ['index.html', 'planner.html', 'style.css', 'early.js', 'common.js', 'mal.js', 'app.js', 'app-local.js', 'app-accounts.js', 'app-progress.js', 'app-catchup.js', 'app-moves.js', 'app-discord.js', 'app-absence.js', 'app-dayedit.js', 'app-start.js', 'drag-moves.js', 'planner.js'];
 
 export function slim(file, text) {
   if (file.endsWith('.js')) return slimJs(text);

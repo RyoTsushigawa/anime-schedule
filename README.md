@@ -3,7 +3,7 @@
 Weekly anime schedule for the Guckplan group: shows the episodes each person watches, on the day they're watched,
 with buttons for the legal streaming services in Germany.
 
-## Hand-over: read this first (state on 10 Nov 2026)
+## Hand-over: read this first (state on 12 Nov 2026)
 
 This project has been worked on in several chats and with several assistants. Each one only knew its own
 part, so this section says what runs where and what is still open. Keep it up to date when that changes.
@@ -14,7 +14,7 @@ part, so this section says what runs where and what is still open. Keep it up to
 |---|---|---|
 | GitHub (this repository, branch `main`) | The site itself (GitHub Pages), `moves.json` and `nicknames.json` written by the page | The copy here is the current one. Changes go in through pull requests. |
 | GitHub Actions | `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status), `source-health.yml`, `masterset-prices.yml` | GitHub's own timer runs hours late or skips days. The daily post is therefore started from Cloudflare. |
-| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v17** (11 Nov), cron trigger set. **v18** (reads the planning channel secret as `DISCORD_WEBHOOK_ABSENCE`, the name used on Cloudflare) was handed over on 11 Nov; `DISCORD_WEBHOOK` is the schedule channel. Its code is **not** in this repository (see below). |
+| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v18** (reads the planning channel secret as `DISCORD_WEBHOOK_ABSENCE` or `…_ABSENCES`), confirmed on 11 Nov: the 09:00 post and absences in the planning channel work. `DISCORD_WEBHOOK` is the schedule channel. The PC downloads the deployed version at logon (task "Helfer herunterladen"). Its code is **not** in this repository (see below). |
 | The owner's PC | `tools/build-streams.mjs` (must run from Germany), `tools/publish.mjs` and the weekly checks, with the tokens | These tools exist only on the PC. Since 10 Nov `publish.mjs` uploads data only (see below). |
 | Discord bot (separate zip, v7) | `/delay`, `/abwesend` and status | Not in this repository. Whether v7 is installed is unconfirmed. |
 
@@ -47,16 +47,21 @@ LiveChart "double-length" notes; partial absences checked at the real watch time
 icon buttons on the day heading; regrouped move dialog; pause rows with reason tags; help sections and
 patch notes; this README brought in line with the site.
 
+**Done on 11–12 Nov 2026** (pull requests #29–#121)
+
+Spontan da in the absence calendar; Wochenübersicht; trailer playlists for the season lists ahead (YouTube,
+automatic, new shows only) with "Trailer neu suchen"; Season Preview voting through the votes helper (open,
+no group code); Catch-up: absence-skipped shows right away, − N + counter, "Automatisch einplanen"; Spiele
+(Titel-Rätsel); header with icon buttons (Zeitplan, Abwesend, Spiele, Mehr); declutter of the lists; the Watch
+planner rebuilt (German, sidebar, change list, drag / tap to move, breaks, earlier/later start, Kompakt,
+Testmodus); Tier-Liste; Wrapped watch time and season comparison; nightly Sheet backup; stylesheet cleanup,
+app.js split into parts, phone fixes.
+
 **Still open**
 
-- 11 Nov: first morning with the Cloudflare timer. Expected: a rehearsal run under Actions shortly after
-  07:50 German time (posts nothing) and the real post at 09:00. A refused start is reported in the bot test
-  channel with a ping.
-- Repository secret `DISCORD_WEBHOOK_LOGS` was added by the owner on 10 Nov (cannot be verified from a
-  chat); the failure step that uses it has never fired.
-- Whether bot v7 (`/abwesend`) is installed is unconfirmed.
-- The PC's weekly `live-check.mjs` may report files added on GitHub as unexpected: `tools/discord-daily.mjs`,
-  `tools/check-site.mjs`, `tool-theme.js`, `daily-post.json` and the workflows `discord-daily.yml`, `check.yml`, `cache-version.yml`. They belong here.
+- Whether bot v7 (`/abwesend`) is installed is unconfirmed; the owner wants no bot updates for now.
+- The PC's weekly `live-check.mjs` may report files added on GitHub as unexpected (all workflows, `tools/*.mjs`
+  here, `tests/`, the `app-*.js` parts, `backup/`, new pages). They belong here.
 - Known limits: a long finale is only recognised once AniList knows the episode count; a "double-length
   premiere" is matched to episode 1 (a Part 2 that keeps counting needs **Lang** by hand).
 
@@ -69,8 +74,9 @@ for everyone, the calendar is for short-term absences. The "Pause" chip above th
 changes users will notice, not for small fixes or work behind the scenes. Warnings go to the
 bot test channel with a ping for the owner (Discord user `255387990136848385`), never to the schedule channel.
 
-The **Tools** menu between Search and Settings holds the Watch planner, Higher / Lower, Anime Wrapped
-and the Piplup/Empoleon Masterset Tracker. **Settings** holds the display choices and **Hilfe**, the
+The top row has icon buttons for Zeitplan, Abwesend, Spiele and **Mehr**. Mehr holds, under "Anime", the
+Wochenübersicht, Season Preview, Watch planner, Anime Wrapped and the Tier-Liste, and under "Sonstiges" the
+Piplup/Empoleon Masterset Tracker and McRib. Higher / Lower and the Cover Quiz are reached from Spiele. **Settings** holds the display choices and **Hilfe**, the
 guide (shortcuts at its end); `?` opens it too. Catch-up stream links default on unless disabled.
 Single open episodes use one compact card; several stay grouped chronologically with ✓ at the far right.
 Paused shows keep a smaller card in their slot. MAL avatars come from the connected profile, with an
@@ -164,12 +170,16 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 
 | File | What it is |
 |---|---|
-| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml`, `check.yml` (checks every pull request), `cache-version.yml` (raises the `CACHE` name in `sw.js` by itself) |
+| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml`, `trailers.yml` (trailer playlists), `season-livechart-refresh.yml`, `season-votes-*.yml` (votes helper: tests, deploy), `sheet-backup.yml` (nightly Sheet copy), `check.yml` (every pull request: the site check and all tests), `visual.yml` (screenshots of the views), `cache-version.yml` (raises the `CACHE` name in `sw.js` by itself) |
 | `tools/check-site.mjs` | The pull-request check: loads the live site with the changed files, fails on page errors, views or dialogs that don't open, or a Discord message that doesn't build; `SCREENS=dir` also saves screenshots |
 | `index.html`, `style.css` | The page and its look |
-| `app.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts (schedule, shared helpers, MyAnimeList, first paint, dragging) |
+| `app.js` + `app-*.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts. `app.js` and its parts load in this order and share one scope: `app.js` (loading and drawing the week), `app-local` (local list), `app-accounts` (accounts, menus, settings), `app-progress` (✓, scores, sync), `app-catchup`, `app-moves` (moves, Nachholen, catch-up planner), `app-discord`, `app-absence` (delays, absences), `app-dayedit` (Wochenübersicht, editing a day), `app-start` (start-up, views, help). Plus shared helpers, MyAnimeList, first paint, dragging |
 | `sw.js` | Offline copy for the home-screen app; its `CACHE` name changes with every published version |
-| `planner.html`, `planner.js`, `xlsx.js` | Watch planner |
+| `planner.html`, `planner.js`, `planner.css`, `xlsx.js` | Watch planner (suggestion, editing by hand, Testmodus with made-up votes) |
+| `tierlist.html`, `tierlist.js`, `tierlist.css` | Tier-Liste (per season and person, kept in the browser) |
+| `season-preview.*`, `season-trailers.json`, `workers/season-votes/` | Season Preview and its votes helper (Cloudflare Worker writing votes into the Sheet; setup in its README) |
+| `tools/sheet-backup.mjs`, `backup/sheet/` | Nightly copy of every Sheet tab (CSV) plus hidden rows/columns and person colours; the git history is the version history |
+| `cover-game.*`, `cover-core.mjs` | Anime Cover Quiz |
 | `games.html`, `games.js`, `games.css`, `games-words.json` | Spiele (Tools menu): Titel-Rätsel, one word a day from the Guckplan titles (6 tries, share as emoji grid). New words go at the END of `games-words.json` so earlier days never change |
 | `tools/trailers.mjs`, `.github/workflows/trailers.yml` | Daily: trailer playlist for each season list still ahead ("Winter 2027"), unlisted, in the list's order; picks and link in `trailers.json` |
 | `trailer-picks.json` | Optional, by hand: `{"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}}` replaces a wrong pick (`""` = no trailer for that show, `"auto"` = a new show although it looks like a sequel: picked automatically; `{"channel": "Team ONIBE"}` = like "auto", and that channel's videos are searched for and preferred) |
@@ -195,7 +205,7 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `tools/fetch-helper.mjs`, `fetch-helper.cmd` | **PC only.** Download the helper as deployed on Cloudflare and overwrite `tools/delays-worker.js` (only when it changed; log in `fetch-helper.log`). Needs `tools/cloudflare-token.txt`: a Cloudflare token with only *Account → Workers Scripts → Read*. Windows runs it at every logon (task "Helfer herunterladen") |
 | `tools/delay-check.mjs` | **PC only.** Weekly, read-only: the helper answers, refuses strangers and is the current version |
 | `tabs.json`, `tools/tab-list.mjs` | (`tab-list.mjs` is **PC only**.) The Guckplan's tab list for first visits (names and tab numbers only), written on publish |
-| `tests/` | **PC only.** The page clicked through in a simulated browser (`node --test` there) |
+| `tests/` | The page clicked through in a simulated browser and checks of single functions; `npm ci` there, then `node --test 'tests/*.test.mjs'` (every pull request runs them all) |
 
 ## Weekly refresh
 
@@ -208,8 +218,7 @@ and GitHub's servers are in the US.
 
 **Titles:** where LiveChart writes a show's title with the same letters but more cleanly ("TANK CHAIR" →
 "Tank Chair"), the page uses LiveChart's by itself. Word changes ("KERORO☆" → "Keroro Gunsou☆") go into
-`TITLE_FIXES` in `common.js` by hand. The weekly run's title check (`tools/title-check.mjs`) lists
-candidates in `tools/last-run.log` as `check:` lines; a title that's fine as it is goes into `TITLE_KEEP`.
+`TITLE_FIXES` in `common.js` by hand.
 
 ## Putting it online (one time)
 

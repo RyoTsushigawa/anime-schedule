@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
-const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const app = APP_SOURCE;
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('quick Catch-up sort is optional and does not replace the old default', () => {

@@ -20,12 +20,10 @@ jobs:
           node-version: 22
       - name: Install fixed test dependencies
         run: |
-          npm ci --prefix tests --ignore-scripts --no-audit --no-fund
+          npm ci --prefix tests --ignore-scripts --no-audit --no-fund   # the views are built with tests/harness.mjs
           npm ci --prefix tools/visual --ignore-scripts --no-audit --no-fund
           cd tools/visual
           npx playwright install --with-deps chromium
-      - name: Behavior checks
-        run: node --test tests/compact-services.test.mjs tests/catchup-seasons.test.mjs tests/skipped-catchup.test.mjs tests/absent-catchup.test.mjs tests/catchup-stepper.test.mjs tests/catchup-large-list.test.mjs tests/catchup-bulk-status.test.mjs tests/auto-catchup.test.mjs tests/local-catchup.test.mjs tests/local-export.test.mjs
       # each view renders without errors or sideways scrolling; the pictures are kept for review, not compared
       - name: Render the views
         working-directory: tools/visual
