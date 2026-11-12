@@ -34,3 +34,5 @@ jobs:
         run: node --test tests/season-votes-worker.test.mjs
       - name: Test grouped Tools navigation
         run: node --test tests/tools-menu.test.mjs
+      - name: Test Anime Cover Quiz
+        run: node --test tests/cover-game.test.mjs
