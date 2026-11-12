@@ -1583,3 +1583,16 @@ button.header-nav-link{font-family:inherit;cursor:pointer}
 .local-import-buttons{display:flex;gap:8px;flex-wrap:wrap}
 .local-import-buttons .pill{min-height:36px;border:1px solid var(--line)}
 .local-import-buttons #localImportConfirm{border-color:var(--accent)}
+
+/* Catch-up: Nachholen automatisch einplanen */
+#autoPlanDlg { box-sizing: border-box; width: min(460px, calc(100vw - 24px)); padding: 20px; max-height: calc(100dvh - 24px); overflow-y: auto; }
+#autoPlanDlg form { display: grid; gap: 12px; }
+#autoPlanDlg select { padding: 5px 10px; }
+.auto-plan-days { gap: 6px; }
+.auto-plan-check { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 99px; font-size: 13px; cursor: pointer; }
+.auto-plan-check:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.auto-plan-check input { margin: 0; accent-color: var(--accent); }
+.auto-plan-preview { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; }
+.auto-plan-day { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; }
+.auto-plan-day small { color: var(--muted); }
+.catchup-summary #autoPlanOpen { margin-left: auto; }

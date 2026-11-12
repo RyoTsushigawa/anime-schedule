@@ -2852,7 +2852,7 @@ const onList = rows.length - fromPlan;
 $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend ? ' friend-summary' : ''}">
       <div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>
       <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}${onList ? ` · ${onList} ${onList === 1 ? 'Serie' : 'Serien'}` : ''}${fromPlan ? ` · ${fromPlan} aus dem Guckplan` : ''}</span>
-      ${friend ? '<button type="button" class="pill" data-own-list>Eigene Liste</button>' : ''}
+      ${friend ? '<button type="button" class="pill" data-own-list>Eigene Liste</button>' : movesKey && !local && rows.some(r => !r.missing) ? '<button type="button" class="pill" id="autoPlanOpen" title="Offene Folgen auf die restlichen Abende dieser Woche verteilen">Automatisch einplanen</button>' : ''}
     </div>`);
 } else if (friend) {
 $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
@@ -3390,7 +3390,7 @@ const x = source.extra ? source : null;
 const r = x ? null : source;
 const m = x ? x.media : r.m;
 const first = x ? x.first : r.first, out = x ? x.out : r.out;
-planning = { m: x ? x.media : { id: m.id, title: { romaji: m.title.romaji, english: m.title.english }, coverImage: { medium: m.coverImage?.medium || '' }, siteUrl: m.siteUrl, episodes: m.episodes || null, externalLinks: (m.externalLinks || []).map(l => ({ site: l.site, url: l.url })) }, first, out, old: x };
+planning = { m: x ? x.media : slimMedia(m), first, out, old: x };
 const name = m.title.english || m.title.romaji;
 $('planName').textContent = `Einplanen · ${name}`;
 $('planFrom').textContent = x ? 'Nachholen, diese Woche.' : `Offen ab Folge ${first}.`;
@@ -3424,6 +3424,64 @@ const entry = { show: key, title: name, extra: true, media: m, first, last, out,
 const next = moves.filter(x => !(x.show === key && x.week === week) && x !== old).concat(entry);
 const label = new Date(day + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short' });
 storeMoves(next, `${name} (${last > first ? `Folgen ${first}–${last}` : `Folge ${first}`}) eingeplant: ${label}${time ? ' ' + time : ''}.`, 'planDlg', 'planMsg');
+};
+// Smart catch-up planner: spreads the open episodes over this week's remaining evenings as "Nachholen"
+// entries (one per show and week, time empty = next free slot). Shows whose next episode comes soonest go
+// first, each on the least busy evening before that episode if possible; leftovers wait for next week.
+const slimMedia = m => ({ id: m.id, title: { romaji: m.title.romaji, english: m.title.english }, coverImage: { medium: m.coverImage?.medium || '' }, siteUrl: m.siteUrl, episodes: m.episodes || null, externalLinks: (m.externalLinks || []).map(l => ({ site: l.site, url: l.url })) });
+function autoCatchupPlan(rows, days, max, week, existing = []) {
+const ids = new Set(rows.map(r => `extra:${r.m.id}`));
+const load = new Map(days.map(d => [d, 0]));
+for (const x of existing) if (x.extra && x.week === week && !ids.has(x.show) && load.has(x.day)) load.set(x.day, load.get(x.day) + x.last - x.first + 1);
+const order = rows.filter(r => !r.missing && r.out >= r.first)
+  .sort((a, b) => (a.nextAt || Infinity) - (b.nextAt || Infinity) || (a.out - a.first) - (b.out - b.first));
+const entries = [];
+let left = 0;
+for (const r of order) {
+  const open = r.out - r.first + 1;
+  const free = days.filter(d => load.get(d) < max);
+  const before = r.nextAt ? free.filter(d => new Date(d + 'T23:59').getTime() / 1000 < r.nextAt) : free;
+  const pick = (before.length ? before : free).sort((a, b) => load.get(a) - load.get(b) || a.localeCompare(b))[0];
+  if (!pick) { left += open; continue; }
+  const count = Math.min(open, max - load.get(pick));
+  load.set(pick, load.get(pick) + count);
+  left += open - count;
+  const m = slimMedia(r.m);
+  entries.push({ show: `extra:${m.id}`, title: m.title.english || m.title.romaji, extra: true, media: m, first: r.first, last: r.first + count - 1, out: r.out, day: pick, time: '', week });
+}
+return { entries, left };
+}
+let autoPlan = null;
+function drawAutoPlan() {
+const max = Number($('autoPlanMax').value);
+const days = [...document.querySelectorAll('#autoPlanDays input:checked')].map(i => i.value);
+const week = isoDay(weekStart(0));
+autoPlan = autoCatchupPlan([...catchupById.values()], days, max, week, moves);
+const byDay = days.map(d => [d, autoPlan.entries.filter(e => e.day === d)]);
+$('autoPlanPreview').innerHTML = !days.length ? '<div class="muted">Mindestens einen Abend wählen.</div>'
+  : byDay.map(([d, list]) => `<div class="auto-plan-day"><b>${esc(new Date(d + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' }))}</b><span>${list.length
+    ? list.map(e => `${esc(e.title)} <small>${e.last > e.first ? `${e.first}–${e.last}` : e.first}</small>`).join(' · ') : '<span class="muted">nichts</span>'}</span></div>`).join('')
+  + (autoPlan.left ? `<div class="muted">${autoPlan.left} ${autoPlan.left === 1 ? 'Folge bleibt' : 'Folgen bleiben'} für nächste Woche.</div>` : '');
+$('autoPlanSave').disabled = !autoPlan.entries.length;
+}
+$('list').addEventListener('click', e => {
+if (!e.target.closest('#autoPlanOpen')) return;
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const days = Array.from({ length: 7 }, (_, i) => { const d = weekStart(0); d.setDate(d.getDate() + i); return d; }).filter(d => d >= today);
+$('autoPlanDays').innerHTML = days.map(d => `<label class="auto-plan-check"><input type="checkbox" value="${isoDay(d)}" checked> ${esc(nearDayName(d) || shortDayName(d))}</label>`).join('');
+try { $('autoPlanMax').value = localStorage.getItem('autoPlanMax') || '2'; } catch {}
+$('autoPlanMsg').textContent = '';
+drawAutoPlan();
+$('autoPlanDlg').showModal();
+});
+$('autoPlanMax').onchange = () => { try { localStorage.setItem('autoPlanMax', $('autoPlanMax').value); } catch {} drawAutoPlan(); };
+$('autoPlanDays').onchange = drawAutoPlan;
+$('autoPlanSave').onclick = () => {
+if (!autoPlan?.entries.length) return;
+const week = isoDay(weekStart(0)), keys = new Set(autoPlan.entries.map(e => e.show));
+const next = moves.filter(x => !(keys.has(x.show) && x.week === week)).concat(autoPlan.entries);
+const count = autoPlan.entries.reduce((n, e) => n + e.last - e.first + 1, 0);
+storeMoves(next, `${count} ${count === 1 ? 'Folge' : 'Folgen'} zum Nachholen eingeplant.`, 'autoPlanDlg', 'autoPlanMsg');
 };
 $('planRemove').onclick = () => {
 const { m, old } = planning;

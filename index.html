@@ -223,6 +223,20 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 </form>
 </dialog>
+<dialog id="autoPlanDlg" class="dlg">
+<form method="dialog">
+<b>Nachholen automatisch einplanen</b>
+<div class="muted">Verteilt die offenen Folgen auf die restlichen Abende dieser Woche, immer in den nächsten freien Slot. Serien mit bald neuer Folge zuerst.</div>
+<div class="dlg-row"><label for="autoPlanMax">Pro Abend höchstens</label><select id="autoPlanMax"><option value="1">1 Folge</option><option value="2">2 Folgen</option><option value="3">3 Folgen</option><option value="4">4 Folgen</option><option value="6">6 Folgen</option></select></div>
+<div class="dlg-row auto-plan-days" id="autoPlanDays" role="group" aria-label="Abende"></div>
+<div id="autoPlanPreview" class="auto-plan-preview" aria-live="polite"></div>
+<div class="muted" id="autoPlanMsg"></div>
+<div class="dlg-row">
+<button type="button" id="autoPlanSave" class="pill primary">Einplanen</button>
+<button value="cancel" class="pill">Abbrechen</button>
+</div>
+</form>
+</dialog>
 <dialog id="discordDlg" class="dlg day-dlg">
 <form method="dialog">
 <div class="discord-head"><div><div class="discord-eyebrow">Discord · Tagesübersicht</div><b id="discordName"></b></div><button type="button" id="discordNickToggle" class="pill" aria-controls="discordNicks" aria-expanded="true">Spitznamen</button></div>
