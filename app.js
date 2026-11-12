@@ -1305,6 +1305,50 @@ let planPeople = [];
 const isLocalList = () => friendList.value.startsWith('local:');
 const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
 const localProgressKey = person => 'localAnimeProgress:v1:' + person;
+const localShowsKey = person => 'localAnimeShows:v1:' + person;
+function localShows(person) {
+  try {
+    const ids = JSON.parse(localStorage.getItem(localShowsKey(person)) || '[]');
+    return Array.isArray(ids) ? [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 50) : [];
+  } catch { return []; }
+}
+function addLocalShow(person, id) {
+  if (!person || !Number.isSafeInteger(id) || id < 1) return false;
+  try {
+    const ids = localShows(person);
+    if (!ids.includes(id)) ids.push(id);
+    if (ids.length > 50) return false;
+    localStorage.setItem(localShowsKey(person), JSON.stringify(ids));
+    return true;
+  } catch { return false; }
+}
+async function localCatalog(person) {
+  const ids = localShows(person);
+  if (!ids.length) return [];
+  const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium } externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } } } }';
+  const data = await anilist(query, { ids });
+  return (data.Page?.media || []).filter(m => Number.isSafeInteger(Number(m.id)));
+}
+$('list').addEventListener('submit', async e => {
+  const form = e.target.closest('#localAnimeAdd');
+  if (!form || !isLocalList()) return;
+  e.preventDefault();
+  const input = form.querySelector('input');
+  const name = input.value.trim();
+  if (!name) return;
+  const button = form.querySelector('button');
+  button.disabled = true;
+  try {
+    const match = name.match(/(?:anilist\\.co\\/anime\\/)?(\\d+)(?:\\/.*)?$/);
+    const data = await anilist('query ($search: String, $id: Int) { Media(search: $search, id: $id, type: ANIME) { id } }', {
+      ...(match ? { id:Number(match[1]) } : {search:name})
+    });
+    const id = Number(data.Media?.id);
+    if (!addLocalShow(localListPerson(), id)) throw new Error('Serie konnte nicht gespeichert werden.');
+    load(true);
+  } catch (error) { notice('Serie nicht gefunden: ' + error.message); }
+  finally { button.disabled = false; }
+});
 function localProgress(person, id) {
   try {
     const saved = JSON.parse(localStorage.getItem(localProgressKey(person)) || '{}');
@@ -2661,10 +2705,10 @@ if (revealMarkBar) { revealMarkBar = false; window.scrollTo({ top: 0 }); }
 playEnter();
 }
 let planShowsCache = { key: '', time: 0, media: [] };
-async function missingPlanShows(plan, entries) {
+async function missingPlanShows(plan, entries, localMode = false) {
 if (!plan || !soloPerson) return [];
-const account = auth, person = soloPerson;
-const current = () => auth === account && soloPerson === person;
+const account = localMode ? null : auth, person = soloPerson;
+const current = () => (!localMode ? auth === account : true) && soloPerson === person;
 const listed = new Set(entries.map(e => e.media.id));
 const ids = [];
 for (const show of picks(plan, soloPerson).keys()) {
@@ -2672,18 +2716,18 @@ const id = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches(
 if (id && !listed.has(Number(id))) ids.push(Number(id));
 }
 if (!ids.length) return [];
-const key = ids.join() + (auth ? ':' + (auth.provider || 'anilist') + ':' + auth.name : '');
+const key = ids.join() + (account ? ':' + (account.provider || 'anilist') + ':' + account.name : ':local');
 if (planShowsCache.key !== key || Date.now() - planShowsCache.time > LIST_CACHE_MS) {
 const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) {
       id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
-      externalLinks { site url } nextAiringEpisode { episode airingAt } ${auth ? 'mediaListEntry { progress status }' : ''}
+      externalLinks { site url } nextAiringEpisode { episode airingAt } ${account ? 'mediaListEntry { progress status }' : ''}
     } } }`;
 try {
 let data;
 if (account?.provider === 'mal') {
 data = await anilist(query.replace('mediaListEntry { progress status }', 'idMal'), { ids });
 for (const m of data.Page.media) { if (!current()) return []; MAL.rememberMedia(m); m.mediaListEntry = await MAL.entry(account, m.id); }
-} else data = auth ? await anilistAsMe(query, { ids }, account) : await anilist(query, { ids });
+} else data = account ? await anilistAsMe(query, { ids }, account) : await anilist(query, { ids });
 if (!current()) return [];
 planShowsCache = { key, time: Date.now(), media: data.Page.media };
 setNote('catchup:missing', null);
@@ -2694,12 +2738,12 @@ return [];
 }
 }
 if (!current()) return [];
-if (auth) for (const m of planShowsCache.media) {
+if (account) for (const m of planShowsCache.media) {
 if (m.mediaListEntry) knownEntries.set(m.id, { progress: m.mediaListEntry.progress, status: m.mediaListEntry.status });
 else notOnList.add(m.id);
 }
 return planShowsCache.media
-.filter(m => !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
+.filter(m => !account || !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
 .map(m => ({ progress: m.mediaListEntry?.progress || 0, media: m, missing: true }));
 }
 async function loadContent(refresh = false) {
