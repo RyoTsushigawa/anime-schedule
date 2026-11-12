@@ -1,0 +1,26 @@
+/* Anime Cover Quiz — quiet, consistent with the main site's rounded pills. */
+.cover-layout{max-width:740px;margin:24px auto 52px;padding:0 16px;display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.cover-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.cover-title h2{margin:0 0 5px;font-size:22px}
+.cover-title p,.cover-footnote{margin:0;color:var(--muted);font-size:13px}
+.cover-daily{flex:none;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);font-size:12px}
+.cover-play,.cover-result{padding:22px;border:1px solid var(--line);border-radius:20px;background:var(--card);display:flex;flex-direction:column;align-items:center;gap:17px}
+.cover-top{width:100%;display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted)}
+.cover-top b{color:var(--text)}
+.cover-art-frame{position:relative;isolation:isolate;overflow:hidden;width:220px;max-width:100%;aspect-ratio:5/7;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.cover-art-frame img{width:100%;height:100%;object-fit:cover;transform:scale(1.13);transition:filter .28s ease,transform .28s ease;user-select:none}
+.cover-art-frame img.revealed{transform:scale(1)}
+.cover-choices{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cover-choice{display:flex;align-items:center;justify-content:center;min-height:54px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);font:inherit;font-size:13px;font-weight:600;line-height:1.35;text-align:center;cursor:pointer}
+.cover-choice:hover:not(:disabled),.cover-choice:focus-visible{border-color:var(--accent);background:var(--today);outline-offset:2px}
+.cover-choice.right{border-color:var(--green);background:color-mix(in srgb,var(--green) 13%,var(--card))}
+.cover-choice.wrong{border-color:#b45555;background:color-mix(in srgb,#b45555 13%,var(--card))}
+.cover-choice:disabled{cursor:default;opacity:1}
+.cover-next{min-height:38px;padding-inline:20px}
+.cover-status{margin:0;min-height:22px;text-align:center;color:var(--muted);font-size:13px}
+.cover-result h2{margin:0;font-size:22px}
+.cover-result #coverFinal{font-size:26px}
+.cover-result p{margin:0;color:var(--muted)}
+.cover-footnote{text-align:center}
+@media(max-width:520px){.cover-layout{margin-top:18px}.cover-title h2{font-size:19px}.cover-play,.cover-result{padding:16px}.cover-choices{grid-template-columns:1fr}.cover-choice{min-height:46px}.cover-art-frame{width:190px}.cover-daily{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.cover-art-frame img{transition:none}}
