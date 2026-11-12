@@ -54,7 +54,7 @@ test('global, season and day bulk actions share the same outcome handling', () =
   assert.equal((source.match(/finishBulkSave\(records, /g)||[]).length,4); // helper and three actions
   const bulk = source.slice(source.indexOf("const b = e.target.closest('#markAll');"),source.indexOf("// \"Alle gesehen\" for one catch-up season."));
   assert.doesNotMatch(bulk,/notice\(\x60\$\{records\.length\} von/);
-  assert.match(bulk,/finishBulkSave\(records, targets\.length, 'Serien', stopped\)/);
-  assert.match(source,/finishBulkSave\(records, targets\.length, 'Serien in ' \+ catchupSeasonLabel\(season\), stopped\)/);
-  assert.match(source,/finishBulkSave\(records, all\.length, 'heutigen Serien', stopped\)/);
+  assert.match(bulk,/finishBulkSave\(records, targets\.length, 'Serien', stopped, cancelled\)/);
+  assert.match(source,/finishBulkSave\(records, targets\.length, 'Serien in ' \+ catchupSeasonLabel\(season\), stopped, cancelled\)/);
+  assert.match(source,/finishBulkSave\(records, all\.length, 'heutigen Serien', stopped, cancelled\)/);
 });
