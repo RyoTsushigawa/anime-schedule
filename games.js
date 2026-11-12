@@ -18,6 +18,13 @@ async function json(url,options) {
 const wordMap = entries => new Map(entries.map(e=>[e.word,e]));
 const mergeEntries = (...sets) => [...wordMap(sets.flat()).values()];
 const sourceWordSet = entries => new Set(entries.map(e=>e.word));
+// Hard mode: any common English word of the right length counts as a guess (SCOWL list,
+// see games-guesses.json); without it you could only guess words from someone's titles.
+let guessWords=null;
+async function dictionaryWords(length) {
+  try{guessWords??=(await json('games-guesses.json')).words||{};}catch{return [];}
+  return String(guessWords[length]||'').split(' ').filter(Boolean);
+}
 let dailyData=null, sheetPool=null, hardUsers=null;
 const hardCache=new Map();
 let puzzle=null,state=null,typing='',allowed=new Set(),generation=0;
@@ -155,6 +162,11 @@ async function start() {
     if(turn!==generation)return;
     allowed=sourceWordSet(source);
     allowed.add(entry.word);
+    if(level==='hard'){
+      const extra=await dictionaryWords(entry.word.length);
+      if(turn!==generation)return;
+      for(const w of extra)allowed.add(w);
+    }
     const id=level+':'+mode+':'+(mode==='daily'?day:round);
     puzzle={...entry,id,day,number:mode==='daily'?Math.max(0,dayNumber(day,dailyData.start))+1:round+1,
       mode,level};
@@ -227,7 +239,7 @@ function press(key){
   const len=puzzle.word.length;
   if(key==='Enter'){
     if(typing.length<len)return message('Das Wort hat '+len+' Buchstaben.');
-    if(!allowed.has(typing))return message('Nur echte englische Wörter aus den Anime-Titeln sind erlaubt.');
+    if(!allowed.has(typing))return message(puzzle.level==='hard'?'Nur echte englische Wörter sind erlaubt.':'Nur echte englische Wörter aus den Anime-Titeln sind erlaubt.');
     if(puzzle.level==='hard'){
       const hint=hardHintError(typing,state.guesses,puzzle.word);
       if(hint)return message('Schwerer Modus: '+hint);
