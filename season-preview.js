@@ -76,26 +76,49 @@ function verifiedTrailer(entry) {
 }
 // Covers (idea 87): from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
 let covers=new Map();
+// A blank URL does not count as successfully cached: retries must be allowed.
+const hasCover=(key)=>typeof covers.get(key)==='string' && /^https:\/\//.test(covers.get(key));
 async function loadCovers(tab,list){
- const key='previewCovers:'+tab.gid;
- try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&Date.now()-saved.time<7*86400000){covers=new Map(saved.covers);if(list.every(s=>covers.has(s.key)))return;}}catch{}
- const want=list.filter(s=>!covers.has(s.key));
+ const cacheKey='previewCovers:'+tab.gid;
+ covers=new Map(); // Never reuse a different season's covers while loading.
+ try{
+  const saved=JSON.parse(localStorage.getItem(cacheKey)||'null');
+  if(saved && Date.now()-saved.time<7*86400000 && Array.isArray(saved.covers))
+   covers=new Map(saved.covers.filter(x=>Array.isArray(x)&&typeof x[0]==='string'&&typeof x[1]==='string'&&/^https:\/\//.test(x[1])));
+ }catch{}
+ const want=list.filter(s=>!hasCover(s.key));
+ if(!want.length)return;
  const malId=s=>malLink(s).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
  const byMal=want.filter(malId),byTitle=want.filter(s=>!malId(s));
- try{
-  for(let i=0;i<byMal.length;i+=50){
-   const part=byMal.slice(i,i+50);
-   const data=await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(idMal_in: $ids, type: ANIME) { idMal coverImage { medium } } } }',{ids:part.map(s=>Number(malId(s)))},undefined,{retries:0,timeout:10000});
-   for(const s of part)covers.set(s.key,data.Page.media.find(m=>String(m.idMal)===malId(s))?.coverImage?.medium||'');
-  }
-  for(let i=0;i<byTitle.length;i+=15){
-   const part=byTitle.slice(i,i+15);
-   const query='query ('+part.map((_,j)=>'$t'+j+': String').join(', ')+') {'+part.map((_,j)=>' s'+j+': Page(perPage: 1) { media(search: $t'+j+', type: ANIME, sort: SEARCH_MATCH) { coverImage { medium } } }').join('')+' }';
-   const data=await anilist(query,Object.fromEntries(part.map((s,j)=>['t'+j,s.english||s.title])),undefined,{retries:0,timeout:10000});
-   part.forEach((s,j)=>covers.set(s.key,data['s'+j]?.media?.[0]?.coverImage?.medium||''));
-  }
- }catch{return;}
- try{localStorage.setItem(key,JSON.stringify({time:Date.now(),covers:[...covers]}));}catch{}
+ // A MAL entry can be missing in AniList; fall back to the English title
+ // instead of permanently treating that title as coverless.
+ for(let i=0;i<byMal.length;i+=50){
+  const part=byMal.slice(i,i+50);
+  try{
+   const data=await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(idMal_in: $ids, type: ANIME) { idMal coverImage { medium } } } }',
+    {ids:part.map(s=>Number(malId(s)))},undefined,{retries:0,timeout:10000});
+   for(const show of part){
+    const url=data.Page?.media?.find(m=>String(m.idMal)===malId(show))?.coverImage?.medium;
+    if(url)covers.set(show.key,url);
+    else byTitle.push(show);
+   }
+  }catch{byTitle.push(...part);}
+ }
+ // A failed batch must not prevent later batches from succeeding.
+ for(let i=0;i<byTitle.length;i+=10){
+  const part=byTitle.slice(i,i+10);
+  const query='query ('+part.map((_,j)=>'$t'+j+': String').join(', ')+') {'+
+   part.map((_,j)=>' s'+j+': Page(perPage: 1) { media(search: $t'+j+', type: ANIME, sort: SEARCH_MATCH) { coverImage { medium } } }').join('')+' }';
+  try{
+   const data=await anilist(query,Object.fromEntries(part.map((show,j)=>['t'+j,show.english||show.title])),
+    undefined,{retries:0,timeout:10000});
+   for(const [j,show] of part.entries()){
+    const url=data['s'+j]?.media?.[0]?.coverImage?.medium;
+    if(url)covers.set(show.key,url);
+   }
+  }catch{} // A later visit can retry only the missing covers.
+ }
+ try{localStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),covers:[...covers].filter(([,url])=>/^https:\/\//.test(url))}));}catch{}
 }
 function malLink(show){
  const key=seasonKey(current).replace(/^herbst-/,'fall-').replace(/^frühling-/,'spring-').replace(/^sommer-/,'summer-');
