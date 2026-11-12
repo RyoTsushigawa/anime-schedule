@@ -177,3 +177,7 @@ details.plan-test { margin: 0; color: var(--text); font-size: inherit; backgroun
 .test-vote:hover { border-color: var(--accent); }
 
 .plan-toolbar .pill { white-space: nowrap; }
+/* tap to move (phones): the chosen show is marked, gaps open up until the target is tapped */
+.plan-slot .info.picked { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: 0 0 0 2px var(--accent); }
+.plan-tapping .plan-drop { cursor: pointer; }
+.plan-tapping .plan-slot .info[data-show]:not(.picked) { cursor: pointer; }

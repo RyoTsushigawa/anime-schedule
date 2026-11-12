@@ -1,5 +1,5 @@
 /* Spiele: Titel-Rätsel */
-.game { max-width: 520px; margin: 18px auto 40px; padding: 0 16px; display: grid; gap: 14px; justify-items: center; }
+.game { max-width: 520px; margin: 18px auto 40px; padding: 0 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; justify-items: center; }
 .game-head { display: flex; align-items: center; gap: 10px; width: 100%; }
 .game-head b { font-size: 18px; }
 .game-hint { color: var(--muted); font-size: 13px; }
@@ -18,9 +18,9 @@
 .game-stats span { display: grid; font-size: 12px; color: var(--muted); }
 .game-stats b { font-size: 20px; color: var(--text); }
 .game-next { margin: 0; font-size: 12px; color: var(--muted); }
-.keyboard { display: grid; gap: 6px; width: 100%; }
+.keyboard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; width: 100%; }
 .key-row { display: flex; justify-content: center; gap: 5px; }
-.key { flex: 0 1 42px; height: 48px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+.key { flex: 0 1 42px; min-width: 0; height: 48px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
 .key.wide { flex-basis: 66px; font-size: 13px; }
 .key:hover { border-color: var(--accent); }
 @media (max-width: 480px) { .board-row { grid-template-columns: repeat(var(--len), minmax(30px, 42px)); } .tile { height: 42px; font-size: 20px; } }
@@ -28,3 +28,4 @@
 /* Keep game shortcuts in one tidy, wrapping row. */
 .game-hub-links{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:0;width:100%}
 .game-hub-links .pill{display:inline-flex;align-items:center;min-height:36px;text-decoration:none}
+@media (max-width: 480px) { .key-row { gap: 4px; } .key.wide { flex: 0 0 50px; font-size: 12px; } }
