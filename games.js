@@ -244,7 +244,7 @@ $('keyboard').addEventListener('click',event=>{
 });
 addEventListener('keydown',event=>{
   if(event.ctrlKey||event.metaKey||event.altKey||
-    event.target?.closest('input,select,textarea,[contenteditable],button'))return;
+    event.target?.closest?.('input,select,textarea,[contenteditable],button'))return;
   const key=event.key==='Enter'||event.key==='Backspace'?event.key:
     /^[a-z]$/i.test(event.key)?event.key.toUpperCase():'';
   if(key){event.preventDefault();press(key);}
