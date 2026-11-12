@@ -1377,10 +1377,9 @@ $('list').addEventListener('click', e => {
   load(true);
 });
 function syncListToSolo() {
-  if (mode !== 'solo') return;
   const person = soloPerson;
   const accounts = listProfiles.get(person) || [];
-  const own = accounts.find(a => auth?.name && a.name.toLowerCase() === auth.name.toLowerCase());
+  const own = auth && (ownPerson() === person || accounts.some(a => auth?.name && a.name.toLowerCase() === auth.name.toLowerCase()));
   if (own) {
     friendList.value = '';
     $('anilistUser').value = auth.name;
