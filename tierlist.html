@@ -27,6 +27,14 @@ https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'
 <select id="tierPerson" class="pill" aria-label="Person"></select>
 <label class="tier-own"><input type="checkbox" id="tierOwn" checked> Nur Serien dieser Person</label>
 <span class="tier-spacer"></span>
+<details class="tier-editor" id="tierEditor">
+<summary class="pill" title="Reihen umbenennen, hinzufügen oder entfernen">Reihen bearbeiten</summary>
+<div class="tier-editor-body">
+<div id="tierEditorRows" class="tier-editor-rows" aria-label="Reihennamen bearbeiten"></div>
+<button type="button" id="tierAdd" class="pill">+ Reihe hinzufügen</button>
+<p class="tier-editor-note">Beim Entfernen landen die Serien wieder unter „Noch offen“.</p>
+</div>
+</details>
 <button type="button" id="tierCopy" class="pill tier-primary">Für Discord kopieren</button>
 <button type="button" id="tierReset" class="pill" title="Alle Serien zurück nach „Noch offen“">Zurücksetzen</button>
 </div>

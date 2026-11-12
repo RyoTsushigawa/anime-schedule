@@ -1,7 +1,10 @@
 // Tier-Liste: sort a season's shows from the Guckplan into S–D. Personal and kept in this browser
 // (localStorage "tierlist:<tab>:<person>"); "Für Discord kopieren" shares it as text.
 'use strict';
-const TIERS = ['S', 'A', 'B', 'C', 'D'];
+const DEFAULT_TIERS = ['S','A','B','C','D'].map(id => ({ id, name:id }));
+const TIER_COLORS = ['#e5484d','#f0883e','#e2b93b','#46a758','#3e8ed0','#9566d9','#c0679d','#188c90','#b97740','#748096','#6b9b53','#8a74bf'];
+const MAX_TIERS = 12;
+let tiers = DEFAULT_TIERS.map(t => ({...t}));
 const POOL = 'pool';
 let tabs = [], sheet = null, covers = new Map(), state = null, picked = null, dragged = null;
 let streams = null;
@@ -17,6 +20,52 @@ function notice(text) {
 const keyOf = show => show.romaji || show.english;
 const titleOf = show => show.english || show.romaji;
 const storeKey = () => `tierlist:${$('tierSeason').selectedOptions[0]?.textContent}:${$('tierPerson').value}`;
+const layoutKey = () => storeKey() + ':rows';
+function normalizedTiers(value) {
+  if (!Array.isArray(value) || !value.length || value.length > MAX_TIERS) return DEFAULT_TIERS.map(t=>({...t}));
+  const ids=new Set();
+  const result=[];
+  for(const tier of value){
+    if(!tier || typeof tier.id!=='string' || !/^[A-Za-z0-9_-]{1,30}$/.test(tier.id) ||
+       tier.id===POOL || ids.has(tier.id) || typeof tier.name!=='string') return DEFAULT_TIERS.map(t=>({...t}));
+    ids.add(tier.id);
+    result.push({id:tier.id,name:tier.name.trim().slice(0,30)||tier.id});
+  }
+  return result;
+}
+function prepareTierState(saved, tierIds, shows) {
+  const allIds=new Set(shows.map(keyOf));
+  const valid=[...tierIds,POOL];
+  const state=Object.fromEntries(valid.map(t=>[t,[]]));
+  const used=new Set();
+  for(const t of valid) for(const key of Array.isArray(saved[t])?saved[t]:[]){
+    if(typeof key!=='string'||!allIds.has(key)||used.has(key))continue;
+    used.add(key);state[t].push(key);
+  }
+  for(const [t,keys] of Object.entries(saved)) if(!valid.includes(t)&&Array.isArray(keys))
+    for(const key of keys) if(typeof key==='string'&&allIds.has(key)&&!used.has(key)){
+      used.add(key);state[POOL].push(key);
+    }
+  for(const show of shows) if(!used.has(keyOf(show)))state[POOL].push(keyOf(show));
+  return state;
+}
+function removeTierFromRanking(saved,id) {
+  const result={...saved};
+  result[POOL]=[...(Array.isArray(result[POOL])?result[POOL]:[]),
+    ...(Array.isArray(result[id])?result[id]:[])].filter((key,i,all)=>all.indexOf(key)===i);
+  delete result[id];
+  return result;
+}
+function loadTiers() {tiers=normalizedTiers(load(layoutKey(),null));drawTierEditor();}
+function persistTiers(){save(layoutKey(),tiers);drawTierEditor();draw();}
+function drawTierEditor(){
+  $('tierEditorRows').innerHTML=tiers.map((tier,i)=>
+    `<div class="tier-editor-entry">
+      <label><span class="sr-only">Name der Reihe ${i+1}</span><input data-tier-name="${esc(tier.id)}" maxlength="30" aria-label="Name der Reihe ${i+1}" value="${esc(tier.name)}"></label>
+      <button type="button" class="pill tier-remove" data-tier-remove="${esc(tier.id)}" aria-label="Reihe ${esc(tier.name)} entfernen" ${tiers.length===1?'disabled':''}>Entfernen</button>
+    </div>`).join('');
+  $('tierAdd').disabled=tiers.length>=MAX_TIERS;
+}
 
 async function start() {
   try { streams = await (await fetch('streams-de.json', { cache: 'no-cache' })).json(); } catch {}
@@ -26,7 +75,7 @@ async function start() {
   const current = tabFor(tabs, now);
   $('tierSeason').innerHTML = tabs.map(t => `<option value="${esc(t.gid)}"${t === current ? ' selected' : ''}>${esc(t.name.replace(/^Guckplan\s+/i, ''))}</option>`).join('');
   $('tierSeason').onchange = loadSeason;
-  $('tierPerson').onchange = () => { try { localStorage.setItem('tierPerson', $('tierPerson').value); } catch {} draw(); };
+  $('tierPerson').onchange = () => { try { localStorage.setItem('tierPerson', $('tierPerson').value); } catch {} picked=null;loadTiers();draw(); };
   $('tierOwn').onchange = draw;
   await loadSeason();
 }
@@ -38,6 +87,8 @@ async function loadSeason() {
   rememberColors([sheet]);
   const wanted = $('tierPerson').value || (() => { try { return localStorage.getItem('tierPerson') || localStorage.getItem('soloPerson'); } catch { return ''; } })() || DEFAULT_PERSON;
   $('tierPerson').innerHTML = sheet.people.map(p => `<option${p === wanted ? ' selected' : ''}>${esc(p)}</option>`).join('');
+  picked=null;
+  loadTiers();
   draw();
   loadCovers(sheet.shows.filter(s => !s.hidden)).then(draw, () => {});
 }
@@ -71,20 +122,17 @@ function draw() {
   const shows = shownShows();
   const byKey = new Map(shows.map(s => [keyOf(s), s]));
   const saved = load(storeKey(), {});
-  // keep the saved order, drop shows no longer shown, everything new goes to the pool
-  state = Object.fromEntries([...TIERS, POOL].map(t => [t, (saved[t] || []).filter(k => byKey.has(k))]));
-  const placed = new Set(Object.values(state).flat());
-  for (const s of shows) if (!placed.has(keyOf(s))) state[POOL].push(keyOf(s));
+  state = prepareTierState(saved,tiers.map(t=>t.id),sheet.shows);
   const tile = key => {
     const s = byKey.get(key), cover = covers.get(key);
     return `<button type="button" class="tier-item${picked === key ? ' picked' : ''}" draggable="true" data-key="${esc(key)}" title="${esc(titleOf(s))}">
       ${cover ? `<img src="${esc(cover)}" alt="" loading="lazy" draggable="false">` : `<span class="tier-noimg">${esc(titleOf(s).slice(0, 2))}</span>`}
       <span class="tier-title">${esc(titleOf(s))}</span></button>`;
   };
-  const row = t => `<section class="tier-row tier-${t === POOL ? 'pool' : t.toLowerCase()}" data-tier="${t}">
-    <div class="tier-label">${t === POOL ? 'Noch offen' : t}</div>
-    <div class="tier-items" data-tier="${t}">${state[t].map(tile).join('') || (t === POOL ? '<span class="tier-empty">Alles eingeordnet.</span>' : '')}</div></section>`;
-  $('tiers').innerHTML = shows.length ? TIERS.map(row).join('') + row(POOL)
+  const row = (id,label,color) => `<section class="tier-row${id===POOL?' tier-pool':''}" data-tier="${esc(id)}" style="--tier:${color}">
+    <div class="tier-label" title="${esc(label)}">${esc(label)}</div>
+    <div class="tier-items" data-tier="${esc(id)}">${state[id].filter(key=>byKey.has(key)).map(tile).join('') || (id===POOL?'<span class="tier-empty">Alles eingeordnet.</span>':'')}</div></section>`;
+  $('tiers').innerHTML = shows.length ? tiers.map((t,i)=>row(t.id,t.name,TIER_COLORS[i])).join('')+row(POOL,'Noch offen','var(--muted)')
     : `<div class="status">${esc($('tierPerson').value)} hat in dieser Season noch keine Serie gewählt.</div>`;
 }
 function place(key, tier, beforeKey) {
@@ -92,10 +140,38 @@ function place(key, tier, beforeKey) {
   const list = state[tier];
   const at = beforeKey ? list.indexOf(beforeKey) : -1;
   list.splice(at < 0 ? list.length : at, 0, key);
-  save(storeKey(), state);
+  save(storeKey(),state);
   picked = null;
   draw();
 }
+$('tierEditorRows').addEventListener('change',e=>{
+  const input=e.target.closest('[data-tier-name]');
+  if(!input)return;
+  const tier=tiers.find(t=>t.id===input.dataset.tierName);
+  if(!tier)return;
+  tier.name=input.value.trim().slice(0,30)||tier.name;
+  persistTiers();
+});
+$('tierEditorRows').addEventListener('click',e=>{
+  const button=e.target.closest('[data-tier-remove]');
+  if(!button || tiers.length<=1)return;
+  const id=button.dataset.tierRemove;
+  const current=tiers.find(t=>t.id===id);
+  if(!current)return;
+  save(storeKey(),removeTierFromRanking(load(storeKey(),{}),id));
+  tiers=tiers.filter(t=>t.id!==id);
+  picked=null;
+  persistTiers();
+  notice('Reihe „'+current.name+'“ entfernt. Ihre Serien sind unter „Noch offen“.');
+});
+$('tierAdd').onclick=()=>{
+  if(tiers.length>=MAX_TIERS)return;
+  const ids=new Set(tiers.map(t=>t.id));
+  let i=1;while(ids.has('extra'+i))i++;
+  tiers.push({id:'extra'+i,name:'Neue Reihe'});
+  persistTiers();
+  $('tierEditorRows').querySelector('[data-tier-name="extra'+i+'"]')?.focus();
+};
 // tap to pick a cover, tap a row to put it there
 $('tiers').addEventListener('click', e => {
   const item = e.target.closest('.tier-item'), row = e.target.closest('.tier-row');
@@ -132,7 +208,7 @@ $('tierCopy').onclick = async () => {
   if (!state) return;
   const byKey = new Map(sheet.shows.map(s => [keyOf(s), s]));
   const season = $('tierSeason').selectedOptions[0]?.textContent || '';
-  const lines = TIERS.filter(t => state[t].length).map(t => `**${t}:** ${state[t].map(k => titleOf(byKey.get(k))).join(', ')}`);
+  const lines = tiers.filter(t => state[t.id]?.some(k=>byKey.has(k))).map(t => `**${t.name}:** ${state[t.id].filter(k=>byKey.has(k)).map(k => titleOf(byKey.get(k))).join(', ')}`);
   if (!lines.length) { notice('Noch nichts eingeordnet.'); return; }
   const text = `Tier-Liste ${season} · ${$('tierPerson').value}\n${lines.join('\n')}`;
   try { await navigator.clipboard.writeText(text); notice('Kopiert. Einfach in Discord einfügen.'); }
