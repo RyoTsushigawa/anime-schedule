@@ -214,7 +214,6 @@ const TITLE_FIXES = {
 213658: 'Ace of Diamond Act II Season 2 Part 2', 198727: 'Chitose Is in the Ramune Bottle Part 2',
 };
 let titleSource = null;
-const TITLE_KEEP = new Set([204011, 209562]);
 const SMALL_WORDS = new Set(['a', 'an', 'the', 'and', 'or', 'nor', 'but', 'of', 'in', 'on', 'to', 'with', 'for', 'at', 'by', 'from', 'as', 'is', 'vs', 'via', 'under', 'into', 'over',
 'no', 'wa', 'ga', 'ni', 'wo', 'de', 'mo', 'ka', 'na', 'e', 'to']);
 function titleFlaws(title) {

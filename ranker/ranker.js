@@ -119,20 +119,7 @@ function save(){
 }
 // Copies what you marked "Didn't watch" or "Dropped" (and how each show got into the game) to the page database,
 // so Claude can read it and tune which seasons get added automatically. Writes only when the lists change.
-let removedTimer = null, removedSent = '';
 function syncRemoved(){ return; // only used by the Claude version (lets Claude read what you removed)
-}
-function syncRemovedUnused(){
-  clearTimeout(removedTimer);
-  removedTimer = setTimeout(async () => {
-    if(!S || S.source==='sample' || typeof followDb==='undefined' || !followDb) return;
-    const pick = i => { const it = S.items[i]; return {id:it.id||'', alId:it.alId||'', title:it.title, type:it.type||'', eps:it.eps||0, status:it.status, from:it.from||''}; };
-    const body = {notWatched:(S.removed||[]).map(pick), dropped:(S.dropped||[]).map(pick),
-      added:S.items.filter(it => it.added && it.status==='Missing season').length, updated:new Date().toISOString()};
-    const key = JSON.stringify([body.notWatched, body.dropped]);
-    if(key===removedSent) return;
-    try{ await followDb.doc('insights/removed').set(body); removedSent = key; }catch(e){}
-  }, 2000);
 }
 function load(){ try{ const raw = localStorage.getItem(KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===2) return s; } }catch(e){} return null; }
 
@@ -799,15 +786,6 @@ function refScore(it, P){
   if(!P) return 0;
   const al = it.alId || (showInfo && it.id && showInfo.anilist[it.id]);
   return (it.id && P.byMal[it.id]) || (al && P.byAl[al]) || 0;
-}
-function refSummary(){
-  if(!REFS.length) return '';
-  const fs = finalScores();
-  return REFS.map(P => {
-    let n = 0, diff = 0, same = 0;
-    for(const k in fs){ const r = refScore(S.items[k], P); if(r){ n++; const d = Math.abs(fs[k]-r); diff += d; if(d<=0.5) same++; } }
-    return n ? `${P.name}: ${n} in common, ${fmt(diff/n)} points apart on average, ${Math.round(same/n*100)}% within half a point.` : `${P.name}: none of your scored shows yet.`;
-  }).join(' ');
 }
 function renderSource(){
   const line = $('sourceLine');

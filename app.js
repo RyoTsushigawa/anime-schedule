@@ -3994,7 +3994,6 @@ $('awayDlg').showModal();
 function drawAway() {
 const today = isoDay(new Date());
 const [y, m] = awayCal.month.split('-').map(Number);
-const first = new Date(y, m - 1, 1);
 const length = new Date(y, m, 0).getDate();
 // in the current month the grid starts with this week: past weeks can't be changed anyway
 const thisMonth = awayCal.month === today.slice(0, 7);
@@ -4357,7 +4356,7 @@ else if (e.key === 'Escape') { e.preventDefault(); closeSuggest(); }
 });
 $('daySuggest').addEventListener('mousedown', e => e.preventDefault());
 $('daySuggest').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) pickSuggest(Number(b.dataset.pick)); });
-function moveTo(next, s, tag, time) {
+function withMove(next, s, tag, time) {
 const week = dayEdit.scope === 'week' ? isoDay(weekStart(weekOffset)) : '';
 if (tag === s.tag && time === s.time) return next;
 const home = tag === s.fromTag && time === s.fromTime;
@@ -4400,13 +4399,13 @@ show: show.key, title: show.title, tag: dayEdit.tag, time, week: thisWeek, skip:
 continue;
 }
 if (show.skip) next = next.filter(m => !(m.show === show.key && m.week === thisWeek && m.skip));
-next = moveTo(next, show.skip ? { ...show, tag: null, skip: false } : show, dayEdit.tag, time);
+next = withMove(next, show.skip ? { ...show, tag: null, skip: false } : show, dayEdit.tag, time);
 }
 for (const row of $('dayMissing').querySelectorAll('.day-missing')) {
 const s = dayEdit.all.find(x => x.key === row.dataset.key);
 const time = row.querySelector('input').value.trim();
 if (time && !parseTime(time)) { $('dayMsg').textContent = `${s.name}: Uhrzeit wie 21:00, oder leer.`; return; }
-next = moveTo(next, s, row.querySelector('select').value, clockOf(time));
+next = withMove(next, s, row.querySelector('select').value, clockOf(time));
 }
 if (next === moves) { $('dayDlg').close(); return; }
 storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg');
