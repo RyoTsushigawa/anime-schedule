@@ -27,11 +27,13 @@ test('More keeps all planning, recap and extra links without duplicating Games',
  assert.ok(!menu.includes('href="ranker/"'));
  assert.equal(new Set(hrefs).size,hrefs.length);
 });
-test('schedule actions remain wired by ID inside More; Games links to Higher/Lower',()=>{
- for(const id of ['awayButton','overviewButton']){
+test('schedule actions stay wired by ID: Abwesend in the header, Wochenübersicht in More; Games links to Higher/Lower',()=>{
+ for(const id of ['awayButton','overviewButton'])
   assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1);
-  assert.match(menu,new RegExp('id="'+id+'"'));
- }
+ // Abwesend is one of the most used functions: a header button, not inside More
+ assert.doesNotMatch(menu,/id="awayButton"/);
+ assert.match(html,/<nav class="header-primary"[\s\S]*id="awayButton"[\s\S]*id="miscButton"/);
+ assert.match(menu,/id="overviewButton"/);
  assert.match(games,/href="ranker\//);
 });
 test('compact navigation preserves mobile controls and accessible menu focus',()=>{
