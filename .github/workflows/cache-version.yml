@@ -32,11 +32,24 @@ jobs:
           echo "before: ${was:-unknown}, now: $now"
           if [ -z "$now" ]; then echo "No CACHE name found in sw.js; nothing changed."; exit 0; fi
           if [ -n "$was" ] && [ "$was" != "$now" ]; then echo "This push changed it already."; exit 0; fi
-          git pull --rebase origin main
-          now=$(grep -m1 -oE "schedule-v[0-9]+" sw.js); next="schedule-v$(( ${now#schedule-v} + 1 ))"
-          sed -i "s/$now/$next/" sw.js
+          # Other jobs also write to main. Retry on a non-fast-forward push
+          # instead of failing just because another job landed first.
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git commit -qam "Cache version ${next#schedule-}"
-          git push
-          echo "Raised to $next."
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            now=$(grep -m1 -oE "schedule-v[0-9]+" sw.js)
+            next="schedule-v$(( ${now#schedule-v} + 1 ))"
+            sed -i "s/$now/$next/" sw.js
+            git add sw.js
+            git commit -qm "Cache version ${next#schedule-}"
+            if git push origin HEAD:main; then
+              echo "Raised to $next."
+              exit 0
+            fi
+            echo "::warning::Main changed during cache update (attempt $attempt/4); retrying."
+            sleep $((attempt * 2))
+          done
+          echo "::error::Could not update cache version after four attempts."
+          exit 1
