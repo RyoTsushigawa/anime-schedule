@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {exportRows, localBackup, malImportXml, malImportInfo} from '../local-export.mjs';
+import {exportRows, localBackup, malImportXml, malImportInfo, parseLocalBackup, mergeLocalBackup} from '../local-export.mjs';
 import {openPage} from './harness.mjs';
 
 const sample = [
@@ -76,4 +76,62 @@ test('export UI only exposes file downloads and explicitly warns about existing 
  assert.match(app,/import\('\.\/local-export\.mjs'\)/);
  assert.match(app,/localExportCatalog\(snapshot\)/);
  assert.match(app,/downloadLocalFile\(/);
+});
+
+test('exported JSON can be read back without losing progress',()=>{
+ const exported=localBackup('Matthias',[100,102],{'100':4,'102':8,'999':2},exportRows(sample,{'100':4,'102':8}));
+ const imported=parseLocalBackup(JSON.stringify(exported));
+ assert.equal(imported.person,'Matthias');
+ assert.deepEqual(imported.shows,[100,102]);
+ assert.equal(imported.progress['999'],2);
+});
+
+test('backup merge keeps the higher episode count, and adds missing shows',()=>{
+ const backup=parseLocalBackup(JSON.stringify(localBackup('Matthias',[101,102],{'100':3,'101':6,'102':4},[])));
+ const merged=mergeLocalBackup({shows:[100,101], progress:{'100':10,'101':2}},backup,'Matthias');
+ assert.deepEqual(merged.shows,[100,101,102]);
+ assert.equal(merged.progress['100'],10);
+ assert.equal(merged.progress['101'],6);
+ assert.equal(merged.progress['102'],4);
+ assert.equal(merged.addedShows,1);
+ assert.equal(merged.addedProgress,1);
+ assert.equal(merged.advancedProgress,1);
+});
+
+test('wrong-person backups are rejected without touching another local tracker',()=>{
+ const backup=parseLocalBackup(JSON.stringify(localBackup('Matthias',[100],{'100':7},[])));
+ assert.throws(()=>mergeLocalBackup({shows:[],progress:{}},backup,'MaRyo'),/Matthias.*MaRyo/);
+});
+
+test('malformed or excessive JSON is rejected before a restore',()=>{
+ const valid=localBackup('Matthias',[100],{'100':4},[]);
+ for(const data of [
+   {...valid,version:2},
+   {...valid,format:'unknown'},
+   {...valid,shows:[-1]},
+   {...valid,progress:{'100':-5}},
+   {...valid,progress:{'100':3.5}},
+   {...valid,shows:Array.from({length:51},(_,i)=>i+1)},
+   {...valid,progress:[]},
+   {...valid,person:''},
+   null
+ ]) assert.throws(()=>parseLocalBackup(JSON.stringify(data)));
+ assert.throws(()=>parseLocalBackup('{invalid'),SyntaxError);
+});
+
+test('merge refuses to silently drop additional manually added shows',()=>{
+ const shows=Array.from({length:50},(_,i)=>i+1);
+ const backup=parseLocalBackup(JSON.stringify(localBackup('Matthias',[51],{'51':2},[])));
+ assert.throws(()=>mergeLocalBackup({shows,progress:{}},backup,'Matthias'),/50/);
+});
+
+test('backup UI requires explicit confirmation before writing progress',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const js=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ for(const id of ['localImportOpen','localImportFile','localImportPreview','localImportDetails','localImportConfirm','localImportCancel'])
+   assert.match(html,new RegExp('id="'+id+'"'));
+ assert.match(html,/localImportPreview" class="local-import-preview" hidden/);
+ assert.match(js,/localImportConfirm'\)\.onclick/);
+ assert.match(js,/localImportFile'\)\.addEventListener\('change'/);
+ assert.match(js,/mergeLocalBackup\(localSnapshot\(pending\.person\)/);
 });

@@ -429,9 +429,18 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
   <div class="local-export-actions">
     <button id="localExportXml" class="pill" type="button">Für MAL / AniList (.xml)</button>
     <button id="localExportBackup" class="pill" type="button">Backup (.json)</button>
+    <button id="localImportOpen" class="pill" type="button">Backup wiederherstellen (.json)</button>
+    <input id="localImportFile" type="file" accept=".json,application/json" aria-label="Lokales JSON-Backup auswählen" hidden>
+  </div>
+  <div id="localImportPreview" class="local-import-preview" hidden>
+    <p id="localImportDetails"></p>
+    <div class="local-import-buttons">
+      <button id="localImportConfirm" type="button" class="pill">Sicher zusammenführen</button>
+      <button id="localImportCancel" type="button" class="pill">Abbrechen</button>
+    </div>
   </div>
   <p id="localExportStatus" role="status" aria-live="polite"></p>
-  <p class="local-export-explain">XML: später unter Import in MAL oder AniList hochladen. Bestehende Einträge vor dem Import prüfen. JSON: persönliche Sicherheitskopie.</p>
+  <p class="local-export-explain">XML: später unter Import in MAL oder AniList hochladen. Bestehende Einträge vor dem Import prüfen. JSON: persönliche Sicherheitskopie. Beim Wiederherstellen bleiben vorhandene Episodenstände erhalten.</p>
 </dialog>
 </body>
 </html>

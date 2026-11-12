@@ -1307,6 +1307,85 @@ const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
 const localProgressKey = person => 'localAnimeProgress:v1:' + person;
 const localShowsKey = person => 'localAnimeShows:v1:' + person;
 const localExportSeen = new Map();
+let pendingLocalRestore = null;
+function resetLocalRestore() {
+  pendingLocalRestore = null;
+  $('localImportPreview').hidden = true;
+  $('localImportDetails').textContent = '';
+  $('localImportFile').value = '';
+}
+$('localImportOpen').onclick = () => $('localImportFile').click();
+$('localImportCancel').onclick = () => { resetLocalRestore(); $('localExportStatus').textContent = ''; };
+$('localExportDialog').addEventListener('close', resetLocalRestore);
+$('localImportFile').addEventListener('change', async () => {
+  resetLocalRestorePending();
+  const file = $('localImportFile').files?.[0];
+  const person = $('localExportDialog').dataset.person;
+  if (!file || !person) return;
+  if (file.size > 2 * 1024 * 1024) {
+    $('localExportStatus').textContent = 'Die Datei ist zu groß (maximal 2 MB).';
+    return;
+  }
+  try {
+    const { parseLocalBackup, mergeLocalBackup } = await import('./local-export.mjs');
+    const parsed = parseLocalBackup(await file.text());
+    const current = localSnapshot(person);
+    const merged = mergeLocalBackup(current, parsed, person);
+    pendingLocalRestore = { person, parsed };
+    $('localImportDetails').textContent =
+      'Backup für ' + person + ': ' + merged.addedShows + ' neue Serien, ' +
+      merged.addedProgress + ' neue Episodenstände, ' +
+      merged.advancedProgress + ' aktualisierte Episodenstände. ' +
+      'Vorhandene höhere Episodenstände bleiben unverändert.';
+    $('localImportPreview').hidden = false;
+    $('localExportStatus').textContent = 'Vorschau prüfen und Zusammenführen bestätigen.';
+  } catch (error) {
+    $('localExportStatus').textContent = 'Backup nicht eingelesen: ' + error.message;
+  }
+});
+function resetLocalRestorePending() {
+  pendingLocalRestore = null;
+  $('localImportPreview').hidden = true;
+  $('localImportDetails').textContent = '';
+}
+$('localImportConfirm').onclick = async () => {
+  const pending = pendingLocalRestore;
+  if (!pending || $('localExportDialog').dataset.person !== pending.person ||
+      !isLocalList() || localListPerson() !== pending.person) {
+    $('localExportStatus').textContent = 'Bitte die lokale Liste erneut auswählen.';
+    resetLocalRestore();
+    return;
+  }
+  const button = $('localImportConfirm');
+  button.disabled = true;
+  try {
+    const { mergeLocalBackup } = await import('./local-export.mjs');
+    // Re-read current values at confirmation to avoid regressing edits made
+    // while the preview was open.
+    const result = mergeLocalBackup(localSnapshot(pending.person), pending.parsed, pending.person);
+    const keyShows = localShowsKey(pending.person), keyProgress = localProgressKey(pending.person);
+    const beforeShows = localStorage.getItem(keyShows), beforeProgress = localStorage.getItem(keyProgress);
+    try {
+      localStorage.setItem(keyShows, JSON.stringify(result.shows));
+      localStorage.setItem(keyProgress, JSON.stringify(result.progress));
+    } catch (error) {
+      try {
+        if (beforeShows === null) localStorage.removeItem(keyShows);
+        else localStorage.setItem(keyShows, beforeShows);
+        if (beforeProgress === null) localStorage.removeItem(keyProgress);
+        else localStorage.setItem(keyProgress, beforeProgress);
+      } catch {}
+      throw error;
+    }
+    resetLocalRestore();
+    $('localExportStatus').textContent = 'Backup für ' + pending.person +
+      ' zusammengeführt. Vorhandene Fortschritte bleiben erhalten.';
+    if (isLocalList() && localListPerson() === pending.person && listView()) load(true);
+  } catch (error) {
+    $('localExportStatus').textContent = 'Import fehlgeschlagen: ' + error.message;
+  } finally { button.disabled = false; }
+};
+
 function localSnapshot(person) {
   let progress = {};
   try {
@@ -1346,6 +1425,7 @@ $('list').addEventListener('click', event => {
   const person = localListPerson();
   $('localExportDialog').dataset.person = person;
   $('localExportPerson').textContent = person + ' · Nur Daten aus diesem Browser';
+  resetLocalRestore();
   $('localExportStatus').textContent = '';
   $('localExportDialog').showModal();
 });
