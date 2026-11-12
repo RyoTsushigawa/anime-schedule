@@ -188,7 +188,7 @@ function refreshHardHints(){
   $('gameHardHints').hidden=!show;
   $('gameHintText').textContent=show?hardHintText():'';
   $('gameHintButton').textContent=state?.hints===1?'Zweiter Hinweis': 'Hinweis anzeigen';
-  $('gameHintButton').hidden=!show || state.hints>=2;
+  $('gameHintButton').hidden=!show || (state?.hints||0)>=2;
 }
 $('gameHintButton').onclick=()=>{
   if(!puzzle || !state || puzzle.level!=='hard' || state.done || state.hints>=2)return;
