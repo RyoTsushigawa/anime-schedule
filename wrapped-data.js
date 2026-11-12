@@ -50,10 +50,12 @@ const WrappedStats = (() => {
     const current=entries.filter(e=>['CURRENT','REPEATING'].includes(e.status));
     // Watch time: completed in the window (all episodes), plus progress on this season's own shows that
     // are still running, paused or dropped. Older unfinished shows can't be dated, so they don't count.
-    const startDate=new Date(start), season=['WINTER','SPRING','SUMMER','FALL'][Math.floor(startDate.getMonth()/3)], year=startDate.getFullYear();
+    // the seasons in the window: one for a season, four for a year
+    const seasons=new Set();
+    for(const d=new Date(start);d.getTime()<end;d.setMonth(d.getMonth()+3))seasons.add(['WINTER','SPRING','SUMMER','FALL'][Math.floor(d.getMonth()/3)]+' '+d.getFullYear());
     const done=new Set(completed);
     const watchedEpisodes=e=>done.has(e)?(e.media.episodes||e.progress||0)
-      :e.media.season===season&&e.media.seasonYear===year&&['CURRENT','REPEATING','PAUSED','DROPPED'].includes(e.status)?(e.progress||0):0;
+      :seasons.has(e.media.season+' '+e.media.seasonYear)&&['CURRENT','REPEATING','PAUSED','DROPPED'].includes(e.status)?(e.progress||0):0;
     const watched=entries.map(e=>[e,watchedEpisodes(e)]).filter(([,n])=>n>0);
     const genres=new Map();
     for(const e of completed) for(const genre of e.media.genres||[]) genres.set(genre,(genres.get(genre)||0)+1);
