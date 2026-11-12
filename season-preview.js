@@ -19,15 +19,39 @@ function seasonKey(tab){const m=tab?.name.match(PV_SEASONS);if(!m)return '';cons
 function parseSeasonRows(rows, updatePeople=true){
   const h = rows.findIndex(r=>r.some(c=>clean(c)==='Anime Titel'));
   if(h<0)throw Error('Die Season-Liste enthält keine Spalte „Anime Titel“.');
-  const cols=rows[h].map(clean), title=cols.indexOf('Anime Titel'), english=cols.indexOf('Eng Anime Titel');
+  const cols=rows[h].map(clean), title=cols.indexOf('Anime Titel'), english=cols.indexOf('Eng Anime Titel'), startCol=cols.indexOf('Startdatum');
   const reserved=new Set(['Anime Titel','Eng Anime Titel','Wo','Tag','Uhrzeit','Startdatum','Sort','Slot','Genre','Studio','Staffel','Episode','Folgen']);
   const firstPerson=cols.indexOf('Uhrzeit')+1;
   const voters=cols.map((name,i)=>({name,i})).filter(x=>x.i>=firstPerson&&x.name&&!reserved.has(x.name));
   if(updatePeople)people=voters.map(v=>v.name);
   return rows.slice(h+1).filter(r=>{const name=clean(r[title]);return name && !(name.toLowerCase()==='amount'&&/^\d+$/.test(clean(r[english])));}).map((r,i)=>({
-    key:clean(r[title]).toLocaleLowerCase(),title:clean(r[title]),english:english<0?'':clean(r[english]),order:i+1,
+    key:clean(r[title]).toLocaleLowerCase(),title:clean(r[title]),english:english<0?'':clean(r[english]),order:i+1,start:startCol<0?null:startDate(r[startCol]),
     votes:voters.flatMap(({name,i})=>clean(r[i])?[{name,value:clean(r[i]).replace(/,$/,'')}]:[])
   }));
+}
+// "07.01.2027" → that day (local), or null
+function startDate(text){
+ const m=clean(text).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+ return m?new Date(+m[3],+m[2]-1,+m[1]):null;
+}
+// Start-Leiste: one pill per start week (Monday–Sunday) and one for shows without a date; a pill filters the list
+let startFilter='';
+const weekOf=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);return x;};
+const weekKey=d=>{const x=weekOf(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');};
+const shortDate=(d,opts)=>d.toLocaleDateString('de-DE',opts);
+function drawStarts(){
+ const box=pv('previewStarts');
+ const weeks=new Map();let none=0;
+ for(const s of shows){if(!s.start){none++;continue;}const k=weekKey(s.start);weeks.set(k,[...(weeks.get(k)||[]),s]);}
+ box.hidden=!weeks.size;
+ if(!weeks.size){startFilter='';return;}
+ if(startFilter&&startFilter!=='none'&&!weeks.has(startFilter))startFilter='';
+ const pill=(key,label,list,title)=>'<button type="button" class="preview-start-week" data-start-week="'+key+'" aria-pressed="'+(startFilter===key)+'" title="'+safeText(title)+'"><b>'+list+'</b><span>'+safeText(label)+'</span></button>';
+ box.innerHTML='<span class="preview-starts-label">Start</span>'+[...weeks].sort(([a],[b])=>a.localeCompare(b)).map(([k,list])=>{
+  const from=weekOf(list[0].start),to=new Date(from);to.setDate(to.getDate()+6);
+  const label=from.getMonth()===to.getMonth()?from.getDate()+'.–'+shortDate(to,{day:'numeric',month:'short'}):shortDate(from,{day:'numeric',month:'short'})+' – '+shortDate(to,{day:'numeric',month:'short'});
+  return pill(k,label,list.length,list.map(s=>s.english||s.title).join('\n'));
+ }).join('')+(none?pill('none','ohne Termin',none,none+' Serien ohne Startdatum in der Liste'):'');
 }
 async function listSeasonTabs(){
  const response=await fetch(SHEET+'/htmlview',{cache:'no-cache'});
@@ -379,9 +403,11 @@ function render(){
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
  let ghKey='';try{ghKey=localStorage.getItem('movesKey')||'';}catch{}
  pv('previewTrailerRefresh').hidden=playlist.hidden||!ghKey;
- const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
+ drawStarts();
+ const inWeek=s=>!startFilter||(startFilter==='none'?!s.start:!!s.start&&weekKey(s.start)===startFilter);
+ const shown=shows.filter(s=>inWeek(s)&&(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
   (voteFilter==='all'||(voteFilter==='open')===(voteValue(s,voter)==='Default')));
- const hasFilter=!!q||voteFilter!=='all';
+ const hasFilter=!!q||voteFilter!=='all'||!!startFilter;
  pv('previewResults').textContent=hasFilter?shown.length+' von '+shows.length+' Serien angezeigt':'';pv('previewResults').parentElement.hidden=!hasFilter;
  pv('previewClear').hidden=!hasFilter;
  const parent=pv('previewList');parent.replaceChildren();
@@ -392,7 +418,8 @@ function render(){
   const sequel=detailsFor(s)?.sequelStatus==='sequel';
   // the trailers are streamed as one playlist; a card only notes when a show has none
   // above the title, so the vote buttons line up on every card
-  const note=trailer?'':'<span class="preview-none">'+(sequel?'Sequel':'Noch kein Trailer')+'</span>';
+  const start=s.start?'ab '+shortDate(s.start,{weekday:'short',day:'numeric',month:'short'}):'';
+  const note=trailer&&!start?'':'<span class="preview-none">'+[trailer?'':(sequel?'Sequel':'Noch kein Trailer'),start].filter(Boolean).join(' · ')+'</span>';
   article.innerHTML='<div class="preview-order">'+s.order+'</div><div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
   parent.append(article);
  }
@@ -400,6 +427,7 @@ function render(){
 async function selectSeason(gid){
  const next=seasonTabs.find(t=>t.gid===gid);if(!next)return;
  current=next;
+ startFilter='';
  const request=++seasonRequest;
  state('Lade '+next.name+' …');
  try{
@@ -434,9 +462,14 @@ async function start(){
  }catch(e){state('Season-Listen sind gerade nicht verfügbar: '+e.message);}
 }
 pv('previewSearch').addEventListener('input',()=>{if(current)render();});
+pv('previewStarts').addEventListener('click',e=>{
+ const b=e.target.closest('[data-start-week]');if(!b||!current)return;
+ startFilter=startFilter===b.dataset.startWeek?'':b.dataset.startWeek;render();
+});
 pv('previewClear').addEventListener('click',()=>{
  pv('previewSearch').value='';
  pv('previewVoteFilter').value='all';
+ startFilter='';
  if(current)render();
  pv('previewSearch').focus();
 });
