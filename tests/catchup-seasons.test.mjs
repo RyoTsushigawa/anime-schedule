@@ -101,6 +101,7 @@ test('per-season action and ungrouped view retain watched controls',()=>{
  assert.match(source,/data-mark-season=/);
  assert.match(source,/seasonWatchTargets\(g\.rows\)/);
  assert.match(source,/if \(hideSeasonHeader\) return/);
- assert.match(source,/const content = listed\.map\(show\)\.join\(''\)/);
+ assert.match(source,/const content = listedHtml \+/);
+ assert.match(source,/remaining\.map\(show\)\.join\(''\)/);
  assert.match(source,/change\(mediaId, \{progress, status: add \? 'CURRENT' : undefined\}\)/);
 });
