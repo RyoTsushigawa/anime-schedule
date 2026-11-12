@@ -422,5 +422,16 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <div class="dlg-row"><button id="helpClose" class="pill">Schließen</button></div>
 </dialog>
 <div id="dragHint" class="drag-hint" role="status" hidden></div>
+<dialog id="localExportDialog" class="local-export-dialog" aria-labelledby="localExportTitle">
+  <form method="dialog"><button class="local-export-close" aria-label="Schließen" title="Schließen">×</button></form>
+  <h2 id="localExportTitle">Lokale Liste exportieren</h2>
+  <p id="localExportPerson" class="local-export-explain"></p>
+  <div class="local-export-actions">
+    <button id="localExportXml" class="pill" type="button">Für MAL / AniList (.xml)</button>
+    <button id="localExportBackup" class="pill" type="button">Backup (.json)</button>
+  </div>
+  <p id="localExportStatus" role="status" aria-live="polite"></p>
+  <p class="local-export-explain">XML: später unter Import in MAL oder AniList hochladen. Bestehende Einträge vor dem Import prüfen. JSON: persönliche Sicherheitskopie.</p>
+</dialog>
 </body>
 </html>

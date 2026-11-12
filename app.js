@@ -1306,6 +1306,84 @@ const isLocalList = () => friendList.value.startsWith('local:');
 const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
 const localProgressKey = person => 'localAnimeProgress:v1:' + person;
 const localShowsKey = person => 'localAnimeShows:v1:' + person;
+const localExportSeen = new Map();
+function localSnapshot(person) {
+  let progress = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(localProgressKey(person)) || '{}');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) progress = saved;
+  } catch {}
+  return { person, progress, showIds: localShows(person), cachedMedia: [...(localExportSeen.get(person)?.values() || [])] };
+}
+async function localExportCatalog(snapshot) {
+  const ids = [...new Set([...snapshot.showIds, ...Object.keys(snapshot.progress).map(Number),
+    ...snapshot.cachedMedia.map(m => Number(m.id))].filter(id => Number.isSafeInteger(id) && id > 0))];
+  const result = [];
+  const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id idMal episodes format title { romaji english } } } }';
+  for (let i = 0; i < ids.length; i += 50) {
+    const data = await anilist(query, {ids: ids.slice(i, i + 50)});
+    result.push(...(data.Page?.media || []));
+  }
+  return result;
+}
+function downloadLocalFile(filename, contents, type) {
+  const file = new Blob([contents], { type });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function localExportFileName(person, ext) {
+  return 'anime-schedule-' + person.toLowerCase().replace(/[^a-z0-9_-]+/g, '-') + '.' + ext;
+}
+$('list').addEventListener('click', event => {
+  if (!event.target.closest('#localExportOpen') || !isLocalList()) return;
+  const person = localListPerson();
+  $('localExportDialog').dataset.person = person;
+  $('localExportPerson').textContent = person + ' · Nur Daten aus diesem Browser';
+  $('localExportStatus').textContent = '';
+  $('localExportDialog').showModal();
+});
+$('localExportBackup').onclick = async () => {
+  const person = $('localExportDialog').dataset.person;
+  if (!person) return;
+  const { localBackup, exportRows } = await import('./local-export.mjs');
+  const snapshot = localSnapshot(person);
+  const rows = exportRows(snapshot.cachedMedia, snapshot.progress);
+  const content = JSON.stringify(localBackup(person, snapshot.showIds, snapshot.progress, rows), null, 2);
+  downloadLocalFile(localExportFileName(person, 'json'), content, 'application/json;charset=utf-8');
+  $('localExportStatus').textContent = 'Backup gespeichert. Bitte die Datei sicher aufbewahren.';
+};
+$('localExportXml').onclick = async () => {
+  const person = $('localExportDialog').dataset.person;
+  if (!person) return;
+  const button = $('localExportXml');
+  button.disabled = true;
+  $('localExportStatus').textContent = 'Anime-Daten für den Export werden geladen …';
+  try {
+    const { exportRows, malImportXml, malImportInfo } = await import('./local-export.mjs');
+    const snapshot = localSnapshot(person);
+    const metadata = await localExportCatalog(snapshot);
+    const rows = exportRows(metadata, snapshot.progress);
+    const info = malImportInfo(rows);
+    if (!info.exported) {
+      $('localExportStatus').textContent = 'Keine Anime mit MyAnimeList-ID gefunden. Das JSON-Backup ist weiterhin möglich.';
+      return;
+    }
+    downloadLocalFile(localExportFileName(person, 'xml'), malImportXml(rows, person), 'application/xml;charset=utf-8');
+    $('localExportStatus').textContent = info.exported + ' Anime exportiert.' +
+      (info.omitted ? ' ' + info.omitted + ' ohne MAL-ID ausgelassen (im JSON-Backup behalten).' : '') +
+      ' Vor dem Import bestehende Einträge prüfen.';
+  } catch (error) {
+    $('localExportStatus').textContent = 'XML-Export nicht verfügbar: ' + error.message + '. JSON-Backup bleibt möglich.';
+  } finally { button.disabled = false; }
+};
+
 function localShows(person) {
   try {
     const ids = JSON.parse(localStorage.getItem(localShowsKey(person)) || '[]');
@@ -2562,6 +2640,7 @@ if (local) {
   catch { setNote('catchup:local', 'Zusätzliche lokale Serien konnten gerade nicht geladen werden.'); }
   if (!current()) return;
   const byId = new Map([...planShows.map(x => x.media), ...extra].map(m => [Number(m.id), m]));
+  localExportSeen.set(person, byId);
   entries = [...byId.values()].map(m => ({media:m, progress:localProgress(person, Number(m.id)), missing:false}));
   planShows = [];
 }
@@ -2701,6 +2780,7 @@ $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${e
 if (local) {
   $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Lokaler Fortschritt für ' + esc(person) + ': nur auf diesem Gerät, nicht synchronisiert.</div>');
   $('list').insertAdjacentHTML('afterbegin', '<form id="localAnimeAdd" class="local-anime-add"><input type="search" name="anime" required maxlength="160" placeholder="Anime-Titel oder AniList-Link" aria-label="Anime zum lokalen Tracker hinzufügen"><button type="submit" class="pill">Hinzufügen</button></form>');
+  $('list').insertAdjacentHTML('afterbegin', '<div class="local-export-entry"><button id="localExportOpen" type="button" class="pill" title="Lokale Liste als XML oder JSON exportieren">Exportieren</button></div>');
 }
 if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Zum Abhaken und Droppen: <button type="button" class="pill" data-connect>Konto verbinden</button></div>');
 const times = [...document.querySelectorAll('.time')];
