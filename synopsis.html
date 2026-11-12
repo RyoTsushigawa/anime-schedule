@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Inhalts-Rätsel · Spiele</title>
+<link rel="icon" type="image/png" href="icon-72.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cover-game.css">
+<link rel="stylesheet" href="synopsis.css">
+</head>
+<body class="cover-page">
+<header><div class="bar">
+<a class="tool-back pill" href="games.html"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>Spiele</a>
+<div class="brand"><h1>Inhalts-Rätsel</h1><div>Eine Inhaltsangabe pro Tag · 4 Antworten · 2 Versuche</div></div>
+</div></header>
+<main class="cover-layout">
+<div class="cover-title"><div><h2>Welche Serie ist das?</h2><p>Die Inhaltsangabe einer Serie aus eurem Guckplan. Namen und Titelwörter sind geschwärzt.</p></div><span class="cover-daily">Täglich neu</span></div>
+<div id="synPlay" class="cover-play" hidden>
+  <div class="cover-top"><b>Inhaltsangabe</b><span id="synTries"></span></div>
+  <p id="synText" class="syn-text"></p>
+  <div id="synChoices" class="cover-choices" role="group" aria-label="Antwortmöglichkeiten"></div>
+  <div id="synEnd" class="syn-end" hidden>
+    <img id="synCover" alt="" width="120" height="170" hidden>
+    <div><p id="synAnswer" class="syn-answer"></p><details><summary>Ganze Inhaltsangabe</summary><p id="synFull" class="syn-full"></p></details>
+    <button id="synShare" class="pill primary" type="button">Ergebnis kopieren</button></div>
+  </div>
+</div>
+<p id="synStatus" class="cover-status" role="status" aria-live="polite">Wird geladen …</p>
+<button id="synRetry" class="pill" type="button" hidden>Erneut versuchen</button>
+<p class="cover-footnote">Inhaltsangaben von AniList (meist auf Englisch). Morgen gibt es eine neue.</p>
+</main>
+<script type="module" src="synopsis-game.mjs"></script>
+</body>
+</html>
