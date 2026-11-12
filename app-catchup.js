@@ -136,6 +136,37 @@ const { rows } = catchupRows(entries, await missingPlanShows(plan, entries), pla
 if (countingCatchup === job && auth === job.account && $('anilistUser').value.trim() === user) showCatchupCount(rows);
 } catch {} finally { if (countingCatchup === job) countingCatchup = null; }
 }
+// Hide Non-seasonal only once this person's list has actually been checked.
+// Unknown/unavailable lists keep the navigation visible rather than falsely
+// suggesting there is nothing to watch.
+let paceNavGeneration = 0;
+function setPaceNav(count) {
+  $('viewPace').hidden = count === 0 && view !== 'pace';
+}
+async function refreshPaceNav() {
+  const generation = ++paceNavGeneration;
+  if (view !== 'week') return; // Catch-up's normal loader already has these rows.
+  const person = soloPerson, account = auth;
+  const friend = friendList.value;
+  const user = listUser();
+  const local = isLocalList();
+  const current = () => generation === paceNavGeneration && view === 'week' &&
+    soloPerson === person && auth === account &&
+    friendList.value === friend && listUser() === user;
+  $('viewPace').hidden = false; // Loading or missing information is not "empty".
+  if (!user || (!friend && account?.name?.toLowerCase() !== user.toLowerCase())) return;
+  try {
+    await ready;
+    if (!current()) return;
+    const entries = local ? (await localCatalog(localListPerson())).map(m => ({
+      media:m, progress:localProgress(person, Number(m.id)), missing:false
+    })) : await anilistList(user, false, !!friend);
+    if (!current()) return;
+    const plan = await sheetFor(tabFor(tabs, new Date()));
+    if (!current()) return;
+    setPaceNav(catchupRows(entries, [], plan, person).ownPace.length);
+  } catch { if (current()) $('viewPace').hidden = false; }
+}
 let catchupGeneration = 0;
 async function loadCatchupContent(refresh = false) {
 const generation = ++catchupGeneration, account = auth;
@@ -192,6 +223,7 @@ if (local) {
   planShows = [];
 }
 const { rows, ownPace } = catchupRows(entries, planShows, plan, local ? person : friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
+if (current()) setPaceNav(ownPace.length);
 const openEpisodes = showCatchupCount(rows);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
