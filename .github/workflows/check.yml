@@ -36,6 +36,8 @@ jobs:
         run: node --test tests/tools-menu.test.mjs
       - name: Test compact Catch-up seasons
         run: node --test tests/catchup-compact.test.mjs
+      - name: Test quick Catch-up sorting
+        run: node --test tests/catchup-quick-sort.test.mjs
       - name: Test compact Settings navigation
         run: node --test tests/settings-layout.test.mjs
       - name: Test Anime Cover Quiz
