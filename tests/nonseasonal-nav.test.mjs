@@ -45,7 +45,8 @@ test('active Non-seasonal never removes its own navigation while rendering', asy
   try {
     p.run("setView('pace'); setPaceNav(0)");
     assert.equal(p.$('viewPace').hidden,false);
-    p.run("setView('week'); setPaceNav(0)");
+    await p.run("setView('week'); setPaceNav(0); refreshPaceNav()");
+    p.run('setPaceNav(0)');
     assert.equal(p.$('viewPace').hidden,true);
   } finally { p.close(); }
 });
