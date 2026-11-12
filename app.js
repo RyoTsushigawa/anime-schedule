@@ -2171,6 +2171,21 @@ if (statusChanged) planShowsCache.time = 0;
 }
 const UNDO_MS = 10 * 60 * 1000;
 const undoSteps = [];
+// In a long Catch-up cleanup (e.g. Belly's backlog), a failed request does not
+// prove the server rejected that particular write. Never count it as saved or
+// automatically retry it: only earlier confirmed responses belong to Undo.
+function bulkSaveSummary(saved, total, unit, error = '') {
+  if (!error) return `${saved} von ${total} ${unit} bestätigt gespeichert.`;
+  const untouched = Math.max(0, total - saved - 1);
+  return `${saved} von ${total} ${unit} bestätigt gespeichert. ` +
+    `1 Änderung nicht bestätigt${untouched ? `, ${untouched} noch nicht versucht` : ''}. ` +
+    `Fehler: ${error}`;
+}
+function finishBulkSave(records, total, unit, error = '') {
+  const message = bulkSaveSummary(records.length, total, unit, error);
+  if (records.length) remember(records, message);
+  else notice(message);
+}
 function remember(records, text) {
 if (!records.length || !auth) return;
 const messages = [...new Set(records.map(r => r.syncMessage).filter(Boolean))];
@@ -2467,31 +2482,24 @@ load(true);
 };
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('#markAll');
-if (!b || !auth || b.disabled) return;
+if (!b || !auth || b.disabled || bulkSaving || pendingChanges.size) return;
 b.disabled = true;
 const targets = catchupTargets.filter(t => !skipped.has(t.mediaId));
 bulkSaving = true;
 syncSavingButtons();
 selecting = false;
 const records = [];
+let stopped = '';
 for (const [i, { mediaId, progress, add }] of targets.entries()) {
 b.textContent = `Speichert ${i + 1}/${targets.length}…`;
 try {
 records.push(await change(mediaId, { progress, status: add ? 'CURRENT' : undefined }));
-} catch (err) {
-b.textContent = `Gestoppt bei ${i + 1}/${targets.length}: ${err.message}`;
-remember(records, `${records.length} von ${targets.length} Serien als gesehen markiert`);
-bulkSaving = false;
-syncSavingButtons();
-notice(`${records.length} von ${targets.length} Serien gespeichert. Gestoppt: ${err.message}`, records.length > 0);
-load(true);
-return;
-}
+} catch (err) { stopped = err.message; break; }
 await new Promise(r => setTimeout(r, 700));
 }
-remember(records, `${records.length} ${records.length === 1 ? 'Serie' : 'Serien'} als gesehen markiert`);
 bulkSaving = false;
 syncSavingButtons();
+finishBulkSave(records, targets.length, 'Serien', stopped);
 load(true);
 });
 // "Alle gesehen" for one catch-up season. Keep the global bulk action unchanged.
@@ -2517,11 +2525,7 @@ $('list').addEventListener('click', async e => {
  }
  bulkSaving = false;
  syncSavingButtons();
- const label = catchupSeasonLabel(season);
- if (records.length) remember(records, stopped
-  ? `${records.length} von ${targets.length} Serien in ${label} als gesehen markiert. Gestoppt: ${stopped}`
-  : `${records.length} ${records.length === 1 ? 'Serie' : 'Serien'} aus ${label} als gesehen markiert`);
- else notice(`Nichts gespeichert: ${stopped || 'Keine Änderungen'}`);
+ finishBulkSave(records, targets.length, 'Serien in ' + catchupSeasonLabel(season), stopped);
  load(true);
 });
 // "Alle gesehen" on today's heading: every open tick of the day, one after the other (Rückgängig takes them all back)
@@ -2547,9 +2551,7 @@ await new Promise(r => setTimeout(r, 700));
 }
 bulkSaving = false;
 syncSavingButtons();
-if (records.length) remember(records, stopped ? `${records.length} von ${all.length} heutigen Folgen als gesehen markiert. Gestoppt: ${stopped}`
-: `${records.length} ${records.length === 1 ? 'Folge' : 'Folgen'} von heute als gesehen markiert`);
-else notice(`Nichts gespeichert: ${stopped}`);
+finishBulkSave(records, all.length, 'heutigen Serien', stopped);
 load(true);
 });
 function dueAt(released, slot, show) {
