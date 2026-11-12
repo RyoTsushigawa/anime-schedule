@@ -457,6 +457,41 @@ aniNext.set(id, next);
 try { localStorage.setItem('next:' + id, JSON.stringify({ time: Date.now(), next, facts })); } catch {}
 }
 }
+// Fortsetzung angekündigt: for a show whose finale is in the shown week, whether AniList already knows a
+// sequel (TV, film, ONA) that hasn't finished yet. Looked up only for those shows, kept for three days.
+const sequelOf = new Map(), pendingSequels = new Set();
+const SEQUEL_KEEP_MS = 3 * 86400000;
+function sequelTag(m, episodes) {
+if (!(m?.episodes > 1) || Math.max(...episodes) !== m.episodes) return '';
+if (!sequelOf.has(m.id)) {
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem('sequel:' + m.id)); } catch {}
+if (saved && Date.now() - saved.time < SEQUEL_KEEP_MS) sequelOf.set(m.id, saved.sequel);
+else { pendingSequels.add(m.id); return ''; }
+}
+const s = sequelOf.get(m.id);
+if (!s) return '';
+const when = s.start?.year ? (s.start.month ? new Date(s.start.year, s.start.month - 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }) : String(s.start.year)) : 'noch ohne Termin';
+return ` <a class="ep-tag sequel-tag" href="${safeUrl(`https://anilist.co/anime/${s.id}`)}" target="_blank" rel="noopener" title="${esc(`${s.title} · ${when}`)}">${s.format === 'MOVIE' ? 'Film angekündigt' : 'Fortsetzung angekündigt'}</a>`;
+}
+async function lookUpSequels() {
+const ids = [...pendingSequels];
+pendingSequels.clear();
+let media = [];
+try {
+for (let i = 0; i < ids.length; i += 25) media.push(...(await anilist(`query ($ids: [Int]) { Page(perPage: 25) { media(id_in: $ids) { id
+  relations { edges { relationType(version: 2) node { id type format status title { romaji english } startDate { year month day } } } } } } }`,
+{ ids: ids.slice(i, i + 25).map(Number) }, undefined, { retries: 0, timeout: 8000 })).Page.media);
+} catch { for (const id of ids) sequelOf.set(id, null); return; }
+for (const id of ids) {
+const edges = media.find(m => String(m.id) === String(id))?.relations?.edges || [];
+const next = edges.map(e => e.relationType === 'SEQUEL' && e.node?.type === 'ANIME' && ['NOT_YET_RELEASED', 'RELEASING'].includes(e.node.status)
+  && ['TV', 'TV_SHORT', 'MOVIE', 'ONA'].includes(e.node.format) ? e.node : null).find(Boolean);
+const sequel = next ? { id: next.id, format: next.format, title: next.title?.english || next.title?.romaji || '', start: next.startDate } : null;
+sequelOf.set(id, sequel);
+try { localStorage.setItem('sequel:' + id, JSON.stringify({ time: Date.now(), sequel })); } catch {}
+}
+}
 const rewatchMedia = new Map();
 const pendingRewatch = new Set();
 const REWATCH_QUERY = `query ($search: String) {
@@ -891,6 +926,7 @@ function chaseLookups() {
 if (pendingRewatch.size) lookUpRewatches().then(() => load(true));
 if (pendingNext.size) lookUpNext().then(() => load(true));
 if (pendingCovers.size) lookUpCovers().then(() => load(true));
+if (pendingSequels.size) lookUpSequels().then(() => load(true));
 }
 function playEnter() {
 playGlide();
@@ -1233,7 +1269,7 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, ex
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes, long)}${whoChips(who, away, maybe)}</div>
+          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes, long)}${extra ? '' : sequelTag(m, episodes)}${whoChips(who, away, maybe)}</div>
           ${extra ? '' : seasonProgress(episodes, m.episodes)}
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>

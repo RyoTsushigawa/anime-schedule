@@ -47,7 +47,8 @@ const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const when = date.toDateString() === new Date().toDateString() ? 'Heute'
 : date.toDateString() === tomorrow.toDateString() ? 'Morgen' : `Am ${dayName(date)}`;
 const lines = groups.map(g => {
-const names = [...new Set(g.map(r => nickOf(r) + (r.slot?.double && r.episodes?.length > 1 ? ' (x2)' : '')))];
+const finale = r => r.m?.episodes > 1 && r.episodes?.length && Math.max(...r.episodes) === r.m.episodes;
+const names = [...new Set(g.map(r => nickOf(r) + (r.slot?.double && r.episodes?.length > 1 ? ' (x2)' : '') + (finale(r) ? ' (Finale)' : '')))];
 const tags = [...new Set(g.flatMap(r => r.who || []).map(p => DISCORD_PINGS[p.toLowerCase()]).filter(Boolean))];
 const time = new Date(g[0].watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 return `${time} ${names.join(' / ')}${tags.length ? ' ' + tags.join(' ') : ''}`;
