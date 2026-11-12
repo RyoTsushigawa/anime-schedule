@@ -1492,3 +1492,22 @@ body.dense .day .row .ep { margin-top: 2px; }
 
 /* Abwesend in the header next to Zeitplan and Spiele (one of the most used functions) */
 button.header-nav-link{font-family:inherit;cursor:pointer}
+
+
+/* Settings: three immediately useful controls; less-used options are discoverable
+   in native, keyboard-accessible disclosure groups. */
+#settingsMenu .settings-primary{display:flex;flex-direction:column;gap:0}
+#settingsMenu .settings-primary>section+section{margin-top:9px;padding-top:10px;border-top:1px solid var(--line)}
+#settingsMenu .settings-secondary{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+#settingsMenu .settings-fold{min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+#settingsMenu .settings-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;padding:10px 12px;list-style:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);user-select:none}
+#settingsMenu .settings-fold>summary::-webkit-details-marker{display:none}
+#settingsMenu .settings-fold>summary:hover{background:var(--today)}
+#settingsMenu .settings-fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+#settingsMenu .settings-fold-arrow{width:8px;height:8px;flex:none;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s ease}
+#settingsMenu .settings-fold[open] .settings-fold-arrow{transform:rotate(225deg)}
+#settingsMenu .settings-fold-content{padding:9px 10px 12px;border-top:1px solid var(--line)}
+#settingsMenu .settings-fold-content>section+section{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+#settingsMenu .settings-fold-content .menu-label{padding:0 4px 8px}
+#settingsMenu .settings-fold-content>section:last-child .menu-item:last-of-type{margin-bottom:0}
+@media(prefers-reduced-motion:reduce){#settingsMenu .settings-fold-arrow{transition:none}}
