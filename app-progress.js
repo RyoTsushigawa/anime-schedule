@@ -117,6 +117,20 @@ const entryBefore = entryNow;
 const ON_WATCHING_LIST = ['CURRENT', 'REPEATING'];
 const pendingChanges = new Set();
 let bulkSaving = false;
+let bulkStopRequested = false;
+function beginBulkSave(total) {
+  bulkStopRequested = false;
+  bulkSaving = true;
+  syncSavingButtons();
+  notice(`Speichert 0/${total}…`);
+}
+function endBulkSave() {
+  const cancelled = bulkStopRequested;
+  bulkSaving = false;
+  syncSavingButtons();
+  return cancelled;
+}
+
 function syncSavingButtons() {
 for (const b of document.querySelectorAll('#list button[data-media]')) {
 const saving = pendingChanges.has(Number(b.dataset.media));
@@ -206,15 +220,17 @@ const undoSteps = [];
 // In a long Catch-up cleanup (e.g. Belly's backlog), a failed request does not
 // prove the server rejected that particular write. Never count it as saved or
 // automatically retry it: only earlier confirmed responses belong to Undo.
-function bulkSaveSummary(saved, total, unit, error = '') {
+function bulkSaveSummary(saved, total, unit, error = '', cancelled = false) {
+  if (cancelled && !error) return `${saved} von ${total} ${unit} bestätigt gespeichert. ` +
+    `${total - saved} noch nicht versucht. Auf Wunsch gestoppt.`;
   if (!error) return `${saved} von ${total} ${unit} bestätigt gespeichert.`;
   const untouched = Math.max(0, total - saved - 1);
   return `${saved} von ${total} ${unit} bestätigt gespeichert. ` +
     `1 Änderung nicht bestätigt${untouched ? `, ${untouched} noch nicht versucht` : ''}. ` +
     `Fehler: ${error}`;
 }
-function finishBulkSave(records, total, unit, error = '') {
-  const message = bulkSaveSummary(records.length, total, unit, error);
+function finishBulkSave(records, total, unit, error = '', cancelled = false) {
+  const message = bulkSaveSummary(records.length, total, unit, error, cancelled);
   if (records.length) remember(records, message);
   else notice(message);
 }
@@ -332,11 +348,21 @@ delayUndo = null;
 $('noticeText').textContent = text;
 $('noticeUndo').hidden = !withUndo;
 $('noticeRetry').hidden = true;
+$('noticeStop').hidden = !bulkSaving;
+$('noticeStop').disabled = bulkStopRequested;
+$('noticeStop').textContent = bulkStopRequested ? 'Wird gestoppt…' : 'Stoppen';
 $('notice').hidden = false;
 clearTimeout(noticeTimer);
-noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
+if (!bulkSaving) noticeTimer = setTimeout(() => { $('notice').hidden = true; }, withUndo ? 20000 : 5000);
 }
 $('noticeUndo').onclick = () => delayUndo ? undoDelay() : movesUndo ? undoMove() : undo();
+$('noticeStop').onclick = () => {
+  if (!bulkSaving || bulkStopRequested) return;
+  bulkStopRequested = true;
+  $('noticeStop').disabled = true;
+  $('noticeStop').textContent = 'Wird gestoppt…';
+  $('noticeText').textContent = 'Stoppt nach der laufenden Serienänderung…';
+};
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'Serie';
 const failedTicks = new Map();
 const tickKey = (mediaId, episode) => JSON.stringify([accountKey(auth), mediaId, episode]);
@@ -517,21 +543,21 @@ const b = e.target.closest('#markAll');
 if (!b || !auth || b.disabled || bulkSaving || pendingChanges.size) return;
 b.disabled = true;
 const targets = catchupTargets.filter(t => !skipped.has(t.mediaId));
-bulkSaving = true;
-syncSavingButtons();
+beginBulkSave(targets.length);
 selecting = false;
 const records = [];
 let stopped = '';
 for (const [i, { mediaId, progress, add }] of targets.entries()) {
+if (bulkStopRequested) break;
 b.textContent = `Speichert ${i + 1}/${targets.length}…`;
+notice(b.textContent);
 try {
 records.push(await change(mediaId, { progress, status: add ? 'CURRENT' : undefined }));
 } catch (err) { stopped = err.message; break; }
 await new Promise(r => setTimeout(r, 700));
 }
-bulkSaving = false;
-syncSavingButtons();
-finishBulkSave(records, targets.length, 'Serien', stopped);
+const cancelled = endBulkSave();
+finishBulkSave(records, targets.length, 'Serien', stopped, cancelled);
 load(true);
 });
 // "Alle gesehen" for one catch-up season. Keep the global bulk action unchanged.
@@ -544,20 +570,20 @@ $('list').addEventListener('click', async e => {
  const targets = catchupSeasonTargets.get(season) || [];
  if (!targets.length) return;
  b.disabled = true;
- bulkSaving = true;
- syncSavingButtons();
+ beginBulkSave(targets.length);
  const records = [];
  let stopped = '';
  for (const [i, {mediaId, progress, add}] of targets.entries()) {
+  if (bulkStopRequested) break;
   b.textContent = `Speichert ${i + 1}/${targets.length} …`;
+  notice(b.textContent);
   try {
    records.push(await change(mediaId, {progress, status: add ? 'CURRENT' : undefined}));
   } catch (err) { stopped = err.message; break; }
   await new Promise(r => setTimeout(r, 700));
  }
- bulkSaving = false;
- syncSavingButtons();
- finishBulkSave(records, targets.length, 'Serien in ' + catchupSeasonLabel(season), stopped);
+ const cancelled = endBulkSave();
+ finishBulkSave(records, targets.length, 'Serien in ' + catchupSeasonLabel(season), stopped, cancelled);
  load(true);
 });
 // "Alle gesehen" on today's heading: every open tick of the day, one after the other (Rückgängig takes them all back)
@@ -571,18 +597,17 @@ if (mediaId && progress > (targets.get(mediaId)?.progress || 0)) targets.set(med
 }
 if (!targets.size) return;
 b.disabled = true;
-bulkSaving = true;
-syncSavingButtons();
 const records = [], all = [...targets.values()];
+beginBulkSave(all.length);
 let stopped = '';
 for (const [i, { mediaId, progress, add }] of all.entries()) {
+if (bulkStopRequested) break;
 notice(`Speichert ${i + 1}/${all.length}…`);
 try { records.push(await change(mediaId, { progress, status: add ? 'CURRENT' : undefined })); }
 catch (err) { stopped = err.message; break; }
 await new Promise(r => setTimeout(r, 700));
 }
-bulkSaving = false;
-syncSavingButtons();
-finishBulkSave(records, all.length, 'heutigen Serien', stopped);
+const cancelled = endBulkSave();
+finishBulkSave(records, all.length, 'heutigen Serien', stopped, cancelled);
 load(true);
 });
