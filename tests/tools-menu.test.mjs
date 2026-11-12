@@ -8,22 +8,22 @@ const css=readFileSync(new URL('../style.css',import.meta.url),'utf8');
 const menu=html.match(/<nav id="miscMenu"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
 const primary=html.match(/<nav class="header-primary"[^>]*>([\s\S]*?)<div class="misc-tools">/)?.[1];
 
-test('main header exposes Schedule and Games, with More and existing Settings',()=>{
+test('main header exposes Schedule and More with existing Settings',()=>{
  assert.ok(primary,'primary nav exists');
  const direct=[...primary.matchAll(/<a class="header-nav-link[^"]*" href="([^"]+)"/g)].map(m=>m[1]);
- assert.deepEqual(direct,['./?view=week','games.html']);
+ assert.deepEqual(direct,['./?view=week']);
  assert.match(html,/id="miscButton"[^>]*aria-controls="miscMenu"/);
  assert.match(html,/id="settingsButton"/);
 });
 test('More keeps all planning, recap and extra links without duplicating Games',()=>{
  assert.ok(menu,'More menu exists');
  const headings=[...menu.matchAll(/<h3 class="misc-section-title">([^<]+)<\/h3>/g)].map(m=>m[1]);
- assert.deepEqual(headings,['Anime','Sonstiges']);
+ assert.deepEqual(headings,['Planung','Rückblick &amp; Spiele','Extras']);
  const hrefs=[...menu.matchAll(/<a href="([^"]+)"/g)].map(m=>m[1]);
  assert.deepEqual(hrefs,[
-  'season-preview.html','planner.html','wrapped.html','tierlist.html','masterset/','https://mcdelivery.de/'
+  'season-preview.html','planner.html','wrapped.html','tierlist.html','games.html','masterset/','https://mcdelivery.de/'
  ]);
- assert.ok(!menu.includes('href="games.html"'));
+ assert.equal((menu.match(/href="games.html"/g)||[]).length,1);
  assert.ok(!menu.includes('href="ranker/"'));
  assert.equal(new Set(hrefs).size,hrefs.length);
 });
