@@ -38,6 +38,8 @@ jobs:
         run: node --test tests/catchup-compact.test.mjs
       - name: Test Catch-up refresh and cache recovery
         run: node --test tests/catchup-refresh.test.mjs tests/catchup-cache-recovery.test.mjs
+      - name: Test partial Catch-up bulk results
+        run: node --test tests/catchup-bulk-status.test.mjs
       - name: Test quick Catch-up sorting
         run: node --test tests/catchup-quick-sort.test.mjs
       - name: Test compact Settings navigation
