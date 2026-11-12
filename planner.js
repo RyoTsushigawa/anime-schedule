@@ -39,7 +39,6 @@ localStorage.setItem('planUntil', JSON.stringify(planUntil));
 if (typeof markStale === 'function' && !keepFresh) markStale();
 };
 let planTabGid = null;
-const planCache = new Map();
 let planOutcome = null;
 let planView = 'compare';
 try { planView = localStorage.getItem('planView') || planView; } catch {}
@@ -73,10 +72,20 @@ return hm ? (hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0]) * 60 + hm[1] : null;
 const clock = min => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 const dayIndex = tag => WEEKDAYS.indexOf(norm(tag).slice(0, 2));
 const bits = mask => { let n = 0; for (; mask; mask &= mask - 1) n++; return n; };
+// Test mode: made-up votes per show and person, only in this browser ("planTestVotes:<tab>"); the Sheet
+// is never written and the export is locked, so everything can be tried before real voting.
+let planTest = false;
+try { planTest = localStorage.getItem('planTest') === 'true'; } catch {}
+const testKey = tab => 'planTestVotes:' + tab.gid;
+const testVotes = tab => { try { return JSON.parse(localStorage.getItem(testKey(tab))) || {}; } catch { return {}; } };
+const saveTestVotes = (tab, votes) => { try { localStorage.setItem(testKey(tab), JSON.stringify(votes)); } catch {} };
+const showKey = show => show.romaji || show.english;
+const sheetCache = new Map(), mediaCache = new Map();
 async function plannerData(tab) {
-if (planCache.has(tab.gid)) return planCache.get(tab.gid);
-const sheet = await loadPlan(tab);
-rememberColors([sheet]);
+if (!sheetCache.has(tab.gid)) { const loaded = await loadPlan(tab); rememberColors([loaded]); sheetCache.set(tab.gid, loaded); }
+const real = sheetCache.get(tab.gid);
+const override = planTest ? testVotes(tab) : {};
+const sheet = planTest ? { ...real, shows: real.shows.map(s => override[showKey(s)] ? { ...s, votes: { ...s.votes, ...override[showKey(s)] } } : s) } : real;
 const byShow = new Map();
 for (const person of sheet.people)
 for (const [show, slot] of picks(sheet, person)) {
@@ -86,7 +95,9 @@ if (!entry.slot?.tag && slot.tag) entry.slot = slot;
 byShow.set(show, entry);
 }
 const entries = [...byShow.values()];
-const media = await plannerMedia(entries.map(e => e.show));
+const unknown = entries.map(e => e.show).filter(s => !mediaCache.has(showKey(s)));
+if (unknown.length) (await plannerMedia(unknown)).forEach((m, i) => mediaCache.set(showKey(unknown[i]), m));
+const media = entries.map(e => mediaCache.get(showKey(e.show)));
 // everyone with a visible column, also those who haven't picked a show yet (their availability can be set ahead)
 const people = sheet.people.slice();
 const idle = new Set(people.filter(p => !entries.some(e => e.people.includes(p))));
@@ -111,9 +122,7 @@ short: !!m?.duration && m.duration <= 15,
 current: day >= 0 ? { day, min: minutesOf(e.slot.time), slot: Number(e.slot.slot) || null } : null,
 };
 });
-const data = { tab, people, idle, shows, sheet };
-planCache.set(tab.gid, data);
-return data;
+return { tab, people, idle, shows, sheet, real };
 }
 async function plannerMedia(shows) {
 const fields = 'id idMal duration title { romaji english } nextAiringEpisode { airingAt }';
@@ -384,6 +393,8 @@ try { planBusy = await seasonplanBusy(data); } catch { planBusy = []; }
 saveSettings();
 }
 $('planSetup').innerHTML = plannerSetup(data);
+$('tabName').textContent = planTest ? 'Testmodus · ausgedachte Stimmen, am Sheet ändert sich nichts' : 'Nur ein Vorschlag · am Guckplan ändert sich nichts';
+document.body.classList.toggle('plan-testing', planTest);
 bindPlannerSetup(data);
 if (planOutcome?.tab === tab.gid) showPlan(data, planOutcome.plan);
 else generatePlan(data);
@@ -411,6 +422,7 @@ return `<div class="plan-setup-head">
       <select id="planTab" class="pill" aria-label="Guckplan">${tabOptions}</select>
       <button id="planRun" class="pill plan-go">Plan erstellen</button>
     </div>
+    <div class="plan-test-toggle"><button id="planTestToggle" class="pill" aria-pressed="${planTest}" title="Mit ausgedachten Stimmen planen: nichts geht ins Sheet">Testmodus</button>${planTest ? '<span>Stimmen nur in diesem Browser · Sheet bleibt unverändert</span>' : ''}</div>
     <p id="planStale" class="plan-stale" hidden>Einstellungen geändert. „Neu erstellen“ übernimmt sie.</p>
     ${group('avail', 'Wer kann wann', offDays ? `${offDays}× nicht da` : '', `
       <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard-Startzeit"></label>
@@ -566,7 +578,13 @@ planFixed.push({ show: free.sheetTitle, day: 'release', slot: '' });
 changed();
 redrawFixed();
 };
-$('planRun').onclick = () => generatePlan(data);
+$('planRun').onclick = () => { if (testDirty) { testDirty = false; planOutcome = null; loadPlanner(); } else generatePlan(data); };
+$('planTestToggle').onclick = () => {
+planTest = !planTest;
+try { localStorage.setItem('planTest', planTest); } catch {}
+testDirty = false; planOutcome = null; planHistory = [];
+loadPlanner();
+};
 }
 // after a settings change the shown plan is outdated: say so at the button
 function markStale() {
@@ -578,13 +596,77 @@ $('planRun').classList.add('stale');
 // compact rows: one line per slot, like the main plan's compact setting (taken from there until changed here)
 let planDense = false;
 try { planDense = (localStorage.getItem('planDense') ?? (localStorage.getItem('density') === 'compact' ? 'true' : 'false')) === 'true'; } catch {}
+let testDirty = false;  // test votes changed since the plan was made
 let keepFresh = false;  // a start shift from the plan itself doesn't make the plan outdated
 let planHistory = [];   // earlier versions of the suggestion while it is edited by hand (Rückgängig)
 let planDrag = null;    // the shown plan, for drag and drop
+// Test mode: the votes table (shows × people). A cell cycles Ja → Vielleicht → Nein → Default.
+const TEST_CYCLE = ['Ja', 'Vielleicht', 'Nein', 'Default'];
+const TEST_MARK = { ja: ['✓', 'yes'], vielleicht: ['?', 'maybe'], nein: ['✕', 'no'] };
+const testCell = value => TEST_MARK[norm(value || '')] || ['·', 'none'];
+function testPanel(data) {
+const override = testVotes(data.tab), real = data.real;
+const shows = real.shows.filter(s => !s.hidden);
+const changed = Object.values(override).reduce((n, v) => n + Object.keys(v).length, 0);
+let open = true;
+try { open = localStorage.getItem('planTestOpen') !== 'false'; } catch {}
+return `<details class="plan-test" id="planTestPanel"${open ? ' open' : ''}><summary><h2>Test-Stimmen <span class="plan-count" id="planTestCount">${changed ? `${changed} geändert` : 'wie im Sheet'}</span></h2></summary>
+    <p class="plan-hint">Zelle antippen: ✓ Ja → ? Vielleicht → ✕ Nein → · Default. Danach „Neu erstellen“.</p>
+    <div class="plan-actions plan-test-actions"><button type="button" class="pill" data-test-fill="random">Zufällig füllen</button><button type="button" class="pill" data-test-fill="no">Alle auf Nein</button><button type="button" class="pill" data-test-fill="sheet">Wie im Sheet</button></div>
+    <div class="plan-test-scroll"><table class="plan-test-table"><thead><tr><th></th>${real.people.map(p => `<th><span style="${personStyle(p)}">${esc(p)}</span></th>`).join('')}</tr></thead>
+    <tbody>${shows.map((s, i) => `<tr><th title="${esc(s.english || s.romaji)}">${esc(s.english || s.romaji)}</th>${real.people.map(p => {
+      const value = override[showKey(s)]?.[p] ?? s.votes[p] ?? '';
+      const [mark, cls] = testCell(value);
+      return `<td><button type="button" class="test-vote ${cls}${override[showKey(s)]?.[p] !== undefined ? ' edited' : ''}" data-test-show="${i}" data-test-person="${esc(p)}" title="${esc(p)}: ${esc(value || 'leer')}">${mark}</button></td>`;
+    }).join('')}</tr>`).join('')}</tbody></table></div></details>`;
+}
+function bindTestPanel(data) {
+const real = data.real, shows = real.shows.filter(s => !s.hidden);
+const changedNow = () => {
+const n = Object.values(testVotes(data.tab)).reduce((n, v) => n + Object.keys(v).length, 0);
+$('planTestCount').textContent = n ? `${n} geändert` : 'wie im Sheet';
+testDirty = true;
+$('planStale').textContent = 'Test-Stimmen geändert. „Neu erstellen“ übernimmt sie.';
+$('planStale').hidden = false;
+$('planRun').textContent = 'Neu erstellen';
+$('planRun').classList.add('stale');
+};
+$('planTestPanel').ontoggle = () => { try { localStorage.setItem('planTestOpen', $('planTestPanel').open); } catch {} };
+for (const b of document.querySelectorAll('[data-test-show]'))
+b.onclick = () => {
+const s = shows[Number(b.dataset.testShow)], p = b.dataset.testPerson, key = showKey(s);
+const votes = testVotes(data.tab);
+const now = votes[key]?.[p] ?? s.votes[p] ?? '';
+const at = TEST_CYCLE.findIndex(v => norm(v) === norm(now));
+const next = TEST_CYCLE[(at + 1) % TEST_CYCLE.length];
+votes[key] = { ...votes[key], [p]: next };
+if (norm(next) === norm(s.votes[p] || '') || (next === 'Default' && !s.votes[p])) delete votes[key][p];
+if (!Object.keys(votes[key]).length) delete votes[key];
+saveTestVotes(data.tab, votes);
+const [mark, cls] = testCell(next);
+b.className = `test-vote ${cls}${votes[key]?.[p] !== undefined ? ' edited' : ''}`;
+b.textContent = mark;
+b.title = `${p}: ${next}`;
+changedNow();
+};
+for (const b of document.querySelectorAll('[data-test-fill]'))
+b.onclick = () => {
+const fill = b.dataset.testFill, votes = {};
+if (fill !== 'sheet')
+for (const s of shows) votes[showKey(s)] = Object.fromEntries(real.people.map(p => {
+const r = Math.random();
+return [p, fill === 'no' ? 'Nein' : r < 0.35 ? 'Ja' : r < 0.45 ? 'Vielleicht' : r < 0.85 ? 'Nein' : 'Default'];
+}));
+saveTestVotes(data.tab, votes);
+testDirty = false; planOutcome = null; planHistory = [];
+loadPlanner();
+notice(fill === 'sheet' ? 'Test-Stimmen wie im Sheet' : fill === 'no' ? 'Alle auf Nein gesetzt' : 'Zufällig gefüllt');
+};
+}
 async function generatePlan(data) {
 const out = $('planOut');
 if (!out) return;
-if (!data.shows.length) { out.innerHTML = '<div class="status">In diesem Tab hat noch niemand eine Serie gewählt.</div>'; return; }
+if (!data.shows.length) { out.innerHTML = (planTest ? testPanel(data) : '') + '<div class="status">In diesem Tab hat noch niemand eine Serie gewählt.</div>'; if (planTest) bindTestPanel(data); return; }
 $('planRun').disabled = true;
 out.style.minHeight = out.offsetHeight + 'px';
 out.innerHTML = '<div class="status plan-busy">Probiere Pläne aus… <span class="plan-progress"><span id="planProgress"></span></span></div>';
@@ -702,17 +784,18 @@ const actions = `<div class="plan-actions plan-toolbar">
     ${planHistory.length ? `<span class="plan-edited">Von Hand angepasst</span><button id="planUndo" class="pill">Rückgängig</button>` : `<span class="plan-hint plan-drag-hint">Serien im Vorschlag lassen sich verschieben</span>`}
     <button id="planDense" class="pill" aria-pressed="${planDense}" title="Eine Zeile pro Slot: alle Serien eines Tages auf einen Blick">Kompakt</button>
     <button id="planAgain" class="pill" title="Noch einmal rechnen: oft gibt es mehrere gleich gute Pläne">Anderer Vorschlag</button>
-    <div class="plan-export"><button id="planExport" class="pill plan-go" aria-haspopup="true" aria-expanded="false" aria-controls="planExportMenu">Übernehmen <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    ${planTest ? '<button class="pill" disabled title="Im Testmodus gesperrt: die Stimmen sind ausgedacht">Übernehmen gesperrt</button>' : ''}<div class="plan-export"${planTest ? ' hidden' : ''}><button id="planExport" class="pill plan-go" aria-haspopup="true" aria-expanded="false" aria-controls="planExportMenu">Übernehmen <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <div id="planExportMenu" class="popover plan-export-menu" hidden>
         <button id="planSheet"><b>Für den Season-Helfer kopieren</b><small>Im Sheet: Season-Helfer → „3. Watch-Plan einfügen“, dann einfügen</small></button>
         <button id="planXlsx"><b>Als .xlsx herunterladen</b><small>Im Sheet: Datei → Importieren → „Neue Tabellenblätter einfügen“</small></button>
         <button id="planCopy"><b>Als Tabelle kopieren</b><small>Titel, Tag, Uhrzeit, Slot: zum Einfügen irgendwo</small></button>
       </div></div></div>`;
 $('planOut').classList.toggle('dense', planDense);
-$('planOut').innerHTML = problems + stats + changeList + actions + days + unplaced + breaks;
+$('planOut').innerHTML = (planTest ? testPanel(data) : '') + problems + stats + changeList + actions + days + unplaced + breaks;
 const cells = [...document.querySelectorAll('#planOut .time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
 $('planAgain').onclick = () => generatePlan(data);
+if (planTest) bindTestPanel(data);
 $('planDense').onclick = () => { planDense = !planDense; try { localStorage.setItem('planDense', planDense); } catch {} showPlan(data, plan); };
 $('planChanges').ontoggle = () => { try { localStorage.setItem('planChangesOpen', $('planChanges').open); } catch {} };
 for (const b of document.querySelectorAll('[data-shift-day]'))
