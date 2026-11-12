@@ -33,6 +33,29 @@ function normalizedTiers(value) {
   }
   return result;
 }
+function prepareTierState(saved, tierIds, shows) {
+  const allIds=new Set(shows.map(keyOf));
+  const valid=[...tierIds,POOL];
+  const state=Object.fromEntries(valid.map(t=>[t,[]]));
+  const used=new Set();
+  for(const t of valid) for(const key of Array.isArray(saved[t])?saved[t]:[]){
+    if(typeof key!=='string'||!allIds.has(key)||used.has(key))continue;
+    used.add(key);state[t].push(key);
+  }
+  for(const [t,keys] of Object.entries(saved)) if(!valid.includes(t)&&Array.isArray(keys))
+    for(const key of keys) if(typeof key==='string'&&allIds.has(key)&&!used.has(key)){
+      used.add(key);state[POOL].push(key);
+    }
+  for(const show of shows) if(!used.has(keyOf(show)))state[POOL].push(keyOf(show));
+  return state;
+}
+function removeTierFromRanking(saved,id) {
+  const result={...saved};
+  result[POOL]=[...(Array.isArray(result[POOL])?result[POOL]:[]),
+    ...(Array.isArray(result[id])?result[id]:[])].filter((key,i,all)=>all.indexOf(key)===i);
+  delete result[id];
+  return result;
+}
 function loadTiers() {tiers=normalizedTiers(load(layoutKey(),null));drawTierEditor();}
 function persistTiers(){save(layoutKey(),tiers);drawTierEditor();draw();}
 function drawTierEditor(){
@@ -99,23 +122,7 @@ function draw() {
   const shows = shownShows();
   const byKey = new Map(shows.map(s => [keyOf(s), s]));
   const saved = load(storeKey(), {});
-  // Keep the full saved ranking, even when "Nur Serien dieser Person" hides
-  // some covers. Previously a save while filtered could erase other placements.
-  const allIds = new Set(sheet.shows.map(keyOf));
-  const valid = [...tiers.map(t=>t.id),POOL];
-  state = Object.fromEntries(valid.map(t=>[t,[]]));
-  const used = new Set();
-  for(const t of valid) for(const key of Array.isArray(saved[t])?saved[t]:[]){
-    if(typeof key!=='string'||!allIds.has(key)||used.has(key))continue;
-    used.add(key);state[t].push(key);
-  }
-  // If a previously configured row disappeared unexpectedly, recover its
-  // ranked anime into the pool instead of deleting their saved placements.
-  for(const [t,keys] of Object.entries(saved)) if(!valid.includes(t)&&Array.isArray(keys))
-    for(const key of keys) if(typeof key==='string'&&allIds.has(key)&&!used.has(key)){
-      used.add(key);state[POOL].push(key);
-    }
-  for(const show of sheet.shows) if(!used.has(keyOf(show)))state[POOL].push(keyOf(show));
+  state = prepareTierState(saved,tiers.map(t=>t.id),sheet.shows);
   const tile = key => {
     const s = byKey.get(key), cover = covers.get(key);
     return `<button type="button" class="tier-item${picked === key ? ' picked' : ''}" draggable="true" data-key="${esc(key)}" title="${esc(titleOf(s))}">
@@ -151,13 +158,7 @@ $('tierEditorRows').addEventListener('click',e=>{
   const id=button.dataset.tierRemove;
   const current=tiers.find(t=>t.id===id);
   if(!current)return;
-  const saved=load(storeKey(),{});
-  // This is reversible through the ranking UI: removed-row covers return
-  // to the unranked pool, including covers hidden by the person filter.
-  const existing=new Set(Object.values(saved).flat().filter(k=>typeof k==='string'));
-  saved[POOL]=[...(saved[POOL]||[]),...(saved[id]||[])].filter((key,i,all)=>all.indexOf(key)===i);
-  delete saved[id];
-  save(storeKey(),saved);
+  save(storeKey(),removeTierFromRanking(load(storeKey(),{}),id));
   tiers=tiers.filter(t=>t.id!==id);
   picked=null;
   persistTiers();
