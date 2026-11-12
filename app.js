@@ -1409,6 +1409,7 @@ const button = $('refreshCatchup');
 if (button.disabled || !listView()) return;
 const user = listUser(), friend = friendList.value;
 if (!user) return;
+if (isLocalList()) { await loadCatchup(true); return; }
 button.disabled = true;
 button.setAttribute('aria-busy', 'true');
 button.textContent = 'Lädt…';
@@ -2473,18 +2474,19 @@ async function loadCatchupContent(refresh = false) {
 const generation = ++catchupGeneration, account = auth;
 updateFallbackControls();
 const user = listUser(), friend = friendList.value;
-const provider = friend ? 'AniList' : listService();
+const local = isLocalList(), person = local ? localListPerson() : soloPerson;
+const provider = local ? 'Lokal' : friend ? 'AniList' : listService();
 const shown = view;
 const current = () => generation === catchupGeneration && auth === account && view === shown && listUser() === user && friendList.value === friend;
 const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
-$('tabName').textContent = user ? `${name} · ${user} auf ${provider}${friend ? ' · Nur lesen' : ''}` : name;
+$('tabName').textContent = user ? name + ' · ' + (local ? person : user) + ' · ' + provider + (friend && !local ? ' · Nur lesen' : '') : name;
 if (!user) { $('list').innerHTML = '<div class="status">Kein AniList-Name eingetragen.</div>'; return; }
 if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;
 await ready;
 if (!current()) return;
 let entries;
 try {
-entries = await anilistList(user, false, !!friend);
+entries = local ? [] : await anilistList(user, false, !!friend);
 } catch (e) {
 if (refresh && current() && document.querySelector('#list .row')) {
 notice(`${name} konnte nicht aktualisiert werden: ${e.message}. Es werden weiter die bisherigen Daten angezeigt.`);
@@ -2508,9 +2510,13 @@ setNote('catchup:plan', null);
 if (!current()) return;
 setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehlen Guck-Slots und geplante Serien, die nicht auf der Liste sind.`);
 }
-const planShows = friend ? [] : await missingPlanShows(plan, entries);
+let planShows = friend && !local ? [] : await missingPlanShows(plan, entries);
 if (!current()) return;
-const { rows, ownPace } = catchupRows(entries, planShows, plan, friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
+if (local) {
+  entries = planShows.map(({media:m}) => ({media:m, progress:localProgress(person, Number(m.id)), missing:false}));
+  planShows = [];
+}
+const { rows, ownPace } = catchupRows(entries, planShows, plan, local ? person : friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
 const openEpisodes = showCatchupCount(rows);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
@@ -2519,13 +2525,14 @@ rows.sort(choices.sort === 'az' ? byTitle
 : (a, b) => a.since - b.since);
 const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
 : `<span class="next-hint"> · ${nextAt * 1000 <= Date.now() ? `Folge ${out + 1} schon da` : 'neu ' + (new Date(nextAt * 1000).toDateString() === new Date().toDateString() ? 'heute' + savedAt(nextAt * 1000).slice(2) : savedAt(nextAt * 1000))}</span>`;
-const mine = !friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase();
-catchupTargets = mine && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
+const mine = local || (!friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase());
+const canBulk = mine && !local;
+catchupTargets = canBulk && shown === 'catchup' ? rows.map(r => ({ mediaId: r.m.id, progress: r.out, add: !!r.missing })) : [];
 catchupById = new Map(rows.map(r => [r.m.id, r]));
 const planIn = m => movesKey && !selecting ? `<button class="plan-in" data-plan="${m.id}" title="Einplanen: diese Woche in den Plan" aria-label="Einplanen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : '';
 const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" data-select="${m.id}"
     title="Bei „Alle ✓“ mitnehmen">✓</button>`;
-const check = (m, ep, missing) => selecting ? selector(m) : watchButton(m.id, ep, missing);
+const check = (m, ep, missing) => selecting ? selector(m) : local ? localWatchButton(m.id, ep) : watchButton(m.id, ep, missing);
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
 const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
@@ -2537,7 +2544,7 @@ const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
         <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + (selecting || out <= first || !auth ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
+      ${mine ? (local ? '' : dropButton(m.id)) + (selecting || out <= first || (!auth && !local) ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
     </div>`;
 // Several open episodes: − / + choose how many to mark (Catch-up starts with all, Non-seasonal with one);
 // only the ✓ saves
@@ -2553,12 +2560,12 @@ return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
         <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
-        ${mine ? dropButton(m.id) + (selecting ? selector(m) : '') : ''}${planIn(m)}
+        ${mine ? (local ? '' : dropButton(m.id)) + (selecting ? selector(m) : '') : ''}${planIn(m)}
       </div>${eps.map(ep => `
       <div class="row compact">
         <div class="time">Folge ${ep}</div>
         <div class="info"></div>
-        ${mine ? (selecting ? '<div class="watch-space"></div>' : watchButton(m.id, ep, missing)) : ''}
+        ${mine ? (selecting ? '<div class="watch-space"></div>' : check(m, ep, missing)) : ''}
       </div>`).join('')}</div>`;
 };
 const paced = ({ m, first, out, progress, links }) => `
@@ -2569,23 +2576,23 @@ const paced = ({ m, first, out, progress, links }) => `
         <div class="ep">${progress} von ${m.episodes || out} gesehen</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? dropButton(m.id) + (selecting ? '<div class="watch-space"></div>' : out > first && auth ? stepper(m, first, out, false, 1) : watchButton(m.id, first)) : ''}
+      ${mine ? (local ? '' : dropButton(m.id)) + (selecting ? '<div class="watch-space"></div>' : out > first && (auth || local) ? stepper(m, first, out, false, 1) : check(m, first, false)) : ''}
     </div>`;
-if (!mine || shown === 'pace') selecting = false;
+if (!canBulk || shown === 'pace') selecting = false;
 const restore = preserveListPosition();
 if (shown === 'pace') {
 ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) : byTitle);
 $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
 : '<div class="status">Keine älteren Serien offen auf der Watching-Liste.</div>';
 } else {
-$('markAllStart').hidden = !mine || !rows.length || selecting;
+$('markAllStart').hidden = !canBulk || !rows.length || selecting;
 const top = !mine || !rows.length || !selecting ? ''
 : `<div class="catchup-bar"><button id="cancelMark" class="pill">Abbrechen</button><button id="markAll" class="pill sure" title="Als gesehen markieren">${markAllLabel()}</button></div>`;
 const show = single ? perEpisode : grouped;
 const seasonGroups = catchupSeasonGroups(rows);
 catchupSeasonTargets = new Map(seasonGroups.map(g => [g.key, seasonWatchTargets(g.rows)]));
 const hideSeasonHeader = !showCatchupSeasonHeaders(seasonGroups);
-const seasonBulkButton = group => seasonGroups.length > 1 && mine && !selecting && catchupSeasonTargets.get(group.key)?.length
+const seasonBulkButton = group => seasonGroups.length > 1 && canBulk && !selecting && catchupSeasonTargets.get(group.key)?.length
  ? `<button type="button" class="pill catchup-season-mark" data-mark-season="${group.key}" title="Alle offenen Folgen dieser Season als gesehen markieren">Alle gesehen ✓</button>` : '';
 const newestSeason = seasonGroups.find(g => g.key !== 'unknown')?.key || seasonGroups[0]?.key;
 const seasonSection = group => {
@@ -2629,8 +2636,8 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
       </div>`).join('')}</section>`);
 }
 $('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
-const listName = friend ? friendList.selectedOptions[0].textContent : user;
-const readOnly = friend ? '<span class="catchup-count">Nur lesen</span>' : '';
+const listName = local ? person : friend ? friendList.selectedOptions[0].textContent : user;
+const readOnly = friend && !local ? '<span class="catchup-count">Nur lesen</span>' : '';
 if (shown === 'catchup') {
 const fromPlan = rows.filter(row => row.missing).length;
 const onList = rows.length - fromPlan;
@@ -2642,6 +2649,7 @@ $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend 
 } else if (friend) {
 $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
 }
+if (local) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Lokaler Fortschritt: nur in diesem Browser gespeichert, nicht mit anderen Geräten synchronisiert.</div>');
 if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Zum Abhaken und Droppen: <button type="button" class="pill" data-connect>Konto verbinden</button></div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
