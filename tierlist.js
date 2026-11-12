@@ -8,6 +8,9 @@ let tiers = DEFAULT_TIERS.map(t => ({...t}));
 const POOL = 'pool';
 let tabs = [], sheet = null, covers = new Map(), state = null, picked = null, dragged = null;
 let streams = null;
+let aniExtraShows = [], aniOwnKeys = new Set(), aniRequest = 0;
+const aniUserCache = new Map();
+let profileMappings = null;
 const load = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
 let noticeTimer = null;
@@ -17,7 +20,7 @@ function notice(text) {
   clearTimeout(noticeTimer);
   noticeTimer = setTimeout(() => { $('notice').hidden = true; }, 3000);
 }
-const keyOf = show => show.romaji || show.english;
+const keyOf = show => show.rankKey || show.romaji || show.english;
 const titleOf = show => show.english || show.romaji;
 const storeKey = () => `tierlist:${$('tierSeason').selectedOptions[0]?.textContent}:${$('tierPerson').value}`;
 const layoutKey = () => storeKey() + ':rows';
@@ -39,11 +42,11 @@ function prepareTierState(saved, tierIds, shows) {
   const state=Object.fromEntries(valid.map(t=>[t,[]]));
   const used=new Set();
   for(const t of valid) for(const key of Array.isArray(saved[t])?saved[t]:[]){
-    if(typeof key!=='string'||!allIds.has(key)||used.has(key))continue;
+    if(typeof key!=='string'||used.has(key))continue;
     used.add(key);state[t].push(key);
   }
   for(const [t,keys] of Object.entries(saved)) if(!valid.includes(t)&&Array.isArray(keys))
-    for(const key of keys) if(typeof key==='string'&&allIds.has(key)&&!used.has(key)){
+    for(const key of keys) if(typeof key==='string'&&!used.has(key)){
       used.add(key);state[POOL].push(key);
     }
   for(const show of shows) if(!used.has(keyOf(show)))state[POOL].push(keyOf(show));
@@ -55,6 +58,111 @@ function removeTierFromRanking(saved,id) {
     ...(Array.isArray(result[id])?result[id]:[])].filter((key,i,all)=>all.indexOf(key)===i);
   delete result[id];
   return result;
+}
+// A person's seasonal AniList anime can be outside the shared Guckplan.
+// Keep the sheet show as canonical when titles match, so existing rankings
+// and links don't change. AniList-only shows use stable media IDs.
+function seasonInfo(tab) {
+  const match=tab?.name?.match(/^Guckplan\s+(Winter|Frühling|Fruehling|Frühjahr|Sommer|Herbst)\s+(\d{4})/i);
+  if(!match)return null;
+  const labels={winter:'WINTER',frühling:'SPRING',fruehling:'SPRING',frühjahr:'SPRING',sommer:'SUMMER',herbst:'FALL'};
+  return {season:labels[match[1].toLowerCase()],year:Number(match[2])};
+}
+function seasonalAniMedia(entries, tab) {
+  const info=seasonInfo(tab);
+  if(!info)return [];
+  const ids=new Set();
+  return entries.flatMap(media=>{
+    if(!media || media.season!==info.season || media.seasonYear!==info.year ||
+      !Number.isSafeInteger(media.id) || media.id<=0 || ids.has(media.id) ||
+      !(media.title?.romaji || media.title?.english))return [];
+    ids.add(media.id);
+    return [media];
+  });
+}
+function mergeSeasonalShows(planShows, media) {
+  const combined=planShows.filter(show=>!show.hidden).slice();
+  const normalized=new Map();
+  for(const show of combined) for(const name of [show.romaji,show.english]){
+    const key=norm(name);if(key&&!normalized.has(key))normalized.set(key,show);
+  }
+  const own=new Set();
+  let added=0;
+  for(const item of media){
+    const names=[item.title?.romaji,item.title?.english].map(norm).filter(Boolean);
+    const existing=names.map(name=>normalized.get(name)).find(Boolean);
+    if(existing){
+      own.add(keyOf(existing));
+      if(item.coverImage?.medium && !covers.has(keyOf(existing))) covers.set(keyOf(existing),item.coverImage.medium);
+      continue;
+    }
+    const show={rankKey:'anilist:'+item.id,romaji:item.title.romaji || item.title.english,
+      english:item.title.english || '',anilistOnly:true};
+    combined.push(show);
+    own.add(keyOf(show));added++;
+    for(const name of names)if(!normalized.has(name))normalized.set(name,show);
+    if(item.coverImage?.medium)covers.set(keyOf(show),item.coverImage.medium);
+  }
+  return {shows:combined,own,added};
+}
+function allTierShows() {
+  return mergeSeasonalShows(sheet?.shows||[],aniExtraShows).shows;
+}
+async function tierProfiles(){
+  if(profileMappings)return profileMappings;
+  const response=await fetch('wrapped-profiles.json',{cache:'no-cache'});
+  if(!response.ok)throw Error('Gruppen-AniLists konnten nicht geladen werden.');
+  const defaults=await response.json();
+  let local={};try{local=JSON.parse(localStorage.getItem('wrappedProfiles')||'{}')||{};}catch{}
+  const merged={...defaults,...local};
+  profileMappings=Object.fromEntries(Object.entries(merged).map(([person,entries])=>[
+    person,Array.isArray(entries)?[...new Set(entries.filter(e=>e?.provider==='anilist' &&
+      typeof e.name==='string' && /^[-\w]{1,50}$/.test(e.name)).map(e=>e.name))]:[]
+  ]));
+  return profileMappings;
+}
+async function tierAniList(username){
+  const key=username.toLowerCase();
+  if(aniUserCache.has(key))return aniUserCache.get(key);
+  const pending=(async()=>{
+    const found=new Map();
+    const query='query ($user:String,$page:Int){Page(page:$page,perPage:50){pageInfo{hasNextPage} mediaList(userName:$user,type:ANIME){media{id season seasonYear title{romaji english} coverImage{medium}}}}}';
+    for(let page=1;page<=30;page++){
+      const data=await anilist(query,{user:username,page},undefined,{retries:0,timeout:12000});
+      if(!data?.Page?.mediaList)throw Error('AniList-Liste nicht verfügbar.');
+      for(const entry of data.Page.mediaList)if(entry?.media?.id)found.set(entry.media.id,entry.media);
+      if(!data.Page.pageInfo?.hasNextPage)return [...found.values()];
+    }
+    throw Error('AniList-Liste zu groß, um sie vollständig zu laden.');
+  })();
+  aniUserCache.set(key,pending);
+  try{return await pending;}catch(error){aniUserCache.delete(key);throw error;}
+}
+async function loadPersonAni(){
+  const request=++aniRequest;
+  const tab=tabs.find(t=>t.gid===$('tierSeason').value)||tabs[0];
+  const person=$('tierPerson').value;
+  aniExtraShows=[];aniOwnKeys=new Set();
+  draw();
+  const status=$('tierAniStatus');
+  status.textContent=' · Prüfe AniList…';
+  try{
+    const profiles=await tierProfiles();
+    const names=profiles[person]||[];
+    if(request!==aniRequest)return;
+    if(!names.length){status.textContent='';return;}
+    const results=await Promise.allSettled(names.map(tierAniList));
+    if(request!==aniRequest || $('tierPerson').value!==person || $('tierSeason').value!==tab.gid)return;
+    const media=seasonalAniMedia(results.filter(r=>r.status==='fulfilled').flatMap(r=>r.value),tab);
+    aniExtraShows=media;
+    const merged=mergeSeasonalShows(sheet.shows,media);
+    aniOwnKeys=merged.own;
+    status.textContent=merged.added?' · '+merged.added+' weitere aus AniList':'';
+    if(results.some(r=>r.status==='rejected'))status.textContent+=' · AniList teilweise nicht verfügbar';
+    draw();
+  }catch{
+    if(request===aniRequest)status.textContent=' · AniList nicht erreichbar; Guckplan bleibt nutzbar';
+  }
 }
 function loadTiers() {tiers=normalizedTiers(load(layoutKey(),null));drawTierEditor();}
 function persistTiers(){save(layoutKey(),tiers);drawTierEditor();draw();}
@@ -75,12 +183,15 @@ async function start() {
   const current = tabFor(tabs, now);
   $('tierSeason').innerHTML = tabs.map(t => `<option value="${esc(t.gid)}"${t === current ? ' selected' : ''}>${esc(t.name.replace(/^Guckplan\s+/i, ''))}</option>`).join('');
   $('tierSeason').onchange = loadSeason;
-  $('tierPerson').onchange = () => { try { localStorage.setItem('tierPerson', $('tierPerson').value); } catch {} picked=null;loadTiers();draw(); };
+  $('tierPerson').onchange = () => { try { localStorage.setItem('tierPerson', $('tierPerson').value); } catch {} picked=null;loadTiers();loadPersonAni(); };
   $('tierOwn').onchange = draw;
   await loadSeason();
 }
 async function loadSeason() {
   const tab = tabs.find(t => t.gid === $('tierSeason').value) || tabs[0];
+  ++aniRequest;
+  aniExtraShows=[];aniOwnKeys=new Set();
+  $('tierAniStatus').textContent='';
   $('tiers').innerHTML = `<div class="status">Lese ${esc(tab.name)}…</div>`;
   try { sheet = await loadPlan(tab); }
   catch (e) { $('tiers').innerHTML = `<div class="status">Der Guckplan konnte nicht gelesen werden (${esc(e.message)}).</div>`; return; }
@@ -91,6 +202,7 @@ async function loadSeason() {
   loadTiers();
   draw();
   loadCovers(sheet.shows.filter(s => !s.hidden)).then(draw, () => {});
+  loadPersonAni();
 }
 // covers from AniList: known IDs from streams-de.json first, the rest by title search
 async function loadCovers(shows) {
@@ -112,17 +224,17 @@ async function loadCovers(shows) {
   }
 }
 function shownShows() {
-  const visible = sheet.shows.filter(s => !s.hidden);
+  const visible = allTierShows();
   if (!$('tierOwn').checked) return visible;
   const own = picks(sheet, $('tierPerson').value);
-  return visible.filter(s => own.has(s));
+  return visible.filter(s => own.has(s) || aniOwnKeys.has(keyOf(s)));
 }
 function draw() {
   if (!sheet) return;
   const shows = shownShows();
   const byKey = new Map(shows.map(s => [keyOf(s), s]));
   const saved = load(storeKey(), {});
-  state = prepareTierState(saved,tiers.map(t=>t.id),sheet.shows);
+  state = prepareTierState(saved,tiers.map(t=>t.id),allTierShows());
   const tile = key => {
     const s = byKey.get(key), cover = covers.get(key);
     return `<button type="button" class="tier-item${picked === key ? ' picked' : ''}" draggable="true" data-key="${esc(key)}" title="${esc(titleOf(s))}">
@@ -206,7 +318,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && picked) { picked = 
 
 $('tierCopy').onclick = async () => {
   if (!state) return;
-  const byKey = new Map(sheet.shows.map(s => [keyOf(s), s]));
+  const byKey = new Map(allTierShows().map(s => [keyOf(s), s]));
   const season = $('tierSeason').selectedOptions[0]?.textContent || '';
   const lines = tiers.filter(t => state[t.id]?.some(k=>byKey.has(k))).map(t => `**${t.name}:** ${state[t.id].filter(k=>byKey.has(k)).map(k => titleOf(byKey.get(k))).join(', ')}`);
   if (!lines.length) { notice('Noch nichts eingeordnet.'); return; }
