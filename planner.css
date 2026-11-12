@@ -125,3 +125,10 @@ header .bar { max-width: 1288px; }
 .plan-pause-label { color: var(--muted); font-size: 13px; font-weight: 600; }
 .plan-pause .round { width: 26px; height: 26px; min-height: 0; padding: 0; color: var(--muted); }
 @media (hover: none) { .plan-add-pause { opacity: 1; } }
+details.plan-changes { margin: 0; color: var(--text); font-size: inherit; }
+.plan-changes summary { display: flex; align-items: center; cursor: pointer; list-style: none; }
+.plan-changes summary::-webkit-details-marker { display: none; }
+.plan-changes summary h2 { margin: 0; }
+.plan-changes summary::after { content: ''; margin-left: auto; width: 7px; height: 7px; border: solid var(--muted); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); transition: transform .15s; }
+.plan-changes[open] summary::after { transform: rotate(-135deg); }
+.plan-changes[open] summary { margin-bottom: 6px; }

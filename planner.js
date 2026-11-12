@@ -630,10 +630,11 @@ const stats = `<div class="plan-stats">
 const problems = result.problems.length ? `<details class="warning" open><summary>${result.problems.length} ${result.problems.length === 1 ? 'Serie passt' : 'Serien passen'} nirgends sauber</summary>
     <ul>${result.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : '';
 const chips = people => `<span class="who">${people.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span>`;
-const changeList = `<section class="plan-changes"><h2>Was sich ändert <span class="plan-count">${changes.length}</span></h2>${changes.length
+const changesOpen = (() => { try { return localStorage.getItem('planChangesOpen') !== 'false'; } catch { return true; } })();
+const changeList = `<details class="plan-changes" id="planChanges"${changesOpen ? ' open' : ''}><summary><h2>Was sich ändert <span class="plan-count">${changes.length}</span></h2></summary>${changes.length
 ? `<ul>${changes.map(([i, w]) => { const o = was.get(i), otherDay = !o || o.d !== w.d;
 return `<li class="${otherDay ? 'other-day' : ''}"><b>${esc(shows[i].title)}</b><span class="plan-from">${when(o)}</span><span class="plan-arrow" aria-label="wird zu">→</span><span class="plan-to">${when(w)}</span></li>`; }).join('')}</ul>`
-: '<p class="ep">Nichts. Der Vorschlag entspricht dem aktuellen Guckplan.</p>'}</section>`;
+: '<p class="ep">Nichts. Der Vorschlag entspricht dem aktuellen Guckplan.</p>'}</details>`;
 const showInfo = (i, d, mark) => {
 const s = shows[i];
 const notes = [];
@@ -707,6 +708,7 @@ $('planOut').innerHTML = problems + stats + changeList + actions + days + unplac
 const cells = [...document.querySelectorAll('#planOut .time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
 $('planAgain').onclick = () => generatePlan(data);
+$('planChanges').ontoggle = () => { try { localStorage.setItem('planChangesOpen', $('planChanges').open); } catch {} };
 for (const b of document.querySelectorAll('[data-shift-day]'))
 b.onclick = () => {
 // earlier / later start for that evening: the day's own start in the settings, the plan stays as it is
