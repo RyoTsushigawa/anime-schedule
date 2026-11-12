@@ -30,7 +30,7 @@ test('40 anime and 100 pending episodes survive season grouping and bulk target 
 test('search finds a show even inside folded overflow in a 40-series view', async () => {
   const p = await openPage();
   try {
-    const cards = Array.from({length:40},(_,i)=>`<div class="row" data-search="series ${i+1}">Series ${i+1}</div>`).join('');
+    const cards = Array.from({length:40},(_,i)=>`<div class="row" data-search="series${i+1}">Series ${i+1}</div>`).join('');
     p.$('list').innerHTML = `<details class="day catchup-season" data-catchup-season="2026-3">
       <summary>Herbst 2026</summary><details class="catchup-overflow" data-catchup-overflow="2026-3">
       <summary>Weitere 32 Serien anzeigen</summary>${cards}</details></details>`;
