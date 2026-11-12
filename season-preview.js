@@ -120,7 +120,26 @@ async function loadCovers(tab,list){
    }
   }catch{} // A later visit can retry only the missing covers.
  }
+ // still missing (no AniList entry yet): MyAnimeList through Jikan, see jikanCovers
+ if(typeof jikanCovers==='function')await jikanCovers(list.filter(s=>!hasCover(s.key)));
  try{localStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),covers:[...covers].filter(([,url])=>/^https:\/\//.test(url))}));}catch{}
+}
+// Covers AniList doesn't have (e.g. "Peropero★Sparkles"): MyAnimeList's, through the public Jikan API (no login);
+// by MAL number when the season data has one, else by title. One request at a time (Jikan allows ~3 per second).
+async function jikanCovers(missing){
+ const term=show=>String(show.english||show.title||'').trim().replace(/\s*\((?:TV|ONA|OVA|Movie|\d{4})\)\s*$/i,'');
+ for(const show of missing.slice(0,10)){
+  const id=malLink(show).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
+  try{
+   const response=await fetch(id?'https://api.jikan.moe/v4/anime/'+id:'https://api.jikan.moe/v4/anime?limit=1&q='+encodeURIComponent(term(show)),{signal:AbortSignal.timeout(8000)});
+   if(response.ok){
+    const data=(await response.json()).data;
+    const url=(Array.isArray(data)?data[0]:data)?.images?.jpg?.image_url;
+    if(/^https:\/\/cdn\.myanimelist\.net\//.test(url||''))covers.set(show.key,url);
+   }
+  }catch{}
+  await new Promise(r=>setTimeout(r,400));
+ }
 }
 function malLink(show){
  const key=seasonKey(current).replace(/^herbst-/,'fall-').replace(/^frühling-/,'spring-').replace(/^sommer-/,'summer-');
