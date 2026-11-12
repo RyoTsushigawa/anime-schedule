@@ -6,7 +6,8 @@ let rounds = [], answers = [], position = 0, revealed = false;
 const day = berlinDay();
 function message(text) { $('coverStatus').textContent = text; }
 function persist() {
-  try { localStorage.setItem(storeKey, JSON.stringify({ day, answers })); } catch {}
+  // score and total too, for the overview on the Spiele page
+  try { localStorage.setItem(storeKey, JSON.stringify({ day, answers, score: scoreAnswers(rounds, answers), total: rounds.length })); } catch {}
 }
 function loadAnswers() {
   try {

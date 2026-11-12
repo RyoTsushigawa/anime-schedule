@@ -21,7 +21,8 @@ img-src 'self'; connect-src 'self' https://graphql.anilist.co https://sheets.goo
 </div>
 </header>
 <main class="game">
-<nav class="game-hub-links" aria-label="Weitere Spiele"><a class="pill" href="cover-game.html">Anime Cover Quiz ↗</a><a class="pill" href="synopsis.html">Inhalts-Rätsel ↗</a><a class="pill" href="ranker/">Higher / Lower ↗</a></nav>
+<section id="gamesToday" class="games-today" aria-label="Heute"><div class="games-cards"><a class="games-card" href="#board"><b>Titel-Rätsel</b></a><a class="games-card" href="cover-game.html"><b>Anime Cover Quiz</b></a><a class="games-card" href="synopsis.html"><b>Inhalts-Rätsel</b></a></div></section>
+<nav class="game-hub-links" aria-label="Weitere Spiele"><a class="pill" href="ranker/">Higher / Lower ↗</a></nav>
 <div class="game-options" aria-label="Rätsel-Modus">
 <label>Spielmodus <select id="gameMode" aria-label="Spielmodus"><option value="daily">Täglich</option><option value="endless">Endlos</option></select></label>
 <label>Schwierigkeit <select id="gameDifficulty" aria-label="Schwierigkeit"><option value="normal">Normal · Guckplan</option><option value="hard">Schwer · Gruppen-AniLists</option></select></label>

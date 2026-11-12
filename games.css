@@ -10,7 +10,7 @@
 .game-head { display: flex; align-items: center; gap: 10px; width: 100%; }
 .game-head b { font-size: 18px; }
 .game-hint { color: var(--muted); font-size: 13px; }
-.game-help { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-weight: 700; cursor: help; }
+.game-help { flex: none; margin-left: auto; display: grid; place-items: center; box-sizing: border-box; width: 26px; height: 26px; min-height: 0; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 700; line-height: 1; cursor: help; }
 .board { display: grid; gap: 6px; width:min(100%, 480px); }
 .board-row { display: grid; grid-template-columns: repeat(var(--len), minmax(0, 1fr)); gap: 6px; }
 .tile { min-height: 0; aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 8px; font-size: 24px; font-weight: 750; text-transform: uppercase; color: var(--text); background: var(--card); }
@@ -36,3 +36,18 @@
 .game-hub-links{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:0;width:100%}
 .game-hub-links .pill{display:inline-flex;align-items:center;min-height:36px;text-decoration:none}
 @media (max-width: 480px) { .key-row { gap: 4px; } .key.wide { flex: 0 0 50px; font-size: 12px; } }
+
+/* Spiele-Übersicht: today's state of the three daily games */
+.games-today { width: 100%; display: grid; gap: 8px; }
+.games-today-head { display: flex; align-items: baseline; gap: 10px; }
+.games-today-head span { color: var(--muted); font-size: 13px; }
+.games-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.games-card { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); text-decoration: none; }
+.games-card:hover { border-color: var(--accent); text-decoration: none; }
+.games-card b { font-size: 13.5px; }
+.games-card span { font-size: 12.5px; color: var(--muted); }
+.games-card small { font-size: 11.5px; color: var(--muted); }
+.games-card.won { border-color: color-mix(in srgb, #2f9e57 55%, var(--line)); }
+.games-card.won span { color: #2f9e57; }
+.games-card.lost span { color: #c45a5a; }
+@media (max-width: 480px) { .games-cards { grid-template-columns: 1fr; } }

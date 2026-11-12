@@ -33,7 +33,8 @@ function draw() {
 function guess(id) {
   if (!puzzle || done() || tries.includes(id)) return;
   tries.push(id);
-  try { localStorage.setItem(storeKey, JSON.stringify({ day, tries })); } catch {}
+  // solved / done too, for the overview on the Spiele page
+  try { localStorage.setItem(storeKey, JSON.stringify({ day, tries, solved: solved(), done: done() })); } catch {}
   message(id === target.id ? '' : done() ? '' : 'Nicht ganz. Noch ein Versuch.');
   draw();
 }
