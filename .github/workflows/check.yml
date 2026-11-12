@@ -38,6 +38,8 @@ jobs:
         run: node --test tests/settings-layout.test.mjs
       - name: Test Anime Cover Quiz
         run: node --test tests/cover-game.test.mjs
+      - name: Install local backup test dependency
+        run: npm install --no-save --no-package-lock jsdom@26.1.0
       - name: Test local anime backup and restore
         run: node --test tests/local-export.test.mjs
       - name: Sheet backup script
