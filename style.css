@@ -1596,3 +1596,15 @@ button.header-nav-link{font-family:inherit;cursor:pointer}
 .auto-plan-day { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; }
 .auto-plan-day small { color: var(--muted); }
 .catchup-summary #autoPlanOpen { margin-left: auto; }
+
+/* Long Catch-up seasons: keep the first eight shows visible, expand the rest on demand. */
+body.catchup #list .catchup-overflow{margin:6px 0 12px;border:1px dashed var(--line);border-radius:10px;overflow:hidden}
+body.catchup #list .catchup-overflow > summary{padding:11px 14px;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;list-style:none;color:var(--muted);font-size:13px;font-weight:650;background:color-mix(in srgb,var(--card) 70%,var(--bg))}
+body.catchup #list .catchup-overflow > summary::-webkit-details-marker{display:none}
+body.catchup #list .catchup-overflow > summary:hover{color:var(--text);background:var(--today)}
+body.catchup #list .catchup-overflow > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+body.catchup #list .catchup-overflow .fold{width:7px;height:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);transition:transform .15s}
+body.catchup #list .catchup-overflow[open] .fold{transform:rotate(225deg)}
+body.catchup #list .catchup-overflow > .row,
+body.catchup #list .catchup-overflow > .shared{margin:9px 9px 0}
+body.catchup #list .catchup-overflow > :last-child{margin-bottom:9px}
