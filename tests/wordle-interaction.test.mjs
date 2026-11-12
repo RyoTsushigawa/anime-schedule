@@ -12,6 +12,7 @@ const game=readFileSync(new URL('../games.js',import.meta.url),'utf8')
   .replace(/^import .* from '\.\/games-logic\.mjs';\s*/m, '');
 const html=readFileSync(new URL('../games.html',import.meta.url),'utf8');
 const daily=JSON.parse(readFileSync(new URL('../games-words.json',import.meta.url),'utf8'));
+const guesses=JSON.parse(readFileSync(new URL('../games-guesses.json',import.meta.url),'utf8'));
 
 async function openGame({mode='daily',difficulty='normal',accounts=['Belly']}={}){
   const dom=new JSDOM(html,{url:'https://example.test/games.html',runScripts:'outside-only'});
@@ -24,6 +25,7 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly']}={}
     requests.push({url,options});
     let data;
     if(url==='games-words.json')data=daily;
+    else if(url==='games-guesses.json')data=guesses;
     else if(url==='tabs.json')data=[];
     else if(url==='config.json')data={};
     else if(url==='wrapped-profiles.json')
@@ -150,4 +152,30 @@ test('Normal Wordle never displays the Hard hint controls',async()=>{
     assert.equal(page.run('state.hints'),0);
     assert.equal(page.window.document.querySelector('#gameHintText').textContent,'');
   }finally{page.close();}
+});
+
+test('Hard Wordle accepts common English words that are in no title, Normal still does not',async()=>{
+  const hard=await openGame({difficulty:'hard'});
+  try{
+    const len=hard.run('puzzle.word.length');
+    const pool=guesses.words[len].split(' ');
+    const word=pool.find(w=>w!==hard.run('puzzle.word') && !['BLACK','CLOVER','DRAGON','QUEST','MAGIC','KNIGHT'].includes(w));
+    assert.ok(word);
+    hard.run(`typing=${JSON.stringify(word)}; press('Enter')`);
+    assert.equal(hard.run('state.guesses.length'),1);
+    assert.equal(hard.run('allowed.has("ZZZZZ")'),false);
+  }finally{hard.close();}
+  const normal=await openGame();
+  try{
+    const len=normal.run('puzzle.word.length');
+    const word=guesses.words[len].split(' ').find(w=>!normal.run(`allowed.has(${JSON.stringify(w)})`));
+    normal.run(`typing=${JSON.stringify(word)}; press('Enter')`);
+    assert.equal(normal.run('state.guesses.length'),0);
+  }finally{normal.close();}
+});
+
+test('the guess list keeps its licence notice and only plain upper-case words',()=>{
+  assert.match(guesses.license,/Kevin Atkinson/);
+  for(const [len,list] of Object.entries(guesses.words))
+    for(const w of list.split(' '))assert.match(w,new RegExp('^[A-Z]{'+len+'}$'));
 });
