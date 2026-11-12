@@ -42,7 +42,8 @@ const me = await profile(account);
 return { ...account, name: me.name, avatar: typeof me.picture === 'string' ? me.picture : me.picture?.medium || me.picture?.large || '' };
 }
 const normalizedEntry = value => value ? { progress: value.num_episodes_watched ?? value.num_watched_episodes ?? 0,
-status: value.is_rewatching ? 'REPEATING' : statuses[value.status] || 'PLANNING', score: value.score || 0 } : null;
+status: value.is_rewatching ? 'REPEATING' : statuses[value.status] || 'PLANNING', score: value.score || 0,
+updatedAt: Date.parse(value.updated_at || '') / 1000 || 0 } : null;
 const dateParts = value => value && /^\d{4}-\d{2}-\d{2}/.test(value)
 ? { year: +value.slice(0, 4), month: +value.slice(5, 7), day: +value.slice(8, 10) } : null;
 function mediaFor(node) {

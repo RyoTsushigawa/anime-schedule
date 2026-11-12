@@ -22,6 +22,12 @@ if (!lastWeekRender) return out;
 try { for (const d of render(...lastWeekRender, true)) for (const r of d.rows) if (r.pause && r.skipped && r.missing?.length && r.alId) out.add(r.alId + ':' + r.episode); } catch {}
 return out;
 }
+// "Später": a sleeping show out of Catch-up for two weeks (this browser)
+const IDLE_WEEKS = 3, LATER_MS = 14 * 86400000;
+const catchupLater = () => { try { const all = JSON.parse(localStorage.getItem('catchupLater')) || {}; return Object.fromEntries(Object.entries(all).filter(([, until]) => until > Date.now())); } catch { return {}; } };
+const saveCatchupLater = all => { try { localStorage.setItem('catchupLater', JSON.stringify(all)); } catch {} };
+const idleTag = r => r.idleWeeks >= IDLE_WEEKS ? `<span class="idle-tag" title="Zuletzt auf der Liste weitergeschaut vor ${r.idleWeeks} Wochen">seit ${r.idleWeeks} Wochen nicht weitergeschaut</span>` : '';
+const laterButton = r => r.idleWeeks >= IDLE_WEEKS ? `<button type="button" class="drop later" data-later="${r.m.id}" title="Zwei Wochen aus Catch-up ausblenden">Später</button>` : '';
 function catchupRows(entries, planShows, plan, person = soloPerson) {
 const now = Date.now() / 1000;
 const away = absenceSkips();
@@ -33,7 +39,7 @@ if (!s?.year) return m.status !== 'FINISHED';
 return new Date(s.year, (s.month || 1) - 1, s.day || 1) > Date.now() - 270 * 86400000;
 };
 const rows = [], ownPace = [];
-for (const { progress, media: m, missing } of [...entries, ...planShows]) {
+for (const { progress, media: m, missing, updatedAt } of [...entries, ...planShows]) {
 const offset = streamsDe?.release?.[m.id]?.offset || 0;
 const next = m.nextAiringEpisode;
 const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
@@ -47,7 +53,9 @@ if (!out || out <= progress) continue;
 const first = progress + 1;
 const since = next ? released(first) : 0;
 const nextAt = next ? released(out + 1) : 0;
-const row = { m, first, out, since, nextAt, missing, progress, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
+// Eingeschlafen (idea 113): on the list, but not continued for three weeks or more
+const idleWeeks = !missing && updatedAt ? Math.floor((now - updatedAt) / week) : 0;
+const row = { m, first, out, since, nextAt, missing, progress, idleWeeks, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
 (missing || show || recent(m) ? rows : ownPace).push(row);
 }
 return { rows, ownPace };
@@ -225,6 +233,10 @@ if (local) {
 const { rows, ownPace } = catchupRows(entries, planShows, plan, local ? person : friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
 if (current()) setPaceNav(ownPace.length);
 const openEpisodes = showCatchupCount(rows);
+// shows put on "Später" stay counted but out of the list, own list only
+const later = !friend ? catchupLater() : {};
+const laterCount = rows.filter(r => later[r.m.id]).length;
+for (let i = rows.length - 1; i >= 0; i--) if (later[rows[i].m.id]) rows.splice(i, 1);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
@@ -244,15 +256,15 @@ const check = (m, ep, missing) => selecting ? selector(m) : local ? localWatchBu
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
 const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
-const grouped = ({ m, first, out, nextAt, missing, links, progress }) => `
+const grouped = ({ m, first, out, nextAt, missing, links, progress, idleWeeks }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <div class="time"><span class="time-day">Folge</span> ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}</div>
+        <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}${idleTag({ m, idleWeeks })}</div>
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
-      ${mine ? (local ? '' : dropButton(m.id)) + (selecting || out <= first || (!auth && !local) ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
+      ${mine ? laterButton({ m, idleWeeks }) + (local ? '' : dropButton(m.id)) + (selecting || out <= first || (!auth && !local) ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
     </div>`;
 // Several open episodes: − / + choose how many to mark (Catch-up starts with all, Non-seasonal with one);
 // only the ✓ saves
@@ -260,15 +272,15 @@ const stepper = (m, first, out, missing, count = out - first + 1) => `<span clas
   + `<button type="button" data-step="-1" aria-label="Eine Folge weniger" title="Eine Folge weniger"${count <= 1 ? ' disabled' : ''}>−</button>`
   + `<span class="ep-count" title="So viele Folgen markiert ✓ als gesehen">${count}</span>`
   + `<button type="button" data-step="1" aria-label="Eine Folge mehr" title="Eine Folge mehr"${count >= out - first + 1 ? ' disabled' : ''}>+</button></span>${check(m, first + count - 1, missing)}`;
-const perEpisode = ({ m, first, out, nextAt, missing, links, progress }) => {
+const perEpisode = ({ m, first, out, nextAt, missing, links, progress, idleWeeks }) => {
 const eps = Array.from({ length: out - first + 1 }, (_, i) => first + i);
-if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, progress });
+if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, progress, idleWeeks });
 return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}</div></div>
+        <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}${idleTag({ m, idleWeeks })}</div></div>
         <div class="links">${linkButtons(links, m.id)}</div>
-        ${mine ? (local ? '' : dropButton(m.id)) + (selecting ? selector(m) : '') : ''}${planIn(m)}
+        ${mine ? laterButton({ m, idleWeeks }) + (local ? '' : dropButton(m.id)) + (selecting ? selector(m) : '') : ''}${planIn(m)}
       </div>${eps.map(ep => `
       <div class="row compact">
         <div class="time">Folge ${ep}</div>
@@ -358,7 +370,7 @@ const fromPlan = rows.filter(row => row.missing).length;
 const onList = rows.length - fromPlan;
 $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend ? ' friend-summary' : ''}">
       <div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>
-      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}${onList ? ` · ${onList} ${onList === 1 ? 'Serie' : 'Serien'}` : ''}${fromPlan ? ` · ${fromPlan} aus dem Guckplan` : ''}</span>
+      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}${onList ? ` · ${onList} ${onList === 1 ? 'Serie' : 'Serien'}` : ''}${fromPlan ? ` · ${fromPlan} aus dem Guckplan` : ''}${laterCount ? ` · <button type="button" class="inline-later" data-later-show title="Wieder in Catch-up zeigen">${laterCount} später</button>` : ''}</span>
       ${friend ? '<button type="button" class="pill" data-own-list>Eigene Liste</button>' : movesKey && !local && rows.some(r => !r.missing) ? '<button type="button" class="pill" id="autoPlanOpen" title="Offene Folgen auf die restlichen Abende dieser Woche verteilen">Automatisch einplanen</button>' : ''}
     </div>`);
 } else if (friend) {
@@ -421,3 +433,12 @@ return planShowsCache.media
 .filter(m => !account || !['COMPLETED', 'DROPPED'].includes(m.mediaListEntry?.status))
 .map(m => ({ progress: m.mediaListEntry?.progress || 0, media: m, missing: true }));
 }
+
+// "Später" on a sleeping show, and showing them again
+$('list').addEventListener('click', e => {
+const later = e.target.closest('[data-later]'), back = e.target.closest('[data-later-show]');
+if (!later && !back) return;
+if (later) { const all = catchupLater(); all[later.dataset.later] = Date.now() + LATER_MS; saveCatchupLater(all); notice('Für zwei Wochen aus Catch-up ausgeblendet'); }
+else saveCatchupLater({});
+loadCatchupContent();
+});

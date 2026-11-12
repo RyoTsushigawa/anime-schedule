@@ -1354,7 +1354,7 @@ playEnter();
 }
 const LIST_QUERY = `query ($user: String) {
   MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING]) {
-    lists { entries { progress status media {
+    lists { entries { progress status updatedAt media {
       id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
       externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day }
     } } }

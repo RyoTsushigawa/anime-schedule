@@ -1548,3 +1548,7 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
 /* Fortsetzung angekündigt (next to "Finale"): a quiet link to the sequel on AniList */
 .ep-tag.sequel-tag { background: transparent; border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent); color: var(--accent); text-decoration: none; }
 .ep-tag.sequel-tag:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* Catch-up: a show not continued for three weeks (idea 113) */
+.idle-tag { margin-left: 6px; font-size: 11.5px; color: color-mix(in srgb, #c9a227 85%, var(--text)); }
+.catchup-summary .inline-later { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
