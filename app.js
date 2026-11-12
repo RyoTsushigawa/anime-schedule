@@ -1941,9 +1941,14 @@ const focusStream = streamRow && { show: streamRow.dataset.search, href: focused
 const focusMedia = focused?.closest('#list button[data-media]') ? { media: focused.dataset.media, ep: focused.dataset.ep,
 kind: ['watch', 'drop', 'score', 'move'].find(c => focused.classList.contains(c)) } : null;
 const focusedRow = focused?.matches?.('#list .row') ? keyRows().indexOf(focused) : -1;
-const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.id || d.querySelector('summary')?.textContent));
+// Counts in the summary change after ticking an episode. Use stable keys so
+// expanded Catch-up sections do not collapse when their totals change.
+const detailsKey = d => d.dataset.catchupSeason ? 'season:' + d.dataset.catchupSeason
+  : d.dataset.catchupOverflow ? 'overflow:' + d.dataset.catchupOverflow
+  : d.id || d.querySelector('summary')?.textContent;
+const expanded = new Set([...document.querySelectorAll('#list details[open]')].map(detailsKey));
 return () => {
-for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(d.id || d.querySelector('summary')?.textContent);
+for (const d of document.querySelectorAll('#list details')) d.open = expanded.has(detailsKey(d));
 if (focusStream && !focused.isConnected && !document.querySelector('dialog[open]')) {
 const next = [...document.querySelectorAll('#list .row[data-search] a.cr')].find(link =>
 link.href === focusStream.href && link.closest('.row').dataset.search === focusStream.show &&
@@ -2836,7 +2841,7 @@ const seasonSection = group => {
  // The remaining cards, their watch buttons and bulk targets stay in the DOM.
  const visible = listed.slice(0, 8), remaining = listed.slice(8);
  const listedHtml = visible.map(show).join('') +
-  (remaining.length && !selecting ? `<details class="catchup-overflow"><summary>Weitere ${remaining.length} ${remaining.length === 1 ? 'Serie' : 'Serien'} anzeigen<i class="fold" aria-hidden="true"></i></summary>${remaining.map(show).join('')}</details>` : remaining.map(show).join(''));
+  (remaining.length && !selecting ? `<details class="catchup-overflow" data-catchup-overflow="${group.key}"><summary>Weitere ${remaining.length} ${remaining.length === 1 ? 'Serie' : 'Serien'} anzeigen<i class="fold" aria-hidden="true"></i></summary>${remaining.map(show).join('')}</details>` : remaining.map(show).join(''));
  const content = listedHtml +
   (notListed.length ? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '');
  if (hideSeasonHeader) return `<section class="catchup-season-plain" aria-label="Aktuelle Season">${seasonBulkButton(group) ? `<div class="catchup-season-tools">${seasonBulkButton(group)}</div>` : ''}${content}</section>`;
