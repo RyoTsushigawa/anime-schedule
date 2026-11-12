@@ -1,12 +1,19 @@
 /* Spiele: Titel-Rätsel */
 .game { max-width: 520px; margin: 18px auto 40px; padding: 0 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; justify-items: center; }
+.game-options {display:flex;align-items:end;gap:10px;flex-wrap:wrap;width:100%;justify-content:center;}
+.game-options label {display:grid;gap:5px;font-size:12px;color:var(--muted);min-width:0;flex:1 1 175px;}
+.game-options select {font:inherit;font-size:13px;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px;min-height:38px;width:100%;}
+.game-options select:focus-visible {outline:2px solid var(--accent);outline-offset:2px;}
+.game-finish-actions {display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
+.game-end[hidden], #gameNextRound[hidden] {display:none!important;}
+.game-help {flex:none;}
 .game-head { display: flex; align-items: center; gap: 10px; width: 100%; }
 .game-head b { font-size: 18px; }
 .game-hint { color: var(--muted); font-size: 13px; }
-.game-help { flex: none; margin-left: auto; display: grid; place-items: center; box-sizing: border-box; width: 26px; height: 26px; min-height: 0; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 700; line-height: 1; cursor: help; }
-.board { display: grid; gap: 6px; }
-.board-row { display: grid; grid-template-columns: repeat(var(--len), 52px); gap: 6px; }
-.tile { height: 52px; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 8px; font-size: 24px; font-weight: 750; text-transform: uppercase; color: var(--text); background: var(--card); }
+.game-help { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-weight: 700; cursor: help; }
+.board { display: grid; gap: 6px; width:min(100%, 480px); }
+.board-row { display: grid; grid-template-columns: repeat(var(--len), minmax(0, 1fr)); gap: 6px; }
+.tile { min-height: 0; aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 8px; font-size: 24px; font-weight: 750; text-transform: uppercase; color: var(--text); background: var(--card); }
 .tile.typed { border-color: var(--muted); }
 .tile.hit, .key.hit { background: #2f9e57; border-color: #2f9e57; color: #fff; }
 .tile.near, .key.near { background: #c9a227; border-color: #c9a227; color: #fff; }
@@ -23,7 +30,7 @@
 .key { flex: 0 1 42px; min-width: 0; height: 48px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); color: var(--text); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
 .key.wide { flex-basis: 66px; font-size: 13px; }
 .key:hover { border-color: var(--accent); }
-@media (max-width: 480px) { .board-row { grid-template-columns: repeat(var(--len), minmax(30px, 42px)); } .tile { height: 42px; font-size: 20px; } }
+@media (max-width: 480px) { .board {width:100%;} .board-row {gap:4px;} .tile {font-size:clamp(14px,5vw,20px);} }
 
 /* Keep game shortcuts in one tidy, wrapping row. */
 .game-hub-links{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:0;width:100%}
