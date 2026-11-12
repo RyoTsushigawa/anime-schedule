@@ -181,3 +181,11 @@ details.plan-test { margin: 0; color: var(--text); font-size: inherit; backgroun
 .plan-slot .info.picked { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: 0 0 0 2px var(--accent); }
 .plan-tapping .plan-drop { cursor: pointer; }
 .plan-tapping .plan-slot .info[data-show]:not(.picked) { cursor: pointer; }
+
+/* Varianten: saved suggestions; one can stand in for the Guckplan in the comparison */
+.plan-variants .plan-count { margin-left: 2px; }
+#planVariants[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.plan-variant-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 2px; }
+.plan-variant-row > button[aria-pressed="true"] b { color: var(--accent); }
+.plan-export-menu .plan-variant-act { width: auto; padding: 6px 9px; font-size: 12px; color: var(--muted); }
+.plan-export-menu .plan-variant-act:hover { color: var(--text); }
