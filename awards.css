@@ -1,0 +1,28 @@
+.awards-page {
+  width: min(100% - 2rem, 52rem);
+  margin: 2rem auto;
+}
+
+.awards-toolbar,
+.awards-ballot {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.awards-page label {
+  display: grid;
+  gap: .4rem;
+  min-width: 0;
+}
+
+.awards-page select,
+#awardsText {
+  width: 100%;
+  min-width: 0;
+}
+
+#awardsManual {
+  margin-top: 1rem;
+}
