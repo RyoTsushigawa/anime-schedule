@@ -1304,6 +1304,7 @@ const listProfiles = new Map();
 let localPlanPeople = [];
 const isLocalList = () => friendList.value.startsWith('local:');
 const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
+const MAX_LOCAL_SHOWS = 500;
 const localProgressKey = person => 'localAnimeProgress:v1:' + person;
 const localShowsKey = person => 'localAnimeShows:v1:' + person;
 const localExportSeen = new Map();
@@ -1467,7 +1468,7 @@ $('localExportXml').onclick = async () => {
 function localShows(person) {
   try {
     const ids = JSON.parse(localStorage.getItem(localShowsKey(person)) || '[]');
-    return Array.isArray(ids) ? [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 50) : [];
+    return Array.isArray(ids) ? [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, MAX_LOCAL_SHOWS) : [];
   } catch { return []; }
 }
 function addLocalShow(person, id) {
@@ -1475,7 +1476,7 @@ function addLocalShow(person, id) {
   try {
     const ids = localShows(person);
     if (!ids.includes(id)) ids.push(id);
-    if (ids.length > 50) return false;
+    if (ids.length > MAX_LOCAL_SHOWS) return false;
     localStorage.setItem(localShowsKey(person), JSON.stringify(ids));
     return true;
   } catch { return false; }
@@ -1484,8 +1485,13 @@ async function localCatalog(person) {
   const ids = localShows(person);
   if (!ids.length) return [];
   const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium } externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } } } }';
-  const data = await anilist(query, { ids });
-  return (data.Page?.media || []).filter(m => Number.isSafeInteger(Number(m.id)));
+  const media = [];
+  // AniList's Page only returns up to 50 entries: load larger local lists in batches.
+  for (let i = 0; i < ids.length; i += 50) {
+    const data = await anilist(query, { ids: ids.slice(i, i + 50) });
+    media.push(...(data.Page?.media || []));
+  }
+  return media.filter(m => Number.isSafeInteger(Number(m.id)));
 }
 $('list').addEventListener('submit', async e => {
   const form = e.target.closest('#localAnimeAdd');
