@@ -570,8 +570,12 @@ for (const day of document.querySelectorAll('#list .day'))
 day.classList.toggle('hidden-by-search', !!q && !day.querySelector('[data-search]:not(.hidden-by-search)'));
 for (const box of document.querySelectorAll('#list .shared:not([data-search])'))
 box.classList.toggle('hidden-by-search', !!q && !box.querySelector('[data-search]:not(.hidden-by-search)'));
-if (q) for (const fold of document.querySelectorAll('#list details.not-listed:not([open])'))
-if (fold.querySelector('[data-search]:not(.hidden-by-search)')) fold.open = true;
+if (q) for (const fold of document.querySelectorAll('#list details.not-listed:not([open]), #list details.catchup-overflow:not([open]), #list details.catchup-season:not([open])'))
+if (fold.querySelector('[data-search]:not(.hidden-by-search)')) { fold.open = true; fold.dataset.searchOpened = '1'; }
+if (!q) for (const fold of document.querySelectorAll('#list details[data-search-opened="1"]')) {
+  fold.open = false;
+  delete fold.dataset.searchOpened;
+}
 // how many shows match, so a shorter list explains itself
 const hits = q ? new Set([...document.querySelectorAll('#list [data-search]:not(.hidden-by-search)')].map(el => el.dataset.search)).size : 0;
 let count = $('matchCount');
@@ -2814,7 +2818,12 @@ const seasonSection = group => {
   savedOpen = localStorage.getItem('catchupSeasonOpen:' + group.key);
  } catch {}
  const open = selecting || searching() || (savedOpen === null ? group.key === newestSeason : savedOpen === '1');
- const content = listed.map(show).join('') +
+ // Keep busy seasons immediately scannable: display eight shows first.
+ // The remaining cards, their watch buttons and bulk targets stay in the DOM.
+ const visible = listed.slice(0, 8), remaining = listed.slice(8);
+ const listedHtml = visible.map(show).join('') +
+  (remaining.length && !selecting ? `<details class="catchup-overflow"><summary>Weitere ${remaining.length} ${remaining.length === 1 ? 'Serie' : 'Serien'} anzeigen<i class="fold" aria-hidden="true"></i></summary>${remaining.map(show).join('')}</details>` : remaining.map(show).join(''));
+ const content = listedHtml +
   (notListed.length ? `<details class="day not-listed"${unfolded || selecting || searching() ? ' open' : ''}><summary><h2 title="Noch nicht auf deiner ${listService()}-Liste">Nicht gelistet · ${notListed.length}<i class="fold" aria-hidden="true"></i></h2></summary>${notListed.map(show).join('')}</details>` : '');
  if (hideSeasonHeader) return `<section class="catchup-season-plain" aria-label="Aktuelle Season">${seasonBulkButton(group) ? `<div class="catchup-season-tools">${seasonBulkButton(group)}</div>` : ''}${content}</section>`;
  return `<details class="day catchup-season" data-catchup-season="${group.key}"${open ? ' open' : ''}>
