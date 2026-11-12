@@ -7,9 +7,11 @@ import {
   englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
   hardHintError,hashWord,pickEntry
 } from '../games-logic.mjs';
+import {ENGLISH_GUESSES} from '../games-guesses.mjs';
 
 const game=readFileSync(new URL('../games.js',import.meta.url),'utf8')
-  .replace(/^import .* from '\.\/games-logic\.mjs';\s*/m, '');
+  .replace(/^import .* from '\.\/games-logic\.mjs';\s*/m, '')
+  .replace(/^import .* from '\.\/games-guesses\.mjs';\s*/m, '');
 const html=readFileSync(new URL('../games.html',import.meta.url),'utf8');
 const daily=JSON.parse(readFileSync(new URL('../games-words.json',import.meta.url),'utf8'));
 
@@ -19,7 +21,7 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly']}={}
   window.localStorage.setItem('titleGameMode',JSON.stringify(mode));
   window.localStorage.setItem('titleGameDifficulty',JSON.stringify(difficulty));
   Object.assign(window,{englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
-    hardHintError,hashWord,pickEntry});
+    hardHintError,hashWord,pickEntry,ENGLISH_GUESSES});
   window.fetch=async(url,options)=>{
     requests.push({url,options});
     let data;
@@ -59,7 +61,7 @@ test('an invalid made-up guess never consumes an attempt, then the real answer i
     const answer=page.run('puzzle.word');
     page.run("typing='Z'.repeat(puzzle.word.length); press('Enter')");
     assert.equal(page.run('state.guesses.length'),0);
-    assert.match(page.window.document.querySelector('#gameMsg').textContent,/echte englische Wörter/);
+    assert.match(page.window.document.querySelector('#gameMsg').textContent,/englischen Wörterbuch/);
     page.run("typing=puzzle.word; press('Enter')");
     assert.equal(page.run('state.guesses.length'),1);
     assert.equal(page.run('state.won'),true);
@@ -149,5 +151,25 @@ test('Normal Wordle never displays the Hard hint controls',async()=>{
     page.window.document.querySelector('#gameHintButton').click();
     assert.equal(page.run('state.hints'),0);
     assert.equal(page.window.document.querySelector('#gameHintText').textContent,'');
+  }finally{page.close();}
+});
+
+test('AGENT is accepted as a valid five-letter guess even when absent from anime titles',async()=>{
+  const page=await openGame();
+  try {
+    assert.ok(ENGLISH_GUESSES.has('AGENT'));
+    assert.ok(!titleEntries([daily.words[0].title], 'Guckplan').some(x=>x.word==='AGENT'));
+    page.run("puzzle.word='BLACK'; state.word='BLACK'; typing='AGENT'; press('Enter')");
+    assert.deepEqual([...page.run('state.guesses')], ['AGENT']);
+    assert.equal(page.run('state.done'),false);
+  }finally{page.close();}
+});
+
+test('nonsense guesses remain invalid, even when length is correct',async()=>{
+  const page=await openGame();
+  try {
+    page.run("puzzle.word='BLACK'; state.word='BLACK'; typing='ZZZZZ'; press('Enter')");
+    assert.equal(page.run('state.guesses.length'),0);
+    assert.match(page.window.document.querySelector('#gameMsg').textContent,/englischen Wörterbuch/);
   }finally{page.close();}
 });
