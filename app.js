@@ -1598,35 +1598,44 @@ return result.entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status));
 const key = 'list:' + user.toLowerCase();
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
-if (!fresh && saved && Date.now() - saved.time < LIST_CACHE_MS) return fixTitles(saved.entries);
+if (!fresh && Array.isArray(saved?.entries) && Number.isFinite(saved.time) && Date.now() - saved.time >= 0 && Date.now() - saved.time < LIST_CACHE_MS) {
+  setNote(key, null);
+  return fixTitles(saved.entries);
+}
 try {
 const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
 try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
 setNote(key, null);
 return entries;
 } catch (e) {
-if (fresh || !saved) throw e;
+if (fresh || !Array.isArray(saved?.entries)) throw e;
 setNote(key, `${unreachable('AniList')}: Liste von ${user} vom ${savedAt(saved.time)}.`);
-return saved.entries;
+return fixTitles(saved.entries);
 }
 }
 $('refreshCatchup').onclick = async () => {
 const button = $('refreshCatchup');
 if (button.disabled || !listView()) return;
-const user = listUser(), friend = friendList.value;
+const user = listUser(), friend = friendList.value, account = auth, selectedView = view;
 if (!user) return;
 if (isLocalList()) { await loadCatchup(true); return; }
+const stillSelected = () => auth === account && view === selectedView &&
+  listView() && listUser() === user && friendList.value === friend;
 button.disabled = true;
 button.setAttribute('aria-busy', 'true');
 button.textContent = 'Lädt…';
 try {
 await anilistList(user, true, !!friend);
+if (!stillSelected()) return;
 planShowsCache.time = 0;
-if (!friend && auth && auth.name.toLowerCase() === user.toLowerCase()) await loadMe();
-if (listView()) await loadCatchup(true);
-notice('Liste aktualisiert.');
+if (!friend && account && account.name.toLowerCase() === user.toLowerCase()) {
+  await loadMe();
+  if (!stillSelected()) return;
+}
+await loadCatchup(true);
+if (stillSelected()) notice('Liste aktualisiert.');
 } catch (error) {
-notice('Liste konnte nicht aktualisiert werden: ' + error.message);
+if (stillSelected()) notice('Liste konnte nicht aktualisiert werden: ' + error.message);
 } finally {
 button.disabled = false;
 button.removeAttribute('aria-busy');
@@ -2720,8 +2729,10 @@ let planShows = friend && !local ? [] : await missingPlanShows(plan, entries, lo
 if (!current()) return;
 if (local) {
   let extra = [];
-  try { extra = await localCatalog(person); }
-  catch { setNote('catchup:local', 'Zusätzliche lokale Serien konnten gerade nicht geladen werden.'); }
+  try {
+    extra = await localCatalog(person);
+    setNote('catchup:local', null);
+  } catch { setNote('catchup:local', 'Zusätzliche lokale Serien konnten gerade nicht geladen werden.'); }
   if (!current()) return;
   const byId = new Map([...planShows.map(x => x.media), ...extra].map(m => [Number(m.id), m]));
   localExportSeen.set(person, byId);
@@ -2852,7 +2863,7 @@ if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="
         ${scoreButton(m.id)}
       </div>`).join('')}</section>`);
 }
-$('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing']));
+$('list').insertAdjacentHTML('afterbegin', notesHtml(['list:' + user.toLowerCase(), 'catchup:plan', 'catchup:missing', 'catchup:local']));
 const listName = local ? person : friend ? friendList.selectedOptions[0].textContent : user;
 const readOnly = friend && !local ? '<span class="catchup-count">Nur lesen</span>' : '';
 if (shown === 'catchup') {
