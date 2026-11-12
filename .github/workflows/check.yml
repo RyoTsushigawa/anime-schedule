@@ -34,6 +34,8 @@ jobs:
         run: node --test tests/season-votes-worker.test.mjs
       - name: Test grouped Tools navigation
         run: node --test tests/tools-menu.test.mjs
+      - name: Test Catch-up refresh account switching
+        run: node --test tests/catchup-refresh.test.mjs
       - name: Test compact Settings navigation
         run: node --test tests/settings-layout.test.mjs
       - name: Test Anime Cover Quiz
