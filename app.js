@@ -1609,20 +1609,28 @@ return saved.entries;
 $('refreshCatchup').onclick = async () => {
 const button = $('refreshCatchup');
 if (button.disabled || !listView()) return;
-const user = listUser(), friend = friendList.value;
+const user = listUser(), friend = friendList.value, account = auth, selectedView = view;
 if (!user) return;
 if (isLocalList()) { await loadCatchup(true); return; }
+// A refresh belongs to one selected list. Do not reload or announce success for
+// a different user if the viewer changes Solo/person/account while it is running.
+const stillSelected = () => auth === account && view === selectedView &&
+  listView() && listUser() === user && friendList.value === friend;
 button.disabled = true;
 button.setAttribute('aria-busy', 'true');
 button.textContent = 'Lädt…';
 try {
 await anilistList(user, true, !!friend);
+if (!stillSelected()) return;
 planShowsCache.time = 0;
-if (!friend && auth && auth.name.toLowerCase() === user.toLowerCase()) await loadMe();
-if (listView()) await loadCatchup(true);
-notice('Liste aktualisiert.');
+if (!friend && account && account.name.toLowerCase() === user.toLowerCase()) {
+  await loadMe();
+  if (!stillSelected()) return;
+}
+await loadCatchup(true);
+if (stillSelected()) notice('Liste aktualisiert.');
 } catch (error) {
-notice('Liste konnte nicht aktualisiert werden: ' + error.message);
+if (stillSelected()) notice('Liste konnte nicht aktualisiert werden: ' + error.message);
 } finally {
 button.disabled = false;
 button.removeAttribute('aria-busy');
