@@ -1,5 +1,5 @@
-const PLAN_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const PLAN_DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const PLAN_DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const PLAN_DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const SHEET_DAYS = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 const SLOT_LENGTH = 30;
 const MAX_SLOTS = 24;
@@ -36,6 +36,7 @@ localStorage.setItem('planFixed', JSON.stringify(planFixed));
 localStorage.setItem('planBreaks', JSON.stringify(planBreaks));
 localStorage.setItem('planUntil', JSON.stringify(planUntil));
 } catch {}
+if (typeof markStale === 'function') markStale();
 };
 let planTabGid = null;
 const planCache = new Map();
@@ -44,12 +45,6 @@ let planView = 'compare';
 try { planView = localStorage.getItem('planView') || planView; } catch {}
 let tabs = [];
 let streamsDe = null;
-try {
-const theme = localStorage.getItem('theme');
-if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-const accent = localStorage.getItem('accent');
-if (/^#[0-9a-f]{6}$/i.test(accent || '')) document.documentElement.style.setProperty('--accent', accent);
-} catch {}
 let noticeTimer = null;
 function notice(text) {
 $('noticeText').textContent = text;
@@ -226,13 +221,13 @@ const s = shows[i];
 const clash = s.mask & busy[d][Math.min(k, MAX_SLOTS - 1)];
 if (clash) {
 cost += PLAN_COST.hard;
-if (details) problems.push(`${s.title}: ${people.filter((p, b) => clash & (1 << b)).join(', ')} can't on ${PLAN_DAYS_SHORT[d]} ${clock(at(k))}`);
+if (details) problems.push(`${s.title}: ${people.filter((p, b) => clash & (1 << b)).join(', ')} kann ${PLAN_DAYS_SHORT[d]} ${clock(at(k))} nicht`);
 }
 if (s.release) {
 const delay = (d - s.release.day + 7) % 7;
 if (delay === 0 && at(k) < s.release.min) {
 cost += PLAN_COST.hard;
-if (details) problems.push(`${s.title}: only out at ${clock(s.release.min)}`);
+if (details) problems.push(`${s.title}: erst ab ${clock(s.release.min)} draußen`);
 }
 if (delay) { cost += PLAN_COST.delay * delay + moveCost; moved++; }
 }
@@ -240,11 +235,11 @@ if (s.current && s.current.day !== d) cost += PLAN_COST.keep;
 const f = fixed[i];
 if (f && f.day !== null && f.day !== d) {
 cost += PLAN_COST.hard;
-if (details) problems.push(`${s.title}: fixed to ${PLAN_DAYS_SHORT[f.day]}`);
+if (details) problems.push(`${s.title}: auf ${PLAN_DAYS_SHORT[f.day]} festgelegt`);
 }
 if (f && f.slot !== null && f.slot !== k) {
 cost += PLAN_COST.hard;
-if (details) problems.push(`${s.title}: fixed to slot ${f.slot + 1}`);
+if (details) problems.push(`${s.title}: auf Slot ${f.slot + 1} festgelegt`);
 }
 }
 }
@@ -372,120 +367,138 @@ async function loadPlanner() {
 await ready;
 const tab = tabs.find(t => t.gid === planTabGid) || tabs[0] || FALLBACK_TAB;
 planTabGid = tab.gid;
-$('list').innerHTML = `<div class="status">Reading ${esc(tab.name)} and looking up release times…</div>`;
+$('planSetup').innerHTML = '';
+$('planOut').innerHTML = `<div class="status">Lese ${esc(tab.name)} und suche die Release-Zeiten…</div>`;
 let data;
 try {
 data = await plannerData(tab);
 } catch (e) {
-$('list').innerHTML = `<div class="status">Couldn't load the plan data (${esc(e.message)}).</div>`;
+$('planOut').innerHTML = `<div class="status">Die Plandaten konnten nicht geladen werden (${esc(e.message)}).</div>`;
 return;
 }
 if (!planBusy) {
 try { planBusy = await seasonplanBusy(data); } catch { planBusy = []; }
 saveSettings();
 }
-try {
-const color = personColor.get(localStorage.getItem('soloPerson') || DEFAULT_PERSON);
-if ((localStorage.getItem('accent') || 'person') === 'person' && color) {
-const [r, g, b] = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
-document.documentElement.style.setProperty('--accent', color);
-document.documentElement.style.setProperty('--accent-text', 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#111' : '#fff');
-}
-} catch {}
-$('list').innerHTML = plannerSetup(data) + '<div id="planOut"></div>';
+$('planSetup').innerHTML = plannerSetup(data);
 bindPlannerSetup(data);
 if (planOutcome?.tab === tab.gid) showPlan(data, planOutcome.plan);
 else generatePlan(data);
 }
+let planOpen = { avail: true };
+try { planOpen = JSON.parse(localStorage.getItem('planOpen')) || planOpen; } catch {}
+const group = (id, title, count, body) => `<details class="plan-group" data-group="${id}"${planOpen[id] ? ' open' : ''}>
+    <summary><span>${title}</span>${count ? `<span class="plan-count">${count}</span>` : ''}</summary><div class="plan-group-body">${body}</div></details>`;
 function plannerSetup(data) {
 const tabOptions = (tabs.length ? tabs : [FALLBACK_TAB]).map(t =>
-`<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (votes)' : ''}</option>`).join('');
-const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}<span class="avail-head" title="Last show over by">Until</span>`;
-const starts = `<span class="avail-name everyone">Start</span>${PLAN_DAYS.map((day, d) =>
+`<option value="${esc(t.gid)}"${t.gid === data.tab.gid ? ' selected' : ''}>${esc(t.name)}${t.list ? ' (Abstimmung)' : ''}</option>`).join('');
+const header = `<span></span>${PLAN_DAYS_SHORT.map(day => `<span class="avail-head">${day}</span>`).join('')}<span class="avail-head" title="Letzte Folge vorbei bis">Bis</span>`;
+const starts = `<span class="avail-name everyone" title="Startzeit pro Tag (leer = Standard)">Start</span>${PLAN_DAYS.map((day, d) =>
 `<input class="avail-start" data-day="${d}" value="${esc(planStarts.days[d] || '')}" placeholder="${esc(planStarts.standard)}"
-      inputmode="numeric" maxlength="5" aria-label="Start on ${day}" title="Start on ${day} (empty = standard)">`).join('')}<span></span>`;
+      inputmode="numeric" maxlength="5" aria-label="Start am ${day}" title="Start am ${day} (leer = Standard)">`).join('')}<span></span>`;
 const grid = [EVERYONE, ...data.people].map(p => `
-    <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Everyone' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
+    <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Alle' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
 `<button class="avail-day" data-person="${esc(p)}" data-day="${d}" aria-pressed="${(planUnavailable[p] || []).includes(d)}"
-        title="${p === EVERYONE ? 'Nobody watches' : esc(p) + " can't"} on ${PLAN_DAYS[d]}">${day.slice(0, 2)}</button>`).join('')}
+        title="${p === EVERYONE ? 'Niemand guckt' : esc(p) + ' kann nicht'} am ${PLAN_DAYS[d]}">${day}</button>`).join('')}
       <input class="avail-start avail-until" data-person="${esc(p)}" value="${esc(planUntil[p] || '')}" placeholder="–" inputmode="numeric" maxlength="5"
-        aria-label="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by" title="${p === EVERYONE ? 'Everyone' : esc(p)}: last show over by (empty = no limit)">`).join('');
-return `<section class="plan-card">
-    <div class="plan-head">
-      <select id="planTab" class="pill" aria-label="Guckplan tab">${tabOptions}</select>
-      <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard start"></label>
-      <button id="planRun" class="pill plan-go">Generate plan</button>
+        aria-label="${p === EVERYONE ? 'Alle' : esc(p)}: letzte Folge vorbei bis" title="${p === EVERYONE ? 'Alle' : esc(p)}: letzte Folge vorbei bis (leer = egal)">`).join('');
+const offDays = Object.values(planUnavailable).reduce((n, days) => n + days.length, 0);
+const ruleCount = (planMoves !== 'rarely' ? 1 : 0) + Object.keys(planBreaks).length;
+return `<div class="plan-setup-head">
+      <select id="planTab" class="pill" aria-label="Guckplan">${tabOptions}</select>
+      <button id="planRun" class="pill plan-go">Plan erstellen</button>
     </div>
-    <div class="menu-label">Who can't when <span class="plan-hint">· tap a day for the whole day off</span></div>
-    <div class="avail">${header}${starts}${grid}</div>
-    <div class="menu-label">Busy times <span class="plan-hint">· “Everyone” skips that time for all</span></div>
-    <div id="busyList" class="busy-list">${busyRows(data)}</div>
-    <div class="plan-actions busy-actions">
-      <button id="busyAdd" class="pill">+ Add</button>
-      <button id="busyReload" class="pill" title="Replace the busy times with the ones in the Seasonpläne tab"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> From Seasonpläne</button>
-    </div>
-    <div class="menu-label">Other days <span class="plan-hint">· moving a show off its release day</span></div>
-    <div class="segmented plan-moves" role="group" aria-label="Moving shows to other days">${[['ok', 'When it helps'], ['rarely', 'Rarely'], ['never', 'Never']].map(([v, label]) =>
-`<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div>
-    <div class="menu-label">Breaks <span class="plan-hint">· tap a name: ★ = avoid their breaks, ☕ = they get breaks first</span></div>
-    <div class="plan-break-prefs">${data.people.map(p => breakChip(p)).join('')}</div>
-    <div class="menu-label">Fixed shows <span class="plan-hint">· kept on a day, in a slot, or day only (late night)</span></div>
-    <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
-    <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Add</button></div>
-  </section>`;
+    <p id="planStale" class="plan-stale" hidden>Einstellungen geändert. „Neu erstellen“ übernimmt sie.</p>
+    ${group('avail', 'Wer kann wann', offDays ? `${offDays}× nicht da` : '', `
+      <label class="plan-start">Start <input id="planStandard" class="pill" value="${esc(planStarts.standard)}" inputmode="numeric" maxlength="5" aria-label="Standard-Startzeit"></label>
+      <p class="plan-hint">Tag antippen = an dem Tag nicht da. „Bis“ = spätestens fertig um.</p>
+      <div class="avail">${header}${starts}${grid}</div>`)}
+    ${group('busy', 'Feste Termine', planBusy?.length || '', `
+      <p class="plan-hint">Zeiten, in denen jemand nicht kann. „Alle“ lässt die Zeit ganz frei.</p>
+      <div id="busyList" class="busy-list">${busyRows(data)}</div>
+      <div class="plan-actions busy-actions">
+        <button id="busyAdd" class="pill">+ Termin</button>
+        <button id="busyReload" class="pill" title="Termine aus dem Tab „Seasonpläne“ übernehmen (ersetzt die Liste)"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Aus Seasonpläne</button>
+      </div>`)}
+    ${group('fixed', 'Serien festlegen', planFixed.length || '', `
+      <p class="plan-hint">Eine Serie auf einen Tag, einen Slot oder nur einen Tag ohne Uhrzeit (z. B. spät nachts) legen.</p>
+      <div id="fixedList" class="busy-list">${fixedRows(data)}</div>
+      <div class="plan-actions busy-actions"><button id="fixedAdd" class="pill">+ Serie</button></div>`)}
+    ${group('rules', 'Regeln', ruleCount || '', `
+      <div class="plan-rule"><span>Serien auf einen anderen Tag als den Release legen</span>
+      <div class="segmented plan-moves" role="group" aria-label="Andere Tage">${[['ok', 'Wenn es hilft'], ['rarely', 'Selten'], ['never', 'Nie']].map(([v, label]) =>
+`<button data-moves="${v}" aria-pressed="${planMoves === v}">${label}</button>`).join('')}</div></div>
+      <div class="plan-rule"><span>Pausen: Name antippen. ★ = möglichst keine Pausen, ☕ = Pausen gehen zuerst an sie</span>
+      <div class="plan-break-prefs">${data.people.map(p => breakChip(p)).join('')}</div></div>`)}`;
 }
 const breakChip = p => {
 const pref = planBreaks[p] || 'normal';
 return `<button class="break-pref ${pref}" data-break-person="${esc(p)}" style="${personStyle(p)}"
-    title="${esc(p)}'s breaks: ${pref === 'protect' ? 'avoid them' : pref === 'fine' ? 'they get breaks first' : 'normal'}">${BREAK_LABEL[pref] ? `${BREAK_LABEL[pref]} ` : ''}${esc(p)}</button>`;
+    title="Pausen für ${esc(p)}: ${pref === 'protect' ? 'möglichst vermeiden' : pref === 'fine' ? 'gehen zuerst an sie' : 'normal'}">${BREAK_LABEL[pref] ? `${BREAK_LABEL[pref]} ` : ''}${esc(p)}</button>`;
 };
 const selectOptions = (list, value) => list.map(([v, label]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(label)}</option>`).join('');
+const removeButton = '<button class="round busy-remove" aria-label="Entfernen" title="Entfernen"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
 function fixedRows(data) {
-if (!planFixed.length) return '<div class="ep busy-empty">None.</div>';
+if (!planFixed.length) return '<div class="ep busy-empty">Keine.</div>';
 const shows = data.shows.map(s => [s.sheetTitle, s.title]).sort((a, b) => a[1].localeCompare(b[1]));
-const days = [['release', 'Release day'], ...PLAN_DAYS_SHORT.map((d, j) => [j, d])];
-const slots = [['', 'Any slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`]), ['none', 'Day only (no slot)']];
+const days = [['release', 'Release-Tag'], ...PLAN_DAYS_SHORT.map((d, j) => [j, d])];
+const slots = [['', 'Beliebiger Slot'], ...Array.from({ length: 10 }, (_, k) => [k + 1, `Slot ${k + 1}`]), ['none', 'Nur Tag (ohne Slot)']];
 return planFixed.map((f, i) => `
-    <div class="busy-row" data-i="${i}">
-      <select class="pill fixed-show" data-field="show" aria-label="Show">${selectOptions(shows, f.show)}</select>
-      <select class="pill" data-field="day" aria-label="Day">${selectOptions(days, f.day)}</select>
+    <div class="busy-row fixed-row" data-i="${i}">
+      <select class="pill fixed-show" data-field="show" aria-label="Serie">${selectOptions(shows, f.show)}</select>
+      <select class="pill" data-field="day" aria-label="Tag">${selectOptions(days, f.day)}</select>
       <select class="pill" data-field="slot" aria-label="Slot">${selectOptions(slots, f.slot)}</select>
-      <button class="round busy-remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      ${removeButton}
     </div>`).join('');
 }
 function busyRows(data) {
-if (!planBusy?.length) return '<div class="ep busy-empty">None.</div>';
-const options = selectOptions;
-const who = [[EVERYONE, 'Everyone'], ...data.people.map(p => [p, p])];
+if (!planBusy?.length) return '<div class="ep busy-empty">Keine.</div>';
+const who = [[EVERYONE, 'Alle'], ...data.people.map(p => [p, p])];
 return planBusy.map((e, i) => `
     <div class="busy-row" data-i="${i}">
-      <select class="pill" data-field="person" aria-label="Who">${options(who, e.person)}</select>
-      <select class="pill" data-field="day" aria-label="Day">${options(PLAN_DAYS_SHORT.map((d, j) => [j, d]), e.day)}</select>
-      <input class="pill busy-time" data-field="from" value="${esc(e.from || '')}" placeholder="from" inputmode="numeric" maxlength="5" aria-label="From">
-      <input class="pill busy-time" data-field="to" value="${esc(e.to || '')}" placeholder="to" inputmode="numeric" maxlength="5" aria-label="To">
-      <input class="pill busy-note" data-field="note" value="${esc(e.note || '')}" placeholder="note" aria-label="Note">
-      <button class="round busy-remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <select class="pill" data-field="person" aria-label="Wer">${selectOptions(who, e.person)}</select>
+      <select class="pill" data-field="day" aria-label="Tag">${selectOptions(PLAN_DAYS_SHORT.map((d, j) => [j, d]), e.day)}</select>
+      <input class="pill busy-time" data-field="from" value="${esc(e.from || '')}" placeholder="von" inputmode="numeric" maxlength="5" aria-label="Von">
+      <input class="pill busy-time" data-field="to" value="${esc(e.to || '')}" placeholder="bis" inputmode="numeric" maxlength="5" aria-label="Bis">
+      ${removeButton}
+      <input class="pill busy-note" data-field="note" value="${esc(e.note || '')}" placeholder="Notiz" aria-label="Notiz">
     </div>`).join('');
 }
 function bindPlannerSetup(data) {
 $('planTab').onchange = () => { planTabGid = $('planTab').value; planOutcome = null; loadPlanner(); };
+for (const d of document.querySelectorAll('.plan-group'))
+d.ontoggle = () => { planOpen[d.dataset.group] = d.open; try { localStorage.setItem('planOpen', JSON.stringify(planOpen)); } catch {} };
+const count = (id, n) => {
+const summary = document.querySelector(`[data-group="${id}"] summary`);
+summary.querySelector('.plan-count')?.remove();
+if (n) summary.insertAdjacentHTML('beforeend', `<span class="plan-count">${n}</span>`);
+};
+const recount = () => {
+const offDays = Object.values(planUnavailable).reduce((n, days) => n + days.length, 0);
+count('avail', offDays ? `${offDays}× nicht da` : '');
+count('busy', planBusy.length);
+count('fixed', planFixed.length);
+count('rules', (planMoves !== 'rarely' ? 1 : 0) + Object.keys(planBreaks).length);
+};
+const changed = () => { saveSettings(); recount(); };
 $('planStandard').onchange = () => {
 planStarts.standard = minutesOf($('planStandard').value) !== null ? $('planStandard').value : '19:00';
-for (const input of document.querySelectorAll('.avail-start')) input.placeholder = planStarts.standard;
-saveSettings();
+$('planStandard').value = planStarts.standard;
+for (const input of document.querySelectorAll('.avail-start:not(.avail-until)')) input.placeholder = planStarts.standard;
+changed();
 };
 for (const input of document.querySelectorAll('.avail-until'))
 input.onchange = () => {
 const p = input.dataset.person;
 if (minutesOf(input.value) !== null) planUntil[p] = input.value; else delete planUntil[p];
 input.value = planUntil[p] || '';
-saveSettings();
+changed();
 };
 for (const input of document.querySelectorAll('.avail-start:not(.avail-until)'))
 input.onchange = () => {
 planStarts.days[Number(input.dataset.day)] = minutesOf(input.value) !== null ? input.value : '';
 input.value = planStarts.days[Number(input.dataset.day)];
-saveSettings();
+changed();
 };
 for (const b of document.querySelectorAll('.avail-day'))
 b.onclick = () => {
@@ -494,30 +507,30 @@ const d = Number(b.dataset.day);
 days.has(d) ? days.delete(d) : days.add(d);
 planUnavailable[b.dataset.person] = [...days].sort();
 b.setAttribute('aria-pressed', days.has(d));
-saveSettings();
+changed();
 };
 const redrawBusy = () => { $('busyList').innerHTML = busyRows(data); bindBusy(); };
 const bindBusy = () => {
 for (const row of document.querySelectorAll('#busyList .busy-row')) {
 const e = planBusy[Number(row.dataset.i)];
 for (const field of row.querySelectorAll('[data-field]'))
-field.onchange = () => { e[field.dataset.field] = field.dataset.field === 'day' ? Number(field.value) : field.value; saveSettings(); };
-row.querySelector('.busy-remove').onclick = () => { planBusy.splice(Number(row.dataset.i), 1); saveSettings(); redrawBusy(); };
+field.onchange = () => { e[field.dataset.field] = field.dataset.field === 'day' ? Number(field.value) : field.value; changed(); };
+row.querySelector('.busy-remove').onclick = () => { planBusy.splice(Number(row.dataset.i), 1); changed(); redrawBusy(); };
 }
 };
 bindBusy();
-$('busyAdd').onclick = () => { planBusy.push({ person: EVERYONE, day: 0, from: '', to: '', note: '' }); saveSettings(); redrawBusy(); };
+$('busyAdd').onclick = () => { planBusy.push({ person: EVERYONE, day: 0, from: '', to: '', note: '' }); changed(); redrawBusy(); };
 $('busyReload').onclick = async () => {
-try { planBusy = await seasonplanBusy(data); } catch { notice("Couldn't read Seasonpläne"); return; }
-saveSettings();
+try { planBusy = await seasonplanBusy(data); } catch { notice('Seasonpläne konnte nicht gelesen werden'); return; }
+changed();
 redrawBusy();
-notice('Busy times taken from Seasonpläne');
+notice('Termine aus Seasonpläne übernommen');
 };
 for (const b of document.querySelectorAll('[data-moves]'))
 b.onclick = () => {
 planMoves = b.dataset.moves;
 for (const o of document.querySelectorAll('[data-moves]')) o.setAttribute('aria-pressed', o === b);
-saveSettings();
+changed();
 };
 const NEXT_PREF = { normal: 'protect', protect: 'fine', fine: 'normal' };
 for (const b of document.querySelectorAll('[data-break-person]'))
@@ -525,7 +538,7 @@ b.onclick = () => {
 const p = b.dataset.breakPerson;
 const pref = NEXT_PREF[planBreaks[p] || 'normal'];
 if (pref === 'normal') delete planBreaks[p]; else planBreaks[p] = pref;
-saveSettings();
+changed();
 b.outerHTML = breakChip(p);
 bindPlannerSetup(data);
 };
@@ -537,9 +550,9 @@ for (const field of row.querySelectorAll('[data-field]'))
 field.onchange = () => {
 const v = field.value;
 f[field.dataset.field] = field.dataset.field === 'show' || v === 'release' || v === 'none' || v === '' ? v : Number(v);
-saveSettings();
+changed();
 };
-row.querySelector('.busy-remove').onclick = () => { planFixed.splice(Number(row.dataset.i), 1); saveSettings(); redrawFixed(); };
+row.querySelector('.busy-remove').onclick = () => { planFixed.splice(Number(row.dataset.i), 1); changed(); redrawFixed(); };
 }
 };
 bindFixed();
@@ -547,28 +560,32 @@ $('fixedAdd').onclick = () => {
 const free = data.shows.find(s => !planFixed.some(f => f.show === s.sheetTitle));
 if (!free) return;
 planFixed.push({ show: free.sheetTitle, day: 'release', slot: '' });
-saveSettings();
+changed();
 redrawFixed();
 };
-const reveal = () => $('planOut')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-$('planRun').onclick = async () => {
-const generating = generatePlan(data);
-reveal();
-await generating;
-reveal();
-};
+$('planRun').onclick = () => generatePlan(data);
+}
+// after a settings change the shown plan is outdated: say so at the button
+function markStale() {
+if (!planOutcome || !$('planStale')) return;
+$('planStale').hidden = false;
+$('planRun').textContent = 'Neu erstellen';
+$('planRun').classList.add('stale');
 }
 async function generatePlan(data) {
 const out = $('planOut');
 if (!out) return;
-if (!data.shows.length) { out.innerHTML = '<div class="status">Nobody has picked any show in this tab yet.</div>'; return; }
+if (!data.shows.length) { out.innerHTML = '<div class="status">In diesem Tab hat noch niemand eine Serie gewählt.</div>'; return; }
 $('planRun').disabled = true;
 out.style.minHeight = out.offsetHeight + 'px';
-out.innerHTML = '<div class="status">Trying out plans… <span id="planProgress">0%</span></div>';
+out.innerHTML = '<div class="status plan-busy">Probiere Pläne aus… <span class="plan-progress"><span id="planProgress"></span></span></div>';
 const ctx = planContext(data);
-const plan = await findPlan(ctx, f => { const el = $('planProgress'); if (el) el.textContent = Math.round(f * 100) + '%'; });
+const plan = await findPlan(ctx, f => { const el = $('planProgress'); if (el) el.style.width = Math.round(f * 100) + '%'; });
 if (!$('planOut')) return;
 $('planRun').disabled = false;
+$('planRun').textContent = 'Neu erstellen';
+$('planRun').classList.remove('stale');
+$('planStale').hidden = true;
 planOutcome = { tab: data.tab.gid, plan };
 showPlan(data, plan);
 out.style.minHeight = '';
@@ -584,75 +601,99 @@ const ends = plan.map((slots, d) => slots.length ? times[d][slots.length - 1] + 
 const nowEnds = now.days.map(evening => evening.length ? evening[evening.length - 1].at + SLOT_LENGTH : 0);
 const sideBySide = p => p.flat().filter(slot => slot.length > 1).length;
 const nowMoved = shows.filter(s => s.release && s.current && s.current.day !== s.release.day).length;
-const tile = (value, label, was) => `<div class="plan-tile"><b>${value}</b><span>${label}</span><small>Guckplan now: ${was}</small></div>`;
+// where each show is now and in the suggestion: { d, at } (at null = day only)
+const was = new Map(), will = new Map();
+now.days.forEach((evening, d) => evening.forEach(({ at, shows: slot }) => slot.forEach(i => was.set(i, { d, at }))));
+now.dayOnly.forEach((list, d) => list.forEach(i => was.set(i, { d, at: null })));
+plan.forEach((slots, d) => slots.forEach((slot, k) => slot.forEach(i => will.set(i, { d, at: times[d][k] }))));
+ctx.dayOnly.forEach((list, d) => list.forEach(i => will.set(i, { d, at: null })));
+const when = w => w ? `${PLAN_DAYS_SHORT[w.d]} ${w.at === null ? '(ohne Zeit)' : clock(w.at)}` : 'noch kein Tag';
+const changes = [...will].filter(([i, w]) => { const o = was.get(i); return !o || o.d !== w.d || o.at !== w.at; })
+.sort((a, b) => a[1].d - b[1].d || (a[1].at ?? 9999) - (b[1].at ?? 9999));
+const changedSet = new Set(changes.map(([i]) => i));
+const tile = (value, label, before, better) => `<div class="plan-tile ${better}"><b>${value}</b><span>${label}</span><small>jetzt ${before}</small></div>`;
+const cmp = (a, b) => a < b ? 'better' : a > b ? 'worse' : '';
+const latest = endOf(ends), nowLatest = endOf(nowEnds);
 const stats = `<div class="plan-stats">
-    ${tile(result.breaks, result.breaks === 1 ? 'break' : 'breaks', nowResult.breaks)}
-    ${tile(result.moved, 'moved off release day', nowMoved)}
-    ${tile(sideBySide(plan), 'slots side by side', sideBySide(now.plan))}
-    ${tile(clock(endOf(ends)), 'latest end', nowEnds.some(Boolean) ? clock(endOf(nowEnds)) : '–')}
+    ${tile(result.breaks, result.breaks === 1 ? 'Pause' : 'Pausen', nowResult.breaks, cmp(result.breaks, nowResult.breaks))}
+    ${tile(result.moved, 'nicht am Release-Tag', nowMoved, cmp(result.moved, nowMoved))}
+    ${tile(sideBySide(plan), 'Slots parallel', sideBySide(now.plan), '')}
+    ${tile(latest ? clock(latest) : '–', 'spätestes Ende', nowLatest ? clock(nowLatest) : '–', nowLatest ? cmp(latest, nowLatest) : '')}
   </div>`;
-const problems = result.problems.length ? `<details class="warning" open><summary>${result.problems.length} ${result.problems.length === 1 ? "show doesn't" : "shows don't"} fit anywhere cleanly</summary>
+const problems = result.problems.length ? `<details class="warning" open><summary>${result.problems.length} ${result.problems.length === 1 ? 'Serie passt' : 'Serien passen'} nirgends sauber</summary>
     <ul>${result.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : '';
 const chips = people => `<span class="who">${people.map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span>`;
-const showInfo = (i, d) => {
+const changeList = `<section class="plan-changes"><h2>Was sich ändert <span class="plan-count">${changes.length}</span></h2>${changes.length
+? `<ul>${changes.map(([i, w]) => { const o = was.get(i), otherDay = !o || o.d !== w.d;
+return `<li class="${otherDay ? 'other-day' : ''}"><b>${esc(shows[i].title)}</b><span class="plan-from">${when(o)}</span><span class="plan-arrow" aria-label="wird zu">→</span><span class="plan-to">${when(w)}</span></li>`; }).join('')}</ul>`
+: '<p class="ep">Nichts. Der Vorschlag entspricht dem aktuellen Guckplan.</p>'}</section>`;
+const showInfo = (i, d, mark) => {
 const s = shows[i];
 const notes = [];
 if (s.release) {
-notes.push(`out ${PLAN_DAYS_SHORT[s.release.day]} ${clock(s.release.min)}`);
+notes.push(`raus ${PLAN_DAYS_SHORT[s.release.day]} ${clock(s.release.min)}`);
 const delay = d < 0 ? 0 : (d - s.release.day + 7) % 7;
-if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'day' : 'days'}</span>`);
-} else notes.push('no weekly release');
-if (s.short) notes.push('short');
-if (ctx.fixed[i]?.dayOnly) notes.push('day only');
-else if (ctx.fixed[i]) notes.push('📌 fixed');
+if (delay) notes.push(`<span class="plan-moved">+${delay} ${delay === 1 ? 'Tag' : 'Tage'}</span>`);
+} else notes.push('kein wöchentlicher Release');
+if (s.short) notes.push('kurz');
+if (ctx.fixed[i]?.dayOnly) notes.push('nur Tag');
+else if (ctx.fixed[i]) notes.push('📌 festgelegt');
+if (mark && changedSet.has(i)) notes.push(`<span class="plan-was">vorher ${when(was.get(i))}</span>`);
 return `<div class="info"><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
 };
-const row = (at, label, slot, d) => `
-    <div class="row plan-row">
+const row = (at, label, slot, d, mark) => `
+    <div class="row plan-row${mark && slot.some(i => changedSet.has(i)) ? ' changed' : ''}">
       <div class="time">${clock(at)}${label ? `<small>${label}</small>` : ''}</div>
-      <div class="plan-slot${slot.length > 1 ? ' pair' : ''}">${slot.map(i => showInfo(i, d)).join('<div class="plan-or">‖</div>')}</div>
+      <div class="plan-slot${slot.length > 1 ? ' pair' : ''}">${slot.map(i => showInfo(i, d, mark)).join('<div class="plan-or">‖</div>')}</div>
     </div>`;
-const dayOnlyRows = (list, d) => list.map(i => `
-    <div class="row plan-row">
-      <div class="time">–<small>no slot</small></div>
-      <div class="plan-slot">${showInfo(i, d)}</div>
+const dayOnlyRows = (list, d, mark) => list.map(i => `
+    <div class="row plan-row${mark && changedSet.has(i) ? ' changed' : ''}">
+      <div class="time">–<small>ohne Slot</small></div>
+      <div class="plan-slot">${showInfo(i, d, mark)}</div>
     </div>`).join('');
-const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d)).join('') + dayOnlyRows(ctx.dayOnly[d], d);
+const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d, true)).join('') + dayOnlyRows(ctx.dayOnly[d], d, true);
 const nowDay = d => now.days[d].map(({ at, shows: slot }) => row(at, '', slot, d)).join('') + dayOnlyRows(now.dayOnly[d], d);
 const span = (from, to) => from === null ? '' : `<span class="plan-span">${clock(from)}–${clock(to)}</span>`;
 const days = PLAN_DAYS.map((day, d) => {
 const mine = plan[d].length ? span(times[d][0], ends[d]) : '';
 const theirs = now.days[d].length ? span(now.days[d][0].at, nowEnds[d]) : '';
 const hasMine = plan[d].length || ctx.dayOnly[d].length, hasTheirs = now.days[d].length || now.dayOnly[d].length;
-if (planView === 'suggestion') return hasMine ? `<section class="day"><h2>${day} ${mine}</h2>${suggestionDay(d)}</section>` : '';
-if (planView === 'now') return hasTheirs ? `<section class="day"><h2>${day} ${theirs}</h2>${nowDay(d)}</section>` : '';
+if (planView === 'suggestion') return hasMine ? `<section class="day"><h2><b>${day}</b> ${mine}</h2>${suggestionDay(d)}</section>` : '';
+if (planView === 'now') return hasTheirs ? `<section class="day"><h2><b>${day}</b> ${theirs}</h2>${nowDay(d)}</section>` : '';
 if (!hasMine && !hasTheirs) return '';
-return `<section class="day"><h2>${day}</h2><div class="plan-compare">
-      <div><div class="plan-side">Guckplan now ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
-      <div><div class="plan-side">Suggestion ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nothing</div>'}</div>
+return `<section class="day"><h2><b>${day}</b></h2><div class="plan-compare">
+      <div><div class="plan-side">Aktuell ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nichts</div>'}</div>
+      <div><div class="plan-side">Vorschlag ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nichts</div>'}</div>
     </div></section>`;
 }).join('');
 const unplaced = planView !== 'suggestion' && now.unplaced.length
-? `<section class="day"><h2>No day in the Guckplan yet</h2>${now.unplaced.map(i => `<div class="row plan-row"><div class="time">–</div><div class="plan-slot">${showInfo(i, -1)}</div></div>`).join('')}</section>` : '';
+? `<section class="day"><h2><b>Noch ohne Tag im Guckplan</b></h2>${now.unplaced.map(i => `<div class="row plan-row"><div class="time">–</div><div class="plan-slot">${showInfo(i, -1)}</div></div>`).join('')}</section>` : '';
 const breakList = (r, label) => {
 const list = data.people.map((p, b) => ({ p, list: r.personBreaks[b] })).filter(x => x.list.length);
 return `<div class="plan-breaks"><span class="plan-side">${label}</span>${list.length
 ? list.map(({ p, list }) => `<span class="plan-break"><span class="who"><span style="${personStyle(p)}">${esc(p)}</span></span>
           ${list.map(x => `${PLAN_DAYS_SHORT[x.day]}${x.gaps > 1 ? ` ×${x.gaps}` : ''}`).join(', ')}</span>`).join('')
-: '<span class="ep">nobody</span>'}</div>`;
+: '<span class="ep">niemand</span>'}</div>`;
 };
-const breaks = `<section class="day"><h2>Breaks</h2>${breakList(result, 'Suggestion')}${breakList(nowResult, 'Guckplan now')}</section>`;
-const views = [['compare', 'Side by side'], ['suggestion', 'Suggestion'], ['now', 'Guckplan now']];
-const actions = `<div class="plan-actions">
-    <div class="segmented plan-views" role="group" aria-label="Show">${views.map(([v, label]) =>
+const breaks = `<section class="day"><h2><b>Pausen</b></h2>${breakList(result, 'Vorschlag')}${breakList(nowResult, 'Aktuell')}</section>`;
+const views = [['compare', 'Vergleich'], ['suggestion', 'Vorschlag'], ['now', 'Aktuell']];
+const actions = `<div class="plan-actions plan-toolbar">
+    <div class="segmented plan-views" role="group" aria-label="Ansicht">${views.map(([v, label]) =>
 `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
-    <button id="planAgain" class="pill">Try another</button><button id="planCopy" class="pill">Copy as table</button>
-    <button id="planSheet" class="pill" title="A code for the Season-Helfer in the sheet: Season-Helfer → 3. Watch-Plan einfügen, then paste">Copy for Season-Helfer</button>
-    <button id="planXlsx" class="pill" title="The plan as a Guckplan tab: in Google Sheets, File → Import → Insert new sheet">Download .xlsx</button></div>`;
-$('planOut').innerHTML = problems + stats + actions + days + unplaced + breaks;
+    <button id="planAgain" class="pill" title="Noch einmal rechnen: oft gibt es mehrere gleich gute Pläne">Anderer Vorschlag</button>
+    <div class="plan-export"><button id="planExport" class="pill plan-go" aria-haspopup="true" aria-expanded="false" aria-controls="planExportMenu">Übernehmen <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div id="planExportMenu" class="popover plan-export-menu" hidden>
+        <button id="planSheet"><b>Für den Season-Helfer kopieren</b><small>Im Sheet: Season-Helfer → „3. Watch-Plan einfügen“, dann einfügen</small></button>
+        <button id="planXlsx"><b>Als .xlsx herunterladen</b><small>Im Sheet: Datei → Importieren → „Neue Tabellenblätter einfügen“</small></button>
+        <button id="planCopy"><b>Als Tabelle kopieren</b><small>Titel, Tag, Uhrzeit, Slot: zum Einfügen irgendwo</small></button>
+      </div></div></div>`;
+$('planOut').innerHTML = problems + stats + changeList + actions + days + unplaced + breaks;
 const cells = [...document.querySelectorAll('#planOut .time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
 $('planAgain').onclick = () => generatePlan(data);
+const menu = $('planExportMenu'), toggle = open => { menu.hidden = !open; $('planExport').setAttribute('aria-expanded', open); };
+$('planExport').onclick = e => { e.stopPropagation(); toggle(menu.hidden); };
+menu.onclick = () => toggle(false);
 $('planCopy').onclick = () => copyPlan(data, plan, times);
 $('planXlsx').onclick = () => downloadXlsx(data, plan, times);
 $('planSheet').onclick = () => copyForSheet(data, plan, times);
@@ -663,6 +704,8 @@ try { localStorage.setItem('planView', planView); } catch {}
 showPlan(data, plan);
 };
 }
+addEventListener('click', e => { if (!e.target.closest('.plan-export')) { const m = $('planExportMenu'); if (m && !m.hidden) { m.hidden = true; $('planExport').setAttribute('aria-expanded', 'false'); } } });
+addEventListener('keydown', e => { if (e.key === 'Escape' && $('planExportMenu') && !$('planExportMenu').hidden) { $('planExportMenu').hidden = true; $('planExport').setAttribute('aria-expanded', 'false'); $('planExport').focus(); } });
 async function copyPlan(data, plan, times) {
 const lines = [['Anime Titel', 'Tag', 'Uhrzeit', 'Slot', 'Parallel mit'].join('\t')];
 const { dayOnly } = planContext(data);
@@ -675,9 +718,9 @@ for (const i of dayOnly[d]) lines.push([data.shows[i].sheetTitle, SHEET_DAYS[d],
 });
 try {
 await navigator.clipboard.writeText(lines.join('\n'));
-notice('Plan copied as a table');
+notice('Plan als Tabelle kopiert');
 } catch {
-notice("Couldn't copy (the browser didn't allow it)");
+notice('Kopieren ging nicht (der Browser hat es nicht erlaubt)');
 }
 }
 function guckplanRows(data, plan, times) {
@@ -734,7 +777,7 @@ document.body.append(a);
 a.click();
 a.remove();
 setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-notice('Downloaded: in Google Sheets, File → Import → Upload → "Insert new sheet(s)"');
+notice('Heruntergeladen. Im Sheet: Datei → Importieren → Hochladen → „Neue Tabellenblätter einfügen“');
 }
 async function copyForSheet(data, plan, times) {
 const { title, people, rows } = guckplanRows(data, plan, times);
@@ -746,9 +789,9 @@ s.row.english || s.row.romaji, s.mal || '', s.row.start || '', s.row.wo || '', t
 });
 try {
 await navigator.clipboard.writeText(code);
-notice('Plan code copied: in the sheet, Season-Helfer → "3. Watch-Plan einfügen" and paste it');
+notice('Plan-Code kopiert. Im Sheet: Season-Helfer → „3. Watch-Plan einfügen“ und einfügen');
 } catch {
-notice("Couldn't copy (the browser didn't allow it)");
+notice('Kopieren ging nicht (der Browser hat es nicht erlaubt)');
 }
 }
 loadPlanner();

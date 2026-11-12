@@ -38,3 +38,5 @@ jobs:
         run: node --test tests/settings-layout.test.mjs
       - name: Test Anime Cover Quiz
         run: node --test tests/cover-game.test.mjs
+      - name: Sheet backup script
+        run: node --test tests/sheet-backup.test.mjs
