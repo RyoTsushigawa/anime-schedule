@@ -111,6 +111,26 @@ async function hardEntries(round) {
 const currentKey = () => 'titleGame:v2:'+difficulty+':'+gameMode;
 const roundNumber = () => gameMode==='daily' ? 0 : Math.max(0,Number(load(currentKey()+':index',0))||0);
 
+// Spiele-Übersicht (idea 139): today's state of the three daily games, from what each keeps in this browser
+function drawToday() {
+  const today = berlinDay();
+  const daily = level => load('titleGame:v2:' + level + ':daily:' + level + ':daily:' + today, null);
+  const title = [daily('normal'), daily('hard')].find(x => x?.guesses?.length) || null;
+  const stats = load('titleGameStats:v2:normal:daily', {});
+  const cover = load('animeCoverQuizV2', null), syn = load('synopsisPuzzleV1', null);
+  const t = !title ? ['open', 'Noch offen'] : !title.done ? ['open', `${title.guesses.length} von ${TRIES} Versuchen`]
+    : title.won ? ['won', `Gelöst in ${title.guesses.length}/${TRIES}`] : ['lost', 'Nicht gelöst'];
+  const c = cover?.day !== today || !cover.answers?.length ? ['open', 'Noch offen']
+    : cover.total && cover.answers.length < cover.total ? ['open', `${cover.answers.length} von ${cover.total} Covern`]
+    : ['won', Number.isFinite(cover.score) ? `${cover.score} / ${(cover.total || 5) * 100} Punkte` : 'Gespielt'];
+  const y = syn?.day !== today || !syn.tries?.length ? ['open', 'Noch offen'] : !syn.done ? ['open', '1 Versuch übrig']
+    : syn.solved ? ['won', syn.tries.length === 1 ? 'Gelöst im 1. Versuch' : 'Gelöst im 2. Versuch'] : ['lost', 'Nicht gelöst'];
+  const played = [t, c, y].filter(([, text]) => text !== 'Noch offen').length;
+  const card = (href, name, [state, text], extra = '') => `<a class="games-card ${state}" href="${href}"><b>${name}</b><span>${text}</span>${extra}</a>`;
+  $('gamesToday').innerHTML = `<div class="games-today-head"><b>Heute</b><span>${played} von 3 gespielt</span></div><div class="games-cards">`
+    + card('#board', 'Titel-Rätsel', t, stats.streak ? `<small>Serie: ${stats.streak}</small>` : '')
+    + card('cover-game.html', 'Anime Cover Quiz', c) + card('synopsis.html', 'Inhalts-Rätsel', y) + '</div>';
+}
 async function start() {
   const turn=++generation;
   const mode=gameMode,level=difficulty,day=berlinDay(),round=roundNumber();
@@ -221,6 +241,7 @@ function finish(fresh){
     .map(([label,value])=>'<span><b>'+value+'</b>'+label+'</span>').join('');
   $('gameNext').textContent=puzzle.mode==='daily'?'Morgen gibt es ein neues Wort.':'Noch eine Runde?';
   $('gameNextRound').hidden=puzzle.mode!=='endless';
+  drawToday();
 }
 $('gameNextRound').onclick=()=>{
   if(gameMode!=='endless'||!state?.done)return;
@@ -257,3 +278,4 @@ $('gameDifficulty').onchange=()=>{
   difficulty=$('gameDifficulty').value;save('titleGameDifficulty',difficulty);start();
 };
 start();
+drawToday();
