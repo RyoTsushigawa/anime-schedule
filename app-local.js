@@ -281,5 +281,6 @@ friendList.add(option);
 }
 updateFriendOptions();
 updateLocalListOptions();
+refreshPaceNav();
 if (listView()) load(true);
 }).catch(() => {});
