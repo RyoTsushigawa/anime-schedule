@@ -1552,3 +1552,10 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
 /* Catch-up: a show not continued for three weeks (idea 113) */
 .idle-tag { margin-left: 6px; font-size: 11.5px; color: color-mix(in srgb, #c9a227 85%, var(--text)); }
 .catchup-summary .inline-later { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Suche: matching shows of the season that aren't on this week */
+.season-matches { margin: 18px 0 8px; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 12px; }
+.season-matches h3 { margin: 0 0 6px; font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.season-match { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 5px 0; font-size: 13.5px; border-top: 1px solid var(--line); }
+.season-match:first-of-type { border-top: 0; }
+.season-match > span { color: var(--muted); font-variant-numeric: tabular-nums; }

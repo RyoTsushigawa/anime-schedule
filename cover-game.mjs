@@ -1,7 +1,7 @@
 import { MAL_IDS, berlinDay, buildRounds, scoreAnswers } from './cover-core.mjs';
 
 const $ = id => document.getElementById(id);
-const storeKey = 'animeCoverQuizV1';
+const storeKey = 'animeCoverQuizV2';   // V2: the shows come from the Guckplan
 let rounds = [], answers = [], position = 0, revealed = false;
 const day = berlinDay();
 function message(text) { $('coverStatus').textContent = text; }
@@ -27,15 +27,29 @@ async function start() {
   $('coverPlay').hidden = true;
   message('Cover werden geladen …');
   try {
-    const response = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ query: 'query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(idMal_in: $ids, type: ANIME) { idMal title { english romaji } coverImage { large extraLarge } } } }', variables: { ids: MAL_IDS } })
-    });
-    if (!response.ok) throw new Error('AniList HTTP ' + response.status);
-    const data = await response.json();
-    if (data.errors?.length) throw new Error('AniList hat die Anfrage abgelehnt.');
-    const catalog = data.data?.Page?.media || [];
+    // the shows from your Guckplan (streams-de.json: AniList IDs); the fixed list if there are too few
+    const ask = async (filter, ids, page) => {
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query: `query ($ids: [Int], $page: Int) { Page(page: $page, perPage: 50) { pageInfo { hasNextPage } media(${filter}: $ids, type: ANIME) { idMal title { english romaji } coverImage { large extraLarge } } } }`, variables: { ids, page } })
+      });
+      if (!response.ok) throw new Error('AniList HTTP ' + response.status);
+      const data = await response.json();
+      if (data.errors?.length) throw new Error('AniList hat die Anfrage abgelehnt.');
+      return data.data?.Page || {};
+    };
+    let catalog = [];
+    try {
+      const streams = await (await fetch('streams-de.json', { cache: 'no-cache' })).json();
+      const ids = Object.keys(streams.status || {}).map(Number).filter(Boolean);
+      for (let page = 1; ids.length && page <= 3; page++) {
+        const part = await ask('id_in', ids, page);
+        catalog.push(...(part.media || []));
+        if (!part.pageInfo?.hasNextPage) break;
+      }
+    } catch {}
+    if (catalog.filter(m => m.idMal).length < 8) catalog = (await ask('idMal_in', MAL_IDS, 1)).media || [];
     const available = await Promise.all(catalog.map(async item => (await imageReady(item.coverImage?.extraLarge || item.coverImage?.large)) ? item : null));
     rounds = buildRounds(available.filter(Boolean), day);
     if (rounds.length < 5) throw new Error('Zu wenige Anime-Cover erreichbar.');
