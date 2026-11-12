@@ -21,7 +21,7 @@ test('Less-used settings live in three native disclosure panels',()=>{
  const summary=[...menu.matchAll(/<details class="settings-fold"><summary>([^<]+)/g)].map(m=>m[1]);
  assert.deepEqual(summary,['Streaming','Anzeige &amp; Listen','Weitere Optionen']);
  assert.doesNotMatch(menu,/<details class="settings-fold" open/);
- assert.match(css,/#settingsMenu \.settings-fold>summary:focus-visible/);
+ assert.match(css,/#settingsMenu \.settings-fold\s*>\s*summary:focus-visible/);
  assert.match(css,/#settingsMenu \.settings-fold\[open\]/);
 });
 

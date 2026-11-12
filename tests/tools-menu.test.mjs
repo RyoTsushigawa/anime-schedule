@@ -37,9 +37,9 @@ test('schedule actions stay wired by ID: Abwesend in the header, Wochenübersich
  assert.match(games,/href="ranker\//);
 });
 test('compact navigation preserves mobile controls and accessible menu focus',()=>{
- assert.match(css,/\.header-primary\{display:flex/);
- assert.match(css,/@media\(max-width:560px\)/);
- assert.match(css,/body\.searching \.header-primary\{display:none\}/);
- assert.match(css,/\.misc-menu\.site-tools\{[^}]*overflow:auto/);
+ assert.match(css,/\.header-primary\s*\{\s*display:\s*flex/);
+ assert.match(css,/@media\s*\(max-width:\s*560px\)/);
+ assert.match(css,/body\.searching \.header-primary\s*\{\s*display:\s*none;?\s*\}/);
+ assert.match(css,/\.misc-menu\.site-tools\s*\{[^}]*overflow:\s*auto/);
  assert.match(css,/\.misc-menu \.misc-section-title/);
 });
