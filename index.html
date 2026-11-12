@@ -49,40 +49,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 </button>
 <div id="settingsMenu" class="popover menu" hidden>
-<section>
-<div class="menu-label">Anzeigen</div>
-<div class="pills settings-options">
-<label class="toggle" title="Wenn du einen Stream öffnest, wird die Folge auch als gesehen markiert (wenn deine Liste verbunden ist). Rückgängig bleibt möglich."><input type="checkbox" id="markOnOpen">Auto-Abhaken</label>
-<label class="toggle week-only" title="Zeigt, wer welche Serie schaut"><input type="checkbox" id="who" aria-label="Wer schaut mit">Zuschauer</label>
-<label class="toggle week-only" title="Zeigt bei einer Folge, wie viele frühere Folgen du noch nicht gesehen hast (wenn deine Liste verbunden ist)"><input type="checkbox" id="behind">Offene Folgen</label>
-
-<label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Drop-Button</label>
-</div>
-</section>
-<section>
-<div class="menu-label">Streaming</div>
-<label class="field service-priority"><span>Bevorzugter Dienst</span><select id="servicePriority" aria-label="Bevorzugter Dienst" title="Hat eine Serie mehrere Dienste, steht dieser vorne; die anderen hinter „+1“"></select></label>
-<div class="settings-caption">Ersatz-Links, wenn kein Dienst angezeigt wird</div>
-<div class="segmented" role="group" aria-label="Ersatz-Links wählen" title="Wenn kein Dienst angezeigt wird"><button data-fallback-source="aniworld">AniWorld</button><button data-fallback-source="torrent">Torrents</button></div>
-<div class="settings-caption">Bei Serien auf Prime Video</div>
-<div class="segmented fallback-prime" role="group" aria-label="Link für Prime-Serien wählen" title="Bei Serien auf Prime Video"><button data-prime-choice="prime"><span class="prime-mark" aria-hidden="true"></span>Prime</button><button data-prime-choice="torrent">Torrents</button></div>
-</section>
+<div class="settings-primary" role="group" aria-label="Schnelleinstellungen">
 <section class="week-only">
 <div class="menu-label">Zeit</div>
 <div class="segmented" role="group" aria-label="Angezeigte Zeit">
 <button data-set="time" data-value="release" title="Wann die Folge erscheint">Release</button><button data-set="time" data-value="watch" title="Deine Guckzeit aus dem Guckplan">Plan</button><button data-set="time" data-value="both">Beide</button>
-</div>
-</section>
-<section class="week-only">
-<div class="menu-label">Discord</div>
-<div class="settings-action">
-<button type="button" id="settingsNicknames" class="pill" title="Spitznamen nach Wochentag oder für alle Anime einrichten">Spitznamen einrichten</button>
-</div>
-</section>
-<section class="catchup-only">
-<div class="menu-label">Sortierung</div>
-<div class="segmented" role="group" aria-label="Reihenfolge beim Catch-up">
-<button data-set="sort" data-value="oldest" title="Am längsten wartend zuerst">Älteste</button><button data-set="sort" data-value="behind" title="Die meisten offenen Folgen zuerst">Backlog</button><button data-set="sort" data-value="next" title="Wessen neue Folge als Nächstes kommt, zuerst">Nächste</button><button data-set="sort" data-value="az">A–Z</button>
 </div>
 </section>
 <section>
@@ -106,6 +77,38 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button data-set="accent" data-value="#159c8c" style="--swatch:#159c8c" aria-label="Türkis"></button>
 </div>
 </section>
+</div>
+<div class="settings-secondary">
+<details class="settings-fold"><summary>Streaming<span class="settings-fold-arrow" aria-hidden="true"></span></summary><div class="settings-fold-content"><section>
+<div class="menu-label">Streaming</div>
+<label class="field service-priority"><span>Bevorzugter Dienst</span><select id="servicePriority" aria-label="Bevorzugter Dienst" title="Hat eine Serie mehrere Dienste, steht dieser vorne; die anderen hinter „+1“"></select></label>
+<div class="settings-caption">Ersatz-Links, wenn kein Dienst angezeigt wird</div>
+<div class="segmented" role="group" aria-label="Ersatz-Links wählen" title="Wenn kein Dienst angezeigt wird"><button data-fallback-source="aniworld">AniWorld</button><button data-fallback-source="torrent">Torrents</button></div>
+<div class="settings-caption">Bei Serien auf Prime Video</div>
+<div class="segmented fallback-prime" role="group" aria-label="Link für Prime-Serien wählen" title="Bei Serien auf Prime Video"><button data-prime-choice="prime"><span class="prime-mark" aria-hidden="true"></span>Prime</button><button data-prime-choice="torrent">Torrents</button></div>
+</section></div></details>
+<details class="settings-fold"><summary>Anzeige &amp; Listen<span class="settings-fold-arrow" aria-hidden="true"></span></summary><div class="settings-fold-content"><section>
+<div class="menu-label">Anzeigen</div>
+<div class="pills settings-options">
+<label class="toggle" title="Wenn du einen Stream öffnest, wird die Folge auch als gesehen markiert (wenn deine Liste verbunden ist). Rückgängig bleibt möglich."><input type="checkbox" id="markOnOpen">Auto-Abhaken</label>
+<label class="toggle week-only" title="Zeigt, wer welche Serie schaut"><input type="checkbox" id="who" aria-label="Wer schaut mit">Zuschauer</label>
+<label class="toggle week-only" title="Zeigt bei einer Folge, wie viele frühere Folgen du noch nicht gesehen hast (wenn deine Liste verbunden ist)"><input type="checkbox" id="behind">Offene Folgen</label>
+
+<label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Drop-Button</label>
+</div>
+</section>
+<section class="catchup-only">
+<div class="menu-label">Sortierung</div>
+<div class="segmented" role="group" aria-label="Reihenfolge beim Catch-up">
+<button data-set="sort" data-value="oldest" title="Am längsten wartend zuerst">Älteste</button><button data-set="sort" data-value="behind" title="Die meisten offenen Folgen zuerst">Backlog</button><button data-set="sort" data-value="next" title="Wessen neue Folge als Nächstes kommt, zuerst">Nächste</button><button data-set="sort" data-value="az">A–Z</button>
+</div>
+</section></div></details>
+<details class="settings-fold"><summary>Weitere Optionen<span class="settings-fold-arrow" aria-hidden="true"></span></summary><div class="settings-fold-content"><section class="week-only">
+<div class="menu-label">Discord</div>
+<div class="settings-action">
+<button type="button" id="settingsNicknames" class="pill" title="Spitznamen nach Wochentag oder für alle Anime einrichten">Spitznamen einrichten</button>
+</div>
+</section>
 <section>
 <button id="movesSetup" class="menu-item" type="button" title="Der Schlüssel, mit dem dieser Browser den Plan bearbeiten darf" hidden>Bearbeitungszugang</button>
 <button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
@@ -113,7 +116,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="settingsExport" class="menu-item" type="button" title="Deine Anzeige-Einstellungen als Datei speichern (ohne Logins und Schlüssel)">Einstellungen exportieren</button>
 <button id="settingsImport" class="menu-item" type="button" title="Einstellungen aus einer exportierten Datei übernehmen">Einstellungen importieren</button><input id="settingsFile" type="file" accept="application/json,.json" hidden>
 <a id="feedbackLink" class="menu-item" target="_blank" rel="noopener" title="Feedback oder Wünsche im Discord" hidden>Feedback<span aria-hidden="true">↗</span></a>
-</section>
+</section></div></details>
+</div>
 </div>
 </div>
 <div class="settings">
