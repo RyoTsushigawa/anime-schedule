@@ -98,3 +98,37 @@ header .bar { max-width: 1288px; }
 .plan-out .plan-breaks { align-items: baseline; }
 .plan-out .plan-breaks .plan-side { width: 90px; margin: 0; }
 .plan-out .plan-breaks + .plan-breaks { margin-top: 6px; }
+
+/* editing the suggestion by hand: drag a show onto a gap (own slot) or onto another show (side by side) */
+.plan-slot .info[draggable="true"] { cursor: grab; border-radius: 8px; transition: background .12s, box-shadow .12s; }
+.plan-slot .info[draggable="true"]:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.plan-slot .info.dragging { opacity: .4; }
+.plan-slot .info.over { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: 0 0 0 2px var(--accent); }
+.plan-drop { height: 4px; margin: -2px 0; border-radius: 99px; transition: height .12s, margin .12s, background .12s; }
+.plan-dragging .plan-drop { height: 14px; margin: 0 0 6px; background: color-mix(in srgb, var(--accent) 10%, transparent); outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+.plan-dragging .plan-drop.over { height: 40px; background: color-mix(in srgb, var(--accent) 22%, transparent); outline: 2px dashed var(--accent); }
+.plan-edited { font-size: 12px; font-weight: 600; color: var(--accent); }
+.plan-drag-hint { font-size: 12px; }
+.plan-toolbar .plan-views { margin-right: auto; }
+.plan-drop.empty { height: auto; margin: 0 0 8px; padding: 10px 12px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); background: none; outline: 0; }
+.plan-dragging .plan-drop.empty { height: auto; padding: 14px 12px; }
+.plan-dragging .plan-drop.empty.over { color: var(--text); }
+.plan-setup .avail-name.idle { opacity: .55; }
+.plan-shift { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
+.plan-shift .round { width: 22px; height: 22px; min-height: 0; padding: 0; font-size: 14px; line-height: 1; color: var(--muted); }
+.plan-shift .round:hover { color: var(--accent); border-color: var(--accent); }
+.plan-add-pause { flex: none; align-self: center; padding: 3px 9px; border: 1px dashed var(--line); border-radius: 99px; background: none; color: var(--muted); font: inherit; font-size: 11.5px; cursor: pointer; opacity: 0; transition: opacity .12s; }
+.plan-row:hover .plan-add-pause, .plan-add-pause:focus-visible { opacity: 1; }
+.plan-add-pause:hover { color: var(--accent); border-color: var(--accent); }
+.plan-row.plan-pause { background: transparent; border-style: dashed; padding-block: 4px; }
+.plan-pause .plan-slot { justify-content: space-between; }
+.plan-pause-label { color: var(--muted); font-size: 13px; font-weight: 600; }
+.plan-pause .round { width: 26px; height: 26px; min-height: 0; padding: 0; color: var(--muted); }
+@media (hover: none) { .plan-add-pause { opacity: 1; } }
+details.plan-changes { margin: 0; color: var(--text); font-size: inherit; }
+.plan-changes summary { display: flex; align-items: center; cursor: pointer; list-style: none; }
+.plan-changes summary::-webkit-details-marker { display: none; }
+.plan-changes summary h2 { margin: 0; }
+.plan-changes summary::after { content: ''; margin-left: auto; width: 7px; height: 7px; border: solid var(--muted); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); transition: transform .15s; }
+.plan-changes[open] summary::after { transform: rotate(-135deg); }
+.plan-changes[open] summary { margin-bottom: 6px; }
