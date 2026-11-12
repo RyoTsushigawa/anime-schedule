@@ -148,7 +148,8 @@ export async function openPage(opts = {}) {
       return text(opts.sheets?.csv?.[url.match(/gid=(\d+)/)?.[1]] ?? CSV);
     }
     if (url.includes('streams-de.json')) return down('streams') || down('site') || json(opts.streams || STREAMS);
-    if (url.includes('wrapped-profiles.json')) return json(JSON.parse(read('wrapped-profiles.json')));
+    // opts.profiles: a different "Wer ist wer" list (person → accounts) instead of the real wrapped-profiles.json
+    if (url.includes('wrapped-profiles.json')) return json(opts.profiles || JSON.parse(read('wrapped-profiles.json')));
     if (url.includes('fallback-links.json')) return down('site') || json({ byAnilist: {} });
     if (url.includes('moves.json') && !url.includes('api.github.com')) return down('site') || (opts.movesFile ? json(opts.movesFile) : json({}, 404));
     // The moves file on GitHub: reading gives a sha, a PUT is kept (decoded) in state.movesSaved

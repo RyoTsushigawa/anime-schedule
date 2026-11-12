@@ -31,7 +31,19 @@ if (Array.isArray(saved)) { selectedPeople.clear(); saved.filter(p => typeof p =
 const malLoginCode = new URLSearchParams(location.hash.slice(1)).get('mal_login');
 if (malLoginCode) history.replaceState(null, '', location.pathname + location.search);
 const listService = () => auth?.provider === 'mal' ? 'MyAnimeList' : 'AniList';
+// The Guckplan person of the connected account, from the "Wer ist wer" list (wrapped-profiles.json, as in
+// Wrapped and the friend lists); RyoTsushigawa is MaRyo. null when the account isn't listed there.
+let profileList = {};
+function accountPerson() {
+if (!auth?.name) return null;
+const provider = auth.provider === 'mal' ? 'mal' : 'anilist', name = auth.name.toLowerCase();
+for (const [person, list] of Object.entries(profileList))
+if ((Array.isArray(list) ? list : []).some(a => (a?.provider || 'anilist') === provider && String(a?.name || '').toLowerCase() === name)) return person;
+return name === DEFAULT_ANILIST.toLowerCase() ? DEFAULT_PERSON : null;
+}
 function ownPerson() {
+const listed = accountPerson();
+if (listed) return listed;
 let person = null;
 try { person = localStorage.getItem('ownPerson'); } catch {}
 if (person || !auth?.name) return person || soloPerson;
@@ -40,8 +52,13 @@ try { localStorage.setItem('ownPerson', person); } catch {}
 return person;
 }
 // ✓ and Droppen write to the connected list: only for shows its person watches in the Guckplan, or that are on
-// that list already (in the group view or another person's Solo plan you also see shows you don't watch)
-const ownShow = (id, who) => !who?.length || who.includes(ownPerson()) || myProgress.has(Number(id)) || knownEntries.has(Number(id));
+// that list already (in the group view or another person's Solo plan you also see shows you don't watch).
+// An account not in "Wer ist wer": ✓ only in the Solo view (and for shows on its list).
+const ownShow = (id, who) => {
+if (!who?.length || myProgress.has(Number(id)) || knownEntries.has(Number(id))) return true;
+const person = accountPerson();
+return person ? who.includes(person) : mode === 'solo' && who.includes(soloPerson);
+};
 const activePeople = () => mode === 'solo' ? [soloPerson].filter(Boolean) : [...selectedPeople];
 const ANILIST_CLIENT_ID = 54702;
 let accounts = [];
