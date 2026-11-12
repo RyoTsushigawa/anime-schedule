@@ -110,7 +110,9 @@ async function loadCovers(tab,list){
   const query='query ('+part.map((_,j)=>'$t'+j+': String').join(', ')+') {'+
    part.map((_,j)=>' s'+j+': Page(perPage: 1) { media(search: $t'+j+', type: ANIME, sort: SEARCH_MATCH) { coverImage { medium } } }').join('')+' }';
   try{
-   const data=await anilist(query,Object.fromEntries(part.map((show,j)=>['t'+j,show.english||show.title])),
+   // "Sekiro: No Defeat (TV)" → "Sekiro: No Defeat": an ending in brackets keeps AniList's search from finding it
+   const term=show=>String(show.english||show.title||'').trim().replace(/\s*\((?:TV|ONA|OVA|Movie|\d{4})\)\s*$/i,'');
+   const data=await anilist(query,Object.fromEntries(part.map((show,j)=>['t'+j,term(show)])),
     undefined,{retries:0,timeout:10000});
    for(const [j,show] of part.entries()){
     const url=data['s'+j]?.media?.[0]?.coverImage?.medium;
