@@ -1,6 +1,7 @@
 // Titel-Rätsel: English words from Guckplan titles, or public group AniLists
 // in Hard mode. Daily puzzles are independent of endlessly replayable rounds.
 import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry} from './games-logic.mjs';
+import {ENGLISH_GUESSES} from './games-guesses.mjs';
 
 const $ = id => document.getElementById(id);
 const TRIES = 6;
@@ -153,7 +154,9 @@ async function start() {
       ?basic.daily[Math.max(0,dayNumber(day,dailyData.start))%basic.daily.length]
       :pickEntry(basic.pool,round,'normal:endless');
     if(turn!==generation)return;
-    allowed=sourceWordSet(source);
+    // Guesses are ordinary English words, independent of the anime title pool.
+    // Keep every possible answer guessable even when it is rare in general English.
+    allowed=new Set([...ENGLISH_GUESSES,...sourceWordSet(source)]);
     allowed.add(entry.word);
     const id=level+':'+mode+':'+(mode==='daily'?day:round);
     puzzle={...entry,id,day,number:mode==='daily'?Math.max(0,dayNumber(day,dailyData.start))+1:round+1,
@@ -164,7 +167,7 @@ async function start() {
     state.hints = Math.max(0,Math.min(2,Number(state.hints)||0));
     $('gameNumber').textContent=(level==='hard'?'Schwer · ':'')+
       (mode==='daily'?'Titel-Rätsel #':'Endlos #')+puzzle.number;
-    $('gameHint').textContent=puzzle.word.length+' Buchstaben · '+allowed.size+' gültige Wörter';
+    $('gameHint').textContent=puzzle.word.length+' Buchstaben · Englische Wörter erlaubt';
     draw();
     refreshHardHints();
     if(state.done) finish(false);
@@ -227,7 +230,7 @@ function press(key){
   const len=puzzle.word.length;
   if(key==='Enter'){
     if(typing.length<len)return message('Das Wort hat '+len+' Buchstaben.');
-    if(!allowed.has(typing))return message('Nur echte englische Wörter aus den Anime-Titeln sind erlaubt.');
+    if(!allowed.has(typing))return message('Dieses Wort steht nicht im englischen Wörterbuch.');
     if(puzzle.level==='hard'){
       const hint=hardHintError(typing,state.guesses,puzzle.word);
       if(hint)return message('Schwerer Modus: '+hint);
