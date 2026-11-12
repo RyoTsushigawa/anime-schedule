@@ -30,17 +30,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Check the site
         run: node tools/check-site.mjs
-      - name: Test the Season Preview voting worker
-        run: node --test tests/season-votes-worker.test.mjs
-      - name: Test grouped Tools navigation
-        run: node --test tests/tools-menu.test.mjs
-      - name: Test compact Settings navigation
-        run: node --test tests/settings-layout.test.mjs
-      - name: Test Anime Cover Quiz
-        run: node --test tests/cover-game.test.mjs
-      - name: Install local backup test dependency
-        run: npm install --no-save --no-package-lock jsdom@26.1.0
-      - name: Test local anime backup and restore
-        run: node --test tests/local-export.test.mjs
-      - name: Sheet backup script
-        run: node --test tests/sheet-backup.test.mjs
+      # every test in tests/ (a new test file runs without being listed here)
+      - name: Install the test packages
+        run: npm ci --prefix tests --ignore-scripts --no-audit --no-fund
+      - name: Run all tests
+        run: node --test 'tests/*.test.mjs'

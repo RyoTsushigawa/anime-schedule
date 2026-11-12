@@ -48,6 +48,15 @@ const WrappedStats = (() => {
     const from = date => date?.year && date?.month && date?.day ? new Date(date.year,date.month-1,date.day).getTime() : NaN;
     const completed=entries.filter(e=>e.status==='COMPLETED' && from(e.completedAt)>=start && from(e.completedAt)<end);
     const current=entries.filter(e=>['CURRENT','REPEATING'].includes(e.status));
+    // Watch time: completed in the window (all episodes), plus progress on this season's own shows that
+    // are still running, paused or dropped. Older unfinished shows can't be dated, so they don't count.
+    // the seasons in the window: one for a season, four for a year
+    const seasons=new Set();
+    for(const d=new Date(start);d.getTime()<end;d.setMonth(d.getMonth()+3))seasons.add(['WINTER','SPRING','SUMMER','FALL'][Math.floor(d.getMonth()/3)]+' '+d.getFullYear());
+    const done=new Set(completed);
+    const watchedEpisodes=e=>done.has(e)?(e.media.episodes||e.progress||0)
+      :seasons.has(e.media.season+' '+e.media.seasonYear)&&['CURRENT','REPEATING','PAUSED','DROPPED'].includes(e.status)?(e.progress||0):0;
+    const watched=entries.map(e=>[e,watchedEpisodes(e)]).filter(([,n])=>n>0);
     const genres=new Map();
     for(const e of completed) for(const genre of e.media.genres||[]) genres.set(genre,(genres.get(genre)||0)+1);
     const rated=completed.filter(e=>e.score>0);
@@ -58,6 +67,7 @@ const WrappedStats = (() => {
     // Only records with a known completion date can be attributed to the selected season.
     return {rated:rated.length,mean,finishDay:top(dates)[0]||null,debate:debates[0]||null,completed:completed.length, minutes:completed.reduce((n,e)=>n+(e.media.episodes||0)*(e.media.duration||24),0),
       durationEstimated:completed.some(e=>!e.media.duration), current:current.length,
+      watchEpisodes:watched.reduce((n,[,k])=>n+k,0), watchMinutes:watched.reduce((n,[e,k])=>n+k*(e.media.duration||24),0), watchShows:watched.length,
       episodes:completed.reduce((n,e)=>n+(e.media.episodes||0),0), genre:top(genres)[0]||null,
       // The same show from several accounts is one row, with their average rating
       favourites:[...ratings.values()].map(es=>({title:es[0].media.title.english||es[0].media.title.romaji,score:Math.round(es.reduce((n,e)=>n+e.score,0)/es.length)})).sort((a,b)=>b.score-a.score).slice(0,3),

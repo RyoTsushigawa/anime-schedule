@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://docs.google.com
+https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Tier-Liste</title>
+<link rel="icon" type="image/png" href="icon-72.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="tierlist.css">
+</head>
+<body>
+<header>
+<div class="bar">
+<a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
+<h1>Tier-Liste</h1>
+<div>Deine Season, von S bis D · bleibt in diesem Browser</div>
+</div>
+</div>
+</header>
+<main class="tier-page">
+<div class="tier-toolbar">
+<select id="tierSeason" class="pill" aria-label="Season"></select>
+<select id="tierPerson" class="pill" aria-label="Person"></select>
+<label class="tier-own"><input type="checkbox" id="tierOwn" checked> Nur Serien dieser Person</label>
+<span class="tier-spacer"></span>
+<details class="tier-editor" id="tierEditor">
+<summary class="pill" title="Reihen umbenennen, hinzufügen oder entfernen">Reihen bearbeiten</summary>
+<div class="tier-editor-body">
+<div id="tierEditorRows" class="tier-editor-rows" aria-label="Reihennamen bearbeiten"></div>
+<button type="button" id="tierAdd" class="pill">+ Reihe hinzufügen</button>
+<p class="tier-editor-note">Beim Entfernen landen die Serien wieder unter „Noch offen“.</p>
+</div>
+</details>
+<button type="button" id="tierCopy" class="pill tier-primary">Für Discord kopieren</button>
+<button type="button" id="tierReset" class="pill" title="Alle Serien zurück nach „Noch offen“">Zurücksetzen</button>
+</div>
+<p class="tier-help">Cover in eine Reihe ziehen. Ohne Ziehen: Cover antippen, dann die Reihe antippen.<span id="tierAniStatus" role="status" aria-live="polite"></span></p>
+<div id="tiers" class="tiers"><div class="status">Lade…</div></div>
+</main>
+<div id="notice" role="status" hidden><span id="noticeText"></span></div>
+<script src="common.js"></script>
+<script src="tierlist.js"></script>
+</body>
+</html>

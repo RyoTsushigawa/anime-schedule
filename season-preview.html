@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.anilist.co; connect-src 'self' https://api.github.com https://*.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.anilist.co https://cdn.myanimelist.net; connect-src 'self' https://graphql.anilist.co https://api.jikan.moe https://api.github.com https://*.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#121216">
 <title>Season Preview · Anime Schedule</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="season-preview.css?v=20261111-ui12">
 <script src="tool-theme.js" data-accent></script>
-<script defer src="common.js"></script><script defer src="season-preview.js?v=20261111-ui12"></script>
+<script defer src="common.js"></script><script defer src="season-preview.js?v=20261112-covers4"></script>
 </head>
 <body class="preview-page">
 <header class="preview-header"><div class="preview-header-inner"><img class="logo" src="icon-72.png" alt="" width="36" height="36"><nav class="segmented preview-view-tabs" aria-label="Ansicht"><a href="./?view=week" class="view-tab" title="Zurück zum Zeitplan">Zeitplan</a><a href="season-preview.html" class="view-tab active" aria-current="page">Season Preview</a></nav></div></header>
@@ -15,6 +15,7 @@
 <div id="previewStatus" class="preview-status" role="status" aria-live="polite">Season-Listen werden geladen …</div>
 
 <div class="preview-toolbar"><div class="preview-member" id="previewMember" aria-label="Abstimmung" hidden><div id="previewVotingInfo" role="status" aria-live="polite"></div><form id="previewAccessForm" class="preview-access" hidden><label for="previewGroupCode">Gruppencode</label><input id="previewGroupCode" type="password" autocomplete="off" minlength="16" maxlength="256" placeholder="Code eurer Gruppe" required><button class="pill" type="submit">Freischalten</button></form><label id="previewPersonLabel" for="previewPerson" hidden>Abstimmen als <select id="previewPerson" hidden></select></label><button id="previewLock" type="button" class="pill" hidden>Sperren</button></div><span id="previewOpen" class="preview-open" hidden></span><input id="previewSearch" class="pill preview-search" type="search" placeholder="Serien suchen …" aria-label="Serien suchen" autocomplete="off"><select id="previewVoteFilter" class="pill" aria-label="Meine Stimmen" hidden><option value="all">Alle Serien</option><option value="open">Noch offen</option><option value="voted">Abgestimmt</option></select><button type="button" id="previewRefresh" class="pill preview-icon" aria-label="Aktualisieren" title="Season-Liste aus Google Sheets neu laden"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button></div>
+<div id="previewStarts" class="preview-starts" role="group" aria-label="Start nach Wochen" hidden></div>
 <div class="preview-results"><span id="previewResults" role="status" aria-live="polite"></span><button id="previewClear" type="button" class="pill" hidden>Filter zurücksetzen</button></div>
 <div id="previewList" class="preview-list"></div>
 </main></body></html>

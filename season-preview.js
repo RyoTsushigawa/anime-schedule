@@ -7,8 +7,8 @@ const PV_MONTHS = {winter:0,'frühling':3,sommer:6,herbst:9};
 const pv = id => document.getElementById(id);
 const clean = s => String(s || '').trim();
 const safeText = s => clean(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, previewCandidates = {seasons:{}}, current = null, shows = [], people = [];
-let voteApi = '', member = null, memberError = '', groupCode = '', saving = new Set(), reloadTimer = 0;
+let seasonTabs = [], seasonIndex = {seasons:{}}, animeIndex = {seasons:{}}, current = null, shows = [], people = [];
+let voteApi = '', member = null, memberError = '', groupCode = '', saving = new Set();
 let carryoverNotice = '', seasonRequest = 0;
 const pendingVotes = new Map(); // show key → the choice being saved (shown right away)
 const checkedNewTitles = new Map();
@@ -19,15 +19,39 @@ function seasonKey(tab){const m=tab?.name.match(PV_SEASONS);if(!m)return '';cons
 function parseSeasonRows(rows, updatePeople=true){
   const h = rows.findIndex(r=>r.some(c=>clean(c)==='Anime Titel'));
   if(h<0)throw Error('Die Season-Liste enthält keine Spalte „Anime Titel“.');
-  const cols=rows[h].map(clean), title=cols.indexOf('Anime Titel'), english=cols.indexOf('Eng Anime Titel');
+  const cols=rows[h].map(clean), title=cols.indexOf('Anime Titel'), english=cols.indexOf('Eng Anime Titel'), startCol=cols.indexOf('Startdatum');
   const reserved=new Set(['Anime Titel','Eng Anime Titel','Wo','Tag','Uhrzeit','Startdatum','Sort','Slot','Genre','Studio','Staffel','Episode','Folgen']);
   const firstPerson=cols.indexOf('Uhrzeit')+1;
   const voters=cols.map((name,i)=>({name,i})).filter(x=>x.i>=firstPerson&&x.name&&!reserved.has(x.name));
   if(updatePeople)people=voters.map(v=>v.name);
   return rows.slice(h+1).filter(r=>{const name=clean(r[title]);return name && !(name.toLowerCase()==='amount'&&/^\d+$/.test(clean(r[english])));}).map((r,i)=>({
-    key:clean(r[title]).toLocaleLowerCase(),title:clean(r[title]),english:english<0?'':clean(r[english]),order:i+1,
+    key:clean(r[title]).toLocaleLowerCase(),title:clean(r[title]),english:english<0?'':clean(r[english]),order:i+1,start:startCol<0?null:startDate(r[startCol]),
     votes:voters.flatMap(({name,i})=>clean(r[i])?[{name,value:clean(r[i]).replace(/,$/,'')}]:[])
   }));
+}
+// "07.01.2027" → that day (local), or null
+function startDate(text){
+ const m=clean(text).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+ return m?new Date(+m[3],+m[2]-1,+m[1]):null;
+}
+// Start-Leiste: one pill per start week (Monday–Sunday) and one for shows without a date; a pill filters the list
+let startFilter='';
+const weekOf=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);return x;};
+const weekKey=d=>{const x=weekOf(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');};
+const shortDate=(d,opts)=>d.toLocaleDateString('de-DE',opts);
+function drawStarts(){
+ const box=pv('previewStarts');
+ const weeks=new Map();let none=0;
+ for(const s of shows){if(!s.start){none++;continue;}const k=weekKey(s.start);weeks.set(k,[...(weeks.get(k)||[]),s]);}
+ box.hidden=!weeks.size;
+ if(!weeks.size){startFilter='';return;}
+ if(startFilter&&startFilter!=='none'&&!weeks.has(startFilter))startFilter='';
+ const pill=(key,label,list,title)=>'<button type="button" class="preview-start-week" data-start-week="'+key+'" aria-pressed="'+(startFilter===key)+'" title="'+safeText(title)+'"><b>'+list+'</b><span>'+safeText(label)+'</span></button>';
+ box.innerHTML='<span class="preview-starts-label">Start</span>'+[...weeks].sort(([a],[b])=>a.localeCompare(b)).map(([k,list])=>{
+  const from=weekOf(list[0].start),to=new Date(from);to.setDate(to.getDate()+6);
+  const label=from.getMonth()===to.getMonth()?from.getDate()+'.–'+shortDate(to,{day:'numeric',month:'short'}):shortDate(from,{day:'numeric',month:'short'})+' – '+shortDate(to,{day:'numeric',month:'short'});
+  return pill(k,label,list.length,list.map(s=>s.english||s.title).join('\n'));
+ }).join('')+(none?pill('none','ohne Termin',none,none+' Serien ohne Startdatum in der Liste'):'');
 }
 async function listSeasonTabs(){
  const response=await fetch(SHEET+'/htmlview',{cache:'no-cache'});
@@ -50,6 +74,73 @@ function verifiedTrailer(entry) {
   title:clean(entry.title)||(teaser?'Offizieller Teaser':'Offizieller Trailer')
  }:null;
 }
+// Covers (idea 87): from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
+let covers=new Map();
+// A blank URL does not count as successfully cached: retries must be allowed.
+const hasCover=(key)=>typeof covers.get(key)==='string' && /^https:\/\//.test(covers.get(key));
+async function loadCovers(tab,list){
+ const cacheKey='previewCovers:'+tab.gid;
+ covers=new Map(); // Never reuse a different season's covers while loading.
+ try{
+  const saved=JSON.parse(localStorage.getItem(cacheKey)||'null');
+  if(saved && Date.now()-saved.time<7*86400000 && Array.isArray(saved.covers))
+   covers=new Map(saved.covers.filter(x=>Array.isArray(x)&&typeof x[0]==='string'&&typeof x[1]==='string'&&/^https:\/\//.test(x[1])));
+ }catch{}
+ const want=list.filter(s=>!hasCover(s.key));
+ if(!want.length)return;
+ const malId=s=>malLink(s).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
+ const byMal=want.filter(malId),byTitle=want.filter(s=>!malId(s));
+ // A MAL entry can be missing in AniList; fall back to the English title
+ // instead of permanently treating that title as coverless.
+ for(let i=0;i<byMal.length;i+=50){
+  const part=byMal.slice(i,i+50);
+  try{
+   const data=await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(idMal_in: $ids, type: ANIME) { idMal coverImage { medium } } } }',
+    {ids:part.map(s=>Number(malId(s)))},undefined,{retries:0,timeout:10000});
+   for(const show of part){
+    const url=data.Page?.media?.find(m=>String(m.idMal)===malId(show))?.coverImage?.medium;
+    if(url)covers.set(show.key,url);
+    else byTitle.push(show);
+   }
+  }catch{byTitle.push(...part);}
+ }
+ // A failed batch must not prevent later batches from succeeding.
+ for(let i=0;i<byTitle.length;i+=10){
+  const part=byTitle.slice(i,i+10);
+  const query='query ('+part.map((_,j)=>'$t'+j+': String').join(', ')+') {'+
+   part.map((_,j)=>' s'+j+': Page(perPage: 1) { media(search: $t'+j+', type: ANIME, sort: SEARCH_MATCH) { coverImage { medium } } }').join('')+' }';
+  try{
+   // "Sekiro: No Defeat (TV)" → "Sekiro: No Defeat": an ending in brackets keeps AniList's search from finding it
+   const term=show=>String(show.english||show.title||'').trim().replace(/\s*\((?:TV|ONA|OVA|Movie|\d{4})\)\s*$/i,'');
+   const data=await anilist(query,Object.fromEntries(part.map((show,j)=>['t'+j,term(show)])),
+    undefined,{retries:0,timeout:10000});
+   for(const [j,show] of part.entries()){
+    const url=data['s'+j]?.media?.[0]?.coverImage?.medium;
+    if(url)covers.set(show.key,url);
+   }
+  }catch{} // A later visit can retry only the missing covers.
+ }
+ // still missing (no AniList entry yet): MyAnimeList through Jikan, see jikanCovers
+ if(typeof jikanCovers==='function')await jikanCovers(list.filter(s=>!hasCover(s.key)));
+ try{localStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),covers:[...covers].filter(([,url])=>/^https:\/\//.test(url))}));}catch{}
+}
+// Covers AniList doesn't have (e.g. "Peropero★Sparkles"): MyAnimeList's, through the public Jikan API (no login);
+// by MAL number when the season data has one, else by title. One request at a time (Jikan allows ~3 per second).
+async function jikanCovers(missing){
+ const term=show=>String(show.english||show.title||'').trim().replace(/\s*\((?:TV|ONA|OVA|Movie|\d{4})\)\s*$/i,'');
+ for(const show of missing.slice(0,10)){
+  const id=malLink(show).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
+  try{
+   const response=await fetch(id?'https://api.jikan.moe/v4/anime/'+id:'https://api.jikan.moe/v4/anime?limit=1&q='+encodeURIComponent(term(show)),{signal:AbortSignal.timeout(8000)});
+   if(response.ok){
+    const data=(await response.json()).data;
+    const url=(Array.isArray(data)?data[0]:data)?.images?.jpg?.image_url;
+    if(/^https:\/\/cdn\.myanimelist\.net\//.test(url||''))covers.set(show.key,url);
+   }
+  }catch{}
+  await new Promise(r=>setTimeout(r,400));
+ }
+}
 function malLink(show){
  const key=seasonKey(current).replace(/^herbst-/,'fall-').replace(/^frühling-/,'spring-').replace(/^sommer-/,'summer-');
  const entries=animeIndex.seasons?.[key]||[];
@@ -61,9 +152,8 @@ function malLink(show){
  return {url:'https://myanimelist.net/anime.php?q='+encodeURIComponent(show.english||show.title)+'&cat=anime',label:'Auf MyAnimeList suchen'};
 }
 function carryoverStatus(show){
- if(checkedNewTitles.get(current?.gid)?.has(show.key))return false;
- const entries=previewCandidates.seasons?.[seasonKey(current)]?.entries;
- return entries?.find(e=>e.key===show.key)?.carriedOver ?? null;
+ // false: checked against the previous season's list and new; null: not checked
+ return checkedNewTitles.get(current?.gid)?.has(show.key)?false:null;
 }
 // Hide continuing titles from the preview, not from the Google Sheet.
 function previousTab(tab){
@@ -106,45 +196,14 @@ async function prepareShows(tab){
    return null;
   }):Promise.resolve(null)
  ]);
- // A missing previous-season list is not proof that a show is new.
- // Exclude only positively identified carryovers from the review report in that case.
- const eligible=previous?withoutCarryovers(items,previous,tab,oldTab):
-  items.filter(item=>previewCandidates.seasons?.[seasonKey(tab)]?.entries?.find(e=>e.key===item.key)?.carriedOver!==true);
+ // without the previous season's list nothing is hidden: that isn't proof a show is new or old
+ const eligible=previous?withoutCarryovers(items,previous,tab,oldTab):items;
  const excluded=items.length-eligible.length;
  if(previous)checkedNewTitles.set(tab.gid,new Set(eligible.map(item=>item.key)));
  else checkedNewTitles.delete(tab.gid);
  carryoverNotice=previous===null?'vorherige Season nicht abgeglichen':
   excluded?excluded+' aus '+oldTab.name+' ausgeblendet':'';
  return eligible.map((show,i)=>({...show,order:i+1}));
-}
-function reviewEntry(show){
- return previewCandidates.seasons?.[seasonKey(current)]?.entries?.find(e=>e.key===show.key)||null;
-}
-function trailerSuggestions(show){
- if(carryoverStatus(show)!==false || reviewEntry(show)?.sequelStatus==='sequel')return '';
- const entry=reviewEntry(show);
- if(!entry)return '';
- const list=[...(entry.youtubeId?[{youtubeId:entry.youtubeId,title:'AniList-Trailer-Kandidat',channel:'AniList'}]:[]),
-  ...(Array.isArray(entry.youtubeSearch)?entry.youtubeSearch:[])];
- const seen=new Set();
- const filtered=list.filter(v=>{
-  if(!/^[a-zA-Z0-9_-]{11}$/.test(v.youtubeId||'')||seen.has(v.youtubeId))return false;
-  seen.add(v.youtubeId);return true;
- }).slice(0,5);
- if(!filtered.length)return '';
- const links=filtered.map(v=>'<a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+
-  v.youtubeId+'">'+safeText(v.title||'YouTube-Kandidat')+(v.channel?' · '+safeText(v.channel):'')+'</a>').join('');
- return '<details class="preview-suggestions"><summary>'+filtered.length+' mögliche Trailer prüfen</summary>'+
-  '<p>Nur Suchtreffer – weder die richtige Serie noch vollständiges Bildmaterial sind bestätigt.</p>'+
-  '<div class="preview-links">'+links+'</div></details>';
-}
-function liveChartLink(show){
- const entries=animeIndex.seasons?.[seasonKey(current)]||[];
- const cleanTitle=s=>clean(s).normalize('NFKC').toLocaleLowerCase();
- const match=entries.find(e=>cleanTitle(e.romaji)===cleanTitle(show.title)||
-  (show.english&&cleanTitle(e.english)===cleanTitle(show.english)));
- const id=String(match?.livechartId||'');
- return /^[1-9]\d*$/.test(id)?'https://www.livechart.me/anime/'+id:'';
 }
 function detailsFor(show){
  const data=seasonIndex.seasons?.[seasonKey(current)] || {};
@@ -175,18 +234,6 @@ function pickedTrailer(show){
  return list.find(v=>v.id===saved)||list[0]||null;
 }
 function trailerFor(show){return trailerCandidates(show)[0]||null;}
-function trailerStatus(show){
- const carryover=carryoverStatus(show);
- if(carryover===true)return 'Übernahme aus vorheriger Season · kein Trailer';
- if(carryover===null)return 'Vorherige Season noch nicht abgeglichen';
- const entry=detailsFor(show);
- if(entry?.sequelStatus==='sequel'||reviewEntry(show)?.sequelStatus==='sequel')return 'Fortsetzung · kein Trailer';
- if(entry?.sequelStatus!=='not_sequel')return 'Trailer folgt';
- if(entry.youtubeStatus==='not_found')return 'Kein passender Trailer auf YouTube gefunden';
- if(entry.youtubeStatus==='unavailable')return 'Auf YouTube nicht verfügbar';
- if(entry.youtubeStatus==='checking')return 'Trailer wird gesucht';
- return 'Trailer folgt';
-}
 // Personal alternative video links do not change the shared catalog or YouTube playlist.
 function externalKey(show){return 'seasonExternalTrailer:'+seasonKey(current)+':'+show.key;}
 function externalUrl(input){
@@ -198,10 +245,6 @@ function externalUrl(input){
      /^(\d+\.){3}\d+$/.test(host))return '';
   return url.href;
  }catch{return '';}
-}
-function localExternal(show){
- if(carryoverStatus(show)===true||detailsFor(show)?.sequelStatus==='sequel'||trailerFor(show))return '';
- try{return externalUrl(localStorage.getItem(externalKey(show)));}catch{return '';}
 }
 function voteValue(show,person){
  const vote=show.votes.find(v=>v.name===person)?.value||'';
@@ -413,7 +456,7 @@ function render(){
  const data=seasonIndex.seasons?.[seasonKey(current)]||{}, trailers=shows.filter(x=>trailerFor(x)).length;
  pv('previewTitle').textContent=current?.name||'Season Preview';
  // sequels get no trailer on purpose; the rest without one is what is really missing
- const sequels=shows.filter(s=>!trailerFor(s)&&(detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel')).length;
+ const sequels=shows.filter(s=>!trailerFor(s)&&(detailsFor(s)?.sequelStatus==='sequel')).length;
  // one line: counts, carry-overs, and a "?" with how the trailers are picked
  const missing=shows.length-trailers-sequels;
  pv('previewIntro').innerHTML=[shows.length+' Serien',trailers+' Trailer',sequels+' Sequels',...(missing?['<span title="Neue Serien, für die noch kein passender Trailer gefunden wurde">'+missing+' fehlend</span>']:[]),...(carryoverNotice?[safeText(carryoverNotice)]:[])].join(' · ')+
@@ -427,9 +470,11 @@ function render(){
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
  let ghKey='';try{ghKey=localStorage.getItem('movesKey')||'';}catch{}
  pv('previewTrailerRefresh').hidden=playlist.hidden||!ghKey;
- const shown=shows.filter(s=>(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
+ drawStarts();
+ const inWeek=s=>!startFilter||(startFilter==='none'?!s.start:!!s.start&&weekKey(s.start)===startFilter);
+ const shown=shows.filter(s=>inWeek(s)&&(!q||(s.title+' '+s.english).toLocaleLowerCase().includes(q))&&
   (voteFilter==='all'||(voteFilter==='open')===(voteValue(s,voter)==='Default')));
- const hasFilter=!!q||voteFilter!=='all';
+ const hasFilter=!!q||voteFilter!=='all'||!!startFilter;
  pv('previewResults').textContent=hasFilter?shown.length+' von '+shows.length+' Serien angezeigt':'';pv('previewResults').parentElement.hidden=!hasFilter;
  pv('previewClear').hidden=!hasFilter;
  const parent=pv('previewList');parent.replaceChildren();
@@ -437,17 +482,20 @@ function render(){
  for(const s of shown){
   // compact card: number, title (romaji below), and why a show has no trailer
   const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item'+(voter&&voteValue(s,voter)==='Default'?' open':'');
-  const sequel=detailsFor(s)?.sequelStatus==='sequel'||reviewEntry(s)?.sequelStatus==='sequel';
+  const sequel=detailsFor(s)?.sequelStatus==='sequel';
   // the trailers are streamed as one playlist; a card only notes when a show has none
   // above the title, so the vote buttons line up on every card
-  const note=trailer?'':'<span class="preview-none">'+(sequel?'Sequel':'Noch kein Trailer')+'</span>';
-  article.innerHTML='<div class="preview-order">'+s.order+'</div><div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
+  const start=s.start?'ab '+shortDate(s.start,{weekday:'short',day:'numeric',month:'short'}):'';
+  const note=trailer&&!start?'':'<span class="preview-none">'+[trailer?'':(sequel?'Sequel':'Noch kein Trailer'),start].filter(Boolean).join(' · ')+'</span>';
+  const cover=covers.get(s.key);
+  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
   parent.append(article);
  }
 }
 async function selectSeason(gid){
  const next=seasonTabs.find(t=>t.gid===gid);if(!next)return;
  current=next;
+ startFilter='';
  const request=++seasonRequest;
  state('Lade '+next.name+' …');
  try{
@@ -457,6 +505,7 @@ async function selectSeason(gid){
   state('');
   updateMemberUI();
   render();
+  loadCovers(next,latest).then(()=>{if(current?.gid===gid)render();});
  }catch(e){
   if(request!==seasonRequest)return;
   shows=[];pv('previewList').replaceChildren();
@@ -465,15 +514,13 @@ async function selectSeason(gid){
 }
 async function start(){
  try{
-  const [tabs,metadata,animeData,candidateData]=await Promise.all([
+  const [tabs,metadata,animeData]=await Promise.all([
    listSeasonTabs(),
    fetch('season-trailers.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}})),
-   fetch('seasons.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}})),
-   fetch('season-trailer-candidates.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}}))
+   fetch('seasons.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{seasons:{}}).catch(()=>({seasons:{}}))
   ]);
   seasonTabs=tabs;seasonIndex=metadata&&typeof metadata==='object'?metadata:{seasons:{}};
   animeIndex=animeData&&typeof animeData==='object'?animeData:{seasons:{}};
-  previewCandidates=candidateData&&typeof candidateData==='object'?candidateData:{seasons:{}};
   const sel=pv('previewSeason');
   if(!tabs.length){state('Noch keine eigenständige Season-Liste gefunden. Sobald z. B. „Winter 2027“ im Google Sheet angelegt wird, erscheint sie hier.');return;}
   for(const t of tabs){const opt=document.createElement('option');opt.value=t.gid;opt.textContent=t.name;sel.append(opt);}
@@ -484,14 +531,19 @@ async function start(){
  }catch(e){state('Season-Listen sind gerade nicht verfügbar: '+e.message);}
 }
 pv('previewSearch').addEventListener('input',()=>{if(current)render();});
+pv('previewStarts').addEventListener('click',e=>{
+ const b=e.target.closest('[data-start-week]');if(!b||!current)return;
+ startFilter=startFilter===b.dataset.startWeek?'':b.dataset.startWeek;render();
+});
 pv('previewClear').addEventListener('click',()=>{
  pv('previewSearch').value='';
  pv('previewVoteFilter').value='all';
+ startFilter='';
  if(current)render();
  pv('previewSearch').focus();
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSheet(true);});
-reloadTimer=setInterval(()=>{if(!document.hidden)refreshSheet(true);},90000);
+setInterval(()=>{if(!document.hidden)refreshSheet(true);},90000);
 start();
 
 // "Trailer neu suchen" (only with the site's GitHub key): writing .github/trailer-refresh.txt starts the

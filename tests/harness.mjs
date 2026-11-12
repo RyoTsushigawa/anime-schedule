@@ -62,6 +62,9 @@ const text = (body, status = 200) => ({ ok: status < 300, status, json: async ()
 // { mediaId: { progress, status } }; opts.fail: Set of 'anilist' | 'sheets' | 'site' | 'streams'.
 // A different week or season: opts.now (the clock), opts.sheets ({ tabs: [[name, gid]], csv: { gid: text } }),
 // opts.airings and opts.streams instead of the ones above.
+// The page's scripts in index.html's order (frame-guard.js and early.js left out; early.js with opts.early)
+export const PAGE_SCRIPTS = [...read('index.html').matchAll(/<script\b[^>]*\bsrc="([^"?]+)/g)].map(m => m[1])
+  .filter(f => !['frame-guard.js', 'early.js'].includes(f));
 export async function openPage(opts = {}) {
   const html = read(opts.wrapped ? 'wrapped.html' : 'index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
   const dom = new JSDOM(html, { url: 'https://ryotsushigawa.github.io/anime-schedule/' + (opts.hash || ''), runScripts: 'outside-only', pretendToBeVisual: true });
@@ -145,7 +148,8 @@ export async function openPage(opts = {}) {
       return text(opts.sheets?.csv?.[url.match(/gid=(\d+)/)?.[1]] ?? CSV);
     }
     if (url.includes('streams-de.json')) return down('streams') || down('site') || json(opts.streams || STREAMS);
-    if (url.includes('wrapped-profiles.json')) return json(JSON.parse(read('wrapped-profiles.json')));
+    // opts.profiles: a different "Wer ist wer" list (person → accounts) instead of the real wrapped-profiles.json
+    if (url.includes('wrapped-profiles.json')) return json(opts.profiles || JSON.parse(read('wrapped-profiles.json')));
     if (url.includes('fallback-links.json')) return down('site') || json({ byAnilist: {} });
     if (url.includes('moves.json') && !url.includes('api.github.com')) return down('site') || (opts.movesFile ? json(opts.movesFile) : json({}, 404));
     // The moves file on GitHub: reading gives a sha, a PUT is kept (decoded) in state.movesSaved
@@ -192,7 +196,7 @@ export async function openPage(opts = {}) {
   Object.defineProperty(window.navigator, 'onLine', { get: () => !state.offline, configurable: true });
   window.console.warn = () => {};
 
-  for (const file of (opts.wrapped ? ['common.js', 'mal.js', 'wrapped-data.js', 'wrapped.js'] : [...(opts.early ? ['early.js'] : []), 'common.js', 'mal.js', 'app.js', 'drag-moves.js'])) vm.runInContext(read(file), ctx, { filename: file });
+  for (const file of (opts.wrapped ? ['common.js', 'mal.js', 'wrapped-data.js', 'wrapped.js'] : [...(opts.early ? ['early.js'] : []), ...PAGE_SCRIPTS])) vm.runInContext(read(file), ctx, { filename: file });
 
   const page = {
     window, document: window.document, calls, list, malList, malCalls, fail, state,

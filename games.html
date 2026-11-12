@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+img-src 'self'; connect-src 'self' https://graphql.anilist.co https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
 <title>Spiele</title>
 <link rel="icon" type="image/png" href="icon-72.png">
@@ -16,23 +16,32 @@ img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-act
 <div class="bar">
 <a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
 <h1>Spiele</h1>
-<div>Titel-Rätsel · Cover Quiz · Higher / Lower</div>
+<div>Titel-Rätsel · Cover Quiz · Inhalts-Rätsel · Higher / Lower</div>
 </div>
 </div>
 </header>
 <main class="game">
-<nav class="game-hub-links" aria-label="Weitere Spiele"><a class="pill" href="cover-game.html">Anime Cover Quiz ↗</a><a class="pill" href="ranker/">Higher / Lower ↗</a></nav>
-<div class="game-head"><b id="gameNumber">Titel-Rätsel</b><span id="gameHint" class="game-hint"></span><button type="button" id="gameHelp" class="game-help" aria-label="So geht's" title="Errate das Wort aus einem Anime-Titel im Guckplan, in 6 Versuchen. Grün: Buchstabe an der richtigen Stelle. Gelb: kommt vor, aber woanders. Grau: kommt nicht vor. Jeden Tag ein neues Wort, für alle dasselbe.">?</button></div>
+<section id="gamesToday" class="games-today" aria-label="Heute"><div class="games-cards"><a class="games-card" href="#board"><b>Titel-Rätsel</b></a><a class="games-card" href="cover-game.html"><b>Anime Cover Quiz</b></a><a class="games-card" href="synopsis.html"><b>Inhalts-Rätsel</b></a></div></section>
+<nav class="game-hub-links" aria-label="Weitere Spiele"><a class="pill" href="ranker/">Higher / Lower ↗</a></nav>
+<div class="game-options" aria-label="Rätsel-Modus">
+<label>Spielmodus <select id="gameMode" aria-label="Spielmodus"><option value="daily">Täglich</option><option value="endless">Endlos</option></select></label>
+<label>Schwierigkeit <select id="gameDifficulty" aria-label="Schwierigkeit"><option value="normal">Normal · Guckplan</option><option value="hard">Schwer · Gruppen-AniLists</option></select></label>
+</div>
+<div class="game-head"><b id="gameNumber">Titel-Rätsel</b><span id="gameHint" class="game-hint"></span><button type="button" id="gameHelp" class="game-help" aria-label="So geht's" title="6 Versuche. Gesucht wird ein englisches Wort aus einem Anime-Titel: im Normalmodus aus dem Guckplan, im schweren Modus aus einer Gruppen-AniList. Raten darfst du im Normalmodus Wörter aus den Titeln, im schweren Modus jedes gängige englische Wort. Schwer: nutze alle gelben/grünen Hinweise. Endlos: nach jedem Rätsel weiterspielen.">?</button></div>
 <div id="board" class="board" role="grid" aria-label="Spielfeld"></div>
+<div id="gameHardHints" class="game-hard-hints" hidden>
+<button type="button" class="pill" id="gameHintButton">Hinweis anzeigen</button>
+<span id="gameHintText" role="status" aria-live="polite"></span>
+</div>
 <p id="gameMsg" class="game-msg" role="status" aria-live="polite"></p>
 <div id="gameEnd" class="game-end" hidden>
 <p id="gameAnswer" class="game-answer"></p>
 <div class="game-stats" id="gameStats"></div>
-<button type="button" id="gameShare" class="pill primary">Teilen</button>
+<div class="game-finish-actions"><button type="button" id="gameShare" class="pill primary">Teilen</button><button type="button" id="gameNextRound" class="pill" hidden>Nächstes Rätsel</button></div>
 <p class="game-next" id="gameNext"></p>
 </div>
 <div id="keyboard" class="keyboard" aria-label="Tastatur"></div>
 </main>
-<script src="games.js"></script>
+<script type="module" src="games.js"></script>
 </body>
 </html>

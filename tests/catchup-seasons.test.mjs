@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
-const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const source = APP_SOURCE;
 function extract(name) {
  const start = source.indexOf('function ' + name + '(');
  assert.ok(start >= 0, name + ' exists');
@@ -101,6 +101,7 @@ test('per-season action and ungrouped view retain watched controls',()=>{
  assert.match(source,/data-mark-season=/);
  assert.match(source,/seasonWatchTargets\(g\.rows\)/);
  assert.match(source,/if \(hideSeasonHeader\) return/);
- assert.match(source,/const content = listed\.map\(show\)\.join\(''\)/);
+ assert.match(source,/const content = listedHtml \+/);
+ assert.match(source,/remaining\.map\(show\)\.join\(''\)/);
  assert.match(source,/change\(mediaId, \{progress, status: add \? 'CURRENT' : undefined\}\)/);
 });

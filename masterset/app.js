@@ -322,7 +322,6 @@ async function searchCards(q,allLangs,status){
   const hits=[...new Map(searches.flat().map(c=>[c.id,c])).values()].filter(c=>!/^(A\d|P-A|B\d)/.test(c.id));
   const found=[],add=async(list,lang)=>{await pool(list.slice(0,300),8,async c=>{const d=await getJson(TCG+lang+'/cards/'+encodeURIComponent(c.id)).catch(()=>null);if(d)found.push({d,lang});status(`Reading card details: ${found.length}`)})};
   await add(hits,'en');
-  const dex=new Set(found.flatMap(x=>x.d.dexId||[]));
   // A tag team also names its partner, so only the Pokémon named most often counts.
   const count={};for(const x of found)if((x.d.dexId||[]).length===1)count[x.d.dexId[0]]=(count[x.d.dexId[0]]||0)+1;
   const main=Number(Object.entries(count).sort((a,b)=>b[1]-a[1])[0]?.[0]);

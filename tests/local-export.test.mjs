@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {exportRows, localBackup, malImportXml, malImportInfo, parseLocalBackup, mergeLocalBackup} from '../local-export.mjs';
 import {openPage} from './harness.mjs';
+import { APP_SOURCE } from './app-source.mjs';
 
 const sample = [
  {id:100,idMal:200,title:{romaji:'Anime & Friends <Test>'},episodes:12,format:'TV'},
@@ -70,7 +71,7 @@ test('local profiles expose one Exportieren entry and an accessible file chooser
 
 test('export UI only exposes file downloads and explicitly warns about existing entries',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const app=APP_SOURCE;
  assert.match(html,/id="localExportDialog"/);
  assert.match(html,/Bestehende Einträge vor dem Import prüfen/);
  assert.match(app,/import\('\.\/local-export\.mjs'\)/);
@@ -127,7 +128,7 @@ test('merge refuses to silently drop additional manually added shows',()=>{
 
 test('backup UI requires explicit confirmation before writing progress',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- const js=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const js=APP_SOURCE;
  for(const id of ['localImportOpen','localImportFile','localImportPreview','localImportDetails','localImportConfirm','localImportCancel'])
    assert.match(html,new RegExp('id="'+id+'"'));
  assert.match(html,/localImportPreview" class="local-import-preview" hidden/);

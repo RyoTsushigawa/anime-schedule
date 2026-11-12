@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
 const html = readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const css = readFileSync(new URL('../style.css',import.meta.url),'utf8');
@@ -21,7 +22,7 @@ test('Less-used settings live in three native disclosure panels',()=>{
  const summary=[...menu.matchAll(/<details class="settings-fold"><summary>([^<]+)/g)].map(m=>m[1]);
  assert.deepEqual(summary,['Streaming','Anzeige &amp; Listen','Weitere Optionen']);
  assert.doesNotMatch(menu,/<details class="settings-fold" open/);
- assert.match(css,/#settingsMenu \.settings-fold>summary:focus-visible/);
+ assert.match(css,/#settingsMenu \.settings-fold\s*>\s*summary:focus-visible/);
  assert.match(css,/#settingsMenu \.settings-fold\[open\]/);
 });
 
@@ -36,7 +37,7 @@ test('Every existing setting and help action remains available once, with existi
 });
 
 test('mixed person choices never highlight two opposing streaming pills',()=>{
- const js = readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const js = APP_SOURCE;
  assert.match(menu,/data-fallback-group/);
  assert.match(menu,/data-prime-group/);
  for(const id of ['fallbackMixed','primeMixed']) assert.match(menu,new RegExp('id="'+id+'"[^>]*hidden'));

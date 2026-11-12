@@ -21,7 +21,7 @@ test('More keeps all planning, recap and extra links without duplicating Games',
  assert.deepEqual(headings,['Anime','Sonstiges']);
  const hrefs=[...menu.matchAll(/<a href="([^"]+)"/g)].map(m=>m[1]);
  assert.deepEqual(hrefs,[
-  'season-preview.html','planner.html','wrapped.html','masterset/','https://mcdelivery.de/'
+  'season-preview.html','planner.html','wrapped.html','tierlist.html','masterset/','https://mcdelivery.de/'
  ]);
  assert.ok(!menu.includes('href="games.html"'));
  assert.ok(!menu.includes('href="ranker/"'));
@@ -37,9 +37,9 @@ test('schedule actions stay wired by ID: Abwesend in the header, Wochenübersich
  assert.match(games,/href="ranker\//);
 });
 test('compact navigation preserves mobile controls and accessible menu focus',()=>{
- assert.match(css,/\.header-primary\{display:flex/);
- assert.match(css,/@media\(max-width:560px\)/);
- assert.match(css,/body\.searching \.header-primary\{display:none\}/);
- assert.match(css,/\.misc-menu\.site-tools\{[^}]*overflow:auto/);
+ assert.match(css,/\.header-primary\s*\{\s*display:\s*flex/);
+ assert.match(css,/@media\s*\(max-width:\s*560px\)/);
+ assert.match(css,/body\.searching \.header-primary\s*\{\s*display:\s*none;?\s*\}/);
+ assert.match(css,/\.misc-menu\.site-tools\s*\{[^}]*overflow:\s*auto/);
  assert.match(css,/\.misc-menu \.misc-section-title/);
 });

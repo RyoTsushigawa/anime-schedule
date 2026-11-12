@@ -1,181 +1,136 @@
 {
- "note": "Titel-Rätsel: one word per day, in this order (day 1 = 11 Nov 2026), from the Guckplans. New words go at the END, so earlier days never change. 5-8 letters A-Z.",
- "start": "2026-11-11",
- "words": [
-  {
-   "word": "INHUMANS",
-   "title": "Hotel Inhumans",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "ZOMBIE",
-   "title": "#I'm Looking For a Zombie",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "KURUMI",
-   "title": "FX Fighter Kurumi-chan",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "SIROTAN",
-   "title": "Sirotan",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "RAYEARTH",
-   "title": "Magic Knight Rayearth",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "CHOJO",
-   "title": "Super Psychic Policeman Chojo",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "GOBLIN",
-   "title": "So What's Wrong with Getting Reborn as a Goblin?",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "YOZAKURA",
-   "title": "Mission: Yozakura Family",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "KANATA",
-   "title": "Kanata kara",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "SASAKI",
-   "title": "Sasaki and Peeps",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "SUIKODEN",
-   "title": "Suikoden: The Anime",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "CHITOSE",
-   "title": "Chitose Is in the Ramune Bottle",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "RETURNER",
-   "title": "A Returner's Magic Should Be Special",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "TOUGEN",
-   "title": "Tougen Anki",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "LISTON",
-   "title": "Nia Liston: The Merciless Maiden",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "VERTEX",
-   "title": "VERTEX FORCE",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "SHEDAR",
-   "title": "Welsh & Shedar",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "KUSURIYA",
-   "title": "The Apothecary Diaries (Kusuriya no Hitorigoto)",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "BEERUS",
-   "title": "Dragon Ball Super: Beerus",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "FIREFLY",
-   "title": "Firefly Wedding",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "AOASHI",
-   "title": "Ao Ashi",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "TETSURYO",
-   "title": "Tetsuryo! Meet with Railroad Girls",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "FIANCE",
-   "title": "Even Though I'm a Super Timid Noble Girl, I Accepted the Bet From My Cunning Fiancé",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "RAMPARTS",
-   "title": "The Ramparts of Ice",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "SUMMONER",
-   "title": "I'm Dating a Dark Summoner",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "ROMELIA",
-   "title": "Romelia War Chronicle",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "POTION",
-   "title": "Hello, I Am a Witch and My Crush Wants Me to Make a Love Potion!",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "CLOVER",
-   "title": "Black Clover",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "KERORO",
-   "title": "Keroro Gunsou",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "RANMA",
-   "title": "Ranma ½",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "DIAMOND",
-   "title": "Ace of Diamond",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "ICEBLADE",
-   "title": "The Iceblade Sorcerer Shall Rule the World",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "LULUTTO",
-   "title": "Magical Sisters Lulutto Lilly",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "COUNCIL",
-   "title": "Even the Student Council Has Its Holes!",
-   "from": "Guckplan Herbst 2026"
-  },
-  {
-   "word": "PSYREN",
-   "title": "PSYREN",
-   "from": "Guckplan Herbst 2026"
-  }
- ]
+  "note": "Curated common English 5–8-letter words occurring as complete tokens in English titles in the Guckplan. Do not insert Japanese names, transliterations or made-up words. Keep first two days (11/12 Nov 2026) stable; add new words only at the end.",
+  "start": "2026-11-11",
+  "words": [
+    {
+      "word": "INHUMANS",
+      "title": "Hotel Inhumans",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "ZOMBIE",
+      "title": "#I'm Looking For a Zombie",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "FIGHTER",
+      "title": "FX Fighter Kurumi-chan",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "MAGIC",
+      "title": "Magic Knight Rayearth",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "SUPER",
+      "title": "Super Psychic Policeman Chojo",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "GOBLIN",
+      "title": "So What's Wrong with Getting Reborn as a Goblin?",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "MISSION",
+      "title": "Mission: Yozakura Family",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "PEEPS",
+      "title": "Sasaki and Peeps",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "ANIME",
+      "title": "Suikoden: The Anime",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "BOTTLE",
+      "title": "Chitose Is in the Ramune Bottle",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "RETURNER",
+      "title": "A Returner's Magic Should Be Special",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "MAIDEN",
+      "title": "Nia Liston: The Merciless Maiden",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "FORCE",
+      "title": "VERTEX FORCE",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "DIARIES",
+      "title": "The Apothecary Diaries (Kusuriya no Hitorigoto)",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "DRAGON",
+      "title": "Dragon Ball Super: Beerus",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "FIREFLY",
+      "title": "Firefly Wedding",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "RAILROAD",
+      "title": "Tetsuryo! Meet with Railroad Girls",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "FIANCE",
+      "title": "Even Though I'm a Super Timid Noble Girl, I Accepted the Bet From My Cunning Fiancé",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "RAMPARTS",
+      "title": "The Ramparts of Ice",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "SUMMONER",
+      "title": "I'm Dating a Dark Summoner",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "POTION",
+      "title": "Hello, I Am a Witch and My Crush Wants Me to Make a Love Potion!",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "CLOVER",
+      "title": "Black Clover",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "DIAMOND",
+      "title": "Ace of Diamond",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "WORLD",
+      "title": "The Iceblade Sorcerer Shall Rule the World",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "SISTERS",
+      "title": "Magical Sisters Lulutto Lilly",
+      "from": "Guckplan Herbst 2026"
+    },
+    {
+      "word": "COUNCIL",
+      "title": "Even the Student Council Has Its Holes!",
+      "from": "Guckplan Herbst 2026"
+    }
+  ]
 }
