@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {openPage} from './harness.mjs';
 
 const source = readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const miscSource = source.slice(source.indexOf('<nav id="miscMenu"'),source.indexOf('</nav></div></nav>',source.indexOf('<nav id="miscMenu"')));
 
 test('daily essentials remain direct and games are grouped under Mehr', () => {
   assert.match(source,/id="awayButton"[^>]*aria-label="Abwesenheiten"/);
@@ -11,9 +12,9 @@ test('daily essentials remain direct and games are grouped under Mehr', () => {
   assert.match(source,/id="viewCatchup">Catch-up/);
   assert.match(source,/id="miscButton"/);
   assert.doesNotMatch(source,/header-nav-link header-games/);
-  assert.equal((source.match(/href="games\.html"/g)||[]).length,1);
-  assert.equal((source.match(/href="wrapped\.html"/g)||[]).length,1);
-  assert.equal((source.match(/href="https:\/\/mcdelivery\.de\/"/g)||[]).length,1);
+  assert.equal((miscSource.match(/href="games\.html"/g)||[]).length,1);
+  assert.equal((miscSource.match(/href="wrapped\.html"/g)||[]).length,1);
+  assert.equal((miscSource.match(/href="https:\/\/mcdelivery\.de\/"/g)||[]).length,1);
 });
 
 test('Mehr groups existing features without adding new top-level controls or dead links', async () => {
