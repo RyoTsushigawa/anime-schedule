@@ -111,7 +111,7 @@ test('malformed or excessive JSON is rejected before a restore',()=>{
    {...valid,shows:[-1]},
    {...valid,progress:{'100':-5}},
    {...valid,progress:{'100':3.5}},
-   {...valid,shows:Array.from({length:51},(_,i)=>i+1)},
+   {...valid,shows:Array.from({length:501},(_,i)=>i+1)},
    {...valid,progress:[]},
    {...valid,person:''},
    null
@@ -120,9 +120,9 @@ test('malformed or excessive JSON is rejected before a restore',()=>{
 });
 
 test('merge refuses to silently drop additional manually added shows',()=>{
- const shows=Array.from({length:50},(_,i)=>i+1);
- const backup=parseLocalBackup(JSON.stringify(localBackup('Matthias',[51],{'51':2},[])));
- assert.throws(()=>mergeLocalBackup({shows,progress:{}},backup,'Matthias'),/50/);
+ const shows=Array.from({length:500},(_,i)=>i+1);
+ const backup=parseLocalBackup(JSON.stringify(localBackup('Matthias',[501],{'501':2},[])));
+ assert.throws(()=>mergeLocalBackup({shows,progress:{}},backup,'Matthias'),/500/);
 });
 
 test('backup UI requires explicit confirmation before writing progress',()=>{
@@ -134,4 +134,17 @@ test('backup UI requires explicit confirmation before writing progress',()=>{
  assert.match(js,/localImportConfirm'\)\.onclick/);
  assert.match(js,/localImportFile'\)\.addEventListener\('change'/);
  assert.match(js,/mergeLocalBackup\(localSnapshot\(pending\.person\)/);
+});
+
+test('local backups and merges support multiple pages of anime',()=>{
+ const ids=Array.from({length:125},(_,i)=>i+1);
+ const backup=parseLocalBackup(JSON.stringify(localBackup('Matthias',ids,{'1':12,'125':4},[])));
+ assert.equal(backup.shows.length,125);
+ const merged=mergeLocalBackup({shows:ids.slice(0,75),progress:{'1':20}},backup,'Matthias');
+ assert.equal(merged.shows.length,125);
+ assert.equal(merged.addedShows,50);
+ assert.equal(merged.progress['1'],20);
+ assert.equal(merged.progress['125'],4);
+ assert.equal(parseLocalBackup(JSON.stringify(localBackup('Matthias',
+   Array.from({length:500},(_,i)=>i+1),{},[]))).shows.length,500);
 });
