@@ -52,7 +52,9 @@ test('invalid progress and missing MAL IDs cannot become import records',()=>{
 });
 
 test('local profiles expose one Exportieren entry and an accessible file chooser',async()=>{
- const p=await openPage({storage:{soloPerson:'Matthias'}});
+ const csv=['Anime Titel,Eng Anime Titel,Wo,Tag,Uhrzeit,MaRyo,Matthias',
+  'Show Alpha,Alpha EN,C,Mi.,20:00,Ja,Ja'].join('\\n');
+ const p=await openPage({storage:{soloPerson:'Matthias'},sheets:{csv:{111:csv,222:csv}}});
  try {
   await p.click(p.$('viewCatchup'),650);
   const open=p.$('localExportOpen');
