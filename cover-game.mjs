@@ -44,7 +44,8 @@ async function start() {
     revealed = answers.length > position;
     $('coverPlay').hidden = false;
     message('');
-    render();
+    if (answers.length >= rounds.length) finish();
+    else render();
   } catch (error) {
     message('Die Cover konnten nicht geladen werden. Bitte erneut versuchen.');
     $('coverRetry').hidden = false;
@@ -52,7 +53,8 @@ async function start() {
   }
 }
 function render() {
-  if (answers.length >= rounds.length) return finish();
+  // Reveal the final cover before showing the score, just like earlier rounds.
+  if (answers.length >= rounds.length && !revealed) return finish();
   const round = rounds[position];
   $('coverProgress').textContent = 'Cover ' + (position + 1) + ' von ' + rounds.length;
   $('coverScore').textContent = scoreAnswers(rounds, answers) + ' Punkte';
