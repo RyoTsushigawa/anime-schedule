@@ -2,20 +2,17 @@
 main.planner { max-width: 1320px; display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
 header .bar { max-width: 1288px; }
 .plan-setup { position: sticky; top: 72px; max-height: calc(100dvh - 88px); overflow-y: auto; overscroll-behavior: contain;
-  display: grid; gap: 8px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+  display: grid; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; gap: 0; }
 .plan-setup:empty { display: none; }
-.plan-setup-head { display: flex; gap: 8px; align-items: center; }
+.plan-setup-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .plan-setup-head select { flex: 1; min-width: 0; padding: 7px 12px; background: var(--bg); border: 1px solid var(--line); color: var(--text); }
 .plan-go { flex: none; min-height: 34px; padding: 6px 14px; background: var(--accent); border: 1px solid var(--accent); color: var(--accent-text); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 .plan-go:hover { filter: brightness(1.08); }
 .plan-go.stale { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
-.plan-stale { margin: 0; padding: 7px 10px; border-radius: 10px; font-size: 12px; color: var(--text); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.plan-stale { margin: 0; padding: 7px 10px; border-radius: 10px; font-size: 12px; color: var(--text); background: color-mix(in srgb, var(--accent) 14%, transparent); margin-bottom: 8px !important; }
 .plan-stale[hidden] { display: none; }
 
 .plan-group { margin: 0; border-top: 1px solid var(--line); color: var(--text); }
-.plan-setup { gap: 0; }
-.plan-setup-head { margin-bottom: 8px; }
-.plan-stale { margin-bottom: 8px !important; }
 .plan-group summary { display: flex; align-items: center; gap: 8px; padding: 10px 4px 8px; cursor: pointer; list-style: none;
   font-size: 11px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .plan-group summary::-webkit-details-marker { display: none; }
@@ -65,7 +62,7 @@ header .bar { max-width: 1288px; }
 
 .plan-changes { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
 .plan-changes h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14px; }
-.plan-changes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; columns: 2; column-gap: 24px; display: block; }
+.plan-changes ul { list-style: none; margin: 0; padding: 0; gap: 2px; columns: 2; column-gap: 24px; display: block; }
 .plan-changes li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: baseline; padding: 4px 0; font-size: 13px; break-inside: avoid; border-bottom: 1px dashed var(--line); }
 .plan-changes li b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-from { color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -172,11 +169,10 @@ details.plan-test { margin: 0; color: var(--text); font-size: inherit; backgroun
 .plan-test-table thead th span { display: inline-block; padding: 1px 6px; border-radius: 99px; background: var(--person, var(--today)); color: var(--person-text, var(--text)); font-size: 11px; font-weight: 600; white-space: nowrap; }
 .plan-test-table tbody th { position: sticky; left: 0; background: var(--card); max-width: 240px; padding: 2px 10px 2px 0; text-align: left; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-test-table td { padding: 2px; text-align: center; }
-.test-vote { width: 30px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.test-vote { width: 30px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; position: relative; }
 .test-vote.yes { background: color-mix(in srgb, #2f9e57 22%, transparent); border-color: #2f9e57; color: #2f9e57; }
 .test-vote.maybe { background: color-mix(in srgb, #c9a227 20%, transparent); border-color: #c9a227; color: #c9a227; }
 .test-vote.no { color: color-mix(in srgb, var(--muted) 70%, transparent); }
-.test-vote { position: relative; }
 .test-vote.edited::after { content: ''; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .test-vote:hover { border-color: var(--accent); }
 
