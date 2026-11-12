@@ -1479,3 +1479,13 @@ body.dense .day .row .ep { margin-top: 2px; }
  .header-primary .misc-menu.site-tools{right:0;left:auto;max-width:calc(100vw - 24px)}
  body.searching .header-primary{display:none}
 }
+
+/* "Mehr" menu: the sections side by side in two columns instead of one long stack (section titles span both) */
+@media (min-width: 561px) {
+  .misc-menu.site-tools { display: grid; grid-template-columns: 1fr 1fr; width: 480px; gap: 2px 6px; align-items: stretch; }
+  .misc-menu.site-tools > .misc-label, .misc-menu.site-tools > .misc-section-title { grid-column: 1 / -1; }
+  .misc-menu.site-tools > a { min-height: 50px; padding: 8px; gap: 9px; }
+  .misc-menu.site-tools > a > span:last-child { display: none; }
+  .misc-menu.site-tools .misc-icon { width: 30px; height: 30px; }
+  .misc-menu.site-tools .misc-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
