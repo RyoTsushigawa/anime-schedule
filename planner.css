@@ -98,3 +98,19 @@ header .bar { max-width: 1288px; }
 .plan-out .plan-breaks { align-items: baseline; }
 .plan-out .plan-breaks .plan-side { width: 90px; margin: 0; }
 .plan-out .plan-breaks + .plan-breaks { margin-top: 6px; }
+
+/* editing the suggestion by hand: drag a show onto a gap (own slot) or onto another show (side by side) */
+.plan-slot .info[draggable="true"] { cursor: grab; border-radius: 8px; transition: background .12s, box-shadow .12s; }
+.plan-slot .info[draggable="true"]:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.plan-slot .info.dragging { opacity: .4; }
+.plan-slot .info.over { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: 0 0 0 2px var(--accent); }
+.plan-drop { height: 4px; margin: -2px 0; border-radius: 99px; transition: height .12s, margin .12s, background .12s; }
+.plan-dragging .plan-drop { height: 14px; margin: 0 0 6px; background: color-mix(in srgb, var(--accent) 10%, transparent); outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+.plan-dragging .plan-drop.over { height: 40px; background: color-mix(in srgb, var(--accent) 22%, transparent); outline: 2px dashed var(--accent); }
+.plan-edited { font-size: 12px; font-weight: 600; color: var(--accent); }
+.plan-drag-hint { font-size: 12px; }
+.plan-toolbar .plan-views { margin-right: auto; }
+.plan-drop.empty { height: auto; margin: 0 0 8px; padding: 10px 12px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); background: none; outline: 0; }
+.plan-dragging .plan-drop.empty { height: auto; padding: 14px 12px; }
+.plan-dragging .plan-drop.empty.over { color: var(--text); }
+.plan-setup .avail-name.idle { opacity: .55; }

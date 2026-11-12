@@ -87,7 +87,9 @@ byShow.set(show, entry);
 }
 const entries = [...byShow.values()];
 const media = await plannerMedia(entries.map(e => e.show));
-const people = sheet.people.filter(p => entries.some(e => e.people.includes(p)));
+// everyone with a visible column, also those who haven't picked a show yet (their availability can be set ahead)
+const people = sheet.people.slice();
+const idle = new Set(people.filter(p => !entries.some(e => e.people.includes(p))));
 const shows = entries.map((e, i) => {
 const m = media[i];
 const next = m?.nextAiringEpisode;
@@ -109,7 +111,7 @@ short: !!m?.duration && m.duration <= 15,
 current: day >= 0 ? { day, min: minutesOf(e.slot.time), slot: Number(e.slot.slot) || null } : null,
 };
 });
-const data = { tab, people, shows, sheet };
+const data = { tab, people, idle, shows, sheet };
 planCache.set(tab.gid, data);
 return data;
 }
@@ -397,7 +399,7 @@ const starts = `<span class="avail-name everyone" title="Startzeit pro Tag (leer
 `<input class="avail-start" data-day="${d}" value="${esc(planStarts.days[d] || '')}" placeholder="${esc(planStarts.standard)}"
       inputmode="numeric" maxlength="5" aria-label="Start am ${day}" title="Start am ${day} (leer = Standard)">`).join('')}<span></span>`;
 const grid = [EVERYONE, ...data.people].map(p => `
-    <span class="avail-name${p === EVERYONE ? ' everyone' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}">${p === EVERYONE ? 'Alle' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
+    <span class="avail-name${p === EVERYONE ? ' everyone' : ''}${data.idle?.has(p) ? ' idle' : ''}" style="${p === EVERYONE ? '' : personStyle(p)}"${data.idle?.has(p) ? ' title="Hat in diesem Tab noch keine Serie gewählt"' : ''}>${p === EVERYONE ? 'Alle' : esc(p)}</span>${PLAN_DAYS_SHORT.map((day, d) =>
 `<button class="avail-day" data-person="${esc(p)}" data-day="${d}" aria-pressed="${(planUnavailable[p] || []).includes(d)}"
         title="${p === EVERYONE ? 'Niemand guckt' : esc(p) + ' kann nicht'} am ${PLAN_DAYS[d]}">${day}</button>`).join('')}
       <input class="avail-start avail-until" data-person="${esc(p)}" value="${esc(planUntil[p] || '')}" placeholder="–" inputmode="numeric" maxlength="5"
@@ -572,6 +574,8 @@ $('planStale').hidden = false;
 $('planRun').textContent = 'Neu erstellen';
 $('planRun').classList.add('stale');
 }
+let planHistory = [];   // earlier versions of the suggestion while it is edited by hand (Rückgängig)
+let planDrag = null;    // the shown plan, for drag and drop
 async function generatePlan(data) {
 const out = $('planOut');
 if (!out) return;
@@ -587,6 +591,7 @@ $('planRun').textContent = 'Neu erstellen';
 $('planRun').classList.remove('stale');
 $('planStale').hidden = true;
 planOutcome = { tab: data.tab.gid, plan };
+planHistory = [];
 showPlan(data, plan);
 out.style.minHeight = '';
 }
@@ -639,10 +644,11 @@ if (s.short) notes.push('kurz');
 if (ctx.fixed[i]?.dayOnly) notes.push('nur Tag');
 else if (ctx.fixed[i]) notes.push('📌 festgelegt');
 if (mark && changedSet.has(i)) notes.push(`<span class="plan-was">vorher ${when(was.get(i))}</span>`);
-return `<div class="info"><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
+const drag = mark && !ctx.fixed[i]?.dayOnly ? ` draggable="true" data-show="${i}" title="Ziehen: auf eine Lücke = eigener Slot, auf eine Serie = parallel"` : '';
+return `<div class="info"${drag}><div class="title">${esc(s.title)}</div><div class="ep">${notes.join(' · ')}${chips(s.people)}</div></div>`;
 };
-const row = (at, label, slot, d, mark) => `
-    <div class="row plan-row${mark && slot.some(i => changedSet.has(i)) ? ' changed' : ''}">
+const row = (at, label, slot, d, mark, k) => `
+    <div class="row plan-row${mark && slot.some(i => changedSet.has(i)) ? ' changed' : ''}"${mark ? ` data-day="${d}" data-slot="${k}"` : ''}>
       <div class="time">${clock(at)}${label ? `<small>${label}</small>` : ''}</div>
       <div class="plan-slot${slot.length > 1 ? ' pair' : ''}">${slot.map(i => showInfo(i, d, mark)).join('<div class="plan-or">‖</div>')}</div>
     </div>`;
@@ -651,19 +657,19 @@ const dayOnlyRows = (list, d, mark) => list.map(i => `
       <div class="time">–<small>ohne Slot</small></div>
       <div class="plan-slot">${showInfo(i, d, mark)}</div>
     </div>`).join('');
-const suggestionDay = d => plan[d].map((slot, k) => row(times[d][k], `Slot ${k + 1}`, slot, d, true)).join('') + dayOnlyRows(ctx.dayOnly[d], d, true);
+const gap = (d, k) => `<div class="plan-drop" data-day="${d}" data-at="${k}" aria-hidden="true"></div>`;
+const suggestionDay = d => !plan[d].length ? `<div class="plan-drop empty" data-day="${d}" data-at="0">Nichts · Serie hierher ziehen</div>` + dayOnlyRows(ctx.dayOnly[d], d, true) : plan[d].map((slot, k) => gap(d, k) + row(times[d][k], `Slot ${k + 1}`, slot, d, true, k)).join('') + gap(d, plan[d].length) + dayOnlyRows(ctx.dayOnly[d], d, true);
 const nowDay = d => now.days[d].map(({ at, shows: slot }) => row(at, '', slot, d)).join('') + dayOnlyRows(now.dayOnly[d], d);
 const span = (from, to) => from === null ? '' : `<span class="plan-span">${clock(from)}–${clock(to)}</span>`;
 const days = PLAN_DAYS.map((day, d) => {
 const mine = plan[d].length ? span(times[d][0], ends[d]) : '';
 const theirs = now.days[d].length ? span(now.days[d][0].at, nowEnds[d]) : '';
 const hasMine = plan[d].length || ctx.dayOnly[d].length, hasTheirs = now.days[d].length || now.dayOnly[d].length;
-if (planView === 'suggestion') return hasMine ? `<section class="day"><h2><b>${day}</b> ${mine}</h2>${suggestionDay(d)}</section>` : '';
+if (planView === 'suggestion') return `<section class="day"><h2><b>${day}</b> ${mine}</h2>${suggestionDay(d)}</section>`;
 if (planView === 'now') return hasTheirs ? `<section class="day"><h2><b>${day}</b> ${theirs}</h2>${nowDay(d)}</section>` : '';
-if (!hasMine && !hasTheirs) return '';
 return `<section class="day"><h2><b>${day}</b></h2><div class="plan-compare">
       <div><div class="plan-side">Aktuell ${theirs}</div>${nowDay(d) || '<div class="ep plan-none">Nichts</div>'}</div>
-      <div><div class="plan-side">Vorschlag ${mine}</div>${suggestionDay(d) || '<div class="ep plan-none">Nichts</div>'}</div>
+      <div><div class="plan-side">Vorschlag ${mine}</div>${suggestionDay(d)}</div>
     </div></section>`;
 }).join('');
 const unplaced = planView !== 'suggestion' && now.unplaced.length
@@ -680,6 +686,7 @@ const views = [['compare', 'Vergleich'], ['suggestion', 'Vorschlag'], ['now', 'A
 const actions = `<div class="plan-actions plan-toolbar">
     <div class="segmented plan-views" role="group" aria-label="Ansicht">${views.map(([v, label]) =>
 `<button data-plan-view="${v}" aria-pressed="${planView === v}">${label}</button>`).join('')}</div>
+    ${planHistory.length ? `<span class="plan-edited">Von Hand angepasst</span><button id="planUndo" class="pill">Rückgängig</button>` : `<span class="plan-hint plan-drag-hint">Serien im Vorschlag lassen sich verschieben</span>`}
     <button id="planAgain" class="pill" title="Noch einmal rechnen: oft gibt es mehrere gleich gute Pläne">Anderer Vorschlag</button>
     <div class="plan-export"><button id="planExport" class="pill plan-go" aria-haspopup="true" aria-expanded="false" aria-controls="planExportMenu">Übernehmen <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <div id="planExportMenu" class="popover plan-export-menu" hidden>
@@ -691,6 +698,8 @@ $('planOut').innerHTML = problems + stats + changeList + actions + days + unplac
 const cells = [...document.querySelectorAll('#planOut .time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...cells.map(t => t.scrollWidth)) + 'px');
 $('planAgain').onclick = () => generatePlan(data);
+if ($('planUndo')) $('planUndo').onclick = () => { const before = planHistory.pop(); if (!before) return; planOutcome.plan = before; showPlan(data, before); };
+planDrag = { data, plan };
 const menu = $('planExportMenu'), toggle = open => { menu.hidden = !open; $('planExport').setAttribute('aria-expanded', open); };
 $('planExport').onclick = e => { e.stopPropagation(); toggle(menu.hidden); };
 menu.onclick = () => toggle(false);
@@ -704,6 +713,71 @@ try { localStorage.setItem('planView', planView); } catch {}
 showPlan(data, plan);
 };
 }
+// Drag and drop in the suggestion: onto a gap = own slot there, onto a show = side by side with it
+function movedPlan(plan, shows, i, d, at, pairWith) {
+const next = plan.map(day => day.map(slot => slot.slice()));
+for (let dd = 0; dd < 7; dd++)
+for (let k = 0; k < next[dd].length; k++) {
+const j = next[dd][k].indexOf(i);
+if (j < 0) continue;
+next[dd][k].splice(j, 1);
+if (!next[dd][k].length) {
+next[dd].splice(k, 1);
+if (dd === d && at > k) at--;
+}
+dd = 7; break;
+}
+if (pairWith === undefined) { next[d].splice(Math.min(at, next[d].length), 0, [i]); return next; }
+const slot = next[d].find(slot => slot.includes(pairWith));
+if (!slot) return null;
+if (slot.length >= MAX_SIDE_BY_SIDE) return { error: `Mehr als ${MAX_SIDE_BY_SIDE} Serien parallel geht nicht` };
+const both = shows[i].people.filter(p => slot.some(j => shows[j].people.includes(p)));
+if (both.length) return { error: `${both.join(', ')} ${both.length === 1 ? 'guckt' : 'gucken'} beide: nicht parallel möglich` };
+slot.push(i);
+return next;
+}
+let dragged = null;
+const clearDrop = () => document.querySelectorAll('#planOut .over').forEach(el => el.classList.remove('over'));
+const dropTarget = e => {
+const show = e.target.closest('#planOut .plan-slot .info[data-show]');
+if (show && Number(show.dataset.show) !== dragged) return show;
+return e.target.closest('#planOut .plan-drop');
+};
+addEventListener('dragstart', e => {
+const el = e.target.closest?.('#planOut [data-show]');
+if (!el || !planDrag) return;
+dragged = Number(el.dataset.show);
+e.dataTransfer.effectAllowed = 'move';
+e.dataTransfer.setData('text/plain', planDrag.data.shows[dragged].title);
+requestAnimationFrame(() => { document.body.classList.add('plan-dragging'); el.classList.add('dragging'); });
+});
+addEventListener('dragover', e => {
+if (dragged === null) return;
+const target = dropTarget(e);
+clearDrop();
+if (!target) return;
+e.preventDefault();
+e.dataTransfer.dropEffect = 'move';
+target.classList.add('over');
+});
+addEventListener('drop', e => {
+if (dragged === null) return;
+const target = dropTarget(e);
+if (!target) return;
+e.preventDefault();
+const { data, plan } = planDrag;
+const pair = target.dataset.show !== undefined;
+const row = target.closest('.plan-row');
+const d = Number(pair ? row.dataset.day : target.dataset.day);
+const next = movedPlan(plan, data.shows, dragged, d, Number(target.dataset.at), pair ? Number(target.dataset.show) : undefined);
+dragged = null;
+if (!next) return;
+if (next.error) { notice(next.error); return; }
+planHistory.push(plan);
+planOutcome.plan = next;
+showPlan(data, next);
+});
+addEventListener('dragend', () => { dragged = null; clearDrop(); document.body.classList.remove('plan-dragging'); document.querySelector('#planOut .dragging')?.classList.remove('dragging'); });
 addEventListener('click', e => { if (!e.target.closest('.plan-export')) { const m = $('planExportMenu'); if (m && !m.hidden) { m.hidden = true; $('planExport').setAttribute('aria-expanded', 'false'); } } });
 addEventListener('keydown', e => { if (e.key === 'Escape' && $('planExportMenu') && !$('planExportMenu').hidden) { $('planExportMenu').hidden = true; $('planExport').setAttribute('aria-expanded', 'false'); $('planExport').focus(); } });
 async function copyPlan(data, plan, times) {
