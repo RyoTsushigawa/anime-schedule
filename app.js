@@ -1301,7 +1301,7 @@ const friendList = $('friendList');
 const listUser = () => friendList.value || $('anilistUser').value.trim();
 // The person selected in Solo is also the default person in Catch-up and Non-seasonal.
 const listProfiles = new Map();
-let planPeople = [];
+let localPlanPeople = [];
 const isLocalList = () => friendList.value.startsWith('local:');
 const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
 const localProgressKey = person => 'localAnimeProgress:v1:' + person;
@@ -1372,6 +1372,7 @@ function localWatchButton(id, episode) {
 $('list').addEventListener('click', e => {
   const button = e.target.closest('[data-local-watch]');
   if (!button || !isLocalList() || !listView()) return;
+  e.stopImmediatePropagation();
   const person = localListPerson(), id = Number(button.dataset.localWatch), episode = Number(button.dataset.localEpisode);
   if (!saveLocalProgress(person, id, episode)) { notice('Fortschritt konnte im Browser nicht gespeichert werden.'); return; }
   load(true);
@@ -1394,8 +1395,8 @@ function syncListToSolo() {
 }
 function updateLocalListOptions() {
   for (const option of [...friendList.options])
-    if (option.value.startsWith('local:') && (listProfiles.has(option.dataset.person) || !planPeople.includes(option.dataset.person))) option.remove();
-  for (const person of planPeople) {
+    if (option.value.startsWith('local:') && (listProfiles.has(option.dataset.person) || !localPlanPeople.includes(option.dataset.person))) option.remove();
+  for (const person of localPlanPeople) {
     if (listProfiles.has(person) || [...friendList.options].some(o => o.value === 'local:' + person)) continue;
     const option = new Option(person + ' · Lokal', 'local:' + person);
     option.dataset.person = person;
@@ -2134,7 +2135,7 @@ if (watch?.classList.contains('watch')) { watch.dataset.ep = first + count - 1; 
 });
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('.watch');
-if (!b || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
+if (!b || b.dataset.localWatch || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
 const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
 const key = tickKey(mediaId, episode);
 const current = myProgress.get(mediaId) || 0;
@@ -4383,7 +4384,7 @@ for (const o of select.options) o.style.cssText = personStyle(o.value)
 applyAccent();
 }
 function fillPeople(people) {
-planPeople = people.slice();
+localPlanPeople = people.slice();
 updateLocalListOptions();
 const select = $('soloPerson');
 if ([...select.options].map(o => o.value).join() !== people.join()) {
