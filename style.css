@@ -1489,3 +1489,6 @@ body.dense .day .row .ep { margin-top: 2px; }
   .misc-menu.site-tools .misc-icon { width: 30px; height: 30px; }
   .misc-menu.site-tools .misc-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* Abwesend in the header next to Zeitplan and Spiele (one of the most used functions) */
+button.header-nav-link{font-family:inherit;cursor:pointer}
