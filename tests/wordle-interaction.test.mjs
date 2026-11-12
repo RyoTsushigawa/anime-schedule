@@ -9,7 +9,7 @@ import {
 } from '../games-logic.mjs';
 
 const game=readFileSync(new URL('../games.js',import.meta.url),'utf8')
-  .replace(/^import .* from '\.\/games-logic\.mjs';\s*/, '');
+  .replace(/^import .* from '\.\/games-logic\.mjs';\s*/m, '');
 const html=readFileSync(new URL('../games.html',import.meta.url),'utf8');
 const daily=JSON.parse(readFileSync(new URL('../games-words.json',import.meta.url),'utf8'));
 
