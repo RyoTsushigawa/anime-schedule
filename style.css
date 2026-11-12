@@ -1492,3 +1492,33 @@ body.dense .day .row .ep { margin-top: 2px; }
 
 /* Abwesend in the header next to Zeitplan and Spiele (one of the most used functions) */
 button.header-nav-link{font-family:inherit;cursor:pointer}
+
+/* ---- Cleaner lists ---- */
+/* day headings: pause shift and the delay clock stay, everything else behind "⋯" */
+.day-more { position: relative; display: inline-flex; order: 2; }
+.day h2 .day-more-btn { display: inline-grid; place-items: center; padding: 3px 10px; font-size: 15px; line-height: 1; letter-spacing: 1px; }
+.day-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 2px; min-width: 250px; padding: 5px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 10px 30px #0005; }
+.day-menu[hidden] { display: none; }
+.day h2 .day-menu > button { order: 0; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 34px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 13px; font-weight: 500; text-align: left; white-space: nowrap; }
+.day h2 .day-menu > button::after { content: attr(aria-label); }
+.day h2 .day-menu > button:hover { background: var(--today); }
+.day h2 .day-menu > button.on { color: var(--accent); }
+/* who is away: a short note in the heading instead of its own line */
+.day h2 .away-note { display: inline; width: auto; margin: 0; padding: 0; border: 0; color: var(--muted); font-size: 13px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.day h2 .away-note:hover { color: var(--text); }
+/* "Droppen" only when the row is hovered (always on touch screens) */
+@media (hover: hover) { .row .drop { opacity: 0; transition: opacity .15s; } .row:hover .drop, .row .drop:focus-visible { opacity: 1; } }
+/* the next show is marked by its border and progress bar; no extra tag */
+.row.next-watch-slot > .info > .ep::before, .next-watch-slot:not(:has(> .parallel-heading)) > .row:first-child > .info > .ep::before, .next-watch-slot > .parallel-heading::after { content: none; display: none; }
+/* slimmer streaming buttons */
+.links > .cr { min-width: 118px; }
+.cr { min-height: 30px; padding: 5px 11px; font-size: 12.5px; }
+/* header: icon-only buttons, the name shows on hover */
+@media (min-width: 561px) {
+  .header-primary .header-nav-link span, .header-primary .misc-trigger > span { display: none; }
+  .header-primary .header-nav-link, .header-primary .round.misc-trigger { width: 34px; padding: 0; }
+}
+
+.day h2 .day-menu > button { justify-content: flex-start; min-width: 0; }
+.day h2 .day-menu > button svg { flex: none; width: 15px; height: 15px; }
+.day h2:has(.day-menu:not([hidden])) { z-index: 25; }
