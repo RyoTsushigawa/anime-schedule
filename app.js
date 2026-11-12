@@ -1779,7 +1779,7 @@ for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = ()
 const choices = { time: 'release', sort: 'oldest', accent: 'person', density: 'comfortable' };
 const CHOICE_OK = {
 time: v => ['release', 'watch', 'both'].includes(v),
-sort: v => ['oldest', 'behind', 'next', 'az'].includes(v),
+sort: v => ['oldest', 'behind', 'quick', 'next', 'az'].includes(v),
 accent: v => v === 'person' || /^#[0-9a-f]{6}$/i.test(v),
 density: v => ['comfortable', 'compact'].includes(v),
 };
@@ -2729,6 +2729,7 @@ const openEpisodes = showCatchupCount(rows);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) || a.since - b.since
+: choices.sort === 'quick' ? (a, b) => (a.out - a.first) - (b.out - b.first) || a.since - b.since
 : choices.sort === 'next' ? (a, b) => (a.nextAt || Infinity) - (b.nextAt || Infinity) || a.since - b.since
 : (a, b) => a.since - b.since);
 const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
@@ -2789,7 +2790,9 @@ const paced = ({ m, first, out, progress, links }) => `
 if (!canBulk || shown === 'pace') selecting = false;
 const restore = preserveListPosition();
 if (shown === 'pace') {
-ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first) : byTitle);
+ownPace.sort(choices.sort === 'behind' ? (a, b) => (b.out - b.first) - (a.out - a.first)
+: choices.sort === 'quick' ? (a, b) => (a.out - a.first) - (b.out - b.first) || byTitle(a, b)
+: byTitle);
 $('list').innerHTML = ownPace.length ? ownPace.map(paced).join('')
 : '<div class="status">Keine älteren Serien offen auf der Watching-Liste.</div>';
 } else {
