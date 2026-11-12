@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 
-const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const source = APP_SOURCE;
 function extract(name) {
  const start = source.indexOf('function ' + name + '(');
  assert.ok(start >= 0, name + ' exists');
@@ -44,6 +43,7 @@ test('catch-up already planned for other shows counts towards the limit', () => 
  assert.equal(entries[0].day, '2026-11-13');
 });
 import { openPage } from './harness.mjs';
+import { APP_SOURCE } from './app-source.mjs';
 test('Catch-up: "Automatisch einplanen" previews the open episodes on this week\'s evenings', async () => {
  const p = await openPage({ storage: { anilistAccounts: JSON.stringify([{ name: 'Tester', token: 'fixture-only' }]), anilistActive: 'Tester', anilistUser: 'Tester', movesKey: 'fixture-only' },
   list: { 1: { status: 'CURRENT', progress: 0 }, 2: { status: 'CURRENT', progress: 0 } } });

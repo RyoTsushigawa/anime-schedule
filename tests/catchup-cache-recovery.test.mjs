@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
 test('Catch-up AniList cache recovers through the same title repair as fresh cache', () => {
-  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const app = APP_SOURCE;
   const start = app.indexOf('async function anilistList(');
   const end = app.indexOf("$('refreshCatchup').onclick", start);
   assert.ok(start >= 0 && end > start);
@@ -15,7 +15,7 @@ test('Catch-up AniList cache recovers through the same title repair as fresh cac
 });
 
 test('Catch-up local error messages disappear after successful recovery', () => {
-  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const app = APP_SOURCE;
   assert.match(app, /extra = await localCatalog\(person\);\s*setNote\('catchup:local', null\)/);
   assert.match(app, /notesHtml\(\['list:' \+ user\.toLowerCase\(\), 'catchup:plan', 'catchup:missing', 'catchup:local'\]\)/);
 });

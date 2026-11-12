@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
-const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const source = APP_SOURCE;
 const start = source.indexOf('function bulkSaveSummary(');
 const end = source.indexOf('function remember(', start);
 assert.ok(start > 0 && end > start, 'bulk outcome helpers exist');

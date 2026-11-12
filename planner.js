@@ -759,7 +759,7 @@ const days = PLAN_DAYS.map((day, d) => {
 const shift = `<span class="plan-shift" role="group" aria-label="Start am ${day}"><button type="button" class="round" data-shift-day="${d}" data-shift="-30" title="${day}: 30 Minuten früher anfangen" aria-label="Früher anfangen">−</button><button type="button" class="round" data-shift-day="${d}" data-shift="30" title="${day}: 30 Minuten später anfangen" aria-label="Später anfangen">+</button></span>`;
 const mine = (plan[d].length ? span(times[d][0], ends[d]) : '') + (plan[d].length ? shift : '');
 const theirs = now.days[d].length ? span(now.days[d][0].at, nowEnds[d]) : '';
-const hasMine = plan[d].length || ctx.dayOnly[d].length, hasTheirs = now.days[d].length || now.dayOnly[d].length;
+const hasTheirs = now.days[d].length || now.dayOnly[d].length;
 if (planView === 'suggestion') return `<section class="day"><h2><b>${day}</b> ${mine}</h2>${suggestionDay(d)}</section>`;
 if (planView === 'now') return hasTheirs ? `<section class="day"><h2><b>${day}</b> ${theirs}</h2>${nowDay(d)}</section>` : '';
 return `<section class="day"><h2><b>${day}</b></h2><div class="plan-compare">

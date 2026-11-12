@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
-const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const app = APP_SOURCE;
 const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 
 test('busy Catch-up seasons display eight rows initially but keep the others expandable', () => {

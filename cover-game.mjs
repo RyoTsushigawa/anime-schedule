@@ -107,7 +107,6 @@ function finish() {
   message('Morgen gibt es fünf neue Cover.');
 }
 async function share() {
-  const correct = answers.filter((id,i) => id === rounds[i]?.target.id);
   const result = 'Anime Cover Quiz · ' + day + '\n' + scoreAnswers(rounds, answers) + ' / ' + (rounds.length * 100) + ' Punkte\n' + answers.map((id,i) => id === rounds[i]?.target.id ? '🟩' : '⬛').join('') + '\n' + location.origin + location.pathname;
   try { await navigator.clipboard.writeText(result); $('coverShare').textContent = 'Kopiert!'; }
   catch { message('Teilen nicht möglich.'); }

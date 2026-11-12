@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { APP_SOURCE } from './app-source.mjs';
 
-const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const source = APP_SOURCE;
 function functionSource(name) {
  const start = source.indexOf('function ' + name + '(');
  assert.ok(start >= 0, name + ' exists');
