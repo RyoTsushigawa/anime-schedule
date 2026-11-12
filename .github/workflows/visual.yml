@@ -25,7 +25,7 @@ jobs:
           cd tools/visual
           npx playwright install --with-deps chromium
       - name: Behavior checks
-        run: node --test tests/compact-services.test.mjs tests/catchup-seasons.test.mjs tests/skipped-catchup.test.mjs tests/absent-catchup.test.mjs tests/catchup-stepper.test.mjs tests/catchup-large-list.test.mjs tests/auto-catchup.test.mjs tests/local-catchup.test.mjs tests/local-export.test.mjs
+        run: node --test tests/compact-services.test.mjs tests/catchup-seasons.test.mjs tests/skipped-catchup.test.mjs tests/absent-catchup.test.mjs tests/catchup-stepper.test.mjs tests/catchup-large-list.test.mjs tests/catchup-bulk-status.test.mjs tests/auto-catchup.test.mjs tests/local-catchup.test.mjs tests/local-export.test.mjs
       # each view renders without errors or sideways scrolling; the pictures are kept for review, not compared
       - name: Render the views
         working-directory: tools/visual
