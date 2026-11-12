@@ -74,6 +74,29 @@ function verifiedTrailer(entry) {
   title:clean(entry.title)||(teaser?'Offizieller Teaser':'Offizieller Trailer')
  }:null;
 }
+// Covers (idea 87): from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
+let covers=new Map();
+async function loadCovers(tab,list){
+ const key='previewCovers:'+tab.gid;
+ try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&Date.now()-saved.time<7*86400000){covers=new Map(saved.covers);if(list.every(s=>covers.has(s.key)))return;}}catch{}
+ const want=list.filter(s=>!covers.has(s.key));
+ const malId=s=>malLink(s).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
+ const byMal=want.filter(malId),byTitle=want.filter(s=>!malId(s));
+ try{
+  for(let i=0;i<byMal.length;i+=50){
+   const part=byMal.slice(i,i+50);
+   const data=await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(idMal_in: $ids, type: ANIME) { idMal coverImage { medium } } } }',{ids:part.map(s=>Number(malId(s)))},undefined,{retries:0,timeout:10000});
+   for(const s of part)covers.set(s.key,data.Page.media.find(m=>String(m.idMal)===malId(s))?.coverImage?.medium||'');
+  }
+  for(let i=0;i<byTitle.length;i+=15){
+   const part=byTitle.slice(i,i+15);
+   const query='query ('+part.map((_,j)=>'$t'+j+': String').join(', ')+') {'+part.map((_,j)=>' s'+j+': Page(perPage: 1) { media(search: $t'+j+', type: ANIME, sort: SEARCH_MATCH) { coverImage { medium } } }').join('')+' }';
+   const data=await anilist(query,Object.fromEntries(part.map((s,j)=>['t'+j,s.english||s.title])),undefined,{retries:0,timeout:10000});
+   part.forEach((s,j)=>covers.set(s.key,data['s'+j]?.media?.[0]?.coverImage?.medium||''));
+  }
+ }catch{return;}
+ try{localStorage.setItem(key,JSON.stringify({time:Date.now(),covers:[...covers]}));}catch{}
+}
 function malLink(show){
  const key=seasonKey(current).replace(/^herbst-/,'fall-').replace(/^frühling-/,'spring-').replace(/^sommer-/,'summer-');
  const entries=animeIndex.seasons?.[key]||[];
@@ -420,7 +443,8 @@ function render(){
   // above the title, so the vote buttons line up on every card
   const start=s.start?'ab '+shortDate(s.start,{weekday:'short',day:'numeric',month:'short'}):'';
   const note=trailer&&!start?'':'<span class="preview-none">'+[trailer?'':(sequel?'Sequel':'Noch kein Trailer'),start].filter(Boolean).join(' · ')+'</span>';
-  article.innerHTML='<div class="preview-order">'+s.order+'</div><div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
+  const cover=covers.get(s.key);
+  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
   parent.append(article);
  }
 }
@@ -437,6 +461,7 @@ async function selectSeason(gid){
   state('');
   updateMemberUI();
   render();
+  loadCovers(next,latest).then(()=>{if(current?.gid===gid)render();});
  }catch(e){
   if(request!==seasonRequest)return;
   shows=[];pv('previewList').replaceChildren();
