@@ -3,7 +3,7 @@
 // is fetched as a whole and offers "Reload" (app.js). Data files still come fresh, with the saved copy
 // standing in when the network is slow or down. AniList, Google and LiveChart requests aren't touched:
 // the page keeps its own copies.
-const CACHE = 'schedule-v437';
+const CACHE = 'schedule-v438';
 const FILES = ['./', 'index.html', 'season-preview.html', 'season-preview.css', 'season-preview.js', 'season-trailers.json', 'services/crunchyroll.svg', 'services/netflix.svg', 'services/prime-video.svg', 'services/disney.svg', 'services/adn.svg', 'services/youtube.svg', 'services/akiba.svg', 'services/hidive.svg', 'services/aniworld.png', 'services/subsplease.png', 'services/nyaa.png', 'services/0neko.ico', 'style.css', 'frame-guard.js', 'early.js', 'tool-theme.js', 'common.js', 'mal.js', 'app.js', 'local-export.mjs', 'drag-moves.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'nicknames.json', 'manifest.webmanifest', 'icon-72.png'];
 
 self.addEventListener('install', event => {
