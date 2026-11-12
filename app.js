@@ -664,6 +664,36 @@ none.append(message, clear);
 none.firstElementChild.textContent = `Keine Serie passt zu „${$('search').value.trim()}“${view === 'week' ? ' in dieser Woche' : ''}.`;
 if (!none.isConnected) $('list').prepend(none);
 } else none?.remove();
+seasonMatches(q);
+}
+// Suche über die ganze Season (idea 132): in the Zeitplan, shows of the shown week's Guckplan that match but
+// aren't on this week, with their usual day and time and who watches them
+function seasonMatches(q) {
+$('seasonMatches')?.remove();
+if (!q || q.length < 2 || view !== 'week' || !lastWeekRender) return;
+const weekKeys = [...document.querySelectorAll('#list [data-search]')].map(el => el.dataset.search);
+const found = new Map();
+for (const sheet of lastWeekRender[2].values()) {
+if (!sheet?.people) continue;
+for (const person of sheet.people) for (const [show, slot] of picks(sheet, person)) {
+const key = [show.romaji, show.english].filter(Boolean).map(norm).join(' ');
+if (!key.includes(q) || weekKeys.some(k => k === key || (norm(show.romaji) && k.includes(norm(show.romaji))))) continue;
+const entry = found.get(key) || { show, slot, who: [] };
+if (!entry.slot?.tag && slot?.tag) entry.slot = slot;
+entry.who.push(person);
+found.set(key, entry);
+}
+}
+if (!found.size) return;
+const box = document.createElement('section');
+box.id = 'seasonMatches';
+box.className = 'season-matches';
+box.innerHTML = `<h3>Diese Season, nicht in dieser Woche</h3>${[...found.values()].map(({ show, slot, who }) => {
+const mv = moveFor(show, lastWeekRender[1]);
+const when = [mv?.tag || slot?.tag, mv ? mv.time : slot?.time].filter(Boolean).join(' ') || 'ohne festen Tag';
+return `<div class="season-match"><b>${esc(show.english || show.romaji)}</b><span>${esc(when)}</span><span class="who">${[...new Set(who)].map(p => `<span style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span></div>`;
+}).join('')}`;
+$('list').append(box);
 }
 const searching = () => !!norm($('search').value);
 let searchedWeek = false;
