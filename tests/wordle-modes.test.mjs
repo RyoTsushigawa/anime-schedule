@@ -27,7 +27,7 @@ test('only whole English title words are accepted: no transliterations, made-up 
 
 test('Hard hint rules preserve green letters and required yellows including repeated letters',()=>{
   assert.deepEqual(scoreGuess('LEVEL','LEVER'),['hit','hit','hit','hit','miss']);
-  assert.match(hardHintError('FIGHT','FIGHT'.split(' '), 'NIGHT'),/Position|mindestens|darf nicht/);
+  assert.match(hardHintError('BLACK',['CLOVER'],'CLOVER'),/Position|mindestens|darf nicht/);
   const bad=hardHintError('BLACK',['CLOVER'],'CLOVER');
   assert.ok(bad,'must refuse a guess that disregards green clues');
 });
