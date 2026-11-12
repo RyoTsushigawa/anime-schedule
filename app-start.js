@@ -147,6 +147,7 @@ $('viewWeek').setAttribute('aria-pressed', view === 'week');
 $('viewCatchup').setAttribute('aria-pressed', view === 'catchup');
 $('viewPace').setAttribute('aria-pressed', view === 'pace');
 try { localStorage.setItem('view', view); } catch {}
+if (view === 'week') refreshPaceNav();
 }
 setView(view);
 $('viewWeek').onclick = () => { setView('week'); enter = { y: 4 }; load(); };
@@ -169,6 +170,7 @@ try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catc
 load();
 };
 friendList.onchange = () => {
+refreshPaceNav();
 selecting = false;
 catchupTargets = [];
 $('markAllStart').hidden = true;
@@ -208,6 +210,7 @@ break;
 $('soloPerson').onchange = () => {
 soloPerson = $('soloPerson').value;
 syncListToSolo();
+refreshPaceNav();
 colorSolo();
 try { localStorage.setItem('soloPerson', soloPerson); } catch {}
 redraw();
