@@ -25,7 +25,8 @@ const hex = c => '#' + ['red', 'green', 'blue'].map(k => Math.round((c[k] || 0) 
 // hidden rows/columns per tab and the header colours of the Guckplan tabs; optional (needs the public API key)
 async function sheetMetadata(fetch, key, tabs) {
   if (!key) return {};
-  const api = path => fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}${path}${path.includes('?') ? '&' : '?'}key=${encodeURIComponent(key)}`)
+  const api = path => fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}${path}${path.includes('?') ? '&' : '?'}key=${encodeURIComponent(key)}`,
+    { headers: { Referer: 'https://ryotsushigawa.github.io/anime-schedule/' } }) // the key only works for the site
     .then(r => { if (!r.ok) throw new Error('Sheets-API antwortet ' + r.status); return r.json(); });
   const result = {};
   const hidden = await api('?fields=sheets(properties(sheetId),data(rowMetadata(hiddenByUser),columnMetadata(hiddenByUser)))');
