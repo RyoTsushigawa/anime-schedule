@@ -36,6 +36,8 @@ jobs:
         run: node --test tests/tools-menu.test.mjs
       - name: Test compact Catch-up seasons
         run: node --test tests/catchup-compact.test.mjs
+      - name: Test Catch-up refresh and cache recovery
+        run: node --test tests/catchup-refresh.test.mjs tests/catchup-cache-recovery.test.mjs
       - name: Test compact Settings navigation
         run: node --test tests/settings-layout.test.mjs
       - name: Test Anime Cover Quiz
