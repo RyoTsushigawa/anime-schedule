@@ -51,7 +51,8 @@
      "officialCheck": true,
      "skip": null,
      "caption": false,
-     "searched": "2026-11-11T18:55:11.777Z"
+     "subsCheck": true,
+     "searched": "2026-11-12T17:38:50.906Z"
     },
     {
      "romaji": "Gacha wo Mawashite Nakama wo Fuyasu: Saikyou no Bishoujo Gundan wo Tsukuriagero",
@@ -400,10 +401,12 @@
      "english": "The Final-Boss Prince is Somehow Obsessed with the Chubby Villainess: Reincarnated Me",
      "anilist": null,
      "skip": null,
-     "video": "k36ip8-Wn5E",
-     "videoTitle": "The FinalBoss Prince is Somehow Obsessed with the Chubby Villainess Reincarnated Me Official Trailer",
-     "channel": "Anime Update 0",
-     "officialCheck": true
+     "video": "9yZpxr6A2Ws",
+     "videoTitle": "Final-Boss Prince is Somehow Obsessed with the Chubby Villainess: Reincarnated Me🤯(Official Trailer)",
+     "channel": "AnimeStrikerz",
+     "officialCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:51.513Z"
     },
     {
      "romaji": "Game Sekai Tensei \"Dankatsu\": Gamer wa \"Dungeon Shuukatsu no Susume\" wo \"Hajime kara\" Play suru",
@@ -414,7 +417,9 @@
      "videoTitle": "TVアニメ『ダン活』スーパーティザーPV ｜ 2027年1月放送開始！",
      "channel": "ABC Animation Channel",
      "subs": [],
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": true,
+     "searched": "2026-11-12T17:38:52.180Z"
     },
     {
      "romaji": "Boukensha License wo Hakudatsu sareta Ossan dakedo, Manamusume ga Dekita node Nonbiri Jinsei wo Ouka suru",
@@ -425,7 +430,9 @@
      "videoTitle": "I Lost My Adventurer's License, but It's Fine Because... - New Anime Trailer (With Eng Subtitles)",
      "channel": "MiracuStream",
      "subs": [],
-     "officialCheck": true
+     "officialCheck": true,
+     "caption": true,
+     "searched": "2026-11-12T17:38:52.768Z"
     },
     {
      "romaji": "Giant Ojou-sama",
@@ -436,7 +443,9 @@
      "videoTitle": "Anime 『GIANT OJOSAMA』 – Teaser Trailer",
      "channel": "DMM pictures",
      "subs": [],
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": true,
+     "searched": "2026-11-12T17:38:53.363Z"
     },
     {
      "romaji": "MONOGATARI Series: OFF & MONSTER Season - Wazamonogatari: Karen Ogre",
@@ -454,7 +463,9 @@
      "video": "q_UGyAntkMk",
      "videoTitle": "PV | Around 40 Kenja no Isekai Seikatsu Nikki - official trailer",
      "channel": "TR anime",
-     "officialCheck": true
+     "officialCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:53.898Z"
     },
     {
      "romaji": "Akane-banashi Season 2",
@@ -481,7 +492,10 @@
      "videoTitle": "TVアニメ『茉莉花官吏伝』メインPV第1弾｜OPテーマ：KANA-BOON「花噺」【2027年1月放送開始】",
      "channel": "KADOKAWAanime",
      "subs": [],
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": true,
+     "via": "anilist",
+     "searched": "2026-11-12T17:38:54.047Z"
     },
     {
      "romaji": "Historie",
@@ -492,7 +506,10 @@
      "videoTitle": "TVアニメ『ヒストリエ』PV第1弾",
      "channel": "MBS animation 公式チャンネル",
      "subs": [],
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": true,
+     "via": "anilist",
+     "searched": "2026-11-12T17:38:54.213Z"
     },
     {
      "romaji": "Shin no Seijo de Aru Watashi wa Tsuihou saremashita. Dakara Kono Kuni wa Mou Owari desu",
@@ -502,7 +519,9 @@
      "video": "AgwEj6-rVdw",
      "videoTitle": "【ティザーPV】TVアニメ『真の聖女である私は追放されました。だからこの国はもう終わりです』｜2027年1月放送開始！",
      "channel": "バンダイナムコフィルムワークス チャンネル",
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:54.817Z"
     },
     {
      "romaji": "Sekiro: No Defeat (TV)",
@@ -523,7 +542,9 @@
      "video": "ZoVtjJsdyB4",
      "videoTitle": "TVアニメ「ひらやすみ」ティザーPV",
      "channel": "ShoProアニメチャンネル",
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:55.441Z"
     },
     {
      "romaji": "Dengeki Daisy",
@@ -533,7 +554,10 @@
      "video": "9wIJGKQKqZY",
      "videoTitle": "TVアニメ『電撃デイジー』メインPV第１弾｜2027年1月より連続2クールにて放送開始",
      "channel": "アニプレックス チャンネル",
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": false,
+     "via": "anilist",
+     "searched": "2026-11-12T17:38:55.607Z"
     },
     {
      "romaji": "ARCANADEA",
@@ -543,17 +567,21 @@
      "video": "9aF_e6hclTw",
      "videoTitle": "\"Arcanadea\" | OFFICIAL TRAILER // New PV | SUBBED",
      "channel": "Anime Overview ",
-     "officialCheck": true
+     "officialCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:56.535Z"
     },
     {
      "romaji": "MURCIÉLAGO",
      "english": "MURCIÉLAGO",
      "anilist": null,
      "skip": null,
-     "video": "Z09Hk6AE3Bg",
-     "videoTitle": "\"Murciélago\" Yuri Action TV ANIME | OFFICIAL TRAILER ",
-     "channel": "Anime Update 0",
-     "officialCheck": true
+     "video": "BBoZVdbU7fM",
+     "videoTitle": "MURCIÉLAGO - Anime Trailer",
+     "channel": "Geek Realm Hub",
+     "officialCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:57.048Z"
     },
     {
      "romaji": "Pen to Wappa to Jijitsukon",
@@ -563,7 +591,9 @@
      "video": "GpsgYnS0p8I",
      "videoTitle": "TVアニメ『ペンと手錠と事実婚』2027年1月放送決定！｜ティザーPV",
      "channel": "「KING AMUSEMENT CREATIVE」公式チャンネル",
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:57.648Z"
     },
     {
      "romaji": "Kaze wo Tsugu Mono",
@@ -574,7 +604,9 @@
      "videoTitle": "Inherit The Winds New Anime Official Trailer (With Eng Subtitles)",
      "channel": "MiracuStream",
      "subs": [],
-     "officialCheck": true
+     "officialCheck": true,
+     "caption": true,
+     "searched": "2026-11-12T17:38:58.136Z"
     },
     {
      "romaji": "Yuukyuu no Gusha Asley no, Kenja no Susume",
@@ -594,7 +626,9 @@
      "video": "5t73vYlujsg",
      "videoTitle": "Ore to Yu nii! - Official Trailer",
      "channel": "Anime Officials Trailer",
-     "officialCheck": true
+     "officialCheck": true,
+     "caption": false,
+     "searched": "2026-11-12T17:38:58.716Z"
     },
     {
      "romaji": "Akazukin, Tabi no Tochuu de Shitai to Deau.",
@@ -605,7 +639,9 @@
      "videoTitle": "TVアニメ「赤ずきん、旅の途中で死体と出会う。」PV第1弾｜2027年1月TOKYO MX、ＢＳ日テレ、読売テレビにて放送開始！",
      "channel": "ぽにきゃん-Anime PONY CANYON",
      "via": "anilist",
-     "subsCheck": true
+     "subsCheck": true,
+     "caption": true,
+     "searched": "2026-11-12T17:38:58.887Z"
     },
     {
      "romaji": "Ramen Akaneko Season 2",
@@ -636,8 +672,8 @@
    ],
    "playlist": "PLMKUhokF0XN8",
    "url": "https://www.youtube.com/playlist?list=PLMKUhokF0XN8",
-   "synced": "2026-11-11T18:55:19.579Z"
+   "synced": "2026-11-12T17:39:00.775Z"
   }
  },
- "updated": "2026-11-11T18:55:19.579Z"
+ "updated": "2026-11-12T17:39:00.775Z"
 }
