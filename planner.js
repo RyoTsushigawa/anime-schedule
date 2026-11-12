@@ -817,6 +817,7 @@ for (const b of document.querySelectorAll('[data-unpause]'))
 b.onclick = () => { const [d, k] = b.dataset.unpause.split(':').map(Number); edit(next => next[d].splice(k, 1)); };
 if ($('planUndo')) $('planUndo').onclick = () => { const before = planHistory.pop(); if (!before) return; planOutcome.plan = before; showPlan(data, before); };
 planDrag = { data, plan };
+tapped = null; document.body.classList.remove('plan-dragging', 'plan-tapping');
 const menu = $('planExportMenu'), toggle = open => { menu.hidden = !open; $('planExport').setAttribute('aria-expanded', open); };
 $('planExport').onclick = e => { e.stopPropagation(); toggle(menu.hidden); };
 menu.onclick = () => toggle(false);
@@ -878,23 +879,48 @@ e.preventDefault();
 e.dataTransfer.dropEffect = 'move';
 target.classList.add('over');
 });
-addEventListener('drop', e => {
-if (dragged === null) return;
-const target = dropTarget(e);
-if (!target) return;
-e.preventDefault();
+// one move, from dragging or from tapping: show i onto a gap (own slot) or onto another show (side by side)
+function applyMove(i, target) {
 const { data, plan } = planDrag;
 const pair = target.dataset.show !== undefined;
-const row = target.closest('.plan-row');
-const d = Number(pair ? row.dataset.day : target.dataset.day);
-const next = movedPlan(plan, data.shows, dragged, d, Number(target.dataset.at), pair ? Number(target.dataset.show) : undefined);
-dragged = null;
+const d = Number(pair ? target.closest('.plan-row').dataset.day : target.dataset.day);
+const next = movedPlan(plan, data.shows, i, d, Number(target.dataset.at), pair ? Number(target.dataset.show) : undefined);
 if (!next) return;
 if (next.error) { notice(next.error); return; }
 planHistory.push(plan);
 planOutcome.plan = next;
 showPlan(data, next);
+}
+addEventListener('drop', e => {
+if (dragged === null) return;
+const target = dropTarget(e);
+if (!target) return;
+e.preventDefault();
+const i = dragged;
+dragged = null;
+applyMove(i, target);
 });
+// Without dragging (phones, or by choice): tap a show, then tap a gap or another show; tap it again or Esc cancels
+let tapped = null;
+const endTap = () => { tapped = null; document.body.classList.remove('plan-dragging', 'plan-tapping'); document.querySelector('#planOut .info.picked')?.classList.remove('picked'); };
+addEventListener('click', e => {
+if (!planDrag || !e.target.closest('#planOut') || e.target.closest('button, a')) return;
+const show = e.target.closest('#planOut .plan-slot .info[data-show]');
+const gap = e.target.closest('#planOut .plan-drop');
+if (tapped === null) {
+if (!show) return;
+tapped = Number(show.dataset.show);
+show.classList.add('picked');
+document.body.classList.add('plan-dragging', 'plan-tapping');
+notice('Ziel antippen: Lücke = eigener Slot, andere Serie = parallel');
+return;
+}
+const i = tapped;
+if (show && Number(show.dataset.show) === i) { endTap(); return; }
+endTap();
+if (show || gap) applyMove(i, show || gap);
+});
+addEventListener('keydown', e => { if (e.key === 'Escape' && tapped !== null) endTap(); });
 addEventListener('dragend', () => { dragged = null; clearDrop(); document.body.classList.remove('plan-dragging'); document.querySelector('#planOut .dragging')?.classList.remove('dragging'); });
 addEventListener('click', e => { if (!e.target.closest('.plan-export')) { const m = $('planExportMenu'); if (m && !m.hidden) { m.hidden = true; $('planExport').setAttribute('aria-expanded', 'false'); } } });
 addEventListener('keydown', e => { if (e.key === 'Escape' && $('planExportMenu') && !$('planExportMenu').hidden) { $('planExportMenu').hidden = true; $('planExport').setAttribute('aria-expanded', 'false'); $('planExport').focus(); } });

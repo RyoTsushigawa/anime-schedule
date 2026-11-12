@@ -1527,3 +1527,18 @@ body.catchup #list .catchup-overflow[open] .fold { transform: rotate(225deg); }
 body.catchup #list .catchup-overflow > .row,
 body.catchup #list .catchup-overflow > .shared { margin: 9px 9px 0; }
 body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
+
+/* Phones */
+@media (max-width: 560px) {
+  /* the streaming button may shrink ("Crunchy…") instead of running into "Droppen" next to it */
+  .row:not(.compact) > .links > .cr { min-width: 0; justify-content: flex-start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Catch-up: the − N + counter sits top right, so it doesn't widen the button columns */
+  .row:not(.compact):has(> .ep-stepper) > .info { grid-column: 2 / 3; }
+  .row:not(.compact) > .ep-stepper { grid-column: 3 / span 3; grid-row: 1; justify-self: end; align-self: start; }
+  .row:not(.compact) > .links > .cr > :is(.svc-icon, .site-icon) { flex: none; }
+}
+@media (max-width: 480px) {
+  /* the header buttons need the room: only the logo, no title (the view and week show below anyway) */
+  header .logo + .brand { display: none; }
+  header .logo ~ .top-actions { margin-left: auto; }
+}
