@@ -1339,7 +1339,7 @@ $('list').addEventListener('submit', async e => {
   const button = form.querySelector('button');
   button.disabled = true;
   try {
-    const match = name.match(/(?:anilist\\.co\\/anime\\/)?(\\d+)(?:\\/.*)?$/);
+    const match = name.match(/(?:^|\/anime\/)([0-9]+)(?:\/|$)/);
     const data = await anilist('query ($search: String, $id: Int) { Media(search: $search, id: $id, type: ANIME) { id } }', {
       ...(match ? { id:Number(match[1]) } : {search:name})
     });
@@ -2554,10 +2554,15 @@ setNote('catchup:plan', null);
 if (!current()) return;
 setNote('catchup:plan', `${unreachable('Google Sheets')}: ohne den Guckplan fehlen Guck-Slots und geplante Serien, die nicht auf der Liste sind.`);
 }
-let planShows = friend && !local ? [] : await missingPlanShows(plan, entries);
+let planShows = friend && !local ? [] : await missingPlanShows(plan, entries, local);
 if (!current()) return;
 if (local) {
-  entries = planShows.map(({media:m}) => ({media:m, progress:localProgress(person, Number(m.id)), missing:false}));
+  let extra = [];
+  try { extra = await localCatalog(person); }
+  catch { setNote('catchup:local', 'Zusätzliche lokale Serien konnten gerade nicht geladen werden.'); }
+  if (!current()) return;
+  const byId = new Map([...planShows.map(x => x.media), ...extra].map(m => [Number(m.id), m]));
+  entries = [...byId.values()].map(m => ({media:m, progress:localProgress(person, Number(m.id)), missing:false}));
   planShows = [];
 }
 const { rows, ownPace } = catchupRows(entries, planShows, plan, local ? person : friend ? friendList.selectedOptions[0]?.dataset.person : soloPerson);
@@ -2693,7 +2698,10 @@ $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend 
 } else if (friend) {
 $('list').insertAdjacentHTML('afterbegin', `<div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>`);
 }
-if (local) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Lokaler Fortschritt: nur in diesem Browser gespeichert, nicht mit anderen Geräten synchronisiert.</div>');
+if (local) {
+  $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Lokaler Fortschritt für ' + esc(person) + ': nur auf diesem Gerät, nicht synchronisiert.</div>');
+  $('list').insertAdjacentHTML('afterbegin', '<form id="localAnimeAdd" class="local-anime-add"><input type="search" name="anime" required maxlength="160" placeholder="Anime-Titel oder AniList-Link" aria-label="Anime zum lokalen Tracker hinzufügen"><button type="submit" class="pill">Hinzufügen</button></form>');
+}
 if (!friend && !mine && !auth && document.querySelector('#list .row')) $('list').insertAdjacentHTML('afterbegin', '<div class="notice">Zum Abhaken und Droppen: <button type="button" class="pill" data-connect>Konto verbinden</button></div>');
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');
@@ -2720,7 +2728,7 @@ const key = ids.join() + (account ? ':' + (account.provider || 'anilist') + ':' 
 if (planShowsCache.key !== key || Date.now() - planShowsCache.time > LIST_CACHE_MS) {
 const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) {
       id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
-      externalLinks { site url } nextAiringEpisode { episode airingAt } ${account ? 'mediaListEntry { progress status }' : ''}
+      externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } ${account ? 'mediaListEntry { progress status }' : ''}
     } } }`;
 try {
 let data;
