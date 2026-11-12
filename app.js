@@ -1299,6 +1299,68 @@ const LIST_QUERY = `query ($user: String) {
 const LIST_CACHE_MS = 10 * 60 * 1000;
 const friendList = $('friendList');
 const listUser = () => friendList.value || $('anilistUser').value.trim();
+// The person selected in Solo is also the default person in Catch-up and Non-seasonal.
+const listProfiles = new Map();
+let planPeople = [];
+const isLocalList = () => friendList.value.startsWith('local:');
+const localListPerson = () => isLocalList() ? friendList.value.slice(6) : '';
+const localProgressKey = person => 'localAnimeProgress:v1:' + person;
+function localProgress(person, id) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(localProgressKey(person)) || '{}');
+    const progress = Number(saved[String(id)]);
+    return Number.isSafeInteger(progress) && progress >= 0 ? progress : 0;
+  } catch { return 0; }
+}
+function saveLocalProgress(person, id, progress) {
+  if (!person || !Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(progress) || progress < 0) return false;
+  try {
+    const key = localProgressKey(person);
+    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+    saved[String(id)] = progress;
+    localStorage.setItem(key, JSON.stringify(saved));
+    return true;
+  } catch { return false; }
+}
+function localWatchButton(id, episode) {
+  return '<button type="button" class="watch" data-local-watch="' + id + '" data-local-episode="' + episode + '" title="Bis Folge ' + episode + ' lokal als gesehen markieren" aria-label="Bis Folge ' + episode + ' lokal als gesehen markieren">✓</button>';
+}
+$('list').addEventListener('click', e => {
+  const button = e.target.closest('[data-local-watch]');
+  if (!button || !isLocalList() || !listView()) return;
+  const person = localListPerson(), id = Number(button.dataset.localWatch), episode = Number(button.dataset.localEpisode);
+  if (!saveLocalProgress(person, id, episode)) { notice('Fortschritt konnte im Browser nicht gespeichert werden.'); return; }
+  load(true);
+});
+function syncListToSolo() {
+  if (mode !== 'solo') return;
+  const person = soloPerson;
+  const accounts = listProfiles.get(person) || [];
+  const own = accounts.find(a => auth?.name && a.name.toLowerCase() === auth.name.toLowerCase());
+  if (own) {
+    friendList.value = '';
+    $('anilistUser').value = auth.name;
+  } else if (accounts.length) {
+    const option = [...friendList.options].find(o => o.dataset.person === person && o.value === accounts[0].name);
+    friendList.value = option?.value || '';
+    if (!option) $('anilistUser').value = accounts[0].name;
+  } else {
+    const option = [...friendList.options].find(o => o.value === 'local:' + person);
+    friendList.value = option?.value || '';
+  }
+}
+function updateLocalListOptions() {
+  for (const option of [...friendList.options])
+    if (option.value.startsWith('local:') && (listProfiles.has(option.dataset.person) || !planPeople.includes(option.dataset.person))) option.remove();
+  for (const person of planPeople) {
+    if (listProfiles.has(person) || [...friendList.options].some(o => o.value === 'local:' + person)) continue;
+    const option = new Option(person + ' · Lokal', 'local:' + person);
+    option.dataset.person = person;
+    friendList.add(option);
+  }
+  syncListToSolo();
+}
+
 function updateFriendOptions() {
 const ownName = auth?.provider !== 'mal' ? auth?.name?.toLowerCase() : null;
 for (const option of friendList.options) {
@@ -1309,6 +1371,7 @@ if (option.hidden && option.selected) friendList.value = '';
 fetch('wrapped-profiles.json').then(r => r.ok ? r.json() : {}).then(profiles => {
 for (const [person, accounts] of Object.entries(profiles)) {
 const ani = accounts.filter(account => account.provider === 'anilist');
+if (ani.length) listProfiles.set(person, ani);
 for (const { name } of ani) {
 const option = new Option(ani.length > 1 ? `${person} · ${name}` : person, name);
 option.dataset.person = person;
@@ -1316,6 +1379,8 @@ friendList.add(option);
 }
 }
 updateFriendOptions();
+updateLocalListOptions();
+if (listView()) load(true);
 }).catch(() => {});
 async function anilistList(user, fresh = false, publicOnly = false) {
 if (!publicOnly && auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
@@ -4174,6 +4239,7 @@ setMode(mode);
 function listView() { return view === 'catchup' || view === 'pace'; }
 let jumpSearch = '';
 function setView(next) {
+if (next !== 'week') syncListToSolo();
 if (next === 'week' && jumpSearch) {
 if ($('search').value === jumpSearch) { $('search').value = ''; openSearch(false); searchedWeek = false; }
 jumpSearch = '';
@@ -4245,6 +4311,7 @@ break;
 });
 $('soloPerson').onchange = () => {
 soloPerson = $('soloPerson').value;
+syncListToSolo();
 colorSolo();
 try { localStorage.setItem('soloPerson', soloPerson); } catch {}
 redraw();
@@ -4257,6 +4324,8 @@ for (const o of select.options) o.style.cssText = personStyle(o.value)
 applyAccent();
 }
 function fillPeople(people) {
+planPeople = people.slice();
+updateLocalListOptions();
 const select = $('soloPerson');
 if ([...select.options].map(o => o.value).join() !== people.join()) {
 select.replaceChildren(...people.map(p => new Option(p, p)));
@@ -4264,6 +4333,7 @@ if (!people.includes(soloPerson) && people.length) soloPerson = people.includes(
 select.value = soloPerson;
 }
 colorSolo();
+syncListToSolo();
 const box = $('people');
 const chips = () => [...box.querySelectorAll('[data-name]')];
 if (chips().map(b => b.dataset.name).join() === people.join()) {
