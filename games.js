@@ -77,7 +77,7 @@ async function anilistEntries(username) {
   // Public, read-only requests; one person's list is used per hard puzzle.
   const entries=[];
   const query='query ($user:String,$page:Int){Page(page:$page,perPage:50){pageInfo{hasNextPage} mediaList(userName:$user,type:ANIME){media{title{english}}}}}';
-  for(let page=1;page<=8;page++) {
+  for(let page=1;page<=30;page++) {
     const result=await json('https://graphql.anilist.co',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({query,variables:{user:username,page}})
@@ -88,6 +88,7 @@ async function anilistEntries(username) {
       if(title) entries.push({title,from:'AniList · '+username});
     }
     if(!result.data?.Page?.pageInfo?.hasNextPage) break;
+    if(page===30) throw new Error('Die AniList ist zu groß für einen vollständigen Import.');
   }
   const pool=titleEntries(entries,'AniList · '+username);
   if(pool.length) hardCache.set(username,pool);
@@ -238,7 +239,8 @@ $('gameShare').onclick=async()=>{
   catch{message(text);}
 };
 $('keyboard').addEventListener('click',event=>{
-  const key=event.target.closest('[data-key]');if(key)press(key.dataset.key);
+  const key=event.target.closest('[data-key]');
+  if(key){press(key.dataset.key);key.blur();}
 });
 addEventListener('keydown',event=>{
   if(event.ctrlKey||event.metaKey||event.altKey||
