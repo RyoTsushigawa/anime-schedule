@@ -85,7 +85,7 @@ export function parseLocalBackup(input) {
     throw new Error('Keine unterstützte Anime-Schedule-Backup-Datei.');
   if (typeof backup.person !== 'string' || !backup.person.trim() || backup.person.length > 120)
     throw new Error('Im Backup fehlt die Person.');
-  if (!Array.isArray(backup.shows) || backup.shows.length > 50 ||
+  if (!Array.isArray(backup.shows) || backup.shows.length > 500 ||
       !backup.progress || typeof backup.progress !== 'object' || Array.isArray(backup.progress) ||
       Object.keys(backup.progress).length > 5000)
     throw new Error('Das Backup enthält ungültige oder zu viele Einträge.');
@@ -112,8 +112,8 @@ export function mergeLocalBackup(current, backup, targetPerson) {
     throw new Error('Das Backup gehört zu ' + backup.person + ', nicht zu ' + targetPerson + '.');
   const existing = [...new Set((current.shows || []).filter(id => typeof id === 'number' && validId(id)))];
   const shows = [...new Set([...existing, ...backup.shows])];
-  if (shows.length > 50)
-    throw new Error('Zusammen wären es mehr als 50 manuell hinzugefügte Serien.');
+  if (shows.length > 500)
+    throw new Error('Zusammen wären es mehr als 500 manuell hinzugefügte Serien.');
   const progress = Object.create(null);
   for (const [id, count] of Object.entries(current.progress || {})) {
     if (/^[1-9][0-9]*$/.test(id) && validProgress(count)) progress[id] = Number(count);
