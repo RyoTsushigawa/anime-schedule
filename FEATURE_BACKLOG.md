@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **9 of 50 approved standalone features** and **23 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **10 of 50 approved standalone features** and **24 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -9,6 +9,7 @@ The feature challenge has **9 of 50 approved standalone features** and **23 appr
 | N1 | Seasonal Anime Awards | Implementation rebuilt on current main in [PR #161](https://github.com/RyoTsushigawa/anime-schedule/pull/161), superseding PR #150. |
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
 | N24 | Anime List Health Check | Approved. |
+| N35 | Anime Title Lookup | Approved. Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
 
 ## Approved updates
 
@@ -22,10 +23,11 @@ The feature challenge has **9 of 50 approved standalone features** and **23 appr
 | U25 | Catch-up Pinned Anime | Approved. |
 | U27 | Season Preview · Next Unvoted Show | Approved. After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
 | U29 | Absences · Filter by Person | Approved. Filter entries in Kalender and Wiederkehrend by person, with an All option. |
+| U32 | Weekly Plan · Hide Covers | Approved. Add a text-only view that keeps times, episode numbers, and watch controls visible. |
 
 ## Curation decisions
 
 - Count only approved standalone features toward 50. Keep updates in their own list.
 - Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
-- Rejected ideas stay excluded, including N27 Season Vote Results Board U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, and U31 Tier List · Undo Last Move. Keep new game ideas out of future rounds.
+- Rejected ideas stay excluded, including N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, and N34 Guckplan Comparison. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
