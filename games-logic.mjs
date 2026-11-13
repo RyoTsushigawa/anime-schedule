@@ -102,3 +102,17 @@ export function pickEntry(pool,index,seed) {
     a.word.localeCompare(b.word));
   return sorted[index%sorted.length];
 }
+
+/** Keep recent answers out of a smaller/rotating AniList pool.
+ * Stable order for the same pool/index, even if recent includes other users.
+ */
+export function pickFreshEntry(pool, index, seed, recent = []) {
+  if(!pool.length) throw new Error('Keine passenden englischen Titelwörter gefunden.');
+  const avoided=new Set(recent.slice(-20));
+  const size=pool.length;
+  for(let offset=0;offset<size;offset++){
+    const entry=pickEntry(pool,index+offset,seed);
+    if(!avoided.has(entry.word)) return entry;
+  }
+  return pickEntry(pool,index,seed); // Only repeat when no alternative exists.
+}
