@@ -1,6 +1,6 @@
 // Titel-Rätsel: English words from Guckplan titles, or public group AniLists
 // in Hard mode. Daily puzzles are independent of endlessly replayable rounds.
-import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry} from './games-logic.mjs';
+import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry} from './games-logic.mjs';
 
 const $ = id => document.getElementById(id);
 const TRIES = 6;
@@ -35,10 +35,23 @@ async function fetchSheetPool() {
   if(sheetPool) return sheetPool;
   // Use English titles in the actual Guckplan; the checked list bundled
   // with the game is a safe fallback if the Sheet API is unavailable.
-  const tabs=await json('tabs.json'), config=await json('config.json');
-  if(!config.sheetsKey || !Array.isArray(tabs)) return [];
+  // The generated seasonal catalog covers hundreds of real English anime
+  // titles, including shows outside the selected watch-plan tab.
   const found=[];
-  for(const tab of tabs.slice(-4)) {
+  try {
+    const catalog=await json('seasons.json');
+    for(const [season,shows] of Object.entries(catalog.seasons||{}))
+      for(const show of shows||[])if(show.english)
+        found.push({title:show.english,from:'Season '+season});
+  } catch {}
+  // Live Google Sheet tabs add any newer English titles missing in the catalog.
+  let tabs=[],config={};
+  try{[tabs,config]=await Promise.all([json('tabs.json'),json('config.json')]);}catch{}
+  if(!config.sheetsKey || !Array.isArray(tabs)){
+    sheetPool=titleEntries(found,'Guckplan');
+    return sheetPool;
+  }
+  for(const tab of tabs.slice(0,8)) {
     if(!tab?.name) continue;
     const range=encodeURIComponent("'"+tab.name.replace(/'/g,"''")+"'!A1:AZ500");
     const url='https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+range+
@@ -117,6 +130,13 @@ async function hardEntries(round) {
 }
 const currentKey = () => 'titleGame:v2:'+difficulty+':'+gameMode;
 const roundNumber = () => gameMode==='daily' ? 0 : Math.max(0,Number(load(currentKey()+':index',0))||0);
+const recentKey = () => currentKey()+':recent';
+const recentAnswers = () => (load(recentKey(),[])||[]).filter(w=>typeof w==='string').slice(-20);
+function rememberAnswer(word){
+  const recent=recentAnswers().filter(w=>w!==word);
+  recent.push(word);
+  save(recentKey(),recent.slice(-20));
+}
 
 // Spiele-Übersicht (idea 139): today's state of the three daily games, from what each keeps in this browser
 function drawToday() {
@@ -150,27 +170,32 @@ async function start() {
     const basic=await normalEntries();
     if(turn!==generation)return;
     let entry,source=basic.pool;
+    const id=level+':'+mode+':'+(mode==='daily'?day:round);
+    const saved=load(currentKey()+':'+id,null);
     if(level==='hard'){
       const hard=await hardEntries(mode==='daily'?day:round);
       if(turn!==generation)return;
       source=mergeEntries(basic.pool,hard.pool);
       entry=mode==='daily'?pickEntry(hard.pool,0,day+':hard:'+hard.user)
-        :pickEntry(hard.pool,Math.floor(round/(await users()).length), 'endless:'+hard.user);
+        :pickFreshEntry(hard.pool,Math.floor(round/(await users()).length),
+          'endless:'+hard.user,recentAnswers());
     } else entry=mode==='daily'
       ?basic.daily[Math.max(0,dayNumber(day,dailyData.start))%basic.daily.length]
-      :pickEntry(basic.pool,round,'normal:endless');
+      :pickFreshEntry(basic.pool,round,'normal:endless',recentAnswers());
+    // A new catalog release may reorder the answer pool. Never change a
+    // started puzzle, otherwise its saved guesses may become impossible.
+    if(saved?.id===id && typeof saved.word==='string'){
+      const old=source.find(e=>e.word===saved.word);
+      if(old)entry=old;
+    }
     if(turn!==generation)return;
     allowed=sourceWordSet(source);
     allowed.add(entry.word);
-    if(level==='hard'){
-      const extra=await dictionaryWords(entry.word.length);
-      if(turn!==generation)return;
-      for(const w of extra)allowed.add(w);
-    }
-    const id=level+':'+mode+':'+(mode==='daily'?day:round);
+    const extra=await dictionaryWords(entry.word.length);
+    if(turn!==generation)return;
+    for(const w of extra)allowed.add(w);
     puzzle={...entry,id,day,number:mode==='daily'?Math.max(0,dayNumber(day,dailyData.start))+1:round+1,
       mode,level};
-    const saved=load(currentKey()+':'+id,null);
     state=saved?.id===id && saved?.word===entry.word ? saved
       :{id,word:entry.word,guesses:[],done:false,won:false};
     state.hints = Math.max(0,Math.min(2,Number(state.hints)||0));
@@ -249,7 +274,7 @@ function press(key){
     else if(state.guesses.length>=TRIES)state.done=true;
     message('');save(currentKey()+':'+puzzle.id,state);draw();
     refreshHardHints();
-    if(state.done)finish(true);
+    if(state.done){if(puzzle.mode==='endless')rememberAnswer(puzzle.word);finish(true);}
     return;
   }
   if(key==='Backspace')typing=typing.slice(0,-1);

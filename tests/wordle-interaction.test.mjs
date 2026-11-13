@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {
   englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
-  hardHintError,hashWord,pickEntry
+  hardHintError,hashWord,pickEntry,pickFreshEntry
 } from '../games-logic.mjs';
 
 const game=readFileSync(new URL('../games.js',import.meta.url),'utf8')
@@ -20,12 +20,13 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly']}={}
   window.localStorage.setItem('titleGameMode',JSON.stringify(mode));
   window.localStorage.setItem('titleGameDifficulty',JSON.stringify(difficulty));
   Object.assign(window,{englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
-    hardHintError,hashWord,pickEntry});
+    hardHintError,hashWord,pickEntry,pickFreshEntry});
   window.fetch=async(url,options)=>{
     requests.push({url,options});
     let data;
     if(url==='games-words.json')data=daily;
     else if(url==='games-guesses.json')data=guesses;
+    else if(url==='seasons.json')data=JSON.parse(readFileSync(new URL('../seasons.json',import.meta.url),'utf8'));
     else if(url==='tabs.json')data=[];
     else if(url==='config.json')data={};
     else if(url==='wrapped-profiles.json')
@@ -154,7 +155,7 @@ test('Normal Wordle never displays the Hard hint controls',async()=>{
   }finally{page.close();}
 });
 
-test('Hard Wordle accepts common English words that are in no title, Normal still does not',async()=>{
+test('Hard and Normal Wordle accept valid English words even when absent from anime titles',async()=>{
   const hard=await openGame({difficulty:'hard'});
   try{
     const len=hard.run('puzzle.word.length');
@@ -168,9 +169,11 @@ test('Hard Wordle accepts common English words that are in no title, Normal stil
   const normal=await openGame();
   try{
     const len=normal.run('puzzle.word.length');
-    const word=guesses.words[len].split(' ').find(w=>!normal.run(`allowed.has(${JSON.stringify(w)})`));
+    const word=guesses.words[len].split(' ').find(w=>w!==normal.run('puzzle.word') && normal.run(`allowed.has(${JSON.stringify(w)})`));
+    assert.ok(word);
     normal.run(`typing=${JSON.stringify(word)}; press('Enter')`);
-    assert.equal(normal.run('state.guesses.length'),0);
+    assert.equal(normal.run('state.guesses.length'),1);
+    assert.equal(normal.run('allowed.has("ZZZZZ")'),false);
   }finally{normal.close();}
 });
 
@@ -178,4 +181,26 @@ test('the guess list keeps its licence notice and only plain upper-case words',(
   assert.match(guesses.license,/Kevin Atkinson/);
   for(const [len,list] of Object.entries(guesses.words))
     for(const w of list.split(' '))assert.match(w,new RegExp('^[A-Z]{'+len+'}$'));
+});
+
+test('Normal accepts a standard dictionary guess not present in anime titles',async()=>{
+  const page=await openGame({mode:'daily',difficulty:'normal'});
+  try{
+    const len=page.run('puzzle.word.length');
+    const dictionary=guesses.words[len].split(' ');
+    assert.ok(dictionary.includes('AGENT') || dictionary.length>0);
+    assert.ok(page.run("allowed.has('AGENT')") || len!==5);
+    // A valid non-answer guess consumes one attempt, not a rejected-input toast.
+    const guess=dictionary.find(w=>page.run('allowed.has('+JSON.stringify(w)+')') && w!==page.run('puzzle.word'));
+    page.run('typing='+JSON.stringify(guess)+"; press('Enter')");
+    assert.equal(page.run('state.guesses.length'),1);
+  }finally{page.close();}
+});
+
+test('Endless Normal draws from the expanded seasonal catalog',async()=>{
+  const page=await openGame({mode:'endless'});
+  try{
+    const pool=await page.run('normalEntries()');
+    assert.ok(pool.pool.length>50,'seasonal catalog should contribute enough varied words');
+  }finally{page.close();}
 });
