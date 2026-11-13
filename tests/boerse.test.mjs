@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CASH, tradingWindow, priceOf, dropValue, fairValue, nextClose, noise, halted, trade, settle, accountValue, ranking } from '../boerse-core.mjs';
+import { CASH, marketOpen, tradingWindow, priceOf, dropValue, fairValue, nextClose, noise, halted, trade, settle, accountValue, ranking } from '../boerse-core.mjs';
 import { seasonShows, updateSeason } from '../tools/boerse-prices.mjs';
 // Anime-Börse: the daily market (prices from AniList and the group), trading rules like Wall Street
 
@@ -80,8 +80,18 @@ test('the price job: shows from the Guckplan, one close per day, the same day re
   const dropped = new Map([['Alpha', [{ user: 'u', status: 'DROPPED', progress: 1, episodes: 12, score: 0 }]]]);
   s = await updateSeason(s, shows, '2026-11-15', { media, ratings: dropped });
   assert.ok(s.shows.Alpha.closes[2] < first * 0.85, 'an early drop crashes it');
-  assert.equal(s.shows.Alpha.halted, '2026-11-15');
+  assert.equal(s.shows.Alpha.halted, '2026-11-16', 'halted the next trading day');
   s = await updateSeason(s, shows, '2026-11-16', { media, ratings: dropped });
   assert.equal(s.shows.Alpha.drops, 1);
-  assert.equal(s.shows.Alpha.halted, undefined, 'the halt was for that day only');
+  assert.equal(s.shows.Alpha.halted, undefined, 'only for that one day');
+});
+
+test('opening hours: 8:00 to 22:00 German time, summer and winter time', () => {
+  const at = iso => Date.parse(iso);
+  assert.equal(marketOpen(at('2026-11-14T06:59:00Z')), false); // 7:59 winter time
+  assert.equal(marketOpen(at('2026-11-14T07:00:00Z')), true); // 8:00
+  assert.equal(marketOpen(at('2026-11-14T20:59:00Z')), true); // 21:59
+  assert.equal(marketOpen(at('2026-11-14T21:00:00Z')), false); // 22:00
+  assert.equal(marketOpen(at('2027-07-01T06:00:00Z')), true); // 8:00 summer time
+  assert.equal(marketOpen(at('2027-07-01T20:00:00Z')), false); // 22:00 summer time
 });

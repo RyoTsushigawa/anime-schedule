@@ -68,6 +68,16 @@ test('short sales up to 1000 Taler; circuit breaker halts a show for the day; ba
  assert.equal((await call(env(url,'2027-04-02T12:00:00Z'),'/stocks/trade',{season,person:'Mia',title:'Frieren',qty:1})).status,409,'season over');
 });
 
+test('opening hours: orders from 8 to 22 German time only',async()=>{
+ const {url}=site({Frieren:{closes:[100]}});
+ const store=kv();
+ let r=await call(env(url,'2027-01-04T21:30:00Z',store),'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:1});
+ assert.equal(r.status,409);
+ assert.match(r.body.error,/8 bis 22/);
+ assert.equal((await get(env(url,'2027-01-04T21:30:00Z',store))).body.market,false);
+ assert.equal((await call(env(url,'2027-01-04T07:05:00Z',store),'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:1})).status,200);
+});
+
 test('after the season everyone sees everyone\'s holdings',async()=>{
  const {url}=site({Frieren:{closes:[100]}});
  const store=kv();
