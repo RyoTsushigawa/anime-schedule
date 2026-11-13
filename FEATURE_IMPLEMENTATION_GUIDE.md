@@ -1,17 +1,17 @@
 # Anime Schedule implementation guide
 
-This is the proposed order for the approved work tracked in [PR #159](https://github.com/RyoTsushigawa/anime-schedule/pull/159). Match items by **title** when comparing backlog branches. [PR #176](https://github.com/RyoTsushigawa/anime-schedule/pull/176) uses some of the same IDs for different proposals and records a different rollout preference. Keep those decisions visible and confirm scope before starting an item whose approval or rollout is disputed.
+This is the proposed order for the approved work in [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md). The ChatGPT and Claude backlogs are joined there; Claude's items that clashed with an ID got N83–N85 and U74.
 
-## Current reviews
+## Merged (integration of ChatGPT's PRs)
 
-- **Linked Account Troubleshooter** — [PR #175](https://github.com/RyoTsushigawa/anime-schedule/pull/175). Review the read-only login, Guckplan mapping, and live list checks.
-- **Allein · Catch-up on Release** — [PR #173](https://github.com/RyoTsushigawa/anime-schedule/pull/173). Verify that an aired episode becomes eligible before the group slot.
+- **Linked Account Troubleshooter** — [PR #175](https://github.com/RyoTsushigawa/anime-schedule/pull/175). Settings › Kontoverbindung prüfen.
+- **Allein · Catch-up on Release** — [PR #173](https://github.com/RyoTsushigawa/anime-schedule/pull/173). Aired „Allein“ episodes are due in Catch-up right away.
 - **Seasonal AniList titles in Tier List** — [PR #171](https://github.com/RyoTsushigawa/anime-schedule/pull/171).
 - **Distinct Anime Wrapped recipes** — [PR #170](https://github.com/RyoTsushigawa/anime-schedule/pull/170).
 
 ## Proposed work order
 
-1. **Plan Issue Diagnostic Report** — In review in [PR #179](https://github.com/RyoTsushigawa/anime-schedule/pull/179). The existing day menu opens a show picker and a copyable report with known title IDs, data source, and freshness. Leave unknown values explicit and keep credentials, account names, and watch progress out. This can be reviewed independently and later attached to a repair report.
+1. **Plan Issue Diagnostic Report** — Merged ([PR #179](https://github.com/RyoTsushigawa/anime-schedule/pull/179)); the day menu button got its icon and tooltip. The existing day menu opens a show picker and a copyable report with known title IDs, data source, and freshness. Leave unknown values explicit and keep credentials, account names, and watch progress out. This can be reviewed independently and later attached to a repair report.
 2. **Upcoming Plan Readiness** — Next. Add a view of sessions in the next seven days that need a decision. Reuse existing schedule and attendance logic, and link to the relevant editor. Use the existing alert area as the entry point.
 3. **Personal Schedule Change Inbox** — Reuse the schedule facts from Readiness. Compare snapshots for the selected person and show moves, pauses, and additions. Treat the first visit as the baseline. A failed or cached refresh should never make a show look newly removed.
 4. **Report a Wrong Streaming Link + Maintainer Repair Queue** — Build the report action and the maintainer workflow together. Keep suggestions pending until a maintainer verifies them, and track resolution in the queue.
