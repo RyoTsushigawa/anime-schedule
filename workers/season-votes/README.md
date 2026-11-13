@@ -39,7 +39,11 @@ Run `node --test tests/season-votes-worker.test.mjs` to verify the access and vo
 The same Worker keeps the ballots for `awards.html` in a Cloudflare KV namespace `anime-awards` (binding `AWARDS`),
 which the deploy workflow creates on its first run. `GET /awards?season=Herbst 2026` gives only the names of who has
 voted until someone presses **Auflösen** (`POST /awards/reveal`); after that it gives all ballots and
-`POST /awards/ballot` is refused for that season. The optional group code applies here too. Tests:
+`POST /awards/ballot` is refused for that season. A ballot gives up to three picks per category in order
+(12, 10 and 8 points, Eurovision style), for 22 categories; a single title from older ballots counts as 12.
+**Ceddl of the Year** candidates are collected over the season: `GET /awards/ceddl?season=…`,
+`POST /awards/ceddl` `{ season, name, anime, by? }`, `POST /awards/ceddl/remove` `{ season, id }` (closed after
+Auflösen, at most 60). The optional group code applies here too. Tests:
 `node --test tests/awards-worker.test.mjs`.
 
 ## Wrong streaming links (U45 → repair queue N55)

@@ -123,9 +123,13 @@ async function saveVote(body,env){
  return {ok:true,person,choice};
 }
 // Seasonal Anime Awards (awards.html): one secret ballot per person and season in KV (binding AWARDS),
-// "ballot:<season>:<person>" = { person, picks: { category: anime title }, at }. Before "Auflösen" only the names
-// of who voted are given out; "meta:<season>" = { revealed: true, revealedAt } then shows everything and closes voting.
-const AWARD_CATEGORIES=['best','surprise','animation','opening','ending','finale'];
+// "ballot:<season>:<person>" = { person, picks: { category: [12 points, 10 points, 8 points] }, at } (a pick from
+// before the points system is one title: it counts as 12 points). Before "Auflösen" only the names of who voted
+// are given out; "meta:<season>" = { revealed: true, revealedAt } then shows everything and closes voting.
+// "ceddl:<season>" = [{ id, name, anime, by, at }]: the Ceddl of the Year candidates, collected over the season.
+const AWARD_CATEGORIES=['best','new','sequel','surprise','finale','action','comedy','romance','drama','fantasy','sliceoflife',
+ 'protagonist','supporting','villain','couple','animation','soundtrack','design','fight','opening','ending','ceddl'];
+const AWARD_PLACES=3;
 const AWARD_SEASON=/^(Winter|Frühling|Sommer|Herbst) 20\d{2}$/;
 const AWARD_NAME=/^[\p{L}\p{N} ._'-]{1,40}$/u;
 function awardSeason(value){
@@ -160,17 +164,20 @@ async function awardsGet(url,env){
  return {season,revealed,...(revealed&&{revealedAt:meta.revealedAt}),voters:ballots.map(b=>b.person),
   ...(revealed&&{ballots:ballots.map(b=>({person:b.person,picks:b.picks}))})};
 }
+const awardTitle=v=>{const t=str(v);if(t.length>200||/[<>]/.test(t))fail(400,'Ungültiger Anime-Titel.');return t;};
 async function awardsBallot(body,env){
  const season=awardSeason(body.season),person=str(body.person);
  if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
  const picks={};
  if(!body.picks||typeof body.picks!=='object'||Array.isArray(body.picks))fail(400,'Ungültiger Stimmzettel.');
- for(const [category,title] of Object.entries(body.picks)){
+ for(const [category,value] of Object.entries(body.picks)){
   if(!AWARD_CATEGORIES.includes(category))fail(400,'Unbekannte Kategorie.');
-  const value=str(title);
-  if(!value)continue;
-  if(value.length>200||/[<>]/.test(value))fail(400,'Ungültiger Anime-Titel.');
-  picks[category]=value;
+  // 12, 10 and 8 points: up to three different picks in order (an empty place stays empty)
+  const list=(Array.isArray(value)?value:[value]).map(awardTitle);
+  if(list.length>AWARD_PLACES)fail(400,'Höchstens drei Plätze pro Kategorie.');
+  const set=list.filter(Boolean);
+  if(new Set(set).size!==set.length)fail(400,'Ein Anime kann pro Kategorie nur einmal Punkte bekommen.');
+  if(set.length)picks[category]=list.slice(0,list.findLastIndex(Boolean)+1);
  }
  if(!Object.keys(picks).length)fail(400,'Mindestens eine Kategorie wählen.');
  const store=awardsStore(env);
@@ -178,6 +185,30 @@ async function awardsBallot(body,env){
  if(meta.revealed)fail(409,'Die Awards dieser Season sind schon aufgelöst.');
  await store.put('ballot:'+season+':'+person,JSON.stringify({person,picks,at:new Date().toISOString()}));
  return {ok:true,season,person};
+}
+// Ceddl of the Year: the group collects candidates over the season; the ballot's Ceddl category offers only these
+async function ceddlList(env,season){return JSON.parse(await awardsStore(env).get('ceddl:'+season)||'[]');}
+async function ceddlChange(body,env,remove){
+ const season=awardSeason(body.season);
+ const meta=JSON.parse(await awardsStore(env).get('meta:'+season)||'{}');
+ if(meta.revealed)fail(409,'Die Awards dieser Season sind schon aufgelöst.');
+ let list=await ceddlList(env,season);
+ if(remove){
+  const id=str(body.id);
+  if(!list.some(c=>c.id===id))fail(404,'Kandidat nicht gefunden.');
+  list=list.filter(c=>c.id!==id);
+ }else{
+  const name=awardTitle(body.name),anime=awardTitle(body.anime),by=str(body.by);
+  if(!name||name.length>80)fail(400,'Name der Figur angeben.');
+  if(anime.length>120)fail(400,'Anime-Titel zu lang.');
+  if(by&&!AWARD_NAME.test(by))fail(400,'Ungültiger Name.');
+  const key=(name+'|'+anime).toLowerCase();
+  if(list.some(c=>(c.name+'|'+c.anime).toLowerCase()===key))return {ok:true,duplicate:true,candidates:list};
+  if(list.length>=60)fail(429,'Schon 60 Kandidaten.');
+  list.push({id:crypto.randomUUID().slice(0,8),name,anime,...(by&&{by}),at:new Date().toISOString()});
+ }
+ await awardsStore(env).put('ceddl:'+season,JSON.stringify(list));
+ return {ok:true,candidates:list};
 }
 async function awardsReveal(body,env){
  const season=awardSeason(body.season);
@@ -249,8 +280,19 @@ export default {
     await authorized(request,env);
     return json(await awardsGet(new URL(request.url),env),200,cors);
    }
+   if(request.method==='GET'&&path==='/awards/ceddl'){
+    return json({candidates:await ceddlList(env,awardSeason(new URL(request.url).searchParams.get('season')))},200,cors);
+   }
+   if(request.method==='POST'&&(path==='/awards/ceddl'||path==='/awards/ceddl/remove')){
+    if(Number(request.headers.get('Content-Length')||0)>2048)fail(413,'Anfrage zu groß.');
+    await authorized(request,env);
+    const body=await request.json();
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    return json(await ceddlChange(body,env,path==='/awards/ceddl/remove'),200,cors);
+   }
    if(request.method==='POST'&&(path==='/awards/ballot'||path==='/awards/reveal')){
-    if(Number(request.headers.get('Content-Length')||0)>4096)fail(413,'Anfrage zu groß.');
+    // a full ballot: 22 categories × 3 places
+    if(Number(request.headers.get('Content-Length')||0)>32768)fail(413,'Anfrage zu groß.');
     await authorized(request,env);
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
