@@ -169,6 +169,14 @@ $(menu).hidden = !open;
 $(button).setAttribute('aria-expanded', open);
 }
 const showSettings = open => showMenu('settingsMenu', 'settingsButton', open);
+const featureCount = $('siteFeatureCount');
+const featureEntries = document.querySelectorAll(
+  '#viewWeek, #viewCatchup, #viewPace, #awayButton, .header-games, #miscMenu .misc-action, #miscMenu > a'
+);
+const siteFeatures = [...featureEntries].filter(entry => !entry.matches('a') || entry.origin === location.origin);
+featureCount.textContent = siteFeatures.length + ' Funktionen · Ansichten, Tools und Spielebereich';
+featureCount.hidden = false;
+
 $('miscButton').onclick = () => showMenu('miscMenu','miscButton',$('miscMenu').hidden);
 $('miscMenu').addEventListener('click',e=>{ if(e.target.closest('a,button')) showMenu('miscMenu','miscButton',false); });
 $('settingsButton').onclick = () => showSettings($('settingsMenu').hidden);
