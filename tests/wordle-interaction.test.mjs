@@ -155,7 +155,7 @@ test('Normal Wordle never displays the Hard hint controls',async()=>{
   }finally{page.close();}
 });
 
-test('Hard Wordle accepts common English words that are in no title, Normal still does not',async()=>{
+test('Hard and Normal Wordle accept valid English words even when absent from anime titles',async()=>{
   const hard=await openGame({difficulty:'hard'});
   try{
     const len=hard.run('puzzle.word.length');
@@ -169,9 +169,11 @@ test('Hard Wordle accepts common English words that are in no title, Normal stil
   const normal=await openGame();
   try{
     const len=normal.run('puzzle.word.length');
-    const word=guesses.words[len].split(' ').find(w=>!normal.run(`allowed.has(${JSON.stringify(w)})`));
+    const word=guesses.words[len].split(' ').find(w=>w!==normal.run('puzzle.word') && normal.run(`allowed.has(${JSON.stringify(w)})`));
+    assert.ok(word);
     normal.run(`typing=${JSON.stringify(word)}; press('Enter')`);
-    assert.equal(normal.run('state.guesses.length'),0);
+    assert.equal(normal.run('state.guesses.length'),1);
+    assert.equal(normal.run('allowed.has("ZZZZZ")'),false);
   }finally{normal.close();}
 });
 
