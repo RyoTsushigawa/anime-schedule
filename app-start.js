@@ -186,6 +186,35 @@ try {
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
 $('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
+function drawEpisodeCrosswalk() {
+  const show = $('episodeCrosswalkShow').value;
+  const input = $('episodeCrosswalkNumber');
+  const result = $('episodeCrosswalkResults');
+  const episode = input.valueAsNumber;
+  const mapped = episode - lagOf(show);
+  const rows = !show ? ['Keine bestätigte Nummernabweichung geladen.']
+    : !Number.isSafeInteger(episode) || !input.validity.valid ? ['Gib eine ganze Folgennummer ab 1 ein.']
+    : [
+      'AniList: Folge ' + episode,
+      mapped > 0 ? 'Guckplan: Folge ' + mapped : 'Guckplan: Keine Zuordnung für diese Folge',
+      'MyAnimeList: Nummerierung nicht bestätigt',
+      'Streamingdienste: Staffel- und Folgennummern nicht bestätigt',
+    ];
+  result.replaceChildren(...rows.map(text => Object.assign(document.createElement('li'), { textContent: text })));
+}
+$('episodeCrosswalkButton').onclick = () => {
+  showSettings(false);
+  const select = $('episodeCrosswalkShow'), input = $('episodeCrosswalkNumber');
+  const options = Object.entries(streamsDe?.release || {})
+    .filter(([id, entry]) => Number.isSafeInteger(entry.lag) && entry.lag !== 0 && streamsDe.status?.[id]?.titles?.[0])
+    .map(([id]) => new Option(streamsDe.status[id].titles[0], id));
+  select.replaceChildren(...options);
+  select.disabled = input.disabled = !options.length;
+  drawEpisodeCrosswalk();
+  $('episodeCrosswalkDlg').showModal();
+};
+$('episodeCrosswalkShow').onchange = drawEpisodeCrosswalk;
+$('episodeCrosswalkNumber').oninput = drawEpisodeCrosswalk;
 $('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
 $('notesButton').onclick = () => {
 showSettings(false);
