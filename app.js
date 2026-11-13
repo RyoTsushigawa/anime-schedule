@@ -1276,15 +1276,25 @@ if (everyone && !shifted && [...absentDays, ...absentRules].some(x => x.from || 
 if (readiness) {
 const issues = [];
 const add = (show, slot, date, reason) => issues.push({ show, slot, date: date && isoDay(date), reason });
+const scheduledDate = slot => days.find(day => WEEKDAYS[(day.date.getDay() + 6) % 7] === norm(slot?.tag || '').slice(0, 2))?.date;
+const unscheduled = new Set();
+for (const gid of weekTabs) for (const [show, slot] of chosen.get(plans.get(gid)) || []) {
+  if (slot.skip) continue;
+  if (!scheduledDate(slot)) {
+    unscheduled.add(show);
+    add(show, slot, null, 'Kein Guck-Tag eingetragen');
+  }
+}
 for (const day of days) for (const row of day.rows) {
-  if (!row.show || row.extra) continue;
+  if (!row.show || row.extra || unscheduled.has(row.show)) continue;
+  if (!row.pause && !parseTime(row.slot?.time)) add(row.show, row.slot, day.date, 'Keine Guck-Uhrzeit eingetragen');
   if (row.skipped && row.missing?.length) add(row.show, row.slot, day.date, 'Zu wenige Zuschauer');
   else if (row.fallback) add(row.show, row.slot, day.date, 'Ausstrahlung unbestätigt');
 }
 for (const { show, why } of unknown) {
   const slot = [...chosen.values()].find(picks => picks.has(show))?.get(show);
-  if (slot?.skip) continue;
-  const date = days.find(day => WEEKDAYS[(day.date.getDay() + 6) % 7] === norm(slot?.tag || '').slice(0, 2))?.date;
+  if (slot?.skip || unscheduled.has(show)) continue;
+  const date = scheduledDate(slot);
   add(show, slot, date, date ? (why || 'Ausstrahlung unbestätigt') : 'Kein Guck-Tag eingetragen');
 }
 return issues;
