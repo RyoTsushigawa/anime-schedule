@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,pickEntry} from '../games-logic.mjs';
+import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,pickEntry,pickFreshEntry} from '../games-logic.mjs';
 
 const data=JSON.parse(readFileSync(new URL('../games-words.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../games.html',import.meta.url),'utf8');
@@ -50,4 +50,15 @@ test('game mode selection, strict dictionary and separate stats are wired up',()
   assert.match(code,/wrapped-profiles\.json/);
   assert.match(code,/mediaList\(userName:\$user,type:ANIME\)/);
   assert.match(html,/type="module" src="games\.js"/);
+});
+
+test('Hard Endless avoids the last twenty answers when alternative title words exist',()=>{
+  const pool=titleEntries(['Black Clover','Dragon Quest','Magic Knight','Firefly Wedding','Secret Garden'],'AniList');
+  const first=pickFreshEntry(pool,0,'endless:belly',[]);
+  const next=pickFreshEntry(pool,0,'endless:belly',[first.word]);
+  assert.notEqual(next.word,first.word);
+  const later=pickFreshEntry(pool,0,'endless:belly',[first.word,next.word]);
+  assert.ok(![first.word,next.word].includes(later.word));
+  assert.equal(pickFreshEntry([first],0,'endless:belly',[first.word]).word,first.word,
+    'only repeat when there are no alternatives');
 });
