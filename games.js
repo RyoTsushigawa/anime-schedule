@@ -272,7 +272,7 @@ function press(key){
       if(hint)return message('Schwerer Modus: '+hint);
     }
     state.guesses.push(typing);typing='';
-    if(state.guesses.at(-1)===puzzle.word)state.done=state.won=true;
+    if(state.guesses[state.guesses.length-1]===puzzle.word)state.done=state.won=true;
     else if(state.guesses.length>=TRIES)state.done=true;
     message('');save(currentKey()+':'+puzzle.id,state);draw();
     refreshHardHints();

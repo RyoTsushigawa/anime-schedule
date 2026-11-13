@@ -15,11 +15,11 @@ if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
 else if (c === '"') quoted = false;
 else field += c;
 } else if (c === '"') quoted = true;
-else if (c === ',') { rows.at(-1).push(field); field = ''; }
-else if (c === '\n') { rows.at(-1).push(field.replace(/\r$/, '')); field = ''; rows.push([]); }
+else if (c === ',') { rows[rows.length - 1].push(field); field = ''; }
+else if (c === '\n') { rows[rows.length - 1].push(field.replace(/\r$/, '')); field = ''; rows.push([]); }
 else field += c;
 }
-rows.at(-1).push(field);
+rows[rows.length - 1].push(field);
 return rows;
 }
 function savedOrFresh(key, download, onChange, onFresh = () => {}) {
@@ -50,7 +50,7 @@ tabs.push({ name, gid, start: new Date(Number(m[2]), month, 1).getTime(), ...(ca
 return tabs.sort((a, b) => b.start - a.start);
 }
 function tabFor(tabs, date) {
-return tabs.find(t => t.start <= date) || tabs.at(-1) || FALLBACK_TAB;
+return tabs.find(t => t.start <= date) || tabs[tabs.length - 1] || FALLBACK_TAB;
 }
 function activeTabs(tabs, date) {
 const tab = tabFor(tabs, date);
