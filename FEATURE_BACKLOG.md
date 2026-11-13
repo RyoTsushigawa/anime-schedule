@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **33 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **34 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -36,6 +36,7 @@ The feature challenge has **13 of 50 approved standalone features** and **33 app
 | U43 | Weekly Plan · Hide Watched Episodes | Approved. Add an on/off toggle in the existing Solo view controls. On hides watched episodes. Off restores the full plan in one click. |
 | U44 | Seasonal Anime Awards · Search Nominees | Approved. Make the existing nominee picker searchable by title. |
 | U45 | Weekly Plan · Report a Wrong Streaming Link | Approved. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
+| U46 | Seasonal Anime Awards · Ballot Progress | Approved. Show how many people have submitted before the reveal while keeping their choices secret. |
 
 ## Curation decisions
 
@@ -44,5 +45,5 @@ The feature challenge has **13 of 50 approved standalone features** and **33 app
 - Check current main, open PRs, and approved backlog items for overlapping workflows. Improve an existing feature when it already serves the same purpose.
 - Count only approved standalone features toward 50. Keep updates in their own list.
 - Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
-- Rejected ideas stay excluded, including N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, N34 Guckplan Comparison, N36 Episode Runtime Calculator, N37 Anime Source Material Finder, U33 Weekly Plan · Copy Day Link, N40 Episode Finder, N41 Personal Rating Breakdown, U35 Catch-up · Time per Show, N42 Guckplan Validator, N43 Season Finale Calendar, U36 Weekly Plan · Collapse All Days, N45 Guckplan Backup Browser, U40 Weekly Plan · Jump to a Date, N46 Watch Night Display, and N47 Group Watch Progress. Keep new game ideas out of future rounds.
+- Rejected ideas stay excluded, including N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, N34 Guckplan Comparison, N36 Episode Runtime Calculator, N37 Anime Source Material Finder, U33 Weekly Plan · Copy Day Link, N40 Episode Finder, N41 Personal Rating Breakdown, U35 Catch-up · Time per Show, N42 Guckplan Validator, N43 Season Finale Calendar, U36 Weekly Plan · Collapse All Days, N45 Guckplan Backup Browser, U40 Weekly Plan · Jump to a Date, N46 Watch Night Display, N47 Group Watch Progress, and U47 Catch-up · Choose How Long to Snooze. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
