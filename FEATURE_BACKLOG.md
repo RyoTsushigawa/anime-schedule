@@ -22,9 +22,9 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | N74 | Linked Account Troubleshooter | Merged with the integration of ChatGPT's PRs ([#175](https://github.com/RyoTsushigawa/anime-schedule/pull/175)): Settings › Kontoverbindung prüfen. |
 | N75 | Upcoming Plan Readiness | Approved. Surface upcoming sessions that need a decision and link to the existing editor. |
 | N80 | Personal Catch-up Planner | Approved. Build on the existing multi-day Nachholen planner and add per-day time budgets around existing watch slots. Use the existing planner entry point. |
-| N83 | Startet bald | Approved (Claude round 7, was N52 there). In the last weeks of a season, the weekly plan shows the next season's premieres that got „Ja“ votes, with their dates. |
-| N84 | Awards Hall of Fame | Approved (Claude round 8, was N54 there). All revealed Seasonal Anime Awards at a glance: winners per season and category, and who most often voted for the winner. |
-| N85 | Readability | Approved (Claude round 10, was N70 there). A setting for text size and a higher-contrast mode. |
+| N83 | Startet bald | Done: a „Startet bald“ box in the weekly plan. In the last weeks of a season, the weekly plan shows the next season's premieres that got „Ja“ votes, with their dates. |
+| N84 | Awards Hall of Fame | Done: Awards page › Ruhmeshalle. All revealed Seasonal Anime Awards at a glance: winners per season and category, and who most often voted for the winner. |
+| N85 | Readability | Done: Settings › Anzeige & Listen › Lesbarkeit. A setting for text size and a higher-contrast mode. |
 
 ## Approved updates
 
@@ -59,7 +59,7 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | U63 | Weekly Plan · Warn When Moving Before Airing | Approved. Flag a proposed slot before the episode’s confirmed release time and show that time in the existing move dialog. |
 | U72 | Allein · Catch-up on Release | Merged with the integration of ChatGPT's PRs ([#173](https://github.com/RyoTsushigawa/anime-schedule/pull/173)). Use the existing Sheet choice to send aired, unwatched episodes to personal Catch-up without waiting for the group slot. |
 | U66 | Weekly Plan · End Date for a Temporary Move | Approved. Let the temporary slot run through a chosen week and then restore the regular slot automatically. |
-| U74 | Watch-Planer · Take Over Absences | Approved (Claude round 7, was U45 there). Recurring absences (e.g. „Sophie jeden Sa“) are taken over as busy times in the Watch planner instead of being entered by hand. |
+| U74 | Watch-Planer · Take Over Absences | Done: Watch-Planer › Feste Termine › Aus Abwesenheiten. Recurring absences (e.g. „Sophie jeden Sa“) are taken over as busy times in the Watch planner instead of being entered by hand. |
 
 | U73 (N80) | Personal Catch-up Planner | Approved. Build on the existing multi-day Nachholen planner and add per-day time budgets around existing watch slots. Use the existing planner entry point. |
 

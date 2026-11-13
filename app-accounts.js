@@ -265,12 +265,14 @@ try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
 setTheme(theme);
 systemDark.addEventListener('change', () => setTheme(theme));
 for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = () => setTheme(b.dataset.themeChoice);
-const choices = { time: 'release', sort: 'oldest', accent: 'person', density: 'comfortable' };
+const choices = { time: 'release', sort: 'oldest', accent: 'person', density: 'comfortable', textsize: 'normal', contrast: 'normal' };
 const CHOICE_OK = {
 time: v => ['release', 'watch', 'both'].includes(v),
 sort: v => ['oldest', 'behind', 'quick', 'next', 'az'].includes(v),
 accent: v => v === 'person' || /^#[0-9a-f]{6}$/i.test(v),
 density: v => ['comfortable', 'compact', 'text'].includes(v),
+textsize: v => ['normal', 'large', 'xl'].includes(v),
+contrast: v => ['normal', 'high'].includes(v),
 };
 for (const name of Object.keys(choices))
 try { const v = localStorage.getItem(name); if (CHOICE_OK[name](v)) choices[name] = v; } catch {}
@@ -280,6 +282,9 @@ for (const b of document.querySelectorAll(`[data-set="${name}"]`))
 b.setAttribute('aria-pressed', b.dataset.value === value);
 try { localStorage.setItem(name, value); } catch {}
 if (name === 'accent') applyAccent();
+// N85 Lesbarkeit: text size and contrast, also read by tool-theme.js on the other pages
+if (name === 'textsize') value === 'normal' ? delete document.documentElement.dataset.textsize : document.documentElement.dataset.textsize = value;
+if (name === 'contrast') value === 'high' ? document.documentElement.dataset.contrast = 'high' : delete document.documentElement.dataset.contrast;
 if (name === 'density') { document.body.classList.toggle('dense', value === 'compact' || value === 'text'); document.body.classList.toggle('text-only', value === 'text'); }
 }
 function applyAccent() {
@@ -299,7 +304,7 @@ for (const b of document.querySelectorAll('[data-set]'))
 b.onclick = () => {
 setChoice(b.dataset.set, b.dataset.value);
 if (b.dataset.set === 'time') redraw();
-else if (b.dataset.set !== 'accent' && b.dataset.set !== 'density') load(true);
+else if (!['accent', 'density', 'textsize', 'contrast'].includes(b.dataset.set)) load(true);
 };
 for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]) {
 try { $(id).checked = id === 'moveButtons' ? localStorage.getItem(id) === '1' : localStorage.getItem(id) !== '0'; } catch { $(id).checked = id !== 'moveButtons'; }
@@ -311,7 +316,7 @@ if (id === 'moveButtons') syncMoveEditor();
 };
 }
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
-const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'servicePriority', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
+const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'textsize', 'contrast', 'servicePriority', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
   'who', 'behind', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
   'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
 {

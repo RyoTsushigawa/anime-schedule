@@ -486,6 +486,7 @@ return `<div class="plan-setup-head">
       <div id="busyList" class="busy-list">${busyRows(data)}</div>
       <div class="plan-actions busy-actions">
         <button id="busyAdd" class="pill">+ Termin</button>
+        <button id="busyAbsences" class="pill" title="Wiederkehrende Abwesenheiten (Abwesenheiten › Wiederkehrend) als Termine dazunehmen">Aus Abwesenheiten</button>
         <button id="busyReload" class="pill" title="Termine aus dem Tab „Seasonpläne“ übernehmen (ersetzt die Liste)"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Aus Seasonpläne</button>
       </div>`)}
     ${group('fixed', 'Serien festlegen', planFixed.length || '', `
@@ -518,6 +519,14 @@ return planFixed.map((f, i) => `
       <select class="pill" data-field="slot" aria-label="Slot">${selectOptions(slots, f.slot)}</select>
       ${removeButton}
     </div>`).join('');
+}
+function absenceBusy(rules, people, today) {
+return (Array.isArray(rules) ? rules : []).flatMap(r => {
+  const person = people.find(p => norm(p) === norm(r?.person || ''));
+  if (!person || r.maybe || !Array.isArray(r.weekdays) || (r.end && r.end < today)) return [];
+  const from = r.from || (r.until ? '12:00' : ''), to = r.from ? '04:59' : r.until || '';
+  return r.weekdays.filter(d => Number.isInteger(d) && d >= 0 && d <= 6).map(day => ({ person, day, from, to, note: 'Abwesend (wiederkehrend)' }));
+});
 }
 function busyRows(data) {
 if (!planBusy?.length) return '<div class="ep busy-empty">Keine.</div>';
@@ -589,6 +598,17 @@ row.querySelector('.busy-remove').onclick = () => { planBusy.splice(Number(row.d
 };
 bindBusy();
 $('busyAdd').onclick = () => { planBusy.push({ person: EVERYONE, day: 0, from: '', to: '', note: '' }); changed(); redrawBusy(); };
+// U74: recurring absences from moves.json as busy times (whole day, "ab" to the end of the night, "bis" until then)
+$('busyAbsences').onclick = async () => {
+let rules;
+try { rules = (await (await fetch('moves.json', { cache: 'no-cache' })).json()).absentRules || []; } catch { notice('Abwesenheiten konnten nicht gelesen werden'); return; }
+const today = new Date().toISOString().slice(0, 10);
+const added = absenceBusy(rules, data.people, today).filter(e => !planBusy.some(b => b.person === e.person && Number(b.day) === e.day && (b.from || '') === e.from && (b.to || '') === e.to));
+planBusy.push(...added);
+changed();
+redrawBusy();
+notice(added.length ? `${added.length} ${added.length === 1 ? 'Termin' : 'Termine'} aus Abwesenheiten übernommen` : 'Keine neuen wiederkehrenden Abwesenheiten');
+};
 $('busyReload').onclick = async () => {
 try { planBusy = await seasonplanBusy(data); } catch { notice('Seasonpläne konnte nicht gelesen werden'); return; }
 changed();

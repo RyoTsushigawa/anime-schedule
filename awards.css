@@ -47,3 +47,12 @@
 .awards-ballots { margin: 1rem 0; font-size: 13px; color: var(--muted); }
 .awards-ballots summary { cursor: pointer; color: var(--text); }
 .awards-page [hidden] { display: none !important; }
+
+/* N84 Ruhmeshalle */
+.awards-hall { margin: 1.5rem 0 1rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.awards-hall summary { cursor: pointer; font-weight: 650; }
+.awards-hall-note { color: var(--muted); font-size: 13px; }
+.awards-hall-season h3 { margin: 1rem 0 .4rem; font-size: 14px; }
+.awards-hall-season ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.awards-hall-season li { display: flex; justify-content: space-between; gap: 1rem; font-size: 13px; }
+.awards-hall-season li span { color: var(--muted); }

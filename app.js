@@ -707,6 +707,47 @@ box.innerHTML = `<h3>Nachschlagen</h3>${media.map(m => {
 }).join('')}`;
 $('list').append(box);
 }
+// N83 Startet bald: in the last weeks of a season, next season's premieres that got "Ja" in the Season Preview
+// (the Sheet's own tab for that season, e.g. "Winter 2027", with its Startdatum), for the shown week and the one after
+const SOON_SEASONS = ['Winter', 'Frühling', 'Sommer', 'Herbst'];
+let soonData = null;
+function nextSeasonName(date = new Date()) {
+const q = Math.floor(date.getMonth() / 3) + 1;
+return `${SOON_SEASONS[q % 4]} ${date.getFullYear() + (q === 4 ? 1 : 0)}`;
+}
+async function loadStartingSoon() {
+const name = nextSeasonName();
+const html = await (await fetch(SHEET + '/htmlview', { cache: 'no-cache' })).text();
+const gid = [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].find(([, n]) => n.trim() === name)?.[2];
+if (!gid) return { name, shows: [] };
+const rows = parseCsv(await (await fetch(`${SHEET}/export?format=csv&gid=${gid}`)).text()).map(r => r.map(c => c.trim()));
+const h = rows.findIndex(r => r.includes('Anime Titel'));
+if (h < 0) return { name, shows: [] };
+const cols = rows[h], title = cols.indexOf('Anime Titel'), english = cols.indexOf('Eng Anime Titel'), startCol = cols.indexOf('Startdatum');
+const reserved = new Set(['Anime Titel', 'Eng Anime Titel', 'Wo', 'Tag', 'Uhrzeit', 'Startdatum', 'Sort', 'Slot', 'Genre', 'Studio', 'Staffel', 'Episode', 'Folgen']);
+const voters = cols.map((n, i) => [n, i]).filter(([n, i]) => i > cols.indexOf('Uhrzeit') && n && !reserved.has(n));
+const shows = rows.slice(h + 1).flatMap(r => {
+  const m = (r[startCol] || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  const yes = voters.filter(([, i]) => /^ja,?$/i.test(r[i] || '')).map(([n]) => n);
+  return r[title] && m && yes.length ? [{ title: r[english] || r[title], date: `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`, yes }] : [];
+});
+return { name, shows };
+}
+async function drawStartingSoon(start) {
+document.getElementById('startingSoon')?.remove();
+if (view !== 'week') return;
+const from = isoDay(start), to = isoDay(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 13));
+try { soonData ??= loadStartingSoon(); } catch { return; }
+let data;
+try { data = await soonData; } catch { soonData = null; return; }
+const soon = data.shows.filter(s => s.date >= from && s.date <= to).sort((a, b) => a.date.localeCompare(b.date) || b.yes.length - a.yes.length);
+if (!soon.length || view !== 'week' || document.getElementById('startingSoon')) return;
+const box = document.createElement('section');
+box.id = 'startingSoon';
+box.className = 'season-matches starting-soon';
+box.innerHTML = `<h3>Startet bald · ${esc(data.name)}</h3>${soon.map(s => `<div class="season-match"><b>${esc(s.title)}</b><span>${esc(shortDayDate(new Date(s.date + 'T12:00:00')))}</span><span class="who" title="${esc(s.yes.join(', '))}">${s.yes.length}× Ja</span></div>`).join('')}`;
+$('list').querySelector('.weekline')?.after(box);
+}
 // Suche über die ganze Season (idea 132): in the Zeitplan, shows of the shown week's Guckplan that match but
 // aren't on this week, with their usual day and time and who watches them
 function seasonMatches(q) {
@@ -1448,6 +1489,7 @@ const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
 updateWeekMarkup(html, keepDays);
+drawStartingSoon(start);
 tick();
 const times = [...document.querySelectorAll('.time')];
 document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.scrollWidth)) + 'px');

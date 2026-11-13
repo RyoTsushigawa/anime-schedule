@@ -5,6 +5,10 @@
   try {
     const root = document.documentElement, theme = localStorage.getItem('theme');
     if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+    // N85 Lesbarkeit, as chosen on the main page
+    const size = localStorage.getItem('textsize'), contrast = localStorage.getItem('contrast');
+    if (size === 'large' || size === 'xl') root.dataset.textsize = size;
+    if (contrast === 'high') root.dataset.contrast = 'high';
     else if (theme === null) root.dataset.theme = 'dark';
     if (!document.currentScript?.hasAttribute('data-accent')) return;
     const c = localStorage.getItem('accentNow') || localStorage.getItem('accent');

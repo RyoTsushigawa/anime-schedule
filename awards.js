@@ -245,6 +245,39 @@ copyButton.onclick = async () => {
   }
 };
 
+// N84 Ruhmeshalle: the winners of every revealed season, and who most often picked a winner
+let hallTabs = [], hallLoaded = false;
+async function drawHall() {
+  const body = $('awardsHallBody');
+  const seasons = [];
+  for (const tab of hallTabs) {
+    const season = tab.name.replace(/^Guckplan\s+/i, '');
+    try { const s = await awardsCall('/awards?season=' + encodeURIComponent(season)); if (s.revealed) seasons.push({ season, ballots: s.ballots || [] }); } catch {}
+  }
+  body.replaceChildren();
+  if (!seasons.length) { const p = document.createElement('p'); p.className = 'awards-hall-note'; p.textContent = 'Noch keine Season aufgelöst.'; body.append(p); return; }
+  const hits = new Map();
+  for (const { season, ballots } of seasons) {
+    const section = document.createElement('section'); section.className = 'awards-hall-season';
+    const h = document.createElement('h3'); h.textContent = season; section.append(h);
+    const list = document.createElement('ul');
+    for (const r of awardsResults(ballots).filter(r => r.ranked.length)) {
+      const winners = r.ranked.filter(([, n]) => n === r.top).map(([t]) => t);
+      const li = document.createElement('li');
+      const label = document.createElement('span'); label.textContent = r.label;
+      const won = document.createElement('b'); won.textContent = winners.join(' / ');
+      li.append(label, won); list.append(li);
+      for (const b of ballots) if (winners.includes(b.picks?.[r.id])) hits.set(b.person, (hits.get(b.person) || 0) + 1);
+    }
+    section.append(list); body.append(section);
+  }
+  if (hits.size) {
+    const top = [...hits].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de'));
+    const p = document.createElement('p'); p.className = 'awards-hall-note';
+    p.textContent = 'Am häufigsten auf den Gewinner gesetzt: ' + top.slice(0, 5).map(([name, n]) => `${name} (${n})`).join(', ');
+    body.prepend(p);
+  }
+}
 async function startAwards() {
   if (typeof config === 'function') {
     const settings = await config().catch(() => ({}));
@@ -259,6 +292,9 @@ async function startAwards() {
     tab.name.replace(/^Guckplan\s+/i, ''), tab.gid
   )));
   seasonSelect.value = current.gid;
+  hallTabs = tabs;
+  $('awardsHall').hidden = !voteApi;
+  $('awardsHall').addEventListener('toggle', () => { if ($('awardsHall').open && !hallLoaded) { hallLoaded = true; drawHall(); } });
   seasonSelect.disabled = false;
   seasonSelect.onchange = () => loadAwardsSeason(tabs[seasonSelect.selectedIndex]);
   await loadAwardsSeason(current);
