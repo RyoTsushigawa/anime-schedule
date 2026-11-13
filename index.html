@@ -301,10 +301,10 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <dialog id="awayDlg" class="dlg away-dlg" aria-labelledby="awayTitle">
 <form method="dialog">
 <div class="away-head"><b id="awayTitle" title="Bleibt bei einer Serie höchstens eine Person übrig, setzt sie an dem Tag aus.">Abwesenheiten</b><button value="cancel" class="round" aria-label="Schließen">✕</button></div>
-<div class="away-tabs" role="tablist" aria-label="Abwesenheiten">
+<div class="away-tabbar"><div class="away-tabs" role="tablist" aria-label="Abwesenheiten">
 <button type="button" id="awayTabCalendar" role="tab" aria-selected="true" aria-controls="awayCalendarPanel">Kalender</button>
 <button type="button" id="awayTabRecurring" role="tab" aria-selected="false" aria-controls="awayRecurringPanel">Wiederkehrend</button>
-</div>
+</div><select id="awayWho" class="pill away-who-filter" aria-label="Einträge zeigen von"><option value="">Alle</option></select></div>
 <div id="awayCalendarPanel" class="away-panel" role="tabpanel" aria-labelledby="awayTabCalendar">
 <div class="away-nav"><button type="button" id="awayPrev" class="round" aria-label="Voriger Monat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b id="awayMonth" aria-live="polite"></b><button type="button" id="awayToday" class="pill" title="Zum aktuellen Monat springen">Heute</button><button type="button" id="awayNext" class="round" aria-label="Nächster Monat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
 <div id="awayGrid" class="away-grid" role="group" aria-label="Kalendertage"></div>

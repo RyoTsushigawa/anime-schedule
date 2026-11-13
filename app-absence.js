@@ -196,7 +196,7 @@ if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 // weekdays, the kind, from when and (if at all) until when. Those are saved as rules (absentRules, see
 // app-moves.js) with no end needed; a single day of a rule can still be changed in the calendar, which saves
 // it as an exception of the rule. Shows with too few people left are skipped on the schedule and in Discord.
-const awayCal = { month: null, start: null, end: null, mode: 'day', tab: 'calendar', allOnce: false, extra: [] };
+const awayCal = { month: null, start: null, end: null, mode: 'day', tab: 'calendar', allOnce: false, extra: [], who: '' };
 const awayRep = { people: [], weekdays: [], mode: 'day', edit: null };
 const AWAY_SHOWN = 4, AWAY_AHEAD = 400;
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -336,6 +336,7 @@ awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.allOnce 
 // in Solo view the dialog starts with that person chosen, until someone picks by hand
 awayCal.me = mode === 'solo' && soloPerson ? soloPerson : null;
 resetRepeat();
+drawAwayWho();
 showAwayTab('calendar');
 $('awayDlg').showModal();
 }
@@ -387,8 +388,16 @@ const runRow = (r, label) => {
 const payload = esc(JSON.stringify(r));
 return awayRow(r.people || [r.p], label, `data-away-edit="${payload}"`, `data-away-remove="${payload}"`, r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen');
 };
+// U29: the lists show everyone or one person (the calendar dots stay complete)
+const shownFor = people => !awayCal.who || people.includes(awayCal.who);
+function drawAwayWho() {
+const names = [...new Set([...allPeople(), ...absentDays.flatMap(x => x.people || []), ...absentRules.map(r => r.person)])].sort((a, b) => a.localeCompare(b, 'de'));
+if (awayCal.who && !names.includes(awayCal.who)) awayCal.who = '';
+$('awayWho').replaceChildren(new Option('Alle', ''), ...names.map(n => new Option(n, n)));
+$('awayWho').value = awayCal.who;
+}
 function drawAwayList() {
-const runs = mergedRuns(false);
+const runs = mergedRuns(false).filter(r => shownFor(r.people || [r.p]));
 const shown = awayCal.allOnce ? runs : runs.slice(0, AWAY_SHOWN);
 $('awayListCount').textContent = runs.length ? String(runs.length) : '';
 $('awayList').innerHTML = shown.map(r => runRow(r, `${r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`} · ${r.cond}`)).join('')
@@ -413,7 +422,7 @@ $('repOpen').checked = true;
 }
 const repEnd = () => $('repOpen').checked ? '' : $('repUntil').value;
 function drawRepeat() {
-const groups = ruleGroups(), legacy = mergedRuns(true);
+const groups = ruleGroups().filter(g => shownFor(g.people)), legacy = mergedRuns(true).filter(r => shownFor(r.people || [r.p]));
 $('repList').innerHTML = groups.map(g => awayRow(g.people, ruleLabel(g), `data-rule-edit="${esc(g.key)}"`, `data-rule-remove="${esc(g.key)}"`, 'Wiederholung entfernen')).join('')
   + legacy.map(r => runRow(r, `jeden ${AWAY_WEEKDAYS[r.weekday]} · ${r.cond} · bis ${shortDate(r.to)}`)).join('')
   || '<li class="muted">Noch keine Wiederholung.</li>';
@@ -477,6 +486,7 @@ if (b) openAway(b.closest('.day').dataset.date);
 $('awayPrev').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() - 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
 $('awayNext').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() + 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
 $('awayToday').onclick = () => { awayCal.month = isoDay(new Date()).slice(0, 7); drawAway(); };
+$('awayWho').onchange = () => { awayCal.who = $('awayWho').value; awayCal.allOnce = false; if (awayCal.tab === 'recurring') drawRepeat(); else drawAwayList(); };
 $('awayMore').onclick = () => { awayCal.allOnce = !awayCal.allOnce; drawAwayList(); };
 $('awayGrid').addEventListener('click', e => {
 const iso = e.target.closest('[data-away-day]')?.dataset.awayDay;

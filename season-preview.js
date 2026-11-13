@@ -14,6 +14,12 @@ const pendingVotes = new Map(); // show key → the choice being saved (shown ri
 const checkedNewTitles = new Map();
 const voteFeedback = new Map();
 const voteFeedbackKey = (gid,key,person)=>gid+'|'+key+'|'+person;
+// U42: a vote that didn't reach the Sheet stays on its card as a draft (also after a reload) until it's sent
+const draftKey=(gid,key,person)=>'previewVoteDraft:'+gid+'|'+key+'|'+person;
+const voteDraft=(gid,key,person)=>{try{return localStorage.getItem(draftKey(gid,key,person))||'';}catch{return '';}};
+const setDraft=(gid,key,person,choice)=>{try{choice?localStorage.setItem(draftKey(gid,key,person),choice):localStorage.removeItem(draftKey(gid,key,person));}catch{}};
+// U27: after a vote, a pill to the next show this voter hasn't voted on
+let nextOpen='';
 function state(msg) {pv('previewStatus').textContent=msg;pv('previewStatus').hidden=!msg;}
 function seasonKey(tab){const m=tab?.name.match(PV_SEASONS);if(!m)return '';const name={winter:'winter','frühling':'spring',sommer:'summer',herbst:'fall'}[m[1].toLowerCase()];return name+'-'+m[2];}
 function parseSeasonRows(rows, updatePeople=true){
@@ -313,6 +319,11 @@ async function loadSequelSuggestions(){
   render();
  }catch(error){console.warn('Sequel-Vorschläge nicht verfügbar:',error);}
 }
+function draftButton(s,voter){
+ const draft=voter&&!saving.has(s.key)?voteDraft(current.gid,s.key,voter):'';
+ if(!draft||voteValue(s,voter)===draft){if(draft)setDraft(current.gid,s.key,voter,'');return '';}
+ return '<button type="button" class="preview-auto preview-draft" data-retry-vote="'+safeText(draft)+'" data-anime="'+safeText(s.key)+'" title="Diese Stimme kam nicht im Sheet an. Antippen sendet sie erneut.">Nicht gesendet: '+safeText(draft)+' · erneut senden</button>';
+}
 function autoVote(s,voter){
  const suggestion=voter&&voteValue(s,voter)==='Default'&&!saving.has(s.key)?sequelSuggestions.get(s.key):'';
  return suggestion?'<button type="button" class="preview-auto" data-auto-vote="'+suggestion+'" data-anime="'+safeText(s.key)+'" title="AniList: direkter Vorgänger '+(suggestion==='Ja'?'abgeschlossen':'abgebrochen')+'. Antippen speichert den Vorschlag.">Vorschlag: '+suggestion+'</button>':'';
@@ -350,6 +361,7 @@ function updateMemberUI(){
  const filter=pv('previewVoteFilter');
  filter.hidden=!unlocked;
  if(!unlocked)pv('previewVoteFilter').value='all';
+ else{let saved='';try{saved=localStorage.getItem('previewVoteFilter')||'';}catch{}if([...filter.options].some(o=>o.value===saved))filter.value=saved;}
  // without the voting service there is nothing to show: votes still go into the Google Sheet directly
  pv('previewMember').hidden=!voteApi;
  info.textContent='';
@@ -435,15 +447,19 @@ async function saveVote(show,choice){
    if(existing)existing.value=choice;else show.votes.push({name:person,value:choice});
   }
   voteFeedback.set(feedbackKey,{success:true,message:choice==='Default'?'Stimme zurückgesetzt.':'Stimme gespeichert.'});
+  setDraft(gid,show.key,person,'');
+  nextOpen=show.key;
   state(''); // the highlighted button on the card shows it; no box that pushes the list down
  }catch(error){
   voteFeedback.set(feedbackKey,{error:true,message:'Nicht gespeichert: '+error.message});
+  if(!conflict)setDraft(gid,show.key,person,choice);
   state('Nicht gespeichert: '+error.message+' · Bitte erneut versuchen.');
  }
  finally{
   saving.delete(show.key);pendingVotes.delete(show.key);
   render();
   if(conflict&&current?.gid===gid){
+   setDraft(gid,show.key,person,'');
    await refreshSheet(true);
    voteFeedback.set(feedbackKey,{error:true,message:'Zwischenzeitlich geändert. Bitte erneut abstimmen.'});
    render();
@@ -473,6 +489,12 @@ pv('previewList').addEventListener('click',event=>{
  if(remove){
   const show=shows.find(s=>s.key===remove.dataset.removeExternal);
   if(show){try{localStorage.removeItem(externalKey(show));}catch{}render();}
+  return;
+ }
+ const retry=event.target.closest('button[data-retry-vote]');
+ if(retry){
+  const show=shows.find(s=>s.key===retry.dataset.anime);
+  if(show)saveVote(show,retry.dataset.retryVote);
   return;
  }
  const auto=event.target.closest('button[data-auto-vote]');
@@ -525,7 +547,10 @@ pv('previewLock').addEventListener('click',()=>{
  updateMemberUI();if(current)render();
  state('Gruppenzugang für diese Browser-Sitzung geschlossen.');
 });
-pv('previewVoteFilter').addEventListener('change',()=>{if(current)render();});
+pv('previewVoteFilter').addEventListener('change',()=>{
+ try{localStorage.setItem('previewVoteFilter',pv('previewVoteFilter').value);}catch{}
+ if(current)render();
+});
 pv('previewRefresh').addEventListener('click',()=>refreshSheet(false));
 function render(){
  const q=clean(pv('previewSearch').value).toLocaleLowerCase();
@@ -556,7 +581,7 @@ function render(){
  pv('previewResults').textContent=hasFilter?shown.length+' von '+shows.length+' Serien angezeigt':'';pv('previewResults').parentElement.hidden=!hasFilter;
  pv('previewClear').hidden=!hasFilter;
  const parent=pv('previewList');parent.replaceChildren();
- if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent=hasFilter?'Keine passenden Serien. Suche oder Filter zurücksetzen.':'Keine Serien in dieser Season gefunden.';parent.append(empty);return;}
+ if(!shown.length){const empty=document.createElement('p');empty.className='preview-empty';empty.textContent=hasFilter?'Keine passenden Serien. Suche oder Filter zurücksetzen.':'Keine Serien in dieser Season gefunden.';parent.append(empty);drawNextOpen(voter);return;}
  for(const s of shown){
   // compact card: number, title (romaji below), and why a show has no trailer
   const trailer=pickedTrailer(s),mal=malLink(s),article=document.createElement('article');article.className='preview-item'+(voter&&voteValue(s,voter)==='Default'?' open':'');
@@ -566,9 +591,30 @@ function render(){
   const start=s.start?'ab '+shortDate(s.start,{weekday:'short',day:'numeric',month:'short'}):'';
   const note=trailer&&!start?'':'<span class="preview-none">'+[trailer?'':(sequel?'Sequel':'Noch kein Trailer'),start].filter(Boolean).join(' · ')+'</span>';
   const cover=covers.get(s.key);
-  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+autoVote(s,voter)+votingControls(s)+'</div>';
+  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+(draftButton(s,voter)||autoVote(s,voter))+votingControls(s)+'</div>';
+  article.dataset.show=s.key;
   parent.append(article);
  }
+ drawNextOpen(voter);
+}
+// U27: after a vote is saved, "Nächste offene Serie ↓" jumps to the next show this voter hasn't voted on
+function drawNextOpen(voter){
+ const pill=pv('previewNext');
+ const open=voter?shows.filter(x=>voteValue(x,voter)==='Default'&&!saving.has(x.key)):[];
+ const from=shows.findIndex(x=>x.key===nextOpen);
+ const target=nextOpen&&open.length?(open.find(x=>shows.indexOf(x)>from)||open[0]):null;
+ pill.hidden=!target;
+ if(!target)return;
+ pill.textContent='Nächste offene Serie ↓ · noch '+open.length;
+ pill.title=target.english||target.title;
+ pill.onclick=()=>{
+  nextOpen='';pill.hidden=true;
+  if(pv('previewVoteFilter').value!=='all'&&pv('previewVoteFilter').value!=='open'){pv('previewVoteFilter').value='all';render();}
+  const card=[...document.querySelectorAll('#previewList article')].find(a=>a.dataset.show===target.key);
+  if(!card){pv('previewSearch').value='';startFilter='';render();}
+  const el=[...document.querySelectorAll('#previewList article')].find(a=>a.dataset.show===target.key);
+  if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('preview-flash');setTimeout(()=>el.classList.remove('preview-flash'),1600);}
+ };
 }
 async function selectSeason(gid){
  const next=seasonTabs.find(t=>t.gid===gid);if(!next)return;
@@ -618,6 +664,7 @@ pv('previewStarts').addEventListener('click',e=>{
 pv('previewClear').addEventListener('click',()=>{
  pv('previewSearch').value='';
  pv('previewVoteFilter').value='all';
+ try{localStorage.setItem('previewVoteFilter','all');}catch{}
  startFilter='';
  if(current)render();
  pv('previewSearch').focus();

@@ -1152,6 +1152,9 @@ text-align: center;
 .away-dlg form { gap: 12px; }
 .away-head { gap: 12px; }
 #awayTitle { font-size: 17px; letter-spacing: -.01em; cursor: help; }
+.away-tabbar { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.away-tabbar .away-tabs { flex: 1; min-width: 0; }
+.away-who-filter { flex: none; max-width: 40%; font-size: 12px; }
 .away-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 99px; background: var(--card); border: 1px solid var(--line); }
 .away-tabs [role="tab"] { min-height: 32px; padding: 4px 10px; border: 0; background: transparent; color: var(--muted); border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .away-tabs [role="tab"][aria-selected="true"] { background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 60%, var(--text)); }

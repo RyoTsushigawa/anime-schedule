@@ -183,3 +183,20 @@ test('daily open-ended absences group matching people and stay active beyond one
   await p.click(p.$('repList').querySelector('[data-rule-remove]'), 300);
   assert.equal(p.run("awayAt('2029-01-01', 'Belly', null)"), false);
 });
+
+test('U29: the lists can show one person; Alle shows everyone again', async () => {
+  const p = await open([{ day: '2026-10-30', people: ['Belly'] }, { day: '2026-11-01', people: ['MaRyo'] }, ...weekly('2026-11-03', 4, ['Rei'])]);
+  try {
+    const pick = async who => { p.$('awayWho').value = who; p.$('awayWho').dispatchEvent(new p.window.Event('change')); await p.settle(); };
+    assert.deepEqual([...p.$('awayWho').options].map(o => o.value), ['', 'Belly', 'MaRyo', 'Rei']);
+    await pick('Belly');
+    assert.deepEqual(rows(p, 'awayList'), ['Belly Fr 30. Okt. · ganztägig']);
+    await p.click(p.$('awayTabRecurring'));
+    assert.match(rows(p, 'repList')[0], /Noch keine Wiederholung/);
+    await pick('Rei');
+    assert.equal(rows(p, 'repList').length, 1);
+    await pick('');
+    await p.click(p.$('awayTabCalendar'));
+    assert.equal(rows(p, 'awayList').length, 2);
+  } finally { p.close(); }
+});

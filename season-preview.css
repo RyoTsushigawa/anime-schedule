@@ -186,3 +186,8 @@
 .preview-side .preview-auto{flex:none;border:1px dashed color-mix(in srgb,var(--accent) 60%,var(--line));border-radius:99px;background:transparent;color:var(--text);min-height:28px;padding:3px 10px;font:inherit;font-size:12px;line-height:1.2;cursor:pointer}
 .preview-side .preview-auto:hover{border-style:solid;border-color:var(--accent)}
 @media(max-width:800px){.preview-side{flex-wrap:wrap;justify-content:flex-end}}
+/* U27: jump to the next show still to vote on; U42: a vote that wasn't sent */
+.preview-next{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;border:1px solid var(--accent);border-radius:99px;background:var(--card);color:var(--text);padding:9px 16px;font:inherit;font-size:13px;font-weight:650;box-shadow:0 8px 28px #0006;cursor:pointer;white-space:nowrap}
+.preview-next[hidden]{display:none}
+.preview-item.preview-flash{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.preview-side .preview-draft{border-style:solid;border-color:#b45555;color:var(--text)}
