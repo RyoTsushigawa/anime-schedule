@@ -8,5 +8,5 @@ test('More shows the count of site views, tools and the games hub', async t => {
   await p.click(p.$('miscButton'));
   assert.equal(p.$('miscMenu').hidden, false);
   assert.equal(p.$('siteFeatureCount').hidden, false);
-  assert.match(p.$('siteFeatureCount').textContent, /^11 Funktionen/);
+  assert.match(p.$('siteFeatureCount').textContent, /^12 Funktionen/);
 });
