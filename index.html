@@ -124,7 +124,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <section>
 <button id="movesSetup" class="menu-item" type="button" title="Der Schlüssel, mit dem dieser Browser den Plan bearbeiten darf" hidden>Bearbeitungszugang</button>
 <button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
-<button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes</button>
+<button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes<small id="notesAge" class="notes-age"></small></button>
 <button id="episodeCrosswalkButton" class="menu-item" aria-haspopup="dialog">Folgennummern vergleichen</button>
 <button id="repairButton" class="menu-item" aria-haspopup="dialog" title="Gemeldete falsche Stream-Links prüfen und korrigieren" hidden>Link-Meldungen</button>
 <button id="dataButton" class="menu-item" aria-haspopup="dialog" title="Wann Guckplan, Sendetermine und Trailer zuletzt aktualisiert wurden">Datenstand</button>
@@ -519,6 +519,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <dialog id="notesDlg" class="dlg notes-dlg" aria-labelledby="notesTitle">
 <form method="dialog">
 <b id="notesTitle">Patch-Notes</b>
+<p id="notesTimer" class="muted notes-timer"></p>
 <div id="notesList"></div>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
 </form>
