@@ -67,11 +67,11 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-13T19:50:00Z', name: 'Anime-Börse' };
+const LAST_FEATURE = { at: '2026-11-13T20:18:00Z', name: 'Anime-Börse mit täglichen Kursen' };
 const PATCH_NOTES = [
 { id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
 'Seasonal Anime Awards, rebuilt: 22 categories like the Crunchyroll Awards (genres, characters, music, a Ceddl of the Year from candidates collected over the season), 12, 10 and 8 points per category, and after „Auflösen“ a Eurovision-style show, vote by vote. Voting is together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
-'New: the Anime-Börse. Buy shares of the season\'s anime with play money at the start of the season; their price follows the group\'s own AniList ratings, and at the end there is a ranking (Mehr › Anime-Börse).',
+'New: the Anime-Börse (Mehr › Anime-Börse). Trade shares of the season\'s anime with play money all season long. Prices move daily with AniList and your own ratings (drops hurt, the earlier the more), with graphs, and Wall Street rules: a fee per order, sale money the next day, short selling and circuit breakers.',
 'New game: the daily Anime-Quiz, five questions about the shows in the Guckplan, the same for everyone. The games page now has four games.',
 'Titel-Rätsel: any common English word counts as a guess, Hard mode is solvable, and it still works when AniList is unreachable. Inhalts-Rätsel got an archive of past days and stats.',
 'Games load more reliably: fewer AniList requests, a clear message when a blocker stops AniList, and a „Neu laden“ button when a game can\'t start.',

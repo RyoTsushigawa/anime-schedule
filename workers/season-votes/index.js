@@ -218,51 +218,82 @@ async function awardsReveal(body,env){
  await awardsStore(env).put('meta:'+season,JSON.stringify({revealed:true,revealedAt:new Date().toISOString()}));
  return {ok:true,season,revealed:true};
 }
-// Anime-Börse (boerse.html): play money for the season's real anime. Everyone gets 1000 Taler and buys shares at
-// 100 each, only while trading is open: from 14 days before to 14 days after the season starts (Winter 1 Jan,
-// Frühling 1 Apr, Sommer 1 Jul, Herbst 1 Oct). A share's value later comes from the group's own ratings (the page
-// works it out from AniList). "stock:<season>:<person>" = { person, holdings: { title: shares }, at }. While
-// trading is open only the names of who has a portfolio are given out; after that everyone's holdings.
-const STOCK_CASH=1000,STOCK_PRICE=100,STOCK_DAYS=14*86400000;
+// Anime-Börse (boerse.html): play money for the season's real anime, traded the whole season at the day's close
+// (boerse-prices.json on the site, written daily by tools/boerse-prices.mjs; rules as in boerse-core.mjs).
+// Everyone starts with 1000 Taler; a trade costs a 1-Taler fee; a sale's money arrives the next day (T+1);
+// selling more than you hold is a short sale, up to 1000 Taler in shorts; a show whose price fell 7 % or more
+// today is halted for the day (circuit breaker). "stock:<season>:<person>" = { person, cash, pending: [{ amount,
+// on }], holdings: { title: shares }, trades: [...] }. Holdings stay private until the season is over; the
+// ranking by value is open to all.
+const STOCK_CASH=1000,STOCK_FEE=1,STOCK_SHORT=1000,STOCK_DAYS=14*86400000;
 const SEASON_MONTH={Winter:0,'Frühling':3,Sommer:6,Herbst:9};
 function stockWindow(season,now=Date.now()){
  const [name,year]=season.split(' ');
- const start=Date.UTC(Number(year),SEASON_MONTH[name],1)-3600000; // midnight German time
- const from=start-STOCK_DAYS,to=start+STOCK_DAYS;
- return {from:new Date(from).toISOString(),to:new Date(to).toISOString(),open:now>=from&&now<to};
+ const start=Date.UTC(Number(year),SEASON_MONTH[name],1)-3600000;
+ const end=new Date(start+3600000);end.setUTCMonth(end.getUTCMonth()+3);
+ const from=start-STOCK_DAYS,to=end.getTime()-3600000;
+ return {from:new Date(from).toISOString(),to:new Date(to).toISOString(),open:now>=from&&now<to,over:now>=to};
 }
-async function stocksState(env,season){
+const berlinDay=t=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin'}).format(new Date(t));
+const dayAfter=d=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+1);return x.toISOString().slice(0,10);};
+const cents=n=>Math.round(n*100)/100;
+let pricesCache=null;
+async function stockPrices(env,season){
+ const url=(env.SITE_URL||'https://ryotsushigawa.github.io/anime-schedule/')+'boerse-prices.json';
+ if(!pricesCache||pricesCache.url!==url||Date.now()-pricesCache.at>120000){
+  const res=await fetch(url+'?'+Date.now());
+  if(!res.ok)fail(503,'Die Kurse sind gerade nicht erreichbar.');
+  pricesCache={url,at:Date.now(),file:await res.json()};
+ }
+ return pricesCache.file.seasons?.[season]||{days:[],shows:{}};
+}
+const latest=s=>new Map(Object.entries(s.shows||{}).map(([t,x])=>[t,x.closes?.[x.closes.length-1]??100]));
+function settled(a,today){
+ const ready=(a.pending||[]).filter(p=>p.on<=today);
+ return {...a,cash:cents((a.cash??STOCK_CASH)+ready.reduce((n,p)=>n+p.amount,0)),pending:(a.pending||[]).filter(p=>p.on>today)};
+}
+const accountValue=(a,prices)=>cents((a.cash??STOCK_CASH)+(a.pending||[]).reduce((n,p)=>n+p.amount,0)+Object.entries(a.holdings||{}).reduce((n,[t,c])=>n+c*(prices.get(t)??100),0));
+async function stockAccounts(env,season){
  const store=awardsStore(env),list=[];let cursor;
  do{const page=await store.list({prefix:'stock:'+season+':',cursor});
   for(const key of page.keys){try{const p=JSON.parse(await store.get(key.name)||'null');if(p?.person)list.push(p);}catch{}}
   cursor=page.list_complete?undefined:page.cursor;}while(cursor);
- return list.sort((a,b)=>a.person.localeCompare(b.person,'de'));
+ return list;
 }
 async function stocksGet(url,env,now){
- const season=awardSeason(url.searchParams.get('season')),window=stockWindow(season,now);
- const list=await stocksState(env,season);
- const person=str(url.searchParams.get('person'));
- return {season,...window,cash:STOCK_CASH,price:STOCK_PRICE,traders:list.map(p=>p.person),
-  // your own portfolio is always yours to see; everyone's once trading has closed
-  ...(person&&AWARD_NAME.test(person)&&{mine:list.find(p=>p.person===person)?.holdings||null}),
-  ...(!window.open&&{portfolios:list.map(p=>({person:p.person,holdings:p.holdings}))})};
+ const season=awardSeason(url.searchParams.get('season')),window=stockWindow(season,now),today=berlinDay(now);
+ const [accounts,priced]=await Promise.all([stockAccounts(env,season),stockPrices(env,season)]);
+ const prices=latest(priced),person=str(url.searchParams.get('person'));
+ const ranking=accounts.map(a=>({person:a.person,value:accountValue(a,prices)})).sort((x,y)=>y.value-x.value||x.person.localeCompare(y.person,'de'));
+ const mine=person&&AWARD_NAME.test(person)?accounts.find(a=>a.person===person):null;
+ return {season,...window,today,cash:STOCK_CASH,fee:STOCK_FEE,shortLimit:STOCK_SHORT,ranking,
+  account:mine?settled(mine,today):null,
+  ...(window.over&&{portfolios:accounts.map(a=>({person:a.person,holdings:a.holdings||{},trades:a.trades||[]}))})};
 }
-async function stocksSave(body,env,now){
- const season=awardSeason(body.season),person=str(body.person);
+async function stocksTrade(body,env,now){
+ const season=awardSeason(body.season),person=str(body.person),title=awardTitle(body.title),qty=body.qty;
  if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
- if(!stockWindow(season,now).open)fail(409,'Handel ist nur zum Start der Season offen.');
- if(!body.holdings||typeof body.holdings!=='object'||Array.isArray(body.holdings))fail(400,'Ungültiges Depot.');
- const holdings={};let spent=0;
- const entries=Object.entries(body.holdings);
- if(entries.length>60)fail(400,'Zu viele Anime.');
- for(const [title,count] of entries){
-  const t=awardTitle(title);
-  if(!t||!Number.isInteger(count)||count<0||count>STOCK_CASH/STOCK_PRICE)fail(400,'Ungültige Anzahl Aktien.');
-  if(count){holdings[t]=count;spent+=count*STOCK_PRICE;}
- }
- if(spent>STOCK_CASH)fail(400,'Nicht genug Taler.');
- await awardsStore(env).put('stock:'+season+':'+person,JSON.stringify({person,holdings,at:new Date(now).toISOString()}));
- return {ok:true,season,person,holdings,cash:STOCK_CASH-spent};
+ if(!stockWindow(season,now).open)fail(409,'Für diese Season wird gerade nicht gehandelt.');
+ if(!Number.isInteger(qty)||qty===0||Math.abs(qty)>50)fail(400,'Ungültige Anzahl.');
+ const priced=await stockPrices(env,season),show=priced.shows?.[title];
+ if(!show?.closes?.length)fail(400,'Diese Serie wird nicht gehandelt.');
+ const today=berlinDay(now),price=show.closes[show.closes.length-1];
+ if(show.halted===today)fail(409,'Handel ausgesetzt: Kurs heute um 7 % oder mehr gefallen (Circuit Breaker).');
+ const store=awardsStore(env),key='stock:'+season+':'+person;
+ const a=settled(JSON.parse(await store.get(key)||'null')||{person,cash:STOCK_CASH,pending:[],holdings:{},trades:[]},today);
+ const holdings={...(a.holdings||{})},after=(holdings[title]||0)+qty;
+ if(qty>0){
+  const cost=cents(qty*price+STOCK_FEE);
+  if(cost>a.cash+1e-9)fail(400,'Nicht genug verfügbare Taler (Verkäufe werden erst am nächsten Tag gutgeschrieben).');
+  a.cash=cents(a.cash-cost);
+ }else a.pending=[...a.pending,{amount:cents(-qty*price-STOCK_FEE),on:dayAfter(today)}];
+ if(after)holdings[title]=after;else delete holdings[title];
+ const prices=latest(priced);
+ const shorts=Object.entries(holdings).reduce((n,[t,c])=>n+(c<0?-c*(prices.get(t)??100):0),0);
+ if(shorts>STOCK_SHORT+1e-9)fail(400,'Leerverkäufe höchstens bis 1000 Taler.');
+ const next={...a,person,holdings,trades:[...(a.trades||[]),{day:today,title,qty,price,fee:STOCK_FEE}].slice(-200)};
+ await store.put(key,JSON.stringify(next));
+ return {ok:true,account:next,price};
 }
 // Wrong streaming links (U45, reported from the weekly plan; the repair queue N55 reads them), in KV (binding
 // AWARDS, prefix "report:"): { id, at, status: 'pending' | 'fixed' | 'rejected', anilistId, title, service, url,
@@ -348,12 +379,12 @@ export default {
     await authorized(request,env);
     return json(await stocksGet(new URL(request.url),env,Number(env.TEST_NOW)||Date.now()),200,cors);
    }
-   if(request.method==='POST'&&path==='/stocks/portfolio'){
-    if(Number(request.headers.get('Content-Length')||0)>8192)fail(413,'Anfrage zu groß.');
+   if(request.method==='POST'&&path==='/stocks/trade'){
+    if(Number(request.headers.get('Content-Length')||0)>2048)fail(413,'Anfrage zu groß.');
     await authorized(request,env);
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
-    return json(await stocksSave(body,env,Number(env.TEST_NOW)||Date.now()),200,cors);
+    return json(await stocksTrade(body,env,Number(env.TEST_NOW)||Date.now()),200,cors);
    }
    if(request.method==='GET'&&path==='/reports'){
     await authorized(request,env);

@@ -1,31 +1,87 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CASH, tradingWindow, priceOf, portfolioValue, ranking } from '../boerse-core.mjs';
-// Anime-Börse: the rules (prices from the group's ratings, the trading window, values and the ranking)
+import { CASH, tradingWindow, priceOf, dropValue, fairValue, nextClose, noise, halted, trade, settle, accountValue, ranking } from '../boerse-core.mjs';
+import { seasonShows, updateSeason } from '../tools/boerse-prices.mjs';
+// Anime-Börse: the daily market (prices from AniList and the group), trading rules like Wall Street
 
-test('trading window: 14 days around the season start, for every season name', () => {
+test('trading runs from 14 days before the season starts until the next season starts', () => {
   const at = iso => Date.parse(iso);
-  assert.equal(tradingWindow('Winter 2027', at('2026-12-19T12:00:00Z')).open, true);
   assert.equal(tradingWindow('Winter 2027', at('2026-12-17T12:00:00Z')).open, false);
-  assert.equal(tradingWindow('Frühling 2027', at('2027-04-10T12:00:00Z')).open, true);
-  assert.equal(tradingWindow('Herbst 2026', at('2026-11-13T12:00:00Z')).open, false);
+  assert.equal(tradingWindow('Winter 2027', at('2026-12-19T12:00:00Z')).open, true);
+  assert.equal(tradingWindow('Winter 2027', at('2027-03-30T12:00:00Z')).open, true);
+  assert.equal(tradingWindow('Winter 2027', at('2027-04-01T12:00:00Z')).open, false);
+  assert.equal(tradingWindow('Herbst 2026', at('2026-11-13T12:00:00Z')).open, true);
   assert.equal(tradingWindow('Guckplan Herbst 2026'), null);
 });
 
-test('price: the group\'s average score × 2; dropped without a score is 30; unrated stays 100', () => {
+test('drops cost value, the earlier the more; never more than the given score', () => {
+  const drop = (progress, episodes, score = 0) => ({ status: 'DROPPED', progress, episodes, score });
+  assert.equal(dropValue(drop(1, 12)), 0);
+  assert.equal(dropValue(drop(6, 12)), 18);
+  assert.equal(dropValue(drop(12, 12)), 40);
+  assert.equal(dropValue(drop(3, null)), 7, 'unknown length: 12 episodes');
+  assert.equal(dropValue(drop(2, 12, 90)), 4, 'a high score does not save a drop');
+  assert.equal(priceOf([{ score: 90 }, { score: 80 }, drop(1, 12)]), 113);
   assert.equal(priceOf([]), 100);
-  assert.equal(priceOf([{ score: 0, status: 'CURRENT' }]), 100);
-  assert.equal(priceOf([{ score: 80 }, { score: 70 }]), 150);
-  assert.equal(priceOf([{ score: 0, status: 'DROPPED' }, { score: 90 }]), 120);
-  assert.equal(priceOf([{ score: 50 }]), 100);
 });
 
-test('portfolio value and ranking: unspent Taler count, shares at today\'s price', () => {
-  const prices = new Map([['Frieren', 170], ['Dandadan', 60]]);
-  assert.equal(portfolioValue({}, prices), CASH);
-  assert.equal(portfolioValue({ Frieren: 6, Dandadan: 4 }, prices), 6 * 170 + 4 * 60);
-  assert.equal(portfolioValue({ Frieren: 2 }, prices), 800 + 340);
-  assert.equal(portfolioValue({ Unknown: 1 }, prices), 1000, 'no price yet: the buying price');
-  const board = ranking([{ person: 'Rei', holdings: { Dandadan: 10 } }, { person: 'Mia', holdings: { Frieren: 5 } }], prices);
-  assert.deepEqual(board.map(r => [r.person, r.value]), [['Mia', 1350], ['Rei', 600]]);
+test('fair value blends AniList (70 = par) with the group (60 = par), the group weighing more with more ratings', () => {
+  assert.equal(fairValue({}), 100);
+  assert.equal(Math.round(fairValue({ community: 84 })), 120);
+  assert.equal(Math.round(fairValue({ community: 70, group: 90, groupCount: 5 })), 138);
+  assert.ok(fairValue({ community: 70, group: 30, groupCount: 5 }) < fairValue({ community: 70, group: 30, groupCount: 1 }));
+});
+
+test('a day\'s close moves towards the fair value, with momentum, drop shocks, noise; circuit breaker at -7 %', () => {
+  const base = { prev: 100, fair: 130, seed: 'x' };
+  const up = nextClose(base);
+  assert.ok(up > 108 && up < 112, String(up));
+  assert.ok(nextClose({ ...base, popNow: 1100, popBefore: 1000 }) > up, 'members gained push it');
+  const early = nextClose({ ...base, newDrops: [{ progress: 1, episodes: 12 }] }), late = nextClose({ ...base, newDrops: [{ progress: 11, episodes: 12 }] });
+  assert.ok(early < late && early < 100, `${early} ${late}`);
+  assert.equal(nextClose(base), nextClose(base), 'the same for everyone');
+  for (let i = 0; i < 50; i++) assert.ok(Math.abs(noise('d' + i)) <= 0.015);
+  assert.equal(halted(93, 100), true);
+  assert.equal(halted(94, 100), false);
+});
+
+test('trades: fee, T+1, short sales up to 1000 Taler, circuit breaker; value and ranking', () => {
+  const prices = new Map([['A', 100], ['B', 50]]);
+  let a = trade({ cash: CASH }, { title: 'A', qty: 3, price: 100, today: '2027-01-04' }, prices);
+  assert.equal(a.cash, 699);
+  a = trade(a, { title: 'A', qty: -1, price: 100, today: '2027-01-04' }, prices);
+  assert.deepEqual(a.pending, [{ amount: 99, on: '2027-01-05' }]);
+  assert.throws(() => trade(a, { title: 'B', qty: 14, price: 50, today: '2027-01-04' }, prices), /nächsten Tag/);
+  assert.equal(settle(a, '2027-01-05').cash, 798);
+  a = trade(a, { title: 'B', qty: -20, price: 50, today: '2027-01-04' }, prices);
+  assert.equal(a.holdings.B, -20);
+  assert.throws(() => trade(a, { title: 'B', qty: -1, price: 50, today: '2027-01-04' }, prices), /1000 Taler/);
+  assert.throws(() => trade(a, { title: 'A', qty: 1, price: 100, today: '2027-01-04', halt: true }, prices), /Circuit Breaker/);
+  assert.throws(() => trade(a, { title: 'A', qty: 0, price: 100, today: '2027-01-04' }, prices), /Anzahl/);
+  // short B falls to 30: the short gains
+  const later = new Map([['A', 100], ['B', 30]]);
+  assert.equal(accountValue(a, later), 699 + 99 + 999 + 200 - 600);
+  assert.deepEqual(ranking([{ person: 'Rei', ...a }, { person: 'Mia', cash: CASH }], later).map(r => r.person), ['Rei', 'Mia']);
+});
+
+test('the price job: shows from the Guckplan, one close per day, the same day recomputed, new drops shock once', async () => {
+  const csv = ',Sort,Slot,Anime Titel,Eng Anime Titel,Startdatum\n,,1,Alpha Romaji,Alpha,01.10.2026\n,,1,Beta Romaji,,02.10.2026\n,,1,Hidden,Hidden EN,\n';
+  assert.deepEqual(seasonShows(csv, [4]).map(s => s.title), ['Alpha', 'Beta Romaji']);
+  const shows = seasonShows(csv, [4]);
+  const media = new Map([['Alpha', { id: 1, averageScore: 84, popularity: 1000 }]]);
+  let s = await updateSeason(undefined, shows, '2026-11-13', { media, ratings: new Map() });
+  assert.deepEqual(s.shows.Alpha.closes, [100]);
+  s = await updateSeason(s, shows, '2026-11-14', { media, ratings: new Map() });
+  const first = s.shows.Alpha.closes[1];
+  assert.ok(first > 100);
+  s = await updateSeason(s, shows, '2026-11-14', { media, ratings: new Map() });
+  assert.deepEqual(s.days, ['2026-11-13', '2026-11-14']);
+  assert.equal(s.shows.Alpha.closes[1], first, 'a second run the same day gives the same close');
+  const dropped = new Map([['Alpha', [{ user: 'u', status: 'DROPPED', progress: 1, episodes: 12, score: 0 }]]]);
+  s = await updateSeason(s, shows, '2026-11-15', { media, ratings: dropped });
+  assert.ok(s.shows.Alpha.closes[2] < first * 0.85, 'an early drop crashes it');
+  assert.equal(s.shows.Alpha.halted, '2026-11-15');
+  s = await updateSeason(s, shows, '2026-11-16', { media, ratings: dropped });
+  assert.equal(s.shows.Alpha.drops, 1);
+  assert.equal(s.shows.Alpha.halted, undefined, 'the halt was for that day only');
 });

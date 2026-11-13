@@ -32,3 +32,34 @@
 .boerse-board li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .1rem .8rem; }
 .boerse-board li .boerse-holdings { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
 @media (max-width: 560px) { .boerse-row { grid-template-columns: minmax(0, 1fr) auto; } .boerse-have { grid-column: 1 / -1; justify-content: flex-end; } }
+/* daily market: graphs, trading */
+.boerse-wallet { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 560px) { .boerse-wallet { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.boerse-page h2 { font-size: 1rem; margin: 1.2rem 0 .5rem; }
+.boerse-chart-box { margin-bottom: .5rem; }
+.boerse-chart { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: .4rem; }
+.boerse-svg { display: block; width: 100%; height: 170px; }
+.boerse-svg.spark { height: 28px; width: 90px; }
+.boerse-svg .line { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.boerse-svg .area { fill: color-mix(in srgb, var(--muted) 12%, transparent); stroke: none; }
+.boerse-svg.up .line { stroke: #4fbf7f; } .boerse-svg.up .area { fill: rgba(79, 191, 127, .14); }
+.boerse-svg.down .line { stroke: #e5737a; } .boerse-svg.down .area { fill: rgba(229, 115, 122, .14); }
+.boerse-axis { display: flex; justify-content: space-between; gap: .5rem; padding: .3rem .2rem 0; color: var(--muted); font-size: 11px; }
+.boerse-list-head { display: flex; justify-content: space-between; align-items: end; gap: 1rem; }
+.boerse-page .boerse-qty { display: flex; align-items: center; gap: .4rem; font-size: 13px; }
+.boerse-qty input { width: 4.5rem; }
+.boerse-row { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.boerse-row.short { border-color: color-mix(in srgb, #e5737a 55%, var(--line)); }
+button.boerse-title { all: unset; cursor: pointer; display: grid; gap: .1rem; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+button.boerse-title:hover, button.boerse-title:focus-visible { text-decoration: underline; }
+.boerse-spark { cursor: pointer; }
+.boerse-have button { min-width: 0; font-size: 12px; padding: .15rem .55rem; }
+@media (max-width: 560px) { .boerse-row { grid-template-columns: minmax(0, 1fr) auto auto; } .boerse-spark { display: none; } .boerse-have { grid-column: 1 / -1; } }
+.boerse-trades { margin: 1rem 0; font-size: 13px; }
+.boerse-trades summary { cursor: pointer; }
+.boerse-trades ol { margin: .5rem 0 0; padding-left: 1.2rem; display: grid; gap: .25rem; color: var(--muted); }
+.boerse-trades li span { color: var(--text); }
+.boerse-dlg { width: min(640px, calc(100vw - 32px)); }
+.boerse-facts { list-style: none; padding: 0; margin: .8rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .5rem; }
+.boerse-facts li { display: grid; gap: .1rem; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: 10px; }
+.boerse-facts small { color: var(--muted); font-size: 11px; }
