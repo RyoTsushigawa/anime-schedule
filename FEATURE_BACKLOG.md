@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **44 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **46 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -10,7 +10,7 @@ The feature challenge has **13 of 50 approved standalone features** and **44 app
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
 | N24 | Anime List Health Check | Approved. |
 | N35 | Anime Title Lookup | Approved. Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
-| N38 | Group Availability Grid | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
+| N38 | Group Availability Grid | Merged in [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
 | N39 | Schedule Data Status | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
 | N44 | Watch Progress Sync History | Approved. Show recent AniList and MyAnimeList episode updates from this browser, with successes and failures. |
 
@@ -21,9 +21,9 @@ The feature challenge has **13 of 50 approved standalone features** and **44 app
 | | Catch-up Quick Actions | Main already has episode steppers and bulk actions. Confirm which additional action is needed before implementing. |
 | | Catch-up Search & Filters | Main already has title search. Check existing filters before extending it. |
 | | Catch-up Progress Bar | Merged in [PR #151](https://github.com/RyoTsushigawa/anime-schedule/pull/151). |
-| U21 | Synopsis Quiz Daily Archive | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
-| U23 | Synopsis Quiz Statistics | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
-| U25 | Catch-up Pinned Anime | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
+| U21 | Synopsis Quiz Daily Archive | Merged in [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
+| U23 | Synopsis Quiz Statistics | Merged in [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
+| U25 | Catch-up Pinned Anime | Merged in [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
 | U27 | Season Preview · Next Unvoted Show | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
 | U29 | Absences · Filter by Person | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Filter entries in Kalender and Wiederkehrend by person, with an All option. |
 | U32 | Weekly Plan · Hide Covers | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Add a text-only view that keeps times, episode numbers, and watch controls visible. |
@@ -47,6 +47,8 @@ The feature challenge has **13 of 50 approved standalone features** and **44 app
 | U57 | Weekly Plan · Copy Streaming Link | Approved. Copy the stream link already shown on the row from the existing show menu. |
 | U59 | Seasonal Anime Awards · Skip a Category | Approved. Let voters explicitly skip a category and distinguish it from an unanswered category during ballot review. |
 | U61 | Weekly Plan · Flag a Scheduling Conflict | Approved. Warn in the existing move dialog when the new slot overlaps another show for any of the same viewers. Leave the decision to the editor. |
+| U62 | Absences · Preview Affected Shows | Approved. In the existing editor, preview which already-scheduled shows would pause under the group’s attendance rules before saving. |
+| U63 | Weekly Plan · Warn When Moving Before Airing | Approved. Flag a proposed slot before the episode’s confirmed release time and show that time in the existing move dialog. |
 
 ## Curation decisions
 
