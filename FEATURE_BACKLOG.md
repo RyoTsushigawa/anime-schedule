@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **26 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **27 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -29,6 +29,7 @@ The feature challenge has **13 of 50 approved standalone features** and **26 app
 | U32 | Weekly Plan · Hide Covers | Approved. Add a text-only view that keeps times, episode numbers, and watch controls visible. |
 | U34 | Discord Schedule · Compact Copy | Approved. Offer a shorter copy format with start times, titles, and episode numbers. |
 | U37 | Season Preview · Remember My Filters | Approved. Restore the last selected voter and filters. |
+| U38 | Weekly Plan · Time Zone Override | Approved. Show the same schedule in Berlin time, device-local time, or a chosen time zone through the existing time settings. |
 
 ## Curation decisions
 
