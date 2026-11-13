@@ -151,3 +151,26 @@ test('without the GitHub key, rules go to the save service, which must give them
     } finally { p.close(); }
   }
 });
+
+test('daily open-ended absences group matching people and stay active beyond one year', async t => {
+  const p = await open([{ day: '2026-11-01', people: ['Sophie'] }]);
+  t.after(() => p.close());
+  await p.click(p.$('awayTabRecurring'));
+  await fill(p, { people: ['Belly', 'MaRyo'], days: [], from: '2026-11-03' });
+  await p.click(p.$('repDaily'));
+  assert.equal(p.$('repDaily').getAttribute('aria-pressed'), 'true');
+  await p.click(p.$('repSave'), 300);
+  const file = p.state.movesSaved;
+  assert.deepEqual(file.absent, [{ day: '2026-11-01', people: ['Sophie'] }]);
+  assert.deepEqual(file.absentRules.map(({ id, ...rule }) => rule), ['Belly', 'MaRyo'].map(person => ({
+    person, weekdays: [0, 1, 2, 3, 4, 5, 6], start: '2026-11-03'
+  })));
+  assert.deepEqual(rows(p, 'repList'), ['Belly MaRyo täglich · ganztägig · ab Di 3. Nov. · bis auf Weiteres']);
+  assert.equal(p.run("awayAt('2026-11-02', 'Belly', null)"), false);
+  assert.equal(p.run("awayAt('2029-01-01', 'Belly', null)"), true);
+  assert.equal(p.run("awayAt('2029-01-02', 'Belly', null)"), true);
+  assert.equal(p.run("awayText('2029-01-01').join(', ')"), 'Belly, MaRyo');
+  p.window.confirm = () => true;
+  await p.click(p.$('repList').querySelector('[data-rule-remove]'), 300);
+  assert.equal(p.run("awayAt('2029-01-01', 'Belly', null)"), false);
+});

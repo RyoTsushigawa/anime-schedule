@@ -135,7 +135,6 @@ delays = body.delays || [];
 if (Array.isArray(body.moves)) { // the whole saved file
   absentDays = Array.isArray(body.absent) ? body.absent : [];
   absentRules = goodRules(body.absentRules);
-  mergeAbsent();
 }
 if (body.reasons) reasonList = goodReasons(body.reasons);
 movesSeen = movesStamp();
@@ -226,7 +225,7 @@ return { id: r.id, person: r.person, weekdays: [...new Set(r.weekdays)].sort(), 
 const rulesFromToday = list => JSON.stringify(goodRules(list).map(canonRule).filter(r => !r.end || r.end >= isoDay(new Date()))
   .map(r => ({ ...r, skip: (r.skip || []).filter(d => d >= isoDay(new Date())) })));
 const newRuleId = () => Math.random().toString(36).slice(2, 10).padEnd(8, '0');
-// The absences (single days, as `absent` shows them) with the people in `on` set on `days`, the rest left as
+// The absences (single days, including occurrences of rules) with the people in `on` set on `days`, the rest left as
 // they are. Whole day: replaces their "ab"/"bis"/"spontan da" there; people in `off` lose their whole day.
 function withAway(list, days, on, mode, time, off = []) {
 const kept = list.flatMap(x => {
@@ -359,8 +358,8 @@ const cells = AWAY_WEEKDAYS.map(d => `<span class="away-wd">${d}</span>`);
 for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden="true"></span>');
 for (let n = startDay; n <= length; n++) {
 const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
-const entries = absent.filter(x => x.day === iso);
-const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}${x.rule ? ' (wöchentlich)' : ''}"${x.maybe ? ' class="maybe"' : x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
+const entries = absencesForDay(iso);
+const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}${x.rule ? ' (wiederkehrend)' : ''}"${x.maybe ? ' class="maybe"' : x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
 cells.push(`<button type="button" class="away-day${iso === today ? ' today' : ''}${sel.has(iso) ? ' sel' : ''}${entries.length ? ' has-entries' : ''}" data-away-day="${iso}"${iso < today ? ' disabled' : ''}${iso === today ? ' aria-current="date"' : ''} aria-pressed="${sel.has(iso)}" aria-label="${esc(shortDate(iso))}${entries.length ? ': ' + esc(awayText(iso).join(', ')) : ''}"><b>${n}</b><span class="away-dots">${dots}</span></button>`);
 }
 $('awayGrid').innerHTML = cells.join('');
@@ -399,11 +398,12 @@ $('awayMore').textContent = awayCal.allOnce ? 'Weniger anzeigen' : `Alle ${runs.
 }
 // Wiederkehrend
 const weekdayNames = list => list.map(i => AWAY_WEEKDAYS[i]).join(', ');
+const repeatLabel = days => days.length === AWAY_WEEKDAYS.length ? 'täglich' : 'jeden ' + weekdayNames(days);
 function ruleLabel(g) {
 const today = isoDay(new Date());
 const span = g.start > today ? `ab ${shortDate(g.start)}` : '';
 const end = g.end ? `bis ${shortDate(g.end)}` : 'bis auf Weiteres';
-return [`jeden ${weekdayNames(g.weekdays)}`, g.cond, span, end].filter(Boolean).join(' · ');
+return [repeatLabel(g.weekdays), g.cond, span, end].filter(Boolean).join(' · ');
 }
 function resetRepeat() {
 Object.assign(awayRep, { people: mode === 'solo' && soloPerson ? [soloPerson] : [], weekdays: [], mode: 'day', edit: null });
@@ -421,6 +421,7 @@ $('repFormTitle').textContent = awayRep.edit ? 'Wiederholung ändern' : 'Neue Wi
 $('repCancel').hidden = !awayRep.edit;
 $('repPeople').innerHTML = [...new Set([...allPeople(), ...awayRep.people])].map(p => `<button type="button" class="pill" data-rep-person="${esc(p)}" aria-pressed="${awayRep.people.includes(p)}" style="${personStyle(p)}">${esc(p)}</button>`).join('');
 $('repWeekdays').innerHTML = AWAY_WEEKDAYS.map((d, i) => `<button type="button" data-rep-day="${i}" aria-pressed="${awayRep.weekdays.includes(i)}">${d}</button>`).join('');
+$('repDaily').setAttribute('aria-pressed', String(awayRep.weekdays.length === AWAY_WEEKDAYS.length));
 modeButtons($('repMode'), awayRep.mode);
 $('repTime').hidden = awayRep.mode === 'day' || awayRep.mode === 'maybe';
 $('repUntilBox').hidden = $('repOpen').checked;
@@ -460,7 +461,7 @@ try {
 await saveAway(next, days);
 } catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return false; }
 finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
-absentDays = next.days; absentRules = next.rules; mergeAbsent();
+absentDays = next.days; absentRules = next.rules;
 if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else drawAway();
 $('awayMsg').textContent = `${done} Alle sehen es in etwa einer Minute.`;
 try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
@@ -507,7 +508,7 @@ const time = awayCal.mode === 'maybe' ? true : awayCal.mode === 'day' ? null : c
 if (awayCal.mode !== 'day' && !time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (awayCal.mode !== 'day' && !on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
 const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${time}.`;
-storeAway(splitAway(withAway(absent, days, on, awayCal.mode, time, off), days), days, label);
+storeAway(splitAway(withAway(days.flatMap(absencesForDay), days, on, awayCal.mode, time, off), days), days, label);
 };
 $('repPeople').addEventListener('click', e => {
 const p = e.target.closest('[data-rep-person]')?.dataset.repPerson;
@@ -515,6 +516,11 @@ if (!p) return;
 awayRep.people = awayRep.people.includes(p) ? awayRep.people.filter(x => x !== p) : [...awayRep.people, p];
 drawRepeat();
 });
+$('repDaily').onclick = () => {
+  const daily = awayRep.weekdays.length === AWAY_WEEKDAYS.length;
+  awayRep.weekdays = daily ? [] : AWAY_WEEKDAYS.map((_, day) => day);
+  drawRepeat();
+};
 $('repWeekdays').addEventListener('click', e => {
 const d = e.target.closest('[data-rep-day]')?.dataset.repDay;
 if (d === undefined) return;
@@ -562,7 +568,7 @@ daysList = daysList.flatMap(x => {
 const cond = awayRep.mode === 'day' ? 'ganztägig' : awayRep.mode === 'maybe' ? 'spontan da' : `${awayRep.mode === 'from' ? 'ab' : 'bis'} ${time}`;
 const rules = kept.map(canonRule).concat(made);
 storeAway({ days: daysList, rules }, [...new Set([...covered, ...legacyDays])].sort(),
-  `${on.join(', ')}: jeden ${weekdayNames(awayRep.weekdays)}, ${cond}, ${end ? `bis ${shortDate(end)}` : 'bis auf Weiteres'}.`);
+  `${on.join(', ')}: ${repeatLabel(awayRep.weekdays)}, ${cond}, ${end ? `bis ${shortDate(end)}` : 'bis auf Weiteres'}.`);
 };
 // Bearbeiten / ✕ in both lists
 $('awayDlg').addEventListener('click', e => {
@@ -572,7 +578,7 @@ if (ruleEdit || ruleRemove) {
   const g = ruleGroups().find(x => x.key === (ruleEdit || ruleRemove));
   if (!g) return;
   if (ruleRemove) {
-    if (!confirm(`Wiederholung für ${g.people.join(', ')} (jeden ${weekdayNames(g.weekdays)}) beenden?`)) return;
+    if (!confirm(`Wiederholung für ${g.people.join(', ')} (${repeatLabel(g.weekdays)}) beenden?`)) return;
     storeAway({ days: absentDays, rules: absentRules.filter(r => !g.ids.includes(r.id)).map(canonRule) }, [], `${g.people.join(', ')}: Wiederholung beendet.`);
     return;
   }
