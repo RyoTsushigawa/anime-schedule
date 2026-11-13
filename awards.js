@@ -255,13 +255,13 @@ $('awardsCeddlList').addEventListener('click', e => {
 
 // The shared part: who has voted, the buttons, and after "Auflösen" the results
 async function awardsCall(path, body, person = '') {
-  let code = '';
-  try { code = sessionStorage.getItem('previewGroupCode') || ''; } catch {}
+  const code = typeof groupCode === 'function' ? groupCode() : '';
   const response = await fetch(voteApi + path, { method: body ? 'POST' : 'GET', cache: 'no-store',
     headers: { ...(code && { 'X-Group-Code': code }), ...(person && ID && ID.headers(person)), ...(body && { 'Content-Type': 'application/json' }) },
     ...(body && { body: JSON.stringify(body) }) });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(response.status === 401 ? 'Gruppencode fehlt: einmal in der Season Preview eingeben' : data.error || 'Fehler ' + response.status);
+  if (response.status === 401 && /Gruppencode/.test(data.error || '') && ID) ID.askGroupCode($('awardsIdentity'), () => loadAwardsSeason(hallTabs[seasonSelect.selectedIndex]));
+  if (!response.ok) throw new Error(data.error || 'Fehler ' + response.status);
   return data;
 }
 async function loadShared() {

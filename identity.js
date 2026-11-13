@@ -64,5 +64,19 @@ const Identity = (() => {
       box.append(reset);
     }
   }
-  return { ready, headers, canAct, myPeople, draw, accountsOf };
+  // the group code is missing on this device: one field to enter it, then the page loads again
+  function askGroupCode(box, retry) {
+    if (!box || box.querySelector('.group-code')) return;
+    box.className = 'identity-box need';
+    box.replaceChildren();
+    const form = Object.assign(document.createElement('span'), { className: 'group-code' });
+    const text = Object.assign(document.createElement('span'), { textContent: 'Der Gruppencode fehlt auf diesem Gerät (derselbe wie in der Season Preview):' });
+    const input = Object.assign(document.createElement('input'), { type: 'password', className: 'pill', placeholder: 'Gruppencode', autocomplete: 'off' });
+    input.setAttribute('aria-label', 'Gruppencode');
+    const save = Object.assign(document.createElement('button'), { type: 'button', className: 'pill primary', textContent: 'Speichern' });
+    save.onclick = () => { const code = input.value.trim(); if (code.length < 16) { text.textContent = 'Der Gruppencode ist mindestens 16 Zeichen lang.'; return; } rememberGroupCode(code); box.replaceChildren(); retry?.(); };
+    form.append(text, input, save);
+    box.append(form);
+  }
+  return { ready, headers, canAct, myPeople, draw, accountsOf, askGroupCode };
 })();

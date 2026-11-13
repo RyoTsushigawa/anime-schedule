@@ -1,0 +1,40 @@
+# Anime-Börse: start one season over. Deletes every account of that season in the votes helper's storage
+# (Cloudflare KV "anime-awards", keys "stock:<season>:<person>"), so everyone is back at 1000 Taler with no
+# shares and no orders. Prices, Awards ballots and PINs stay. Only by hand: Actions › Anime-Börse reset › Run.
+name: Anime-Börse reset
+
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: 'Season to start over, e.g. "Herbst 2026"'
+        required: true
+        default: 'Herbst 2026'
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SEASON: ${{ inputs.season }}
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
+        with:
+          node-version: 22
+      - name: Delete the season's Börse accounts
+        run: |
+          echo "$SEASON" | grep -Eq '^(Winter|Frühling|Sommer|Herbst) 20[0-9]{2}$' || { echo "::error::Ungültige Season: $SEASON"; exit 1; }
+          id=$(npx --yes wrangler@4 kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const list=JSON.parse(s.slice(s.indexOf("[")));const n=list.find(x=>x.title==="anime-awards"||x.title.endsWith("-anime-awards"));process.stdout.write(n?n.id:"")})')
+          [ -n "$id" ] || { echo "::error::KV namespace anime-awards not found"; exit 1; }
+          npx --yes wrangler@4 kv key list --namespace-id "$id" --prefix "stock:$SEASON:" --remote > keys.json
+          node -e 'const s=require("fs").readFileSync("keys.json","utf8");const k=JSON.parse(s.slice(s.indexOf("[")));require("fs").writeFileSync("names.txt",k.map(x=>x.name).join("\n"));console.log(k.length+" Depots: "+k.map(x=>x.name.split(":").pop()).join(", "))'
+          while IFS= read -r key; do
+            [ -n "$key" ] || continue
+            npx --yes wrangler@4 kv key delete --namespace-id "$id" "$key" --remote
+          done < names.txt
+          echo "Alle Depots von $SEASON stehen wieder auf 1000 Taler."

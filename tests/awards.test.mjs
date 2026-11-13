@@ -270,3 +270,44 @@ test('only for yourself: your AniList login picks and confirms you; without AniL
   assert.equal(sent.at(-1).headers['X-Person-Pin'], 'rei-pin');
   assert.equal(sent.at(-1).headers['X-AniList-Token'], undefined);
 });
+
+test('group code missing on this device: a field right on the page, remembered, then it loads again', async t => {
+  const dom = new JSDOM(read('awards.html'), { url: 'https://schedule.example/awards.html', runScripts: 'outside-only' });
+  const { window } = dom;
+  t.after(() => window.close());
+  const byId = id => window.document.getElementById(id);
+  const codes = [];
+  window.fetch = async (url, options = {}) => {
+    const u = new URL(url, 'https://schedule.example/');
+    const reply = (data, status = 200) => ({ ok: status === 200, status, json: async () => data });
+    if (u.pathname.endsWith('wrapped-profiles.json')) return reply({});
+    if (u.host !== 'votes.test') return reply({}, 404);
+    codes.push(options.headers?.['X-Group-Code'] || '');
+    if (options.headers?.['X-Group-Code'] !== 'the-group-code-1234') return reply({ error: 'Gruppencode fehlt oder ist ungültig.' }, 401);
+    if (u.pathname === '/awards/ceddl') return reply({ candidates: [] });
+    return reply({ revealed: false, voters: ['Rei'] });
+  };
+  const common = read('common.js');
+  window.eval(`
+    ${common.slice(common.indexOf('// The group code of the votes helper'), common.indexOf('const esc = s =>'))}
+    const $ = id => document.getElementById(id);
+    const SHEET_ID = 'test-sheet';
+    const norm = value => value.toLowerCase();
+    const config = async () => ({ previewVotesUrl: 'https://votes.test/' });
+    const guckplanTabs = async () => [{ gid: '2', name: 'Guckplan Herbst 2026' }];
+    const tabFor = tabs => tabs[0];
+    const loadPlan = async () => ({ people: ['Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }] });
+    ${read('identity.js')}
+    ${read('awards.js')}
+  `);
+  const tick = async () => { for (let i = 0; i < 12; i++) await new Promise(r => setImmediate(r)); };
+  await tick();
+  const field = byId('awardsIdentity').querySelector('.group-code input');
+  assert.ok(field, byId('awardsIdentity').textContent);
+  field.value = 'the-group-code-1234';
+  byId('awardsIdentity').querySelector('.group-code button').click();
+  await tick();
+  assert.equal(window.localStorage.getItem('previewGroupCode'), 'the-group-code-1234', 'remembered on this device');
+  assert.match(byId('awardsGroup').textContent, /✓ Rei/);
+  assert.equal(codes.at(-1), 'the-group-code-1234');
+});

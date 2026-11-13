@@ -14,12 +14,12 @@ const cls = n => n > 0 ? 'up' : n < 0 ? 'down' : '';
 
 // only for yourself: your AniList login or your PIN goes along (identity.js)
 async function call(path, body, person = '') {
-  let code = '';
-  try { code = sessionStorage.getItem('previewGroupCode') || ''; } catch {}
+  const code = groupCode();
   const res = await fetch(voteApi + path, { method: body ? 'POST' : 'GET', cache: 'no-store',
     headers: { ...(code && { 'X-Group-Code': code }), ...(person && Identity.headers(person)), ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(res.status === 401 ? 'Gruppencode fehlt: einmal in der Season Preview eingeben' : data.error || 'Fehler ' + res.status);
+  if (res.status === 401 && /Gruppencode/.test(data.error || '')) { Identity.askGroupCode($('stockIdentity'), () => loadSeason()); throw new Error('Gruppencode fehlt: oben einmal eingeben.'); }
+  if (!res.ok) throw new Error(data.error || 'Fehler ' + res.status);
   return data;
 }
 
@@ -50,7 +50,9 @@ const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 
 function draw() {
   const win = tradingWindow(seasonName()), open = !!state?.open && !!state?.account;
-  $('stockWindow').textContent = !win ? '' : open ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
+  // the season's dates decide what the line says, also when the helper can't be reached
+  const running = win && (state ? state.open : win.open);
+  $('stockWindow').textContent = !win ? '' : running ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
     : Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand';
   const a = state?.account || { cash: CASH, pending: [], holdings: {}, trades: [] };
   const value = accountValue(a, prices);
