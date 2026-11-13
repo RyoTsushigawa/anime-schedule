@@ -34,6 +34,7 @@ The feature challenge has **15 of 50 approved standalone features** and **31 app
 
 ## Curation decisions
 
+- The group is about 10 people who (except MaRyo) live far apart and do everything over Discord. Prefer features that help a remote group coordinate and talk there; skip ideas that assume meeting in person (e.g. cinema nights).
 - Since 13 Nov: keep updates to a minimum and propose mainly new standalone features. Approved items are only recorded for now; once 50 standalone features are approved, everything is built at once.
 - Require a concrete user benefit for every proposal. Treat 50 as a target and keep the bar for approval consistent.
 - Keep the interface clean and easy to understand. Prefer existing entry points and add controls only where they help users complete a task.
