@@ -111,7 +111,7 @@ test('shared voting: who voted shows before Auflösen, the winners after; nothin
     const config = async () => ({ previewVotesUrl: 'https://votes.test/' });
     const guckplanTabs = async () => [{ gid: '2', name: 'Guckplan Herbst 2026' }];
     const tabFor = tabs => tabs[0];
-    const loadPlan = async () => ({ people: ['Ryo', 'Mia', 'Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }, { romaji: 'Beta', english: 'Beta EN' }] });
+    const loadPlan = async () => ({ people: ['MaRyo', 'Mia', 'Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }, { romaji: 'Beta', english: 'Beta EN' }] });
     ${read('awards.js')}
   `);
   const tick = async () => { for (let i = 0; i < 5; i++) await new Promise(r => setImmediate(r)); };
@@ -124,19 +124,23 @@ test('shared voting: who voted shows before Auflösen, the winners after; nothin
   };
   assert.equal(byId('awardsGroup').hidden, false);
   assert.equal(byId('awardsReveal').disabled, true);
+  // the shared MaRyo column: Marvin and Ryo each vote
+  assert.deepEqual([...byId('awardsPerson').options].map(o => o.value), ['Marvin', 'Ryo', 'Mia', 'Rei']);
+  await vote('Marvin', 'alpha');
   await vote('Ryo', 'alpha');
   await vote('Mia', 'alpha');
   await vote('Rei', 'beta');
   assert.match(byId('awardsStatus').textContent, /Rei abgegeben/);
   assert.deepEqual([...ballots.get('Ryo').picks ? Object.entries(ballots.get('Ryo').picks) : []], [['best', 'The Alpha']]);
-  assert.match(byId('awardsGroup').textContent, /✓ Ryo.*✓ Mia.*✓ Rei/s);
+  assert.match(byId('awardsGroup').textContent, /✓ Marvin.*✓ Ryo.*✓ Mia.*✓ Rei/s);
   assert.equal(byId('awardsResults').hidden, true);
   byId('awardsReveal').click(); await tick();
   assert.equal(byId('awardsResults').hidden, false);
   assert.equal(byId('awardsBallot').hidden, true);
   const first = byId('awardsResults').querySelector('.awards-result');
-  assert.match(first.querySelector('li.winner').textContent, /The Alpha.*2 Stimmen/);
+  assert.match(first.querySelector('li.winner').textContent, /The Alpha.*3 Stimmen/);
   assert.match(byId('awardsResults').textContent, /Rei: Anime der Season Beta EN/);
+  assert.match(byId('awardsResults').textContent, /Marvin: Anime der Season The Alpha/);
   assert.ok(calls.includes('POST /awards/reveal'));
 });
 

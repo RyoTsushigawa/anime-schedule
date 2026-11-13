@@ -22,6 +22,9 @@ let nominees = new Map();
 let ballot = {};
 let seasonRequest = 0;
 let people = [];
+// A Guckplan column shared by two people still gives each of them a ballot of their own
+const BALLOT_PEOPLE = { MaRyo: ['Marvin', 'Ryo'] };
+const voters = names => names.flatMap(name => BALLOT_PEOPLE[name] || [name]);
 let voteApi = '';
 let shared = null; // the helper's answer for this season: { revealed, voters, ballots? } or { error }
 
@@ -204,10 +207,10 @@ async function loadAwardsSeason(tab) {
       .filter(([key]) => key)
       .sort((a, b) => a[1].localeCompare(b[1], 'de'));
     nominees = new Map(titles);
-    people = plan.people.slice();
-    personSelect.replaceChildren(...plan.people.map(name => new Option(name, name)));
-    if (plan.people.includes(wanted)) personSelect.value = wanted;
-    if (!nominees.size || !plan.people.length) {
+    people = voters(plan.people);
+    personSelect.replaceChildren(...people.map(name => new Option(name, name)));
+    if (people.includes(wanted)) personSelect.value = wanted;
+    if (!nominees.size || !people.length) {
       awardsStatus.textContent = 'Für diese Season ist kein Stimmzettel verfügbar.';
       return;
     }
