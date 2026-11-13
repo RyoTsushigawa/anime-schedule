@@ -1,6 +1,7 @@
 // Anime-Quiz: five questions a day about the shows in your Guckplan (AniList ids from streams-de.json,
 // who watches what from the Guckplan sheet). One answer per question; the result stays in this browser.
 import { berlinDay } from './cover-core.mjs';
+import { anilist } from './game-data.mjs';
 import { questionsFor, scoreOf, norm, QUESTIONS } from './trivia-core.mjs';
 
 const $ = id => document.getElementById(id);
@@ -13,9 +14,7 @@ const QUERY = `query ($ids: [Int], $page: Int) { Page(page: $page, perPage: 50) 
 async function anilistMedia(ids) {
   const out = [];
   for (let page = 1; page <= 4; page++) {
-    const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query: QUERY, variables: { ids, page } }) });
-    if (!response.ok) throw new Error('AniList antwortet ' + response.status);
-    const data = (await response.json()).data?.Page;
+    const data = (await anilist(QUERY, { ids, page }))?.Page;
     out.push(...(data?.media || []));
     if (!data?.pageInfo?.hasNextPage) break;
   }

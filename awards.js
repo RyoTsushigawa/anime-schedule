@@ -250,12 +250,19 @@ let hallTabs = [], hallLoaded = false;
 async function drawHall() {
   const body = $('awardsHallBody');
   const seasons = [];
+  let failed = 0;
   for (const tab of hallTabs) {
     const season = tab.name.replace(/^Guckplan\s+/i, '');
-    try { const s = await awardsCall('/awards?season=' + encodeURIComponent(season)); if (s.revealed) seasons.push({ season, ballots: s.ballots || [] }); } catch {}
+    try { const s = await awardsCall('/awards?season=' + encodeURIComponent(season)); if (s.revealed) seasons.push({ season, ballots: s.ballots || [] }); } catch { failed++; }
   }
   body.replaceChildren();
-  if (!seasons.length) { const p = document.createElement('p'); p.className = 'awards-hall-note'; p.textContent = 'Noch keine Season aufgelöst.'; body.append(p); return; }
+  if (!seasons.length) {
+    const p = document.createElement('p'); p.className = 'awards-hall-note';
+    p.textContent = failed && failed === hallTabs.length ? 'Die Ruhmeshalle ist gerade nicht erreichbar. Später noch einmal öffnen.' : 'Noch keine Season aufgelöst.';
+    body.append(p);
+    if (failed === hallTabs.length) hallLoaded = false; // next opening tries again
+    return;
+  }
   const hits = new Map();
   for (const { season, ballots } of seasons) {
     const section = document.createElement('section'); section.className = 'awards-hall-season';
