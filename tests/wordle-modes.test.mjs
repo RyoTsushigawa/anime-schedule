@@ -48,7 +48,7 @@ test('game mode selection, strict dictionary and separate stats are wired up',()
   assert.match(code,/\$\('gameNextRound'\)\.onclick/);
   assert.match(code,/titleGameStats:v2:/);
   assert.match(code,/wrapped-profiles\.json/);
-  assert.match(code,/mediaList\(userName:\$user,type:ANIME\)/);
+  assert.match(code,/MediaListCollection\(userName:\$user,type:ANIME\)/);
   assert.match(html,/type="module" src="games\.js"/);
 });
 

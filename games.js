@@ -92,27 +92,43 @@ async function users() {
   if(!hardUsers.length) throw new Error('Keine Gruppen-AniLists eingerichtet.');
   return hardUsers;
 }
+// One request per person (the whole list at once) instead of up to 30 pages, and each list is kept
+// for a day, so hard mode stays under AniList's rate limit. A list saved earlier stands in when
+// AniList can't be reached (rate limit, blocker, network).
+const LIST_DAY=24*60*60*1000;
+const savedList=username=>load('titleGameAniList:'+username.toLowerCase(),null);
 async function anilistEntries(username) {
   if(hardCache.has(username)) return hardCache.get(username);
-  // Public, read-only requests; one person's list is used per hard puzzle.
-  const entries=[];
-  const query='query ($user:String,$page:Int){Page(page:$page,perPage:50){pageInfo{hasNextPage} mediaList(userName:$user,type:ANIME){media{title{english}}}}}';
-  for(let page=1;page<=30;page++) {
-    const result=await json('https://graphql.anilist.co',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({query,variables:{user:username,page}})
-    });
-    if(result.errors?.length) throw new Error('AniList: '+result.errors[0].message);
-    for(const item of result.data?.Page?.mediaList||[]){
-      const title=item.media?.title?.english;
-      if(title) entries.push({title,from:'AniList · '+username});
+  const kept=savedList(username);
+  const usable=titles=>{
+    const pool=titleEntries(titles.map(title=>({title,from:'AniList · '+username})),'AniList · '+username);
+    if(pool.length) hardCache.set(username,pool);
+    return pool;
+  };
+  if(kept && Array.isArray(kept.titles) && Date.now()-kept.at<LIST_DAY) return usable(kept.titles);
+  const query='query ($user:String){MediaListCollection(userName:$user,type:ANIME){lists{entries{media{title{english}}}}}}';
+  try {
+    let res;
+    for(let attempt=0;attempt<2;attempt++){
+      res=await fetch('https://graphql.anilist.co',{
+        method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({query,variables:{user:username}})
+      });
+      if(res.status!==429)break;
+      const wait=Math.min(5,Number(res.headers.get('Retry-After'))||2);
+      await new Promise(r=>setTimeout(r,wait*1000));
     }
-    if(!result.data?.Page?.pageInfo?.hasNextPage) break;
-    if(page===30) throw new Error('Die AniList ist zu groß für einen vollständigen Import.');
+    if(!res.ok) throw new Error(res.status===429?'AniList: zu viele Anfragen':'AniList: HTTP '+res.status);
+    const result=await res.json();
+    if(result.errors?.length) throw new Error('AniList: '+result.errors[0].message);
+    const titles=[...new Set((result.data?.MediaListCollection?.lists||[])
+      .flatMap(list=>list?.entries||[]).map(item=>item?.media?.title?.english).filter(Boolean))];
+    save('titleGameAniList:'+username.toLowerCase(),{at:Date.now(),titles});
+    return usable(titles);
+  } catch(e) {
+    if(kept && Array.isArray(kept.titles)) return usable(kept.titles);
+    throw e;
   }
-  const pool=titleEntries(entries,'AniList · '+username);
-  if(pool.length) hardCache.set(username,pool);
-  return pool;
 }
 async function hardEntries(round) {
   const names=await users();
@@ -174,13 +190,21 @@ async function start() {
     let entry,source=basic.pool;
     const id=level+':'+mode+':'+(mode==='daily'?day:round);
     const saved=load(currentKey()+':'+id,null);
+    let hard=null,offline='';
     if(level==='hard'){
-      const hard=await hardEntries(mode==='daily'?day:round);
+      try{hard=await hardEntries(mode==='daily'?day:round);}
+      catch(e){offline=e.message;}
       if(turn!==generation)return;
+    }
+    if(hard){
       source=mergeEntries(basic.pool,hard.pool);
       entry=mode==='daily'?pickEntry(hard.pool,0,day+':hard:'+hard.user)
         :pickFreshEntry(hard.pool,Math.floor(round/(await users()).length),
           'endless:'+hard.user,recentAnswers());
+    } else if(offline) {
+      // AniList can't be reached from this browser: a hard puzzle from the Guckplan instead of no game.
+      entry=mode==='daily'?pickEntry(basic.pool,0,day+':hard-guckplan')
+        :pickFreshEntry(basic.pool,round,'hard:guckplan',recentAnswers());
     } else entry=mode==='daily'
       ?basic.daily[Math.max(0,dayNumber(day,dailyData.start))%basic.daily.length]
       :pickFreshEntry(basic.pool,round,'normal:endless',recentAnswers());
@@ -206,6 +230,8 @@ async function start() {
     $('gameHint').textContent=puzzle.word.length+' Buchstaben · '+allowed.size+' gültige Wörter';
     draw();
     refreshHardHints();
+    if(offline && !state.done) message('AniList ist von diesem Browser aus gerade nicht erreichbar (Werbeblocker oder Tracking-Schutz?). '+
+      'Dieses Rätsel kommt deshalb aus dem Guckplan und ist nicht dasselbe wie bei den anderen.');
     if(state.done) finish(false);
   }catch(e){
     if(turn===generation){$('gameHint').textContent='Nicht verfügbar';message('Rätsel konnte nicht geladen werden: '+e.message);}
@@ -217,7 +243,7 @@ async function start() {
 function hardHintText() {
   if(!puzzle || !state || puzzle.level!=='hard' || !state.hints)return '';
   const owner = (puzzle.from || '').replace(/^AniList\s*·\s*/, '');
-  const label = owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
+  const label = !/^AniList/.test(puzzle.from || '') ? 'Aus dem Guckplan.' : owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
   if(state.hints===1)return label;
   const index=hashWord(puzzle.id+':hint')%puzzle.word.length;
   return label + ' Buchstabe ' + (index+1) + ' ist ' + puzzle.word[index] + '.';

@@ -14,7 +14,7 @@ const html=readFileSync(new URL('../games.html',import.meta.url),'utf8');
 const daily=JSON.parse(readFileSync(new URL('../games-words.json',import.meta.url),'utf8'));
 const guesses=JSON.parse(readFileSync(new URL('../games-guesses.json',import.meta.url),'utf8'));
 
-async function openGame({mode='daily',difficulty='normal',accounts=['Belly']}={}){
+async function openGame({mode='daily',difficulty='normal',accounts=['Belly'],anilistDown=false}={}){
   const dom=new JSDOM(html,{url:'https://example.test/games.html',runScripts:'outside-only'});
   const {window}=dom,ctx=dom.getInternalVMContext(),requests=[];
   window.localStorage.setItem('titleGameMode',JSON.stringify(mode));
@@ -31,12 +31,13 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly']}={}
     else if(url==='config.json')data={};
     else if(url==='wrapped-profiles.json')
       data=Object.fromEntries(accounts.map((name,i)=>['Member'+i,[{name,provider:'anilist'}]]));
+    else if(url==='https://graphql.anilist.co' && anilistDown)throw new TypeError('NetworkError when attempting to fetch resource.');
     else if(url==='https://graphql.anilist.co')
-      data={data:{Page:{pageInfo:{hasNextPage:false},mediaList:[
+      data={data:{MediaListCollection:{lists:[{entries:[
         {media:{title:{english:'Black Clover'}}},
         {media:{title:{english:'Dragon Quest'}}},
         {media:{title:{english:'Magic Knight'}}}
-      ]}}};
+      ]}]}}};
     else throw Error('Unexpected request: '+url);
     return {ok:true,json:async()=>data};
   };
@@ -107,9 +108,19 @@ test('Hard Mode draws a title from the public AniList and sends no mutation requ
     assert.ok(gql.length);
     for(const call of gql){
       const body=JSON.parse(call.options.body);
-      assert.match(body.query,/mediaList\(userName:\$user,type:ANIME\)/);
+      assert.match(body.query,/MediaListCollection\(userName:\$user,type:ANIME\)/);
       assert.doesNotMatch(body.query,/mutation/i);
     }
+  }finally{page.close();}
+});
+
+test('Hard Mode still gives a puzzle when AniList is unreachable, and says so',async()=>{
+  const page=await openGame({difficulty:'hard',anilistDown:true});
+  try{
+    assert.ok(page.run('puzzle && puzzle.word'));
+    assert.equal(page.run('puzzle.level'),'hard');
+    assert.match(page.window.document.getElementById('gameMsg').textContent,/AniList ist von diesem Browser aus/);
+    assert.notEqual(page.window.document.getElementById('gameHint').textContent,'Nicht verfügbar');
   }finally{page.close();}
 });
 
