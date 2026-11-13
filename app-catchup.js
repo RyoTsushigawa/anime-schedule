@@ -256,12 +256,15 @@ const check = (m, ep, missing) => selecting ? selector(m) : local ? localWatchBu
 const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
 const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
+const progressBar = (progress, m) => Number.isSafeInteger(m.episodes) && m.episodes > 0
+  ? `<progress class="catchup-progress" value="${Math.max(0, Math.min(progress, m.episodes))}" max="${m.episodes}" aria-label="${esc(seen(progress, m))}"></progress>`
+  : '';
 const grouped = ({ m, first, out, nextAt, missing, links, progress, idleWeeks }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
       <div class="time"><span class="time-day">Folge</span> ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}${idleTag({ m, idleWeeks })}</div>
+        <div class="ep"><span class="catchup-count">${out - first + 1} offen</span> ${seen(progress, m)}${nextHint(nextAt, out)}${idleTag({ m, idleWeeks })}</div>${progressBar(progress, m)}
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? laterButton({ m, idleWeeks }) + (local ? '' : dropButton(m.id)) + (selecting || out <= first || (!auth && !local) ? check(m, out, missing) : stepper(m, first, out, missing)) : ''}${planIn(m)}
@@ -278,7 +281,7 @@ if (eps.length === 1) return grouped({ m, first, out, nextAt, missing, links, pr
 return `<div class="shared catchup-show" ${searchKey(...mediaTitles(m))}>
       <div class="row show-head" ${artStyle(m)}>
         <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
-        <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}${idleTag({ m, idleWeeks })}</div></div>
+        <div class="info">${title(m)}<div class="ep"><span class="catchup-count">${eps.length} offen</span> Folgen ${first}–${out}${nextHint(nextAt, out)}${idleTag({ m, idleWeeks })}</div>${progressBar(progress, m)}</div>
         <div class="links">${linkButtons(links, m.id)}</div>
         ${mine ? laterButton({ m, idleWeeks }) + (local ? '' : dropButton(m.id)) + (selecting ? selector(m) : '') : ''}${planIn(m)}
       </div>${eps.map(ep => `

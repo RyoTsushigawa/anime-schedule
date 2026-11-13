@@ -187,6 +187,13 @@ font-size: 11px;
 font-weight: 650;
 white-space: nowrap;
 }
+.catchup-progress {
+  display: block;
+  width: min(100%, 9rem);
+  height: .5rem;
+  margin-top: .25rem;
+  accent-color: var(--accent);
+}
 .catchup-bar .pill { white-space: nowrap; }
 @media (pointer: coarse) {
 .menu .pills > button, .menu .pills > a, .menu .pill-row > button, .menu .toggle, #accountSection .account-choice { min-height: 44px; }
