@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CASH, tradingWindow, priceOf, portfolioValue, ranking } from '../boerse-core.mjs';
+import { CASH, tradingWindow, priceOf, dropValue, portfolioValue, ranking } from '../boerse-core.mjs';
 // Anime-Börse: the rules (prices from the group's ratings, the trading window, values and the ranking)
 
 test('trading window: 14 days around the season start, for every season name', () => {
@@ -12,12 +12,25 @@ test('trading window: 14 days around the season start, for every season name', (
   assert.equal(tradingWindow('Guckplan Herbst 2026'), null);
 });
 
-test('price: the group\'s average score × 2; dropped without a score is 30; unrated stays 100', () => {
+test('price: the group\'s average score × 2; unrated stays 100', () => {
   assert.equal(priceOf([]), 100);
   assert.equal(priceOf([{ score: 0, status: 'CURRENT' }]), 100);
   assert.equal(priceOf([{ score: 80 }, { score: 70 }]), 150);
-  assert.equal(priceOf([{ score: 0, status: 'DROPPED' }, { score: 90 }]), 120);
   assert.equal(priceOf([{ score: 50 }]), 100);
+});
+
+test('drops cost value, the earlier the more; never more than the given score', () => {
+  const drop = (progress, episodes, score = 0) => ({ status: 'DROPPED', progress, episodes, score });
+  assert.equal(dropValue(drop(1, 12)), 0);
+  assert.equal(dropValue(drop(0, 12)), 0);
+  assert.equal(dropValue(drop(6, 12)), 18);
+  assert.equal(dropValue(drop(12, 12)), 40);
+  assert.equal(dropValue(drop(3, null)), 7, 'unknown length: 12 episodes');
+  assert.equal(dropValue(drop(10, 12, 20)), 20, 'the own score if lower');
+  assert.equal(dropValue(drop(2, 12, 90)), 4, 'a high score does not save a drop');
+  // an early drop pulls a well-rated show down hard
+  assert.equal(priceOf([{ score: 90 }, { score: 80 }, drop(1, 12)]), 113);
+  assert.ok(priceOf([{ score: 80 }, drop(2, 12)]) < priceOf([{ score: 80 }, drop(11, 12)]));
 });
 
 test('portfolio value and ranking: unspent Taler count, shares at today\'s price', () => {

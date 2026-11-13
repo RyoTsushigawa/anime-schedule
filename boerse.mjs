@@ -53,14 +53,15 @@ async function loadPrices(list) {
     const accounts = [...new Set(Object.values(profiles).flat().filter(a => a?.provider === 'anilist' && /^[\w-]{2,40}$/.test(a.name)).map(a => a.name))];
     for (const user of accounts) {
       try {
-        const data = await anilist('query ($user: String, $ids: [Int]) { Page(perPage: 50) { mediaList(userName: $user, mediaId_in: $ids, type: ANIME) { mediaId status score(format: POINT_100) } } }', { user, ids: [...byId.keys()] });
-        for (const e of data?.Page?.mediaList || []) ratings.get(byId.get(e.mediaId))?.push({ score: e.score, status: e.status });
+        const data = await anilist('query ($user: String, $ids: [Int]) { Page(perPage: 50) { mediaList(userName: $user, mediaId_in: $ids, type: ANIME) { mediaId status progress score(format: POINT_100) media { episodes } } } }', { user, ids: [...byId.keys()] });
+        for (const e of data?.Page?.mediaList || []) ratings.get(byId.get(e.mediaId))?.push({ score: e.score, status: e.status, progress: e.progress, episodes: e.media?.episodes });
       } catch {}
     }
   }
   return ratings;
 }
 
+const drops = title => (rated.get(title) || []).filter(r => r.status === 'DROPPED').length;
 function draw() {
   const win = tradingWindow(seasonName());
   const open = !!state?.open, list = $('stockList');
@@ -76,7 +77,7 @@ function draw() {
   list.innerHTML = sorted.map(title => {
     const price = prices.get(title) ?? PRICE, have = mine[title] || 0, change = price - PRICE, n = (rated.get(title) || []).length;
     return `<div class="boerse-row${have ? ' owned' : ''}" data-title="${esc(title)}">
-      <span class="boerse-title">${esc(title)}<small>${n ? n + (n === 1 ? ' Bewertung' : ' Bewertungen') : 'noch unbewertet'}</small></span>
+      <span class="boerse-title">${esc(title)}<small>${n ? n + (n === 1 ? ' Bewertung' : ' Bewertungen') : 'noch unbewertet'}${drops(title) ? ` · <b class="down">${drops(title)}× gedroppt</b>` : ''}</small></span>
       <span class="boerse-price">${price}<small class="${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${change > 0 ? '▲ +' : change < 0 ? '▼ ' : '± '}${change}</small></span>
       <span class="boerse-have">${open ? `<button type="button" class="pill" data-trade="-1" aria-label="Eine Aktie ${esc(title)} verkaufen"${have ? '' : ' disabled'}>−</button>` : ''}<b>${have}</b>${open ? `<button type="button" class="pill" data-trade="1" aria-label="Eine Aktie ${esc(title)} kaufen"${cash >= PRICE ? '' : ' disabled'}>+</button>` : ''}</span>
     </div>`;
