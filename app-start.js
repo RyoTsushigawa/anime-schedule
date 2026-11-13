@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-13T19:22:00Z', name: 'Zeit pro Abend beim Nachholen' };
+const LAST_FEATURE = { at: '2026-11-13T19:30:00Z', name: 'Bearbeiter-Zugang' };
 const PATCH_NOTES = [
 { id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
 'Seasonal Anime Awards are now voted together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
@@ -228,7 +228,7 @@ $('list').addEventListener('click', async event => {
     const detail = document.createElement('span');
     detail.textContent = (date ? shortDate(date) + ' · ' : '') + reason;
     row.append(label, detail);
-    if (movesKey) {
+    if (canMove()) {
       const edit = document.createElement('button');
       edit.type = 'button';
       edit.className = 'pill';

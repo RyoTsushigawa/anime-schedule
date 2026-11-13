@@ -59,7 +59,7 @@ $('dayWeek').onclick = () => setDayScope('week');
 $('dayAlways').onclick = () => setDayScope('always');
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-edit]');
-if (!b || !movesKey) return;
+if (!b || !canMove()) return;
 const section = b.closest('.day');
 const all = weekShows();
 const keys = new Set([...section.querySelectorAll('.move:not([data-extra])')].map(m => norm(m.dataset.moveTitle)));

@@ -420,6 +420,18 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <button type="button" id="keyRemove" class="pill" title="Schlüssel entfernen">Entfernen</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
+<section id="editorSelf" class="editor-box" hidden>
+<b>Bearbeiter-Zugang</b>
+<div class="muted" id="editorSelfText"></div>
+<div class="dlg-row"><button type="button" id="editorLeave" class="pill">Zugang aus diesem Browser entfernen</button></div>
+</section>
+<section id="editorAdmin" class="editor-box" hidden>
+<b>Bearbeiter</b>
+<div class="muted">Vertraute Leute dürfen Serien verschieben, skippen und nachholen, ohne deinen Schlüssel. Jede Person bekommt einen eigenen Link; „Entfernen“ sperrt ihn sofort. Schlüssel, Bearbeiter und Einstellungen bleiben bei dir.</div>
+<ul id="editorList" class="data-list"></ul>
+<div class="dlg-row"><input id="editorNameInput" class="pill" placeholder="Name" maxlength="40" aria-label="Name der Person"><button type="button" id="editorAdd" class="pill">Link erstellen</button></div>
+<div class="muted" id="editorMsg" role="status"></div>
+</section>
 </form>
 </dialog>
 <div id="update" role="status" hidden><span>Neue Version ist da.</span><button id="updateReload" class="pill">Neuladen</button></div>

@@ -11,7 +11,7 @@ line.style.top = `${Math.round(y)}px`; line.style.left = `${Math.round(box.left)
 line.dataset.time = time || 'frei';
 line.hidden = false;
 }
-const allowed = () => !!movesKey && view === 'week' && !document.body.classList.contains('no-move');
+const allowed = () => canMove() && view === 'week' && !document.body.classList.contains('no-move');
 function prepareCards() {
 if (!globalThis.document?.documentElement) { observer.disconnect(); return; }
 for (const row of document.querySelectorAll('#list .row')) {

@@ -187,9 +187,31 @@ const awayLabel = x => x.maybe ? 'spontan da' : x.from ? `ab ${x.from}` : x.unti
 const awayText = date => absencesForDay(date).flatMap(x => (x.people || []).map(p => x.from || x.until || x.maybe ? `${p} (${awayLabel(x)})` : p));
 let reasonList = [];
 let delaysUrl = '';
-config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
+config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); refreshEditor(); } });
 let movesKey = '';
 try { movesKey = localStorage.getItem('movesKey') || ''; } catch {}
+// N61 Bearbeiter-Zugang: a trusted member moves shows with their own code instead of the owner's GitHub key.
+// The owner creates the codes (a link "#editor=…"); moves.json "editors" keeps only each code's SHA-256, and
+// the delays helper (v20+) checks it before it saves. Keys, editors and everything else stay owner-only.
+let editorCode = '', editorName = '', editorList = [];
+try { editorCode = localStorage.getItem('editorCode') || ''; } catch {}
+if (location.hash.startsWith('#editor=')) {
+editorCode = decodeURIComponent(location.hash.slice(8)).trim();
+try { localStorage.setItem('editorCode', editorCode); } catch {}
+history.replaceState(null, '', location.pathname + location.search);
+}
+const canMove = () => !!movesKey || (!!editorName && !!delaysUrl);
+const sha256Hex = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(b => b.toString(16).padStart(2, '0')).join('');
+async function refreshEditor() {
+const before = canMove();
+let name = '';
+try { if (editorCode && !movesKey) { const hash = await sha256Hex(editorCode); name = editorList.find(e => e?.hash === hash)?.name || ''; } } catch {}
+editorName = name;
+$('moveToggle').hidden = !canMove();
+$('movesSetup').hidden = !movesKey && !editorCode;
+syncMoveEditor();
+if (before !== canMove() && lastWeekRender && view === 'week') render(...lastWeekRender, false, true);
+}
 function isoDay(d) {
 return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -210,6 +232,8 @@ movesUpdated = newest?.updated || '';
 absentDays = Array.isArray(newest?.absent) ? newest.absent : [];
 absentRules = goodRules(newest?.absentRules);
 reasonList = goodReasons(newest?.reasons);
+editorList = Array.isArray((site || newest)?.editors) ? (site || newest).editors : [];
+refreshEditor();
 }
 function moveFor(show, monday) {
 const key = norm(show.romaji || show.english);
@@ -234,6 +258,7 @@ throw e;
 }
 let movesWritten = null;
 async function saveMovesNow(next, changeDelays, reasons, absentNext) {
+if (!movesKey) return saveMovesAsEditor(next, changeDelays || reasons || absentNext);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 for (let attempt = 0; attempt < 4; attempt++) {
 if (attempt) await new Promise(r => setTimeout(r, 800 * attempt));
@@ -249,7 +274,7 @@ const remoteReasons = goodReasons(remote.reasons);
 const nextAbsent = (absentNext?.days || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
 // rules that ended more than two days ago go, like single days
 const nextRules = goodRules(absentNext ? absentNext.rules : remote.absentRules).filter(r => !r.end || Date.parse(r.end) > Date.now() - 2 * 86400000);
-const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), ...(nextRules.length && { absentRules: nextRules }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), ...(nextRules.length && { absentRules: nextRules }), ...(Array.isArray(remote.editors) && remote.editors.length && { editors: remote.editors }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : absentNext ? 'Abwesend' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
@@ -267,6 +292,21 @@ return;
 if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
 }
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
+}
+// N61: an editor's moves go through the delays helper, which checks the code
+async function saveMovesAsEditor(next, other) {
+if (other || !editorName || !delaysUrl) throw new Error('kein Bearbeitungszugang');
+const res = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ editor: editorCode, moves: next }) });
+const file = await res.json().catch(() => ({}));
+if (!res.ok) {
+if (res.status === 403 && /Bearbeiter/.test(file.error || '')) { editorName = ''; refreshEditor(); }
+const old = Number(res.headers?.get?.('X-Helper-Version')) < 20;
+throw new Error(old ? 'der Speicher-Dienst kann noch keine Bearbeiter (Version 20 nötig)' : file.error || `Speicher-Dienst antwortet ${res.status}`);
+}
+if (movesPending <= 1) { moves = file.moves || []; absentDays = Array.isArray(file.absent) ? file.absent : []; absentRules = goodRules(file.absentRules); }
+delays = file.delays || [];
+movesSeen = movesStamp();
+try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
 }
 const movesStamp = () => JSON.stringify([moves, delays, absentDays, absentRules]);
 let movesSeen = '';
@@ -292,14 +332,76 @@ render(...lastWeekRender, false, true);
 if (fresh?.length) notice(fresh.map(d => `Verspätung: +${d.minutes} Min. ab ${d.title || d.show}`).join(' · '));
 }
 setInterval(followMoves, 30000);
-$('movesSetup').hidden = $('moveToggle').hidden = !movesKey;
+$('movesSetup').hidden = !movesKey && !editorCode;
+$('moveToggle').hidden = !canMove();
 syncMoveEditor();
 function openKeyDialog() {
 $('keyInput').value = '';
 $('keyMsg').textContent = movesKey ? 'In diesem Browser ist ein Schlüssel gespeichert.' : '';
+drawEditorBoxes();
 $('keyDlg').showModal();
 }
 $('movesSetup').onclick = openKeyDialog;
+// N61: the owner's list of editors (name, date); an editor sees their own access
+function drawEditorBoxes() {
+$('editorAdmin').hidden = !movesKey;
+$('editorSelf').hidden = !!movesKey || !editorCode;
+$('editorSelfText').textContent = editorName ? `Du darfst als ${editorName} Serien verschieben.` + (delaysUrl ? '' : ' Der Speicher-Dienst ist gerade nicht erreichbar.')
+  : 'Dieser Bearbeiter-Link gilt nicht (mehr). Frag nach einem neuen.';
+$('editorList').innerHTML = editorList.length ? editorList.map(e => `<li><b>${esc(e.name)}</b><span>seit ${esc(new Date(e.at).toLocaleDateString('de-DE'))} <button type="button" class="pill" data-editor-remove="${esc(e.hash)}">Entfernen</button></span></li>`).join('')
+  : '<li class="muted">Noch niemand.</li>';
+}
+// the owner changes the editors in moves.json directly (GitHub key); nothing else in the file changes
+async function saveEditors(change) {
+const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
+for (let attempt = 0; attempt < 4; attempt++) {
+const current = await fetch(MOVES_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
+const meta = current.ok ? await current.json() : null;
+let file = { moves: [] };
+try { if (meta?.content) file = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
+const editors = change(Array.isArray(file.editors) ? file.editors : []);
+const next = { ...file, updated: new Date().toISOString(), editors };
+if (!editors.length) delete next.editors;
+const content = btoa(unescape(encodeURIComponent(JSON.stringify(next, null, 1) + '\n')));
+const res = await fetch(MOVES_API, { method: 'PUT', headers, body: JSON.stringify({ message: 'Bearbeiter', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
+if (res.ok) { editorList = editors; movesWritten = null; try { localStorage.setItem('movesOwn', JSON.stringify(next)); } catch {} return; }
+if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
+}
+throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
+}
+$('editorAdd').onclick = async () => {
+const name = $('editorNameInput').value.trim().replace(/[<>]/g, '').slice(0, 40);
+if (!name) { $('editorMsg').textContent = 'Erst einen Namen eintragen.'; return; }
+const bytes = crypto.getRandomValues(new Uint8Array(24));
+const code = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const hash = await sha256Hex(code);
+$('editorAdd').disabled = true;
+$('editorMsg').textContent = 'Wird gespeichert …';
+try {
+await saveEditors(list => list.filter(e => e.name !== name).concat({ name, hash, at: new Date().toISOString() }));
+const link = location.origin + location.pathname + '#editor=' + encodeURIComponent(code);
+let copied = false;
+try { await navigator.clipboard.writeText(link); copied = true; } catch {}
+$('editorMsg').textContent = (copied ? 'Link kopiert, nur diese eine Person schicken (z. B. per Discord-DM): ' : 'Diesen Link nur dieser einen Person schicken (z. B. per Discord-DM): ') + link;
+$('editorNameInput').value = '';
+drawEditorBoxes();
+} catch (e) { $('editorMsg').textContent = 'Nicht gespeichert: ' + e.message; }
+finally { $('editorAdd').disabled = false; }
+};
+$('editorList').addEventListener('click', async e => {
+const b = e.target.closest('[data-editor-remove]');
+if (!b) return;
+b.disabled = true;
+try { await saveEditors(list => list.filter(x => x.hash !== b.dataset.editorRemove)); $('editorMsg').textContent = 'Entfernt; der Link gilt nicht mehr.'; drawEditorBoxes(); }
+catch (err) { $('editorMsg').textContent = 'Nicht entfernt: ' + err.message; b.disabled = false; }
+});
+$('editorLeave').onclick = () => {
+editorCode = ''; editorName = '';
+try { localStorage.removeItem('editorCode'); } catch {}
+refreshEditor();
+drawEditorBoxes();
+$('keyMsg').textContent = 'Bearbeiter-Zugang aus diesem Browser entfernt.';
+};
 if (location.hash === '#moves') { history.replaceState(null, '', location.pathname + location.search); openKeyDialog(); }
 $('keySave').onclick = async () => {
 const key = $('keyInput').value.trim();
@@ -313,15 +415,16 @@ movesKey = key;
 try { localStorage.setItem('movesKey', key); } catch {}
 $('movesSetup').hidden = $('moveToggle').hidden = $('repairButton').hidden = $('deliveryButton').hidden = false;
 syncMoveEditor();
+drawEditorBoxes();
 $('keyMsg').textContent = 'Gespeichert.';
 load(true);
 } catch (e) { $('keyMsg').textContent = `Nicht gespeichert: ${e.message}`; }
 };
 $('keyRemove').onclick = () => {
 movesKey = '';
-$('moveToggle').hidden = true;
-$('movesSetup').hidden = $('repairButton').hidden = $('deliveryButton').hidden = true;
-syncMoveEditor();
+$('repairButton').hidden = $('deliveryButton').hidden = true;
+refreshEditor();
+drawEditorBoxes();
 try { localStorage.removeItem('movesKey'); } catch {}
 $('keyMsg').textContent = 'Aus diesem Browser entfernt.';
 load(true);
@@ -346,7 +449,7 @@ if (b.dataset.extra) { const x = moves.find(m => m.extra && m.show === b.dataset
 openMoveDialog(b);
 });
 function openMoveDialog(b, destination = null) {
-if (!movesKey || !b) return;
+if (!canMove() || !b) return;
 moving = { key: norm(b.dataset.moveTitle), name: b.dataset.moveName };
 const week = isoDay(weekStart(weekOffset));
 const mv = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
@@ -489,7 +592,7 @@ storeMoves(moves.filter(m => !(keys.includes(m.show) && own(m))), `${namesOf(sho
 };
 let catchupById = new Map(), planning = null;
 function openPlan(source) {
-if (!movesKey) return;
+if (!canMove()) return;
 const x = source.extra ? source : null;
 const r = x ? null : source;
 const m = x ? x.media : r.m;
