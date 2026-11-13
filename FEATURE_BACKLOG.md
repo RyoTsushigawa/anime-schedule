@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **35 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **37 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -38,6 +38,8 @@ The feature challenge has **13 of 50 approved standalone features** and **35 app
 | U45 | Weekly Plan · Report a Wrong Streaming Link | Approved. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
 | U46 | Seasonal Anime Awards · Ballot Progress | Approved. Show how many people have submitted before the reveal while keeping their choices secret. |
 | U48 | Search · Clear Recent Searches | Approved. Clear this browser's recent title suggestions from the existing settings menu. |
+| U50 | Catch-up · Restore One Snoozed Show | Approved. Open the existing Später count to restore one show while keeping the others snoozed. |
+| U51 | Absences · Undo Accidental Removal | Approved. Restore the removed absence from the existing save notice, including its dates and time rules. |
 
 ## Curation decisions
 
