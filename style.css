@@ -321,6 +321,7 @@ background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix
 body.searching .daystrip { display: none; }
 .weekline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 6px; }
 .weekline > .daystrip { flex: 1 1 340px; min-width: 0; margin: 0; }
+.weekline > .schedule-inbox-button { order: 1; }
 .weekline > .alerts-chip { order: 1; margin-left: auto; }
 .weekline > #planReadinessButton { order: 1; }
 .weekline > .alerts-body { order: 2; flex: 0 0 100%; margin: 2px 0 4px; padding: 0 2px; }
