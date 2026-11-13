@@ -187,6 +187,44 @@ async function awardsReveal(body,env){
  await awardsStore(env).put('meta:'+season,JSON.stringify({revealed:true,revealedAt:new Date().toISOString()}));
  return {ok:true,season,revealed:true};
 }
+// Wrong streaming links (U45, reported from the weekly plan; the repair queue N55 reads them), in KV (binding
+// AWARDS, prefix "report:"): { id, at, status: 'pending' | 'fixed' | 'rejected', anilistId, title, service, url,
+// suggestion?, note?, resolvedAt?, resolution? }. POST /reports adds one, GET /reports[?status=] lists them
+// (newest first), POST /reports/resolve { id, status, resolution? } closes one.
+const REPORT_STATUS=['pending','fixed','rejected'];
+const httpsUrl=v=>{const u=str(v);if(!u)return '';if(u.length>400||!/^https:\/\/[^\s<>"]+$/.test(u))fail(400,'Ungültiger Link.');return u;};
+const shortText=(v,max,what)=>{const t=str(v);if(t.length>max||/[<>]/.test(t))fail(400,'Ungültige Angabe: '+what+'.');return t;};
+async function reportsList(env,status){
+ const store=awardsStore(env),out=[];let cursor;
+ do{const page=await store.list({prefix:'report:',cursor});
+  for(const key of page.keys){try{const r=JSON.parse(await store.get(key.name)||'null');if(r&&(!status||r.status===status))out.push(r);}catch{}}
+  cursor=page.list_complete?undefined:page.cursor;}while(cursor);
+ return out.sort((a,b)=>b.at.localeCompare(a.at));
+}
+async function reportAdd(body,env){
+ const anilistId=Number(body.anilistId);
+ if(!Number.isSafeInteger(anilistId)||anilistId<=0)fail(400,'Ungültige Serie.');
+ const report={id:crypto.randomUUID().slice(0,12),at:new Date().toISOString(),status:'pending',anilistId,
+  title:shortText(body.title,200,'Titel'),service:shortText(body.service,40,'Dienst'),url:httpsUrl(body.url)};
+ if(!report.title||!report.service||!report.url)fail(400,'Serie, Dienst und Link angeben.');
+ const suggestion=httpsUrl(body.suggestion),note=shortText(body.note,300,'Notiz');
+ if(suggestion)report.suggestion=suggestion;if(note)report.note=note;
+ const pending=await reportsList(env,'pending');
+ if(pending.length>=200)fail(429,'Zu viele offene Meldungen.');
+ if(pending.some(r=>r.anilistId===anilistId&&r.url===report.url&&(r.suggestion||'')===(report.suggestion||'')))return {ok:true,duplicate:true};
+ await awardsStore(env).put('report:'+report.id,JSON.stringify(report));
+ return {ok:true,id:report.id};
+}
+async function reportResolve(body,env){
+ const id=str(body.id),status=str(body.status);
+ if(!/^[a-f0-9-]{6,40}$/.test(id)||!REPORT_STATUS.includes(status))fail(400,'Ungültige Angabe.');
+ const store=awardsStore(env),old=JSON.parse(await store.get('report:'+id)||'null');
+ if(!old)fail(404,'Meldung nicht gefunden.');
+ const resolution=shortText(body.resolution,300,'Lösung');
+ const next={...old,status,...(status==='pending'?{}:{resolvedAt:new Date().toISOString()}),...(resolution&&{resolution})};
+ await store.put('report:'+id,JSON.stringify(next));
+ return {ok:true,report:next};
+}
 export default {
  async fetch(request,env){
   const origin=request.headers.get('Origin')||'';
@@ -217,6 +255,19 @@ export default {
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
     return json(path==='/awards/ballot'?await awardsBallot(body,env):await awardsReveal(body,env),200,cors);
+   }
+   if(request.method==='GET'&&path==='/reports'){
+    await authorized(request,env);
+    const status=new URL(request.url).searchParams.get('status');
+    if(status&&!REPORT_STATUS.includes(status))fail(400,'Ungültiger Status.');
+    return json({reports:await reportsList(env,status)},200,cors);
+   }
+   if(request.method==='POST'&&(path==='/reports'||path==='/reports/resolve')){
+    if(Number(request.headers.get('Content-Length')||0)>4096)fail(413,'Anfrage zu groß.');
+    await authorized(request,env);
+    const body=await request.json();
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    return json(path==='/reports'?await reportAdd(body,env):await reportResolve(body,env),200,cors);
    }
    return json({error:'Nicht gefunden.'},404,cors);
   }catch(error){return json({error:error?.status?error.message:'Die Abstimmung konnte nicht verarbeitet werden.'},error?.status||500,cors);}

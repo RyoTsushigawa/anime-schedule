@@ -41,3 +41,15 @@ which the deploy workflow creates on its first run. `GET /awards?season=Herbst 2
 voted until someone presses **Auflösen** (`POST /awards/reveal`); after that it gives all ballots and
 `POST /awards/ballot` is refused for that season. The optional group code applies here too. Tests:
 `node --test tests/awards-worker.test.mjs`.
+
+## Wrong streaming links (U45 → repair queue N55)
+
+The weekly plan's day menu has "Falschen Link melden". Reports are kept in the same KV namespace (prefix `report:`):
+`{ id, at, status: 'pending' | 'fixed' | 'rejected', anilistId, title, service, url, suggestion?, note?, resolvedAt?, resolution? }`.
+
+- `POST /reports` `{ anilistId, title, service, url, suggestion?, note? }`: adds a pending report (https links only,
+  short plain text, at most 200 pending; the same link and suggestion again is answered `{ duplicate: true }`).
+- `GET /reports?status=pending` (or `fixed`, `rejected`, or no status for all): newest first.
+- `POST /reports/resolve` `{ id, status, resolution? }`: closes or reopens one.
+
+The optional group code applies here too. Tests: `node --test tests/link-reports-worker.test.mjs`.

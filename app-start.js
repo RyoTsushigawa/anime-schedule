@@ -373,6 +373,71 @@ $('accountCheckButton').onclick = () => {
   checkListConnection();
 };
 $('accountCheckRetry').onclick = checkListConnection;
+// U45 Falschen Link melden: to the votes helper (workers/season-votes, POST /reports), for the repair queue
+$('list').addEventListener('click', event => {
+  const button = event.target.closest('[data-link-report]');
+  if (!button) return;
+  const shows = JSON.parse(button.dataset.linkReport);
+  const showPick = $('linkReportShow'), linkPick = $('linkReportLink');
+  showPick.replaceChildren(...shows.map((s, i) => new Option(s.title, i)));
+  const drawLinks = () => linkPick.replaceChildren(...shows[showPick.selectedIndex].links.map((l, i) => new Option(l.label, i)));
+  showPick.onchange = drawLinks;
+  drawLinks();
+  $('linkReportSuggestion').value = ''; $('linkReportNote').value = ''; $('linkReportStatus').textContent = '';
+  $('linkReportSend').disabled = false;
+  $('linkReportSend').onclick = async () => {
+    const show = shows[showPick.selectedIndex], link = show.links[linkPick.selectedIndex];
+    const suggestion = $('linkReportSuggestion').value.trim(), status = $('linkReportStatus');
+    if (suggestion && !/^https:\/\/\S+$/.test(suggestion)) { status.textContent = 'Der richtige Link muss mit https:// beginnen.'; return; }
+    const api = (await config()).previewVotesUrl;
+    if (!/^https:\/\//.test(api || '')) { status.textContent = 'Melden ist hier noch nicht eingerichtet.'; return; }
+    $('linkReportSend').disabled = true; status.textContent = 'Wird gesendet …';
+    try {
+      const res = await fetch(api.replace(/\/$/, '') + '/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anilistId: show.aniList, title: show.title, service: link.label, url: link.url, suggestion, note: $('linkReportNote').value.trim() }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Fehler ' + res.status);
+      status.textContent = data.duplicate ? 'Das wurde schon gemeldet. Danke!' : 'Gemeldet. Danke!';
+      setTimeout(() => $('linkReportDlg').close(), 1200);
+    } catch (e) { status.textContent = 'Nicht gesendet: ' + e.message; $('linkReportSend').disabled = false; }
+  };
+  $('linkReportDlg').showModal();
+});
+// N59 Transfer-Assistent, preview first: AniList and MyAnimeList entries matched by MAL ID; nothing is written
+const TRANSFER_QUERY = `query ($user: String) { MediaListCollection(userName: $user, type: ANIME) { lists { entries {
+  status progress score media { id idMal episodes siteUrl title { english romaji } } } } } }`;
+const STATUS_DE = { CURRENT: 'Schaue ich', REPEATING: 'Wiederholt', COMPLETED: 'Abgeschlossen', PAUSED: 'Pausiert', DROPPED: 'Gedroppt', PLANNING: 'Geplant' };
+function transferPreview(aniEntries, malEntries) {
+const title = m => m.title?.english || m.title?.romaji || 'MAL ' + m.idMal;
+const mal = new Map(malEntries.filter(e => e.media?.idMal).map(e => [e.media.idMal, e]));
+const onlyAni = [], noMalId = [], differ = [], seen = new Set();
+for (const e of aniEntries) {
+  if (!e.media?.idMal) { noMalId.push({ title: title(e.media), url: e.media.siteUrl, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}` }); continue; }
+  const other = mal.get(e.media.idMal);
+  seen.add(e.media.idMal);
+  if (!other) { onlyAni.push({ title: title(e.media), url: e.media.siteUrl, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}` }); continue; }
+  if (other.status !== e.status || (other.progress || 0) !== (e.progress || 0))
+    differ.push({ title: title(e.media), url: e.media.siteUrl, text: `AniList: ${STATUS_DE[e.status] || e.status}, Folge ${e.progress || 0} · MAL: ${STATUS_DE[other.status] || other.status}, Folge ${other.progress || 0}` });
+}
+const onlyMal = malEntries.filter(e => e.media?.idMal && !seen.has(e.media.idMal)).map(e => ({ title: title(e.media), url: 'https://myanimelist.net/anime/' + e.media.idMal, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}` }));
+const by = (a, b) => a.title.localeCompare(b.title);
+return [['Unterschiedlich', differ], ['Nur auf AniList', onlyAni], ['Nur auf MyAnimeList', onlyMal], ['Auf AniList ohne MyAnimeList-ID', noMalId]].map(([name, items]) => ({ name, items: items.sort(by) }));
+}
+async function drawTransfer() {
+const ani = accounts.find(a => (a.provider || 'anilist') === 'anilist'), mal = accounts.find(a => a.provider === 'mal');
+$('transferList').innerHTML = '';
+if (!ani || !mal) { $('transferIntro').textContent = 'Dafür braucht dieser Browser ein AniList- und ein MyAnimeList-Konto (Kontomenü).'; return; }
+$('transferIntro').textContent = `Vergleiche ${ani.name} (AniList) mit ${mal.name} (MyAnimeList) …`;
+try {
+  const [aniEntries, malResult] = await Promise.all([
+    anilist(TRANSFER_QUERY, { user: ani.name }, ani.token).then(d => d.MediaListCollection.lists.flatMap(l => l.entries)),
+    MAL.list(mal, true)]);
+  const groups = transferPreview(aniEntries, malResult.entries), found = groups.reduce((n, g) => n + g.items.length, 0);
+  $('transferIntro').textContent = found ? `${aniEntries.length} Einträge auf AniList, ${malResult.entries.length} auf MyAnimeList. Nur eine Vorschau, es wird nichts geändert.` : 'Beide Listen stimmen überein ✓';
+  $('transferList').innerHTML = groups.filter(g => g.items.length).map(g => `<section><h3>${esc(g.name)} <span>${g.items.length}</span></h3><ul class="data-list">${g.items.slice(0, 60).map(i => `<li><a href="${safeUrl(i.url)}" target="_blank" rel="noopener"><b>${esc(i.title)}</b></a><span>${esc(i.text)}</span></li>`).join('')}${g.items.length > 60 ? `<li class="muted">… und ${g.items.length - 60} weitere</li>` : ''}</ul></section>`).join('');
+} catch (e) { $('transferIntro').textContent = `Die Listen konnten nicht verglichen werden: ${e.message}`; }
+}
+$('transferButton').onclick = () => { showSettings(false); $('transferDlg').showModal(); drawTransfer(); };
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
 $('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
