@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://*.anilist.co; connect-src 'self' https://graphql.anilist.co https://docs.google.com https://*.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Anime-Quiz · Spiele</title>
+<link rel="icon" type="image/png" href="icon-72.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cover-game.css">
+<link rel="stylesheet" href="trivia.css">
+</head>
+<body class="cover-page">
+<header><div class="bar">
+<a class="tool-back pill" href="games.html"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>Spiele</a>
+<div class="brand"><h1>Anime-Quiz</h1><div>5 Fragen pro Tag · für alle dieselben</div></div>
+</div></header>
+<main class="cover-layout">
+<div class="cover-title"><div><h2>Wie gut kennt ihr eure Season?</h2><p>Fragen zu den Serien aus eurem Guckplan: Genres, Studios, Figuren, Folgen und wer was schaut.</p></div><span class="cover-daily">Täglich neu</span></div>
+<div id="quizPlay" class="cover-play" hidden>
+  <div class="cover-top"><b id="quizProgress"></b><span id="quizScore"></span></div>
+  <h3 id="quizPrompt" class="quiz-prompt"></h3>
+  <div id="quizChoices" class="cover-choices" role="group" aria-label="Antwortmöglichkeiten"></div>
+  <p id="quizExplain" class="quiz-explain" hidden></p>
+  <button id="quizNext" class="pill primary" type="button" hidden>Weiter</button>
+</div>
+<div id="quizEnd" class="cover-play quiz-end" hidden>
+  <p id="quizResult" class="quiz-result"></p>
+  <ol id="quizReview" class="quiz-review"></ol>
+  <button id="quizShare" class="pill primary" type="button">Ergebnis kopieren</button>
+</div>
+<p id="quizStatus" class="cover-status" role="status" aria-live="polite">Wird geladen …</p>
+<button id="quizRetry" class="pill" type="button" hidden>Erneut versuchen</button>
+<p class="cover-footnote">Daten von AniList und aus eurem Guckplan. Morgen gibt es neue Fragen.</p>
+</main>
+<script src="common.js"></script>
+<script type="module" src="trivia-game.mjs"></script>
+</body>
+</html>

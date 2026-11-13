@@ -45,7 +45,7 @@
 .games-today { width: 100%; display: grid; gap: 8px; }
 .games-today-head { display: flex; align-items: baseline; gap: 10px; }
 .games-today-head span { color: var(--muted); font-size: 13px; }
-.games-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.games-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .games-card { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); text-decoration: none; }
 .games-card:hover { border-color: var(--accent); text-decoration: none; }
 .games-card b { font-size: 13.5px; }
@@ -54,4 +54,5 @@
 .games-card.won { border-color: color-mix(in srgb, #2f9e57 55%, var(--line)); }
 .games-card.won span { color: #2f9e57; }
 .games-card.lost span { color: #c45a5a; }
-@media (max-width: 480px) { .games-cards { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .games-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 380px) { .games-cards { grid-template-columns: 1fr; } }
