@@ -21,7 +21,7 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | N66 | Plan Issue Diagnostic Report | Merged with the integration of ChatGPT's PRs ([#179](https://github.com/RyoTsushigawa/anime-schedule/pull/179)): day menu › Seriendaten prüfen. Generate a shareable report for a show with missing or inconsistent data, including title IDs, source, and last refresh. Exclude credentials and personal watch progress. |
 | N74 | Linked Account Troubleshooter | Merged with the integration of ChatGPT's PRs ([#175](https://github.com/RyoTsushigawa/anime-schedule/pull/175)): Settings › Kontoverbindung prüfen. |
 | N75 | Upcoming Plan Readiness | Approved. Surface upcoming sessions that need a decision and link to the existing editor. |
-| N80 | Personal Catch-up Planner | Approved. Build on the existing multi-day Nachholen planner and add per-day time budgets around existing watch slots. Use the existing planner entry point. |
+| N80 | Personal Catch-up Planner | Done: Catch-up › Automatisch einplanen. Each evening gets a time budget (Zeit offen, 30–180 Min., remembered per weekday); episodes are counted with their real length from AniList, and the preview shows when the evening's plan ends and until when the catch-up runs. |
 | N83 | Startet bald | Done: a „Startet bald“ box in the weekly plan. In the last weeks of a season, the weekly plan shows the next season's premieres that got „Ja“ votes, with their dates. |
 | N84 | Awards Hall of Fame | Done: Awards page › Ruhmeshalle. All revealed Seasonal Anime Awards at a glance: winners per season and category, and who most often voted for the winner. |
 | N85 | Readability | Done: Settings › Anzeige & Listen › Lesbarkeit. A setting for text size and a higher-contrast mode. |
@@ -61,7 +61,7 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | U66 | Weekly Plan · End Date for a Temporary Move | Approved. Let the temporary slot run through a chosen week and then restore the regular slot automatically. |
 | U74 | Watch-Planer · Take Over Absences | Done: Watch-Planer › Feste Termine › Aus Abwesenheiten. Recurring absences (e.g. „Sophie jeden Sa“) are taken over as busy times in the Watch planner instead of being entered by hand. |
 
-| U73 (N80) | Personal Catch-up Planner | Approved. Build on the existing multi-day Nachholen planner and add per-day time budgets around existing watch slots. Use the existing planner entry point. |
+| U73 (N80) | Personal Catch-up Planner | Done as N80. |
 
 ## Curation decisions
 

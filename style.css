@@ -1554,7 +1554,9 @@ button.header-nav-link { font-family: inherit; cursor: pointer; }
 .auto-plan-check:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .auto-plan-check input { margin: 0; accent-color: var(--accent); }
 .auto-plan-preview { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; }
-.auto-plan-day { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; }
+.auto-plan-day { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.auto-plan-budget { font-size: 12px; padding: 2px 4px; }
+.auto-plan-time { display: inline-block; margin-top: 2px; }
 .auto-plan-day small { color: var(--muted); }
 .catchup-summary #autoPlanOpen { margin-left: auto; }
 

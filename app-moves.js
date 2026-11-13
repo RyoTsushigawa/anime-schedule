@@ -532,42 +532,76 @@ storeMoves(next, `${name} (${last > first ? `Folgen ${first}–${last}` : `Folge
 // Smart catch-up planner: spreads the open episodes over this week's remaining evenings as "Nachholen"
 // entries (one per show and week, time empty = next free slot). Shows whose next episode comes soonest go
 // first, each on the least busy evening before that episode if possible; leftovers wait for next week.
-const slimMedia = m => ({ id: m.id, title: { romaji: m.title.romaji, english: m.title.english }, coverImage: { medium: m.coverImage?.medium || '' }, siteUrl: m.siteUrl, episodes: m.episodes || null, externalLinks: (m.externalLinks || []).map(l => ({ site: l.site, url: l.url })) });
-function autoCatchupPlan(rows, days, max, week, existing = []) {
+const slimMedia = m => ({ id: m.id, title: { romaji: m.title.romaji, english: m.title.english }, coverImage: { medium: m.coverImage?.medium || '' }, siteUrl: m.siteUrl, episodes: m.episodes || null, duration: m.duration || null, externalLinks: (m.externalLinks || []).map(l => ({ site: l.site, url: l.url })) });
+// N80: budgets { day: minutes } limit each evening by time too (episode length from AniList, else 24 min);
+// a day without a budget is limited only by the number of episodes
+const episodeMinutes = m => m?.duration || 24;
+function autoCatchupPlan(rows, days, max, week, existing = [], budgets = null) {
 const ids = new Set(rows.map(r => `extra:${r.m.id}`));
-const load = new Map(days.map(d => [d, 0]));
-for (const x of existing) if (x.extra && x.week === week && !ids.has(x.show) && load.has(x.day)) load.set(x.day, load.get(x.day) + x.last - x.first + 1);
+const load = new Map(days.map(d => [d, 0])), minutes = new Map(days.map(d => [d, 0]));
+for (const x of existing) if (x.extra && x.week === week && !ids.has(x.show) && load.has(x.day)) {
+  load.set(x.day, load.get(x.day) + x.last - x.first + 1);
+  minutes.set(x.day, minutes.get(x.day) + (x.last - x.first + 1) * episodeMinutes(x.media));
+}
+const room = (d, length) => Math.min(max - load.get(d), budgets?.[d] ? Math.floor((budgets[d] - minutes.get(d)) / length) : Infinity);
 const order = rows.filter(r => !r.missing && r.out >= r.first)
   .sort((a, b) => (a.nextAt || Infinity) - (b.nextAt || Infinity) || (a.out - a.first) - (b.out - b.first));
 const entries = [];
 let left = 0;
 for (const r of order) {
-  const open = r.out - r.first + 1;
-  const free = days.filter(d => load.get(d) < max);
+  const open = r.out - r.first + 1, length = episodeMinutes(r.m);
+  const free = days.filter(d => room(d, length) > 0);
   const before = r.nextAt ? free.filter(d => new Date(d + 'T23:59').getTime() / 1000 < r.nextAt) : free;
   const pick = (before.length ? before : free).sort((a, b) => load.get(a) - load.get(b) || a.localeCompare(b))[0];
   if (!pick) { left += open; continue; }
-  const count = Math.min(open, max - load.get(pick));
+  const count = Math.min(open, room(pick, length));
   load.set(pick, load.get(pick) + count);
+  minutes.set(pick, minutes.get(pick) + count * length);
   left += open - count;
   const m = slimMedia(r.m);
   entries.push({ show: `extra:${m.id}`, title: m.title.english || m.title.romaji, extra: true, media: m, first: r.first, last: r.first + count - 1, out: r.out, day: pick, time: '', week });
 }
-return { entries, left };
+return { entries, left, minutes: Object.fromEntries(minutes) };
 }
 let autoPlan = null;
+// time budget per weekday (0 = Mo … 6 = So), remembered in this browser; none = only the episode limit
+const AUTO_BUDGETS = [0, 30, 45, 60, 90, 120, 180];
+let autoBudgets = {};
+try { autoBudgets = JSON.parse(localStorage.getItem('autoPlanBudgets') || '{}') || {}; } catch {}
+const budgetWeekday = d => (new Date(d + 'T12:00').getDay() + 6) % 7;
+const planClock = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+// when the evening's own plan ends: the last regular slot (not catch-up) plus one slot
+function eveningEnd(day) {
+const found = typeof discordDay === 'function' ? discordDay(day) : null;
+const times = (found?.groups || []).flat().filter(r => !r.extra && Number.isFinite(r.watchAt)).map(r => r.watchAt);
+return times.length ? Math.max(...times) + SLOT_MINUTES * 60000 : null;
+}
 function drawAutoPlan() {
 const max = Number($('autoPlanMax').value);
 const days = [...document.querySelectorAll('#autoPlanDays input:checked')].map(i => i.value);
 const week = isoDay(weekStart(0));
-autoPlan = autoCatchupPlan([...catchupById.values()], days, max, week, moves);
+const budgets = Object.fromEntries(days.map(d => [d, Number(autoBudgets[budgetWeekday(d)]) || 0]));
+autoPlan = autoCatchupPlan([...catchupById.values()], days, max, week, moves, budgets);
 const byDay = days.map(d => [d, autoPlan.entries.filter(e => e.day === d)]);
+const budgetPick = d => `<select class="auto-plan-budget" data-budget-day="${budgetWeekday(d)}" aria-label="Zeit zum Nachholen">${AUTO_BUDGETS.map(v => `<option value="${v}"${v === budgets[d] ? ' selected' : ''}>${v ? v + ' Min.' : 'Zeit offen'}</option>`).join('')}</select>`;
+const timing = d => {
+  const end = eveningEnd(d), used = autoPlan.minutes[d] || 0;
+  const parts = [end ? 'ab ' + planClock(end) : 'Abend ohne Plan', used && end ? 'bis ca. ' + planClock(end + used * 60000) : '', budgets[d] ? `${used} von ${budgets[d]} Min.` : used ? `${used} Min.` : ''];
+  return `<small class="auto-plan-time">${esc(parts.filter(Boolean).join(' · '))}</small>`;
+};
 $('autoPlanPreview').innerHTML = !days.length ? '<div class="muted">Mindestens einen Abend wählen.</div>'
   : byDay.map(([d, list]) => `<div class="auto-plan-day"><b>${esc(new Date(d + 'T12:00').toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' }))}</b><span>${list.length
-    ? list.map(e => `${esc(e.title)} <small>${e.last > e.first ? `${e.first}–${e.last}` : e.first}</small>`).join(' · ') : '<span class="muted">nichts</span>'}</span></div>`).join('')
+    ? list.map(e => `${esc(e.title)} <small>${e.last > e.first ? `${e.first}–${e.last}` : e.first}</small>`).join(' · ') : '<span class="muted">nichts</span>'}<br>${timing(d)}</span>${budgetPick(d)}</div>`).join('')
   + (autoPlan.left ? `<div class="muted">${autoPlan.left} ${autoPlan.left === 1 ? 'Folge bleibt' : 'Folgen bleiben'} für nächste Woche.</div>` : '');
 $('autoPlanSave').disabled = !autoPlan.entries.length;
 }
+$('autoPlanPreview').addEventListener('change', e => {
+const pick = e.target.closest('[data-budget-day]');
+if (!pick) return;
+autoBudgets[pick.dataset.budgetDay] = Number(pick.value);
+try { localStorage.setItem('autoPlanBudgets', JSON.stringify(autoBudgets)); } catch {}
+drawAutoPlan();
+});
 $('list').addEventListener('click', e => {
 if (!e.target.closest('#autoPlanOpen')) return;
 const today = new Date(); today.setHours(0, 0, 0, 0);
