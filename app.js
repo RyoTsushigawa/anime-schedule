@@ -130,6 +130,8 @@ if (new URLSearchParams(location.search).get('view') === 'week') view = 'week';
 let streamsDe = null;
 titleSource = id => streamsDe?.status?.[id]?.titles;
 let fallbackLinks = { byAnilist: {} };
+// N55: link fixes taken over from reports (link-fixes.json), applied on top of the generated links
+let linkFixes = [];
 let sourceHealth = null;
 fetch('source-health.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : null).then(data => {
 sourceHealth = data;
@@ -184,6 +186,22 @@ if (b.dataset.primeChoice === 'torrent') primeChoices.set(person, 'torrent'); el
 try { localStorage.setItem('primeChoices', JSON.stringify(Object.fromEntries(primeChoices))); } catch {}
 updatePrimeControls(); redraw();
 };
+async function loadLinkFixes() {
+try {
+const response = await fetch('link-fixes.json', { cache: 'no-cache' });
+const data = response.ok ? await response.json() : null;
+linkFixes = Array.isArray(data?.fixes) ? data.fixes.filter(f => Number.isSafeInteger(f?.anilistId) && /^https:\/\//.test(f.to || '') && (f.from || f.service)) : [];
+} catch {}
+}
+// the reported link (same address, else the same service) gets the fixed address
+function fixLinks(links, id) {
+for (const fix of linkFixes) {
+if (fix.anilistId !== id) continue;
+const link = links.find(l => l.url === fix.from) || links.find(l => l.label === fix.service);
+if (link) link.url = fix.to;
+}
+return links;
+}
 async function loadFallbackLinks() {
 try {
 const response = await fetch('fallback-links.json', { cache: 'no-cache' });
@@ -541,6 +559,9 @@ return list.length > 1 ? list.map(t => `(${t})`).join('|') : list[0] || 'anime';
 }
 const OTHER_SERVICE_COLORS = [[/akiba/i, '#ff1a00'], [/it'?s anime/i, '#ff0000']];
 function streamLinks(media, wo, searchTitle) {
+return fixLinks(streamLinksFound(media, wo, searchTitle), media.id);
+}
+function streamLinksFound(media, wo, searchTitle) {
 const links = [];
 links.title = searchTitle || media.title?.english || media.title?.romaji || '';
 links.names = [links.title, media.title?.english, media.title?.romaji];

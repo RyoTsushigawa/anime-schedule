@@ -154,6 +154,12 @@ export async function openPage(opts = {}) {
     // opts.profiles: a different "Wer ist wer" list (person → accounts) instead of the real wrapped-profiles.json
     if (url.includes('wrapped-profiles.json')) return json(opts.profiles || JSON.parse(read('wrapped-profiles.json')));
     if (url.includes('fallback-links.json')) return down('site') || json({ byAnilist: {} });
+    // N55: opts.linkFixes as the site's link-fixes.json; a PUT to GitHub is kept (decoded) in state.linkFixesSaved
+    if (url.includes('api.github.com') && url.includes('link-fixes.json')) {
+      if ((init.method || 'GET') === 'PUT') { state.linkFixesSaved = JSON.parse(decodeURIComponent(escape(atob(JSON.parse(init.body).content)))); return json({}); }
+      return json({ sha: 'fix1', content: btoa(unescape(encodeURIComponent(JSON.stringify(state.linkFixesSaved || opts.linkFixes || { fixes: [] })))) });
+    }
+    if (url.includes('link-fixes.json')) return down('site') || json(opts.linkFixes || { fixes: [] });
     if (url.includes('moves.json') && !url.includes('api.github.com')) return down('site') || (opts.movesFile ? json(opts.movesFile) : json({}, 404));
     // The moves file on GitHub: reading gives a sha, a PUT is kept (decoded) in state.movesSaved
     if (url.includes('api.github.com') && url.includes('moves.json')) {

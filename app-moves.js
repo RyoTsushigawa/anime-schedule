@@ -311,7 +311,7 @@ const repo = res.ok ? await res.json() : null;
 if (!repo?.permissions?.push) throw new Error(res.ok ? "dieser Schlüssel kann die Seite nicht ändern" : `GitHub antwortet ${res.status}`);
 movesKey = key;
 try { localStorage.setItem('movesKey', key); } catch {}
-$('movesSetup').hidden = $('moveToggle').hidden = false;
+$('movesSetup').hidden = $('moveToggle').hidden = $('repairButton').hidden = false;
 syncMoveEditor();
 $('keyMsg').textContent = 'Gespeichert.';
 load(true);
@@ -320,7 +320,7 @@ load(true);
 $('keyRemove').onclick = () => {
 movesKey = '';
 $('moveToggle').hidden = true;
-$('movesSetup').hidden = true;
+$('movesSetup').hidden = $('repairButton').hidden = true;
 syncMoveEditor();
 try { localStorage.removeItem('movesKey'); } catch {}
 $('keyMsg').textContent = 'Aus diesem Browser entfernt.';

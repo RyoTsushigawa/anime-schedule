@@ -126,6 +126,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
 <button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes</button>
 <button id="episodeCrosswalkButton" class="menu-item" aria-haspopup="dialog">Folgennummern vergleichen</button>
+<button id="repairButton" class="menu-item" aria-haspopup="dialog" title="Gemeldete falsche Stream-Links prüfen und korrigieren" hidden>Link-Meldungen</button>
 <button id="dataButton" class="menu-item" aria-haspopup="dialog" title="Wann Guckplan, Sendetermine und Trailer zuletzt aktualisiert wurden">Datenstand</button>
 <button id="accountCheckButton" class="menu-item" aria-haspopup="dialog">Kontoverbindung prüfen</button>
 <button id="transferButton" class="menu-item" aria-haspopup="dialog" title="Zeigt, was auf AniList und MyAnimeList unterschiedlich ist (nur Vorschau, ändert nichts)">AniList ↔ MAL vergleichen</button>
@@ -449,6 +450,15 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <p id="transferIntro" class="muted sync-intro"></p>
 <div id="transferList" class="health-list"></div>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
+</form>
+</dialog>
+<dialog id="repairDlg" class="dlg notes-dlg" aria-labelledby="repairTitle">
+<form method="dialog">
+<b id="repairTitle">Link-Meldungen <small id="repairCount" class="muted"></small></b>
+<p class="muted sync-intro">Gemeldete falsche Stream-Links. „Übernehmen“ setzt den vorgeschlagenen Link für alle ein.</p>
+<ul id="repairList" class="data-list sync-list repair-list"></ul>
+<p id="repairStatus" class="muted" role="status"></p>
+<div class="dlg-row dlg-foot"><button type="button" id="repairReload" class="pill">Neu laden</button><button value="cancel" class="pill primary">OK</button></div>
 </form>
 </dialog>
 <dialog id="linkReportDlg" class="dlg notes-dlg" aria-labelledby="linkReportTitle">

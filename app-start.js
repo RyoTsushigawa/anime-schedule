@@ -22,6 +22,7 @@ const ready = Promise.all([
 tabsReady,
 streamsReady,
 loadFallbackLinks().then(() => { if (lastWeekRender && view === 'week') redraw(); }),
+loadLinkFixes().then(() => { if (linkFixes.length && lastWeekRender && view === 'week') redraw(); }),
 loadMoves().then(() => {
 movesSeen = movesStamp();
 if (lastWeekRender && view === 'week') redraw();
@@ -403,6 +404,100 @@ $('list').addEventListener('click', event => {
   };
   $('linkReportDlg').showModal();
 });
+// N55 Link-Meldungen: the open reports for the plan owner (the browser with the GitHub key). A proposed link
+// is checked against the service's own site; "Übernehmen" saves it to link-fixes.json (applied on top of the
+// generated links, so the next link build doesn't undo it) and closes every open report for the same link.
+const SERVICE_SITES = [[/crunchyroll/i, /(^|\.)crunchyroll\.com$/], [/netflix/i, /(^|\.)netflix\.com$/], [/prime|amazon/i, /(^|\.)(primevideo\.com|amazon\.[a-z.]+)$/],
+  [/youtube/i, /(^|\.)(youtube\.com|youtu\.be)$/], [/disney/i, /(^|\.)disneyplus\.com$/], [/^adn|animation digital/i, /(^|\.)animationdigitalnetwork\.[a-z]+$/],
+  [/hidive/i, /(^|\.)hidive\.com$/], [/akiba/i, /(^|\.)akibapass\.de$/], [/aniworld/i, /(^|\.)aniworld\.to$/], [/subsplease/i, /(^|\.)subsplease\.org$/], [/nyaa/i, /(^|\.)nyaa\.si$/]];
+function checkSuggestion(report) {
+  if (!report.suggestion) return { ok: false, text: 'Kein richtiger Link vorgeschlagen' };
+  let host;
+  try { host = new URL(report.suggestion).hostname.toLowerCase(); } catch { return { ok: false, text: 'Kein gültiger Link' }; }
+  if (report.suggestion === report.url) return { ok: false, text: 'Gleicher Link wie der gemeldete' };
+  const site = SERVICE_SITES.find(([name]) => name.test(report.service));
+  if (!site) return { ok: true, text: 'Dienst unbekannt, Seite ' + host + ' bitte selbst prüfen' };
+  return site[1].test(host) ? { ok: true, text: 'Passt zu ' + report.service + ' (' + host + ')' } : { ok: false, text: 'Andere Seite als ' + report.service + ': ' + host };
+}
+const reportsApi = async () => { const api = (await config()).previewVotesUrl; return /^https:\/\//.test(api || '') ? api.replace(/\/$/, '') : ''; };
+const groupHeaders = () => { let code = ''; try { code = sessionStorage.getItem('previewGroupCode') || ''; } catch {} return code ? { 'X-Group-Code': code } : {}; };
+let repairReports = [];
+async function loadRepairQueue() {
+  const list = $('repairList');
+  list.innerHTML = '<li class="muted">Wird geladen …</li>';
+  const api = await reportsApi();
+  if (!api) { list.innerHTML = '<li class="muted">Meldungen sind hier nicht eingerichtet.</li>'; return; }
+  try {
+    const res = await fetch(api + '/reports?status=pending', { headers: groupHeaders(), cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Fehler ' + res.status);
+    repairReports = data.reports || [];
+    drawRepairQueue();
+  } catch (e) { list.innerHTML = `<li class="muted">Nicht geladen: ${esc(e.message)}</li>`; }
+}
+function drawRepairQueue() {
+  $('repairCount').textContent = repairReports.length ? `${repairReports.length} offen` : '';
+  $('repairList').innerHTML = repairReports.length ? repairReports.map(r => {
+    const check = checkSuggestion(r);
+    return `<li data-report="${esc(r.id)}"><b>${esc(r.title)} · ${esc(r.service)}</b>
+      <span>Gemeldet: <a href="${safeUrl(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a></span>
+      ${r.suggestion ? `<span>Vorschlag: <a href="${safeUrl(r.suggestion)}" target="_blank" rel="noopener">${esc(r.suggestion)}</a></span>` : ''}
+      ${r.note ? `<span>Notiz: ${esc(r.note)}</span>` : ''}
+      <small class="${check.ok ? 'ok' : 'warn'}">${check.ok ? '✓' : '⚠'} ${esc(check.text)} · ${esc(ago(r.at))}</small>
+      <span class="repair-actions">${r.suggestion ? `<button type="button" class="pill${check.ok ? ' primary' : ''}" data-repair="take">Übernehmen</button>` : ''}<button type="button" class="pill" data-repair="fixed">Erledigt</button><button type="button" class="pill" data-repair="rejected">Ablehnen</button></span></li>`;
+  }).join('') : '<li class="muted">Keine offenen Meldungen.</li>';
+}
+async function saveLinkFix(report) {
+  const api = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/link-fixes.json';
+  const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const current = await fetch(api + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
+    const meta = current.ok ? await current.json() : null;
+    let file = { fixes: [] };
+    try { if (meta?.content) file = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
+    const fixes = (file.fixes || []).filter(f => !(f.anilistId === report.anilistId && (f.from === report.url || f.service === report.service)));
+    fixes.push({ anilistId: report.anilistId, title: report.title, service: report.service, from: report.url, to: report.suggestion, report: report.id, at: new Date().toISOString() });
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify({ updated: new Date().toISOString(), fixes }, null, 1) + '\n')));
+    const res = await fetch(api, { method: 'PUT', headers, body: JSON.stringify({ message: 'Link-Korrektur: ' + report.title, content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
+    if (res.ok) { linkFixes = fixes; return; }
+    if (res.status !== 409 && res.status !== 422) throw new Error('GitHub antwortet ' + res.status);
+  }
+  throw new Error('GitHub: die Datei wurde gleichzeitig geändert, bitte erneut versuchen');
+}
+async function resolveReports(reports, status, resolution) {
+  const api = await reportsApi();
+  for (const r of reports) {
+    const res = await fetch(api + '/reports/resolve', { method: 'POST', headers: { 'Content-Type': 'application/json', ...groupHeaders() }, body: JSON.stringify({ id: r.id, status, resolution }) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Fehler ' + res.status);
+  }
+}
+$('repairList').addEventListener('click', async event => {
+  const button = event.target.closest('[data-repair]');
+  if (!button) return;
+  const report = repairReports.find(r => r.id === button.closest('[data-report]').dataset.report);
+  if (!report) return;
+  const action = button.dataset.repair, status = $('repairStatus');
+  // every open report about the same link goes with it
+  const same = repairReports.filter(r => r.anilistId === report.anilistId && r.url === report.url && (action !== 'take' || !r.suggestion || r.suggestion === report.suggestion));
+  button.closest('li').querySelectorAll('button').forEach(b => { b.disabled = true; });
+  status.textContent = 'Wird gespeichert …';
+  try {
+    if (action === 'take') await saveLinkFix(report);
+    await resolveReports(action === 'take' ? same : [report], action === 'take' ? 'fixed' : action,
+      action === 'take' ? 'Übernommen: ' + report.suggestion : action === 'fixed' ? 'Von Hand behoben' : 'Abgelehnt');
+    const done = new Set((action === 'take' ? same : [report]).map(r => r.id));
+    repairReports = repairReports.filter(r => !done.has(r.id));
+    status.textContent = action === 'take' ? 'Übernommen. Der Link gilt für alle nach dem nächsten Laden.' : action === 'fixed' ? 'Als erledigt markiert.' : 'Abgelehnt.';
+    drawRepairQueue();
+    if (action === 'take' && lastWeekRender && view === 'week') redraw();
+  } catch (e) {
+    status.textContent = 'Nicht gespeichert: ' + e.message;
+    button.closest('li').querySelectorAll('button').forEach(b => { b.disabled = false; });
+  }
+});
+$('repairButton').onclick = () => { showSettings(false); $('repairStatus').textContent = ''; $('repairDlg').showModal(); loadRepairQueue(); };
+$('repairReload').onclick = loadRepairQueue;
+$('repairButton').hidden = !movesKey;
 // N59 Transfer-Assistent, preview first: AniList and MyAnimeList entries matched by MAL ID; nothing is written
 const TRANSFER_QUERY = `query ($user: String) { MediaListCollection(userName: $user, type: ANIME) { lists { entries {
   status progress score media { id idMal episodes siteUrl title { english romaji } } } } } }`;
