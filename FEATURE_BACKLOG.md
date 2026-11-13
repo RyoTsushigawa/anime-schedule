@@ -15,7 +15,7 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | N48 | Personal Schedule Change Inbox | Approved. Show moves, pauses, and additions since the last visit for shows on the selected person's plan. |
 | N50 | Episode Number Crosswalk | Approved. Match streaming season and episode numbering to the Guckplan, AniList, and MyAnimeList where mappings are known. |
 | N55 | Maintainer Repair Queue | Approved. Review wrong streaming-link reports, verify proposed fixes, and mark reports resolved. Use U45 as the reporting entry point. |
-| N59 | AniList ↔ MyAnimeList Transfer Assistant | Approved. Preview a provider transfer, resolve title or progress mismatches, and select entries to copy. |
+| N59 | AniList ↔ MyAnimeList Transfer Assistant | Preview done: Settings › AniList ↔ MAL vergleichen (differences, one side only, no MAL ID; nothing is written). Copying selected entries is the follow-up. Preview a provider transfer, resolve title or progress mismatches, and select entries to copy. |
 | N61 | Guckplan Editor Access | Approved. Let the plan owner grant trusted members permission to move shows without sharing the owner's GitHub key. Keep management owner-only. |
 | N63 | Discord Delivery Queue | Approved. Show failed schedule deliveries and allow one retry with duplicate protection. |
 | N66 | Plan Issue Diagnostic Report | Merged with the integration of ChatGPT's PRs ([#179](https://github.com/RyoTsushigawa/anime-schedule/pull/179)): day menu › Seriendaten prüfen. Generate a shareable report for a show with missing or inconsistent data, including title IDs, source, and last refresh. Exclude credentials and personal watch progress. |
@@ -43,7 +43,7 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | U42 | Season Preview · Save an Unsent Vote | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Keep a failed vote as a draft on its show so the voter can retry later. |
 | U43 | Weekly Plan · Hide Watched Episodes | Approved. Add an on/off toggle in the existing Solo view controls. On hides watched episodes. Off restores the full plan in one click. |
 | U44 | Seasonal Anime Awards · Search Nominees | Approved. Make the existing nominee picker searchable by title. |
-| U45 | Weekly Plan · Report a Wrong Streaming Link | Approved. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
+| U45 | Weekly Plan · Report a Wrong Streaming Link | Done: day menu › Falschen Link melden; reports stored by the votes helper (see workers/season-votes/README.md) for the repair queue N55. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
 | U46 | Seasonal Anime Awards · Ballot Progress | Done with the shared voting ([PR #163](https://github.com/RyoTsushigawa/anime-schedule/pull/163)): ✓ chips show who has voted, choices stay secret. |
 | U48 | Search · Clear Recent Searches | Approved. Clear this browser's recent title suggestions from the existing settings menu. |
 | U50 | Catch-up · Restore One Snoozed Show | Approved. Open the existing Später count to restore one show while keeping the others snoozed. |
