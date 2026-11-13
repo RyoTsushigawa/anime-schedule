@@ -294,7 +294,7 @@ async function awardsReveal(body,env){
 }
 // Anime-Börse (boerse.html): play money for the season's real anime, traded the whole season at the day's close
 // (boerse-prices.json on the site, written daily by tools/boerse-prices.mjs; rules as in boerse-core.mjs).
-// Everyone starts with 1000 Taler; a trade costs a 1-Taler fee; a sale's money arrives the next day (T+1);
+// Open from 8 to 22 German time. Everyone starts with 1000 Taler; a trade costs a 1-Taler fee; a sale's money arrives the next day (T+1);
 // selling more than you hold is a short sale, up to 1000 Taler in shorts; a show whose price fell 7 % or more
 // today is halted for the day (circuit breaker). "stock:<season>:<person>" = { person, cash, pending: [{ amount,
 // on }], holdings: { title: shares }, trades: [...] }. Holdings stay private until the season is over; the
@@ -309,6 +309,9 @@ function stockWindow(season,now=Date.now()){
  return {from:new Date(from).toISOString(),to:new Date(to).toISOString(),open:now>=from&&now<to,over:now>=to};
 }
 const berlinDay=t=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin'}).format(new Date(t));
+// opening hours: 8:00 to 22:00 German time, every day
+const berlinHour=t=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',hourCycle:'h23'}).format(new Date(t)));
+const marketOpen=t=>{const h=berlinHour(t);return h>=8&&h<22;};
 const dayAfter=d=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+1);return x.toISOString().slice(0,10);};
 const cents=n=>Math.round(n*100)/100;
 let pricesCache=null;
@@ -342,7 +345,7 @@ async function stocksGet(url,env,now,request){
  // your own account only with your AniList login or PIN
  const me=person?await verifiedPerson(request,env,person):null;
  const mine=me?accounts.find(a=>a.person===me)||{person:me,cash:STOCK_CASH,pending:[],holdings:{},trades:[]}:null;
- return {season,...window,today,cash:STOCK_CASH,fee:STOCK_FEE,shortLimit:STOCK_SHORT,ranking,
+ return {season,...window,today,market:marketOpen(now),cash:STOCK_CASH,fee:STOCK_FEE,shortLimit:STOCK_SHORT,ranking,
   account:mine?settled(mine,today):null,
   ...(window.over&&{portfolios:accounts.map(a=>({person:a.person,holdings:a.holdings||{},trades:a.trades||[]}))})};
 }
@@ -350,6 +353,7 @@ async function stocksTrade(body,env,now,request){
  const season=awardSeason(body.season),title=awardTitle(body.title),qty=body.qty;
  const person=await verifiedPerson(request,env,body.person);
  if(!stockWindow(season,now).open)fail(409,'Für diese Season wird gerade nicht gehandelt.');
+ if(!marketOpen(now))fail(409,'Die Börse ist geschlossen: gehandelt wird von 8 bis 22 Uhr.');
  if(!Number.isInteger(qty)||qty===0||Math.abs(qty)>50)fail(400,'Ungültige Anzahl.');
  const priced=await stockPrices(env,season),show=priced.shows?.[title];
  if(!show?.closes?.length)fail(400,'Diese Serie wird nicht gehandelt.');

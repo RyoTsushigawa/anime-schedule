@@ -16,7 +16,12 @@ export function tradingWindow(season, now = Date.now()) {
   const from = start - DAYS, to = end.getTime() - 3600000;
   return { from, to, open: now >= from && now < to };
 }
+// opening hours: 8:00 to 22:00 German time, every day; the day's close is set after 22:00
+export const OPEN_HOUR = 8, CLOSE_HOUR = 22;
+export const berlinHour = (time = Date.now()) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date(time)));
+export const marketOpen = (time = Date.now()) => { const h = berlinHour(time); return h >= OPEN_HOUR && h < CLOSE_HOUR; };
 export const berlinDay = (time = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date(time));
+export const prevDay = day => { const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
 export const nextDay = day => { const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
 
 // A drop clearly costs value, the earlier the more: dropped after the first episode counts as 0/100, at the very
@@ -58,7 +63,7 @@ export function nextClose({ prev, fair, popNow = 0, popBefore = 0, trending = 0,
   price *= 1 + noise(seed);
   return Math.max(1, Math.round(price * 100) / 100);
 }
-// circuit breaker: a fall of 7 % or more in a day halts trading in that show for the day
+// circuit breaker: a fall of 7 % or more at a day's close halts trading in that show the next trading day
 export const halted = (close, prev) => prev > 0 && close <= prev * (1 - HALT);
 
 // accounts (the votes helper keeps them): unsettled money becomes cash from its day on (T+1)

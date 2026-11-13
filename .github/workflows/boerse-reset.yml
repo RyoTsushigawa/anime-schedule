@@ -33,7 +33,7 @@ jobs:
           [ -n "$id" ] || { echo "::error::KV namespace anime-awards not found"; exit 1; }
           npx --yes wrangler@4 kv key list --namespace-id "$id" --prefix "stock:$SEASON:" --remote > keys.json
           node -e 'const s=require("fs").readFileSync("keys.json","utf8");const k=JSON.parse(s.slice(s.indexOf("[")));require("fs").writeFileSync("names.txt",k.map(x=>x.name).join("\n"));console.log(k.length+" Depots: "+k.map(x=>x.name.split(":").pop()).join(", "))'
-          while IFS= read -r key; do
+          while IFS= read -r key || [ -n "$key" ]; do   # the last name has no line break after it
             [ -n "$key" ] || continue
             npx --yes wrangler@4 kv key delete --namespace-id "$id" "$key" --remote
           done < names.txt

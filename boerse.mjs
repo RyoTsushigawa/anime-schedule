@@ -1,7 +1,7 @@
 // Anime-Börse (boerse.html): play money for the season's real anime, traded the whole season at the day's close.
 // Prices: boerse-prices.json (tools/boerse-prices.mjs, daily). Accounts and trades: the votes helper
 // (workers/season-votes, /stocks). Rules: boerse-core.mjs.
-import { CASH, FEE, PRICE, tradingWindow, berlinDay, latestPrices, pendingSum, accountValue } from './boerse-core.mjs';
+import { CASH, FEE, PRICE, OPEN_HOUR, CLOSE_HOUR, tradingWindow, berlinDay, marketOpen, latestPrices, pendingSum, accountValue } from './boerse-core.mjs';
 
 const BALLOT_PEOPLE = { MaRyo: ['Marvin', 'Ryo'] };
 const voters = names => names.flatMap(name => BALLOT_PEOPLE[name] || [name]);
@@ -49,11 +49,12 @@ const change = title => { const c = priced.shows[title]?.closes || []; return c.
 const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 
 function draw() {
-  const win = tradingWindow(seasonName()), open = !!state?.open && !!state?.account;
-  // the season's dates decide what the line says, also when the helper can't be reached
-  const running = win && (state ? state.open : win.open);
-  $('stockWindow').textContent = !win ? '' : running ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
-    : Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand';
+  // the season's dates and the opening hours (8–22) decide, also when the helper can't be reached
+  const win = tradingWindow(seasonName()), running = win && (state ? state.open : win.open), hours = marketOpen();
+  const open = !!state?.open && !!state?.account && hours;
+  const close = priced.days.length ? ' · Schlusskurs vom ' + day(priced.days[priced.days.length - 1]) : '';
+  $('stockWindow').textContent = !win ? '' : !running ? (Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand')
+    : hours ? `Börse geöffnet bis ${CLOSE_HOUR}:00${close}` : `Börse geschlossen · öffnet um ${OPEN_HOUR}:00${close}`;
   const a = state?.account || { cash: CASH, pending: [], holdings: {}, trades: [] };
   const value = accountValue(a, prices);
   $('stockWallet').hidden = !state?.account;
@@ -162,6 +163,9 @@ async function loadSeason() {
   } catch { if (turn === request) $('stockStatus').textContent = 'Der Guckplan konnte nicht geladen werden.'; }
 }
 $('stockPerson').onchange = () => loadPerson();
+// opening and closing at 8 and 22 show without a reload
+let wasOpen = marketOpen();
+setInterval(() => { if (marketOpen() !== wasOpen) { wasOpen = marketOpen(); draw(); } }, 30000);
 $('stockSeason').onchange = loadSeason;
 
 (async () => {
