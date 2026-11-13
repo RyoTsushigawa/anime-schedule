@@ -47,7 +47,7 @@ const SITE_FEATURES = [
     'Nominierte durchsuchen (auch Figuren von AniList)', 'Ceddl of the Year: Kandidaten über die Season sammeln', 'Geheime Gruppenabstimmung mit „Auflösen“',
     'Punktevergabe-Show: Wertung für Wertung, „… und unsere 12 Punkte gehen an …“', 'Ruhmeshalle']],
   ['Anime-Börse', ['Aktien auf die Season-Anime mit Spielgeld, die ganze Season handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
-    'Kurs-Graphen pro Serie und für dein Depot', 'Wall-Street-Regeln: Ordergebühr, T+1, Leerverkäufe, Circuit Breaker', 'Rangliste nach Depotwert']],
+    'Kurs-Graphen pro Serie und für dein Depot', 'Wall-Street-Regeln: Ordergebühr, T+1, Leerverkäufe, Circuit Breaker', 'Rangliste nach Depotwert', 'Nur für dich: Bestätigung über AniList oder PIN (auch bei den Awards)']],
   ['Spiele', ['Spieleseite mit dem heutigen Stand', 'Titel-Rätsel (täglich / endlos, normal / schwer, Hinweise)', 'Anime Cover Quiz',
     'Inhalts-Rätsel mit Archiv und Statistik', 'Anime-Quiz']],
   ['Sonstiges', ['Masterset Tracker', 'McRib bestellen']],

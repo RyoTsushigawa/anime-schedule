@@ -1681,3 +1681,10 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 :root[data-textsize="xl"] body { zoom: 1.25; width: calc(100vw / 1.25); }
 :root[data-contrast="high"] body { --muted: color-mix(in srgb, var(--text) 82%, var(--bg)); --line: color-mix(in srgb, var(--text) 34%, var(--bg)); }
 :root[data-textsize] .top-actions { flex-wrap: wrap; row-gap: 6px; }
+
+/* Awards and Börse: who you are (identity.js) */
+.identity-box { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; margin: -.3rem 0 1rem; font-size: 13px; color: var(--muted); }
+.identity-box:empty { display: none; }
+.identity-box.ok { color: #4fbf7f; }
+.identity-box.need a { color: var(--text); }
+.identity-box input { width: 9rem; }

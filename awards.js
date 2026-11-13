@@ -38,6 +38,9 @@ let people = [];
 const BALLOT_PEOPLE = { MaRyo: ['Marvin', 'Ryo'] };
 const voters = names => names.flatMap(name => BALLOT_PEOPLE[name] || [name]);
 let voteApi = '';
+// only for yourself: your AniList login or your PIN goes with the ballot (identity.js)
+const ID = typeof Identity === 'undefined' ? null : Identity;
+const drawIdentity = () => { if (ID && $('awardsIdentity')) ID.draw($('awardsIdentity'), revealed() ? '' : personSelect.value, () => drawShared()); };
 let shared = null; // the helper's answer for this season: { revealed, voters, ballots? } or { error }
 let showInfo = new Map(); // title → { genres, sequel, chars: [{ name, role }] } from AniList, when reachable
 let ceddl = []; // Ceddl of the Year candidates: [{ id, name, anime, by }]
@@ -104,7 +107,7 @@ function updateAwardsCopy() {
   copyButton.textContent = revealed() ? 'Ergebnis für Discord kopieren' : 'Für Discord kopieren';
   $('awardsManual').hidden = true;
   const submit = $('awardsSubmit');
-  if (submit) submit.disabled = !ballotSummary().length;
+  if (submit) submit.disabled = !ballotSummary().length || (!!ID && !ID.canAct(personSelect.value));
   const filled = awardCategories.filter(([id]) => (ballot[id] || []).some(Boolean)).length;
   $('awardsProgress').textContent = `${filled} von ${awardCategories.length} Kategorien ausgefüllt`;
 }
@@ -251,11 +254,11 @@ $('awardsCeddlList').addEventListener('click', e => {
 });
 
 // The shared part: who has voted, the buttons, and after "Auflösen" the results
-async function awardsCall(path, body) {
+async function awardsCall(path, body, person = '') {
   let code = '';
   try { code = sessionStorage.getItem('previewGroupCode') || ''; } catch {}
   const response = await fetch(voteApi + path, { method: body ? 'POST' : 'GET', cache: 'no-store',
-    headers: { ...(code && { 'X-Group-Code': code }), ...(body && { 'Content-Type': 'application/json' }) },
+    headers: { ...(code && { 'X-Group-Code': code }), ...(person && ID && ID.headers(person)), ...(body && { 'Content-Type': 'application/json' }) },
     ...(body && { body: JSON.stringify(body) }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(response.status === 401 ? 'Gruppencode fehlt: einmal in der Season Preview eingeben' : data.error || 'Fehler ' + response.status);
@@ -273,6 +276,7 @@ function drawShared() {
   const box = $('awardsGroup'), results = $('awardsResults');
   box.hidden = !voteApi; results.hidden = !revealed();
   ballotElement.hidden = $('awardsIntro').hidden = $('awardsProgress').hidden = revealed();
+  if ($('awardsIdentity')) $('awardsIdentity').hidden = revealed() || !voteApi;
   personSelect.closest('label').hidden = revealed();
   drawCeddl();
   if (!voteApi) return;
@@ -289,7 +293,9 @@ function drawShared() {
     const actions = document.createElement('div'); actions.className = 'awards-actions';
     const submit = document.createElement('button'); submit.type = 'button'; submit.id = 'awardsSubmit'; submit.className = 'pill primary';
     submit.textContent = voted.has(personSelect.value) ? 'Stimme ändern' : 'Stimme abgeben';
-    submit.disabled = !ballotSummary().length;
+    const confirmed = !ID || ID.canAct(personSelect.value);
+    submit.disabled = !ballotSummary().length || !confirmed;
+    if (!confirmed) submit.title = 'Erst oben bestätigen, dass du ' + personSelect.value + ' bist';
     submit.onclick = submitBallot;
     const reveal = document.createElement('button'); reveal.type = 'button'; reveal.id = 'awardsReveal'; reveal.className = 'pill';
     reveal.textContent = 'Auflösen'; reveal.disabled = !voted.size;
@@ -396,7 +402,7 @@ async function submitBallot() {
   const button = $('awardsSubmit'); button.disabled = true;
   awardsStatus.textContent = 'Wird abgegeben…';
   try {
-    await awardsCall('/awards/ballot', { season: seasonName(), person: personSelect.value, picks });
+    await awardsCall('/awards/ballot', { season: seasonName(), person: personSelect.value, picks }, personSelect.value);
     awardsStatus.textContent = 'Stimme von ' + personSelect.value + ' abgegeben. Bis zum Auflösen sieht sie niemand.';
     shared = { ...shared, voters: [...new Set([...(shared?.voters || []), personSelect.value])] };
     drawShared();
@@ -430,12 +436,16 @@ async function loadAwardsSeason(tab) {
     people = voters(plan.people);
     personSelect.replaceChildren(...people.map(name => new Option(name, name)));
     if (people.includes(wanted)) personSelect.value = wanted;
+    // your own name first when your AniList login is in this browser
+    else if (ID) { await ID.ready; const mine = ID.myPeople().find(p => people.includes(p)); if (mine) personSelect.value = mine; }
     if (!nominees.size || !people.length) {
       awardsStatus.textContent = 'Für diese Season ist kein Stimmzettel verfügbar.';
       return;
     }
     personSelect.disabled = false;
     awardsStatus.textContent = '';
+    if (ID) await ID.ready;
+    drawIdentity();
     renderBallot();
     drawShared();
     loadShared();
@@ -452,6 +462,7 @@ async function loadAwardsSeason(tab) {
 
 personSelect.onchange = () => {
   awardsStatus.textContent = '';
+  drawIdentity();
   renderBallot();
   drawShared();
 };

@@ -12,11 +12,12 @@ const taler = n => (Math.round(n * 100) / 100).toLocaleString('de-DE', { maximum
 const pct = n => (n > 0 ? '+' : '') + n.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
 const cls = n => n > 0 ? 'up' : n < 0 ? 'down' : '';
 
-async function call(path, body) {
+// only for yourself: your AniList login or your PIN goes along (identity.js)
+async function call(path, body, person = '') {
   let code = '';
   try { code = sessionStorage.getItem('previewGroupCode') || ''; } catch {}
   const res = await fetch(voteApi + path, { method: body ? 'POST' : 'GET', cache: 'no-store',
-    headers: { ...(code && { 'X-Group-Code': code }), ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
+    headers: { ...(code && { 'X-Group-Code': code }), ...(person && Identity.headers(person)), ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(res.status === 401 ? 'Gruppencode fehlt: einmal in der Season Preview eingeben' : data.error || 'Fehler ' + res.status);
   return data;
@@ -48,12 +49,12 @@ const change = title => { const c = priced.shows[title]?.closes || []; return c.
 const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 
 function draw() {
-  const win = tradingWindow(seasonName()), open = !!state?.open;
+  const win = tradingWindow(seasonName()), open = !!state?.open && !!state?.account;
   $('stockWindow').textContent = !win ? '' : open ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
     : Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand';
   const a = state?.account || { cash: CASH, pending: [], holdings: {}, trades: [] };
   const value = accountValue(a, prices);
-  $('stockWallet').hidden = !state;
+  $('stockWallet').hidden = !state?.account;
   $('stockCash').textContent = taler(a.cash ?? CASH);
   $('stockPending').textContent = taler(pendingSum(a));
   $('stockValue').textContent = taler(value);
@@ -112,7 +113,7 @@ $('stockList').addEventListener('click', async e => {
   row.querySelectorAll('button[data-trade]').forEach(x => { x.disabled = true; });
   $('stockMsg').textContent = 'Order wird ausgeführt …';
   try {
-    const r = await call('/stocks/trade', { season: seasonName(), person: $('stockPerson').value, title, qty });
+    const r = await call('/stocks/trade', { season: seasonName(), person: $('stockPerson').value, title, qty }, $('stockPerson').value);
     state = { ...state, account: r.account };
     $('stockMsg').textContent = `${qty > 0 ? 'Gekauft' : 'Verkauft'}: ${Math.abs(qty)}× ${title} zu ${taler(r.price ?? price)} (+${FEE} Taler Gebühr)${qty < 0 ? '. Das Geld ist ab morgen verfügbar.' : '.'}`;
     loadPerson(false);
@@ -120,12 +121,20 @@ $('stockList').addEventListener('click', async e => {
 });
 
 async function loadPerson(clear = true) {
-  const turn = request;
+  const turn = request, person = $('stockPerson').value;
+  Identity.draw($('stockIdentity'), person, () => loadPerson());
+  // your own account only when you are confirmed; otherwise prices and the ranking
+  const mine = Identity.canAct(person);
   try {
-    state = await call('/stocks?season=' + encodeURIComponent(seasonName()) + '&person=' + encodeURIComponent($('stockPerson').value));
+    state = await call('/stocks?season=' + encodeURIComponent(seasonName()) + (mine ? '&person=' + encodeURIComponent(person) : ''), null, mine ? person : '');
     if (turn !== request) return;
-    $('stockStatus').textContent = '';
-  } catch (err) { if (turn === request) { state = null; $('stockStatus').textContent = 'Die Börse ist gerade nicht erreichbar: ' + err.message; } }
+    $('stockStatus').textContent = mine ? '' : 'Bestätige oben, dass du ' + person + ' bist, um dein Depot zu sehen und zu handeln.';
+  } catch (err) {
+    if (turn !== request) return;
+    if (mine) { try { state = await call('/stocks?season=' + encodeURIComponent(seasonName())); } catch { state = null; } }
+    else state = null;
+    $('stockStatus').textContent = (mine ? 'Nicht bestätigt: ' : 'Die Börse ist gerade nicht erreichbar: ') + err.message;
+  }
   if (clear) $('stockMsg').textContent = '';
   draw();
 }
@@ -143,7 +152,9 @@ async function loadSeason() {
     const wanted = $('stockPerson').value;
     people = voters(plan.people);
     $('stockPerson').replaceChildren(...people.map(p => new Option(p, p)));
+    await Identity.ready;
     if (people.includes(wanted)) $('stockPerson').value = wanted;
+    else { const me = Identity.myPeople().find(p => people.includes(p)); if (me) $('stockPerson').value = me; }
     $('stockPerson').disabled = false;
     await loadPerson();
   } catch { if (turn === request) $('stockStatus').textContent = 'Der Guckplan konnte nicht geladen werden.'; }

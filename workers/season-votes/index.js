@@ -10,7 +10,7 @@ function originHeaders(origin,env){
  const allowed=env.SITE_ORIGIN||DEFAULT_ORIGIN;
  if(origin!==allowed)return null;
  return {'Access-Control-Allow-Origin':allowed,'Access-Control-Allow-Methods':'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers':'X-Group-Code, Content-Type','Vary':'Origin'};
+  'Access-Control-Allow-Headers':'X-Group-Code, X-AniList-Token, X-Person-Pin, X-Owner-Key, Content-Type','Vary':'Origin'};
 }
 // Shared access code is a group-level permission, NOT verified individual identity.
 // Never expose GROUP_ACCESS_CODE or Google service-account credentials to the static site.
@@ -122,6 +122,81 @@ async function saveVote(body,env){
   fail(409,'Die gespeicherte Stimme stimmt nicht mit der Tabelle überein. Bitte aktualisieren.');
  return {ok:true,person,choice};
 }
+// Who is acting (Awards ballots, Börse orders, your own Börse account): a person with an AniList account in
+// "Wer ist wer" (wrapped-profiles.json on the site) proves it with their AniList login (X-AniList-Token; the helper
+// only asks AniList whose login it is and keeps nothing). A person without one uses a PIN (X-Person-Pin), set the
+// first time; only a salted SHA-256 is kept ("pin:<person>"), and 5 wrong tries lock it for 15 minutes. The owner
+// can reset a PIN with the site's GitHub key (X-Owner-Key, checked against GitHub). MaRyo's two accounts are
+// two people.
+const ACCOUNT_PERSON={ryotsushigawa:'Ryo',milkyway95:'Marvin'};
+const SHARED_COLUMN={MaRyo:['Marvin','Ryo']};
+let profilesCache=null;
+async function accountPeople(env){
+ const url=(env.SITE_URL||'https://ryotsushigawa.github.io/anime-schedule/')+'wrapped-profiles.json';
+ if(!profilesCache||profilesCache.url!==url||Date.now()-profilesCache.at>300000){
+  const res=await fetch(url+'?'+Date.now());
+  if(!res.ok)fail(503,'"Wer ist wer" ist gerade nicht erreichbar.');
+  const map=new Map();
+  for(const [person,accounts] of Object.entries(await res.json()))for(const a of accounts||[])
+   if(a?.provider==='anilist'&&typeof a.name==='string'){const key=a.name.toLowerCase();map.set(key,ACCOUNT_PERSON[key]||(SHARED_COLUMN[person]?null:person));}
+  profilesCache={url,at:Date.now(),map};
+ }
+ return profilesCache.map;
+}
+const pinHash=async (salt,pin)=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pin)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+async function verifiedPerson(request,env,claimed){
+ const person=str(claimed);
+ if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+ const token=str(request.headers.get('X-AniList-Token'));
+ const people=await accountPeople(env);
+ const hasAniList=[...people.values()].includes(person);
+ if(token){
+  if(token.length>4000)fail(400,'Ungültige Anmeldung.');
+  const res=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:'Bearer '+token},body:JSON.stringify({query:'{ Viewer { name } }'})});
+  const name=res.ok?(await res.json().catch(()=>({})))?.data?.Viewer?.name:null;
+  if(!name)fail(401,'Die AniList-Anmeldung ist abgelaufen: auf der Hauptseite neu verbinden.');
+  const who=people.get(name.toLowerCase());
+  if(!who)fail(403,'Das AniList-Konto '+name+' steht nicht in „Wer ist wer“.');
+  if(who!==person)fail(403,'Mit dem AniList-Konto '+name+' kannst du nur als '+who+' handeln.');
+  return person;
+ }
+ if(hasAniList)fail(403,person+' meldet sich mit AniList an: auf der Hauptseite das AniList-Konto verbinden.');
+ const pin=str(request.headers.get('X-Person-Pin'));
+ if(!/^\S{4,32}$/.test(pin))fail(401,'PIN nötig (4 bis 32 Zeichen).');
+ const store=awardsStore(env),key='pin:'+person;
+ const saved=JSON.parse(await store.get(key)||'null');
+ if(!saved){
+  const salt=crypto.randomUUID();
+  await store.put(key,JSON.stringify({salt,hash:await pinHash(salt,pin),at:new Date().toISOString()}));
+  return person;
+ }
+ if(saved.lockedUntil&&Date.parse(saved.lockedUntil)>Date.now())fail(429,'Zu viele falsche PINs: in 15 Minuten nochmal.');
+ if(await pinHash(saved.salt,pin)!==saved.hash){
+  const fails=(saved.fails||0)+1;
+  await store.put(key,JSON.stringify({...saved,fails:fails>=5?0:fails,...(fails>=5&&{lockedUntil:new Date(Date.now()+900000).toISOString()})}));
+  fail(403,'Falsche PIN.');
+ }
+ if(saved.fails||saved.lockedUntil)await store.put(key,JSON.stringify({salt:saved.salt,hash:saved.hash,at:saved.at}));
+ return person;
+}
+// the owner (the site's GitHub key, checked with GitHub) resets a forgotten PIN
+async function pinReset(request,body,env){
+ const key=str(request.headers.get('X-Owner-Key'));
+ if(!key)fail(401,'Nur mit dem GitHub-Schlüssel der Seite.');
+ const res=await fetch('https://api.github.com/repos/RyoTsushigawa/anime-schedule',{headers:{Authorization:'Bearer '+key,Accept:'application/vnd.github+json','User-Agent':'anime-season-preview-votes'}});
+ if(!res.ok||!(await res.json().catch(()=>({})))?.permissions?.push)fail(403,'Dieser Schlüssel darf die Seite nicht ändern.');
+ const person=str(body.person);
+ if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+ await awardsStore(env).delete?.('pin:'+person);
+ return {ok:true,person};
+}
+// who needs what: AniList (with the account) or a PIN (and whether one is set)
+async function identityInfo(url,env){
+ const people=await accountPeople(env),person=str(url.searchParams.get('person'));
+ if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+ const accounts=[...people].filter(([,p])=>p===person).map(([a])=>a);
+ return {person,anilist:accounts,pinSet:!accounts.length&&!!(await awardsStore(env).get('pin:'+person))};
+}
 // Seasonal Anime Awards (awards.html): one secret ballot per person and season in KV (binding AWARDS),
 // "ballot:<season>:<person>" = { person, picks: { category: [12 points, 10 points, 8 points] }, at } (a pick from
 // before the points system is one title: it counts as 12 points). Before "Auflösen" only the names of who voted
@@ -165,9 +240,8 @@ async function awardsGet(url,env){
   ...(revealed&&{ballots:ballots.map(b=>({person:b.person,picks:b.picks}))})};
 }
 const awardTitle=v=>{const t=str(v);if(t.length>200||/[<>]/.test(t))fail(400,'Ungültiger Anime-Titel.');return t;};
-async function awardsBallot(body,env){
- const season=awardSeason(body.season),person=str(body.person);
- if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+async function awardsBallot(body,env,request){
+ const season=awardSeason(body.season),person=await verifiedPerson(request,env,body.person);
  const picks={};
  if(!body.picks||typeof body.picks!=='object'||Array.isArray(body.picks))fail(400,'Ungültiger Stimmzettel.');
  for(const [category,value] of Object.entries(body.picks)){
@@ -260,19 +334,21 @@ async function stockAccounts(env,season){
   cursor=page.list_complete?undefined:page.cursor;}while(cursor);
  return list;
 }
-async function stocksGet(url,env,now){
+async function stocksGet(url,env,now,request){
  const season=awardSeason(url.searchParams.get('season')),window=stockWindow(season,now),today=berlinDay(now);
  const [accounts,priced]=await Promise.all([stockAccounts(env,season),stockPrices(env,season)]);
  const prices=latest(priced),person=str(url.searchParams.get('person'));
  const ranking=accounts.map(a=>({person:a.person,value:accountValue(a,prices)})).sort((x,y)=>y.value-x.value||x.person.localeCompare(y.person,'de'));
- const mine=person&&AWARD_NAME.test(person)?accounts.find(a=>a.person===person):null;
+ // your own account only with your AniList login or PIN
+ const me=person?await verifiedPerson(request,env,person):null;
+ const mine=me?accounts.find(a=>a.person===me)||{person:me,cash:STOCK_CASH,pending:[],holdings:{},trades:[]}:null;
  return {season,...window,today,cash:STOCK_CASH,fee:STOCK_FEE,shortLimit:STOCK_SHORT,ranking,
   account:mine?settled(mine,today):null,
   ...(window.over&&{portfolios:accounts.map(a=>({person:a.person,holdings:a.holdings||{},trades:a.trades||[]}))})};
 }
-async function stocksTrade(body,env,now){
- const season=awardSeason(body.season),person=str(body.person),title=awardTitle(body.title),qty=body.qty;
- if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+async function stocksTrade(body,env,now,request){
+ const season=awardSeason(body.season),title=awardTitle(body.title),qty=body.qty;
+ const person=await verifiedPerson(request,env,body.person);
  if(!stockWindow(season,now).open)fail(409,'Für diese Season wird gerade nicht gehandelt.');
  if(!Number.isInteger(qty)||qty===0||Math.abs(qty)>50)fail(400,'Ungültige Anzahl.');
  const priced=await stockPrices(env,season),show=priced.shows?.[title];
@@ -373,18 +449,30 @@ export default {
     await authorized(request,env);
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
-    return json(path==='/awards/ballot'?await awardsBallot(body,env):await awardsReveal(body,env),200,cors);
+    return json(path==='/awards/ballot'?await awardsBallot(body,env,request):await awardsReveal(body,env),200,cors);
+   }
+   if(request.method==='GET'&&path==='/identity'){
+    await authorized(request,env);
+    return json(await identityInfo(new URL(request.url),env),200,cors);
+   }
+   if(request.method==='POST'&&(path==='/identity/check'||path==='/identity/pin-reset')){
+    if(Number(request.headers.get('Content-Length')||0)>1024)fail(413,'Anfrage zu groß.');
+    await authorized(request,env);
+    const body=await request.json();
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    if(path==='/identity/pin-reset')return json(await pinReset(request,body,env),200,cors);
+    return json({ok:true,person:await verifiedPerson(request,env,body.person)},200,cors);
    }
    if(request.method==='GET'&&path==='/stocks'){
     await authorized(request,env);
-    return json(await stocksGet(new URL(request.url),env,Number(env.TEST_NOW)||Date.now()),200,cors);
+    return json(await stocksGet(new URL(request.url),env,Number(env.TEST_NOW)||Date.now(),request),200,cors);
    }
    if(request.method==='POST'&&path==='/stocks/trade'){
     if(Number(request.headers.get('Content-Length')||0)>2048)fail(413,'Anfrage zu groß.');
     await authorized(request,env);
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
-    return json(await stocksTrade(body,env,Number(env.TEST_NOW)||Date.now()),200,cors);
+    return json(await stocksTrade(body,env,Number(env.TEST_NOW)||Date.now(),request),200,cors);
    }
    if(request.method==='GET'&&path==='/reports'){
     await authorized(request,env);
