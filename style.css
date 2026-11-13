@@ -1656,3 +1656,9 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .health-list p { margin: 2px 0 0; font-size: 12px; }
 .health-list a { color: var(--text); text-decoration: none; }
 .health-list a:hover b { text-decoration: underline; }
+
+/* N85 Lesbarkeit: bigger everything (the page is sized in px, so the body is zoomed) and stronger greys */
+:root[data-textsize="large"] body { zoom: 1.12; width: calc(100vw / 1.12); }
+:root[data-textsize="xl"] body { zoom: 1.25; width: calc(100vw / 1.25); }
+:root[data-contrast="high"] body { --muted: color-mix(in srgb, var(--text) 82%, var(--bg)); --line: color-mix(in srgb, var(--text) 34%, var(--bg)); }
+:root[data-textsize] .top-actions { flex-wrap: wrap; row-gap: 6px; }

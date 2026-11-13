@@ -139,3 +139,39 @@ test('shared voting: who voted shows before Auflösen, the winners after; nothin
   assert.match(byId('awardsResults').textContent, /Rei: Anime der Season Beta EN/);
   assert.ok(calls.includes('POST /awards/reveal'));
 });
+
+test('N84 Ruhmeshalle: only revealed seasons, their winners, and who picked winners most', async t => {
+  const dom = new JSDOM(read('awards.html'), { url: 'https://schedule.example/awards.html', runScripts: 'outside-only' });
+  const { window } = dom;
+  t.after(() => window.close());
+  const byId = id => window.document.getElementById(id);
+  const data = {
+    'Herbst 2026': { revealed: true, voters: ['Ryo', 'Mia', 'Rei'], ballots: [
+      { person: 'Ryo', picks: { best: 'Frieren', opening: 'Dandadan' } },
+      { person: 'Mia', picks: { best: 'Frieren', opening: 'Gachiakuta' } },
+      { person: 'Rei', picks: { best: 'Dandadan', opening: 'Dandadan' } }] },
+    'Winter 2027': { revealed: false, voters: ['Ryo'] },
+  };
+  window.fetch = async url => ({ ok: true, status: 200, json: async () => data[new URL(url).searchParams.get('season')] || { revealed: false, voters: [] } });
+  window.eval(`
+    const $ = id => document.getElementById(id);
+    const SHEET_ID = 'test-sheet';
+    const norm = value => value.toLowerCase();
+    const config = async () => ({ previewVotesUrl: 'https://votes.test/' });
+    const guckplanTabs = async () => [{ gid: '3', name: 'Guckplan Winter 2027' }, { gid: '2', name: 'Guckplan Herbst 2026' }];
+    const tabFor = tabs => tabs[0];
+    const loadPlan = async () => ({ people: ['Ryo', 'Mia', 'Rei'], shows: [{ romaji: 'Frieren', english: 'Frieren' }] });
+    ${read('awards.js')}
+  `);
+  const tick = async () => { for (let i = 0; i < 8; i++) await new Promise(r => setImmediate(r)); };
+  await tick();
+  const hall = byId('awardsHall');
+  assert.equal(hall.hidden, false);
+  hall.open = true; hall.dispatchEvent(new window.Event('toggle'));
+  await tick();
+  const seasons = [...byId('awardsHallBody').querySelectorAll('.awards-hall-season h3')].map(h => h.textContent);
+  assert.deepEqual(seasons, ['Herbst 2026']);
+  assert.match(byId('awardsHallBody').textContent, /Anime der Season\s*Frieren/);
+  assert.match(byId('awardsHallBody').textContent, /Bestes Opening\s*Dandadan/);
+  assert.match(byId('awardsHallBody').querySelector('.awards-hall-note').textContent, /Ryo \(2\), Mia \(1\), Rei \(1\)/);
+});

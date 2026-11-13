@@ -40,3 +40,18 @@ test('N39: Datenstand lists every source, with a saved copy flagged', async () =
     assert.match(rows.join('\n'), /Trailer-Listen/);
   } finally { p.close(); }
 });
+
+test('N85: text size and contrast are settings that stay, without reloading the plan', async () => {
+  const p = await openPage();
+  try {
+    const root = p.document.documentElement, calls = p.calls.length;
+    await p.click(p.document.querySelector('[data-set="textsize"][data-value="xl"]'));
+    await p.click(p.document.querySelector('[data-set="contrast"][data-value="high"]'));
+    assert.equal(root.dataset.textsize, 'xl');
+    assert.equal(root.dataset.contrast, 'high');
+    assert.equal(p.window.localStorage.getItem('textsize'), 'xl');
+    assert.equal(p.calls.length, calls, 'no new requests');
+    await p.click(p.document.querySelector('[data-set="textsize"][data-value="normal"]'));
+    assert.equal(root.dataset.textsize, undefined);
+  } finally { p.close(); }
+});
