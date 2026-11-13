@@ -190,7 +190,7 @@ if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 // Abwesenheiten: a month calendar (top bar button, or any day's "Abwesend") where planned absences
 // go in for one day or a range, the whole day or only "ab"/"bis" a time. Shows with too few people
 // left are skipped on the schedule and in the Discord message.
-const awayCal = { month: null, start: null, end: null, mode: 'day', repeat: 'once' };
+const awayCal = { month: null, start: null, end: null, mode: 'day', repeat: 'once', tab: 'calendar' };
 const AWAY_REPEAT_WEEKS = 12;
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const allPeople = () => {
@@ -206,6 +206,15 @@ const days = [];
 for (let d = awayCal.start; d <= (awayCal.end || awayCal.start) && days.length < 92; d = addDay(d, 1)) days.push(d);
 return days;
 }
+function showAwayTab(tab) {
+  awayCal.tab = tab === 'recurring' ? 'recurring' : 'calendar';
+  const calendar = awayCal.tab === 'calendar';
+  $('awayCalendarPanel').hidden = !calendar;
+  $('awayRecurringPanel').hidden = calendar;
+  $('awayTabCalendar').setAttribute('aria-selected', String(calendar));
+  $('awayTabRecurring').setAttribute('aria-selected', String(!calendar));
+  drawAwayList();
+}
 function openAway(date) {
 const today = isoDay(new Date());
 const pick = date && date >= today ? date : null;
@@ -214,6 +223,7 @@ awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.repeat =
 // in Solo view the dialog starts with that person chosen, until someone picks by hand
 awayCal.me = mode === 'solo' && soloPerson ? soloPerson : null;
 $('awayMsg').textContent = '';
+showAwayTab('calendar');
 drawAway();
 $('awayDlg').showModal();
 }
@@ -267,7 +277,9 @@ return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="$
 }
 function drawAwayList() {
 const today = isoDay(new Date());
-const entries = absent.filter(x => x.day >= today).flatMap(x => (x.people || []).map(p => ({ p, day: x.day, cond: awayLabel(x) })));
+// Include historical dates for detecting a weekly pattern even with fewer than three future occurrences.
+// The underlying saved entries are never consolidated or rewritten here.
+const entries = absent.flatMap(x => (x.people || []).map(p => ({ p, day: x.day, cond: awayLabel(x) })));
 const byPerson = new Map();
 for (const it of entries) {
   const key = JSON.stringify([it.p, it.cond]);
@@ -308,13 +320,22 @@ for (const group of byPerson.values()) {
   }
 }
 runs.sort((a, b) => a.from.localeCompare(b.from) || a.p.localeCompare(b.p));
-$('awayList').innerHTML = runs.length ? runs.map(r => {
+const recurring = awayCal.tab === 'recurring';
+// Show a single row per weekly series, not one row for every occurrence.
+// Only future days are included in edit/remove actions; past entries stay saved.
+const visible = runs.filter(r => Boolean(r.weekly) === recurring).map(r => {
+  const days = r.days.filter(d => d >= today);
+  return days.length ? { ...r, from: days[0], to: days.at(-1), days } : null;
+}).filter(Boolean);
+$('awayListTitle').textContent = recurring ? 'Wiederkehrende Abwesenheiten' : 'Einmalige Einträge';
+$('awayListCount').textContent = visible.length ? visible.length + (visible.length === 1 ? ' Eintrag' : ' Einträge') : '';
+$('awayList').innerHTML = visible.length ? visible.map(r => {
   const dates = r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`;
-  const label = r.weekly ? `Jede Woche · ${r.days.length} Termine · ${dates}` : dates;
+  const label = r.weekly ? `Jede Woche · ${r.days.length} kommende Termine · ${dates}` : dates;
   const action = r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen';
   const payload = esc(JSON.stringify(r));
   return `<li><span class="away-who" style="${personStyle(r.p)}">${esc(r.p)}</span><span>${esc(label)} · ${esc(r.cond)}</span><span class="away-entry-actions"><button type="button" class="pill" data-away-edit="${payload}" aria-label="Eintrag bearbeiten: ${esc(r.p)}" title="Eintrag bearbeiten">Bearbeiten</button><button type="button" class="pill" data-away-remove="${payload}" aria-label="${action}: ${esc(r.p)}" title="${action}">✕</button></span></li>`;
-}).join('') : '<li class="muted">Niemand hat etwas eingetragen.</li>';
+}).join('') : `<li class="muted">${recurring ? 'Keine kommenden wöchentlichen Wiederholungen.' : 'Keine kommenden einmaligen Einträge.'}</li>`;
 }
 // Saves the absences of the given days (the rest stay as they are).
 async function saveAway(next, days) {
@@ -336,6 +357,18 @@ drawAway();
 try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
 }
 $('awayButton').onclick = () => openAway();
+$('awayTabCalendar').onclick = () => showAwayTab('calendar');
+$('awayTabRecurring').onclick = () => showAwayTab('recurring');
+$('awayNewRecurring').onclick = () => {
+  awayCal.start = null;
+  awayCal.end = null;
+  awayCal.repeat = 'weekly';
+  awayCal.mode = 'day';
+  awayCal.month = isoDay(new Date()).slice(0, 7);
+  $('awayMsg').textContent = '';
+  showAwayTab('calendar');
+  drawAway();
+};
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-absent]');
 if (b) openAway(b.closest('.day').dataset.date);
@@ -418,6 +451,7 @@ if (edit) {
   awayCal.mode = existing?.maybe ? 'maybe' : existing?.from ? 'from' : existing?.until ? 'until' : 'day';
   if (existing?.from || existing?.until) $('awayClock').value = existing.from || existing.until;
   $('awayMsg').textContent = 'Eintrag ausgewählt. Änderungen vornehmen und speichern.';
+  showAwayTab('calendar');
   drawAway();
   for (const b of $('awayPeople').querySelectorAll('[data-away]'))
     b.setAttribute('aria-pressed', String(b.dataset.away === run.p));
