@@ -374,6 +374,38 @@ $('accountCheckRetry').onclick = checkListConnection;
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
 $('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
+function drawEpisodeCrosswalk() {
+  const show = $('episodeCrosswalkShow').value;
+  const input = $('episodeCrosswalkNumber');
+  const result = $('episodeCrosswalkResults');
+  const episode = input.valueAsNumber;
+  const fromPlan = $('episodeCrosswalkFrom').value === 'plan';
+  const aniList = fromPlan ? episode + lagOf(show) : episode;
+  const plan = fromPlan ? episode : episode - lagOf(show);
+  const rows = !show ? ['Keine bestätigte Nummernabweichung geladen.']
+    : !Number.isSafeInteger(episode) || !input.validity.valid ? ['Gib eine ganze Folgennummer ab 1 ein.']
+    : [
+      aniList > 0 ? 'AniList: Folge ' + aniList : 'AniList: Keine Zuordnung für diese Folge',
+      plan > 0 ? 'Guckplan: Folge ' + plan : 'Guckplan: Keine Zuordnung für diese Folge',
+      'MyAnimeList: Nummerierung nicht bestätigt',
+      'Streamingdienste: Staffel- und Folgennummern nicht bestätigt',
+    ];
+  result.replaceChildren(...rows.map(text => Object.assign(document.createElement('li'), { textContent: text })));
+}
+$('episodeCrosswalkButton').onclick = () => {
+  showSettings(false);
+  const select = $('episodeCrosswalkShow'), input = $('episodeCrosswalkNumber');
+  const options = Object.entries(streamsDe?.release || {})
+    .filter(([id, entry]) => Number.isSafeInteger(entry.lag) && entry.lag !== 0 && streamsDe.status?.[id]?.titles?.[0])
+    .map(([id]) => new Option(streamsDe.status[id].titles[0], id));
+  select.replaceChildren(...options);
+  select.disabled = input.disabled = $('episodeCrosswalkFrom').disabled = !options.length;
+  drawEpisodeCrosswalk();
+  $('episodeCrosswalkDlg').showModal();
+};
+$('episodeCrosswalkShow').onchange = drawEpisodeCrosswalk;
+$('episodeCrosswalkNumber').oninput = drawEpisodeCrosswalk;
+$('episodeCrosswalkFrom').onchange = drawEpisodeCrosswalk;
 $('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
 $('notesButton').onclick = () => {
 showSettings(false);
