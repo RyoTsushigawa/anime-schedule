@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **9 of 50 approved standalone features** and **22 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **9 of 50 approved standalone features** and **23 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -21,10 +21,11 @@ The feature challenge has **9 of 50 approved standalone features** and **22 appr
 | U23 | Synopsis Quiz Statistics | Approved. |
 | U25 | Catch-up Pinned Anime | Approved. |
 | U27 | Season Preview · Next Unvoted Show | Approved. After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
+| U29 | Absences · Filter by Person | Approved. Filter entries in Kalender and Wiederkehrend by person, with an All option. |
 
 ## Curation decisions
 
 - Count only approved standalone features toward 50. Keep updates in their own list.
 - Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
-- Rejected ideas stay excluded, including N27 Season Vote Results Board and U28 Weekly Plan · Estimated Finish Time. Keep new game ideas out of future rounds.
+- Rejected ideas stay excluded, including N27 Season Vote Results Board U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, and N29 Group Watch Journal. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
