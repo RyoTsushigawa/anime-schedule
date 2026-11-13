@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **9 of 50 approved standalone features** and **21 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **9 of 50 approved standalone features** and **22 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -16,14 +16,15 @@ The feature challenge has **9 of 50 approved standalone features** and **21 appr
 | --- | --- | --- |
 | | Catch-up Quick Actions | Main already has episode steppers and bulk actions. Confirm which additional action is needed before implementing. |
 | | Catch-up Search & Filters | Main already has title search. Check existing filters before extending it. |
-| | Catch-up Progress Bar | Implementation in [PR #151](https://github.com/RyoTsushigawa/anime-schedule/pull/151). Check its status before starting. |
+| | Catch-up Progress Bar | Merged in [PR #151](https://github.com/RyoTsushigawa/anime-schedule/pull/151). |
 | U21 | Synopsis Quiz Daily Archive | Approved. |
 | U23 | Synopsis Quiz Statistics | Approved. |
 | U25 | Catch-up Pinned Anime | Approved. |
+| U27 | Season Preview · Next Unvoted Show | Approved. After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
 
 ## Curation decisions
 
 - Count only approved standalone features toward 50. Keep updates in their own list.
-- Preserve the four earlier maybes and the undecided N7–N9. The latest proposals N26–N27 and U27–U28 are also pending a decision.
-- Rejected ideas stay excluded. Keep new game ideas out of future rounds.
+- Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
+- Rejected ideas stay excluded, including N27 Season Vote Results Board and U28 Weekly Plan · Estimated Finish Time. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
