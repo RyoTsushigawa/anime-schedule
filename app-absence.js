@@ -187,12 +187,15 @@ if (b) openDelay(b.closest('.day').dataset.date);
 const edit = e.target.closest('[data-delay-edit]');
 if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 });
-// Abwesenheiten: a month calendar (top bar button, or any day's "Abwesend") where planned absences
-// go in for one day or a range, the whole day or only "ab"/"bis" a time. Shows with too few people
-// left are skipped on the schedule and in the Discord message.
-const awayCal = { month: null, start: null, end: null, mode: 'day', repeat: 'once', tab: 'calendar' };
-const AWAY_REPEAT_WEEKS = 12;
+// Abwesenheiten: two tabs. "Kalender" is a month calendar (top bar button, or any day's "Abwesend") for one day
+// or a range, the whole day or only "ab"/"bis" a time. "Wiederkehrend" sets up weekly absences: who, which
+// weekdays, the kind and from when until when. Everything is saved per day, so a single day of a series can
+// still be changed in the calendar. Shows with too few people left are skipped on the schedule and in Discord.
+const awayCal = { month: null, start: null, end: null, mode: 'day', tab: 'calendar', allOnce: false };
+const awayRep = { people: [], weekdays: [], mode: 'day', edit: null };
+const AWAY_DEFAULT_WEEKS = 12, AWAY_MAX_DAYS = 366, AWAY_SHOWN = 4;
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const AWAY_WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const allPeople = () => {
 const fromPlan = lastWeekRender ? [...new Set([...lastWeekRender[2].values()].flatMap(s => s.people))] : [];
 return fromPlan.length ? fromPlan : [...$('soloPerson').options].map(o => o.value);
@@ -200,31 +203,90 @@ return fromPlan.length ? fromPlan : [...$('soloPerson').options].map(o => o.valu
 const dayOf = iso => new Date(iso + 'T12:00:00');
 const addDay = (iso, n) => { const d = dayOf(iso); d.setDate(d.getDate() + n); return isoDay(d); };
 const shortDate = iso => `${shortDayName(dayOf(iso))} ${germanDate(dayOf(iso))}`;
+const weekdayOf = iso => (dayOf(iso).getDay() + 6) % 7; // 0 = Monday
 function selectedDays() {
 if (!awayCal.start) return [];
 const days = [];
 for (let d = awayCal.start; d <= (awayCal.end || awayCal.start) && days.length < 92; d = addDay(d, 1)) days.push(d);
 return days;
 }
+// The absences with person p (or anyone in `on`) set on `days`, the rest left as they are.
+// Whole day: replaces their "ab"/"bis"/"spontan da" there; people in `off` lose their whole day.
+function withAway(list, days, on, mode, time, off = []) {
+const kept = list.flatMap(x => {
+  if (!days.includes(x.day)) return [x];
+  const timed = x.from || x.until || x.maybe;
+  const people = (x.people || []).filter(p => !on.includes(p) && (mode !== 'day' || timed || !off.includes(p)));
+  return people.length ? [{ ...x, people }] : [];
+});
+const added = !on.length ? [] : days.map(day => mode === 'day' ? { day, people: on } : { day, people: on, [mode]: time });
+return kept.concat(added).sort((a, b) => a.day.localeCompare(b.day));
+}
+function withoutRun(list, run, days) {
+return list.flatMap(x => {
+  if (!days.includes(x.day) || awayLabel(x) !== run.cond) return [x];
+  const who = run.people || [run.p];
+  const people = (x.people || []).filter(p => !who.includes(p));
+  return people.length ? [{ ...x, people }] : [];
+});
+}
+// Saved days, grouped for the lists: a weekly series is the same person, kind and weekday every 7 days
+// (at least 3 times, and not just the inside of one long stretch); everything else is single days or ranges.
+// Only for showing: nothing saved is merged or rewritten.
+function awayRuns() {
+const groups = new Map();
+for (const x of absent) for (const p of x.people || []) {
+  const key = JSON.stringify([p, awayLabel(x)]);
+  if (!groups.has(key)) groups.set(key, new Set());
+  groups.get(key).add(x.day);
+}
+const runs = [];
+for (const [key, set] of groups) {
+  const [p, cond] = JSON.parse(key), dates = [...set].sort(), has = new Set(dates), used = new Set();
+  const stretch = new Map();
+  dates.forEach((d, i) => stretch.set(d, i && addDay(dates[i - 1], 1) === d ? stretch.get(dates[i - 1]) : d));
+  for (const d of dates) {
+    if (used.has(d)) continue;
+    const chain = [d];
+    while (has.has(addDay(chain.at(-1), 7)) && !used.has(addDay(chain.at(-1), 7))) chain.push(addDay(chain.at(-1), 7));
+    if (chain.length >= 3 && new Set(chain.map(c => stretch.get(c))).size > 1) {
+      chain.forEach(c => used.add(c));
+      runs.push({ p, cond, weekly: true, weekday: weekdayOf(d), days: chain, from: chain[0], to: chain.at(-1) });
+    }
+  }
+  for (const d of dates) {
+    if (used.has(d)) continue;
+    const prev = runs.at(-1);
+    if (prev && !prev.weekly && prev.p === p && prev.cond === cond && addDay(prev.to, 1) === d) { prev.to = d; prev.days.push(d); }
+    else runs.push({ p, cond, days: [d], from: d, to: d });
+  }
+}
+// what's left from today on (past days stay saved, but aren't offered for editing)
+const today = isoDay(new Date());
+return runs.map(r => {
+  const days = r.days.filter(d => d >= today);
+  return days.length ? { ...r, days, from: days[0], to: days.at(-1) } : null;
+}).filter(Boolean).sort((a, b) => a.from.localeCompare(b.from) || a.p.localeCompare(b.p));
+}
 function showAwayTab(tab) {
-  awayCal.tab = tab === 'recurring' ? 'recurring' : 'calendar';
-  const calendar = awayCal.tab === 'calendar';
-  $('awayCalendarPanel').hidden = !calendar;
-  $('awayRecurringPanel').hidden = calendar;
-  $('awayTabCalendar').setAttribute('aria-selected', String(calendar));
-  $('awayTabRecurring').setAttribute('aria-selected', String(!calendar));
-  drawAwayList();
+awayCal.tab = tab === 'recurring' ? 'recurring' : 'calendar';
+const calendar = awayCal.tab === 'calendar';
+$('awayCalendarPanel').hidden = !calendar;
+$('awayRecurringPanel').hidden = calendar;
+$('awayTabCalendar').setAttribute('aria-selected', String(calendar));
+$('awayTabRecurring').setAttribute('aria-selected', String(!calendar));
+$('awayMsg').textContent = '';
+if (calendar) drawAway(); else drawRepeat();
 }
 function openAway(date) {
 const today = isoDay(new Date());
 const pick = date && date >= today ? date : null;
 awayCal.month = (pick || today).slice(0, 7);
-awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.repeat = 'once';
+awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.allOnce = false; awayCal.extra = [];
 // in Solo view the dialog starts with that person chosen, until someone picks by hand
 awayCal.me = mode === 'solo' && soloPerson ? soloPerson : null;
-$('awayMsg').textContent = '';
+resetRepeat();
 showAwayTab('calendar');
-drawAway();
 $('awayDlg').showModal();
 }
 function drawAway() {
@@ -240,12 +302,9 @@ $('awayPrev').disabled = awayCal.month <= today.slice(0, 7);
 $('awayToday').disabled = awayCal.month === today.slice(0, 7);
 const chosen = selectedDays();
 const sel = new Set(chosen);
-$('awayHint').textContent = !awayCal.start
-  ? (awayCal.repeat === 'weekly' ? 'Wochentag auswählen · Wird 12-mal wiederholt.' : 'Tag auswählen · Für einen Zeitraum danach den letzten Tag wählen.')
-  : awayCal.end
-    ? `${chosen.length} Tage ausgewählt · ${shortDate(chosen[0])} – ${shortDate(chosen.at(-1))}.`
-    : awayCal.repeat === 'weekly' ? `Wöchentlich ab ${shortDate(awayCal.start)} · ${AWAY_REPEAT_WEEKS} Termine.` : `Start: ${shortDate(awayCal.start)} · Für einen Zeitraum den letzten Tag wählen.`;
-const cells = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `<span class="away-wd">${d}</span>`);
+$('awayHint').textContent = !awayCal.start ? 'Tag antippen · für einen Zeitraum danach den letzten Tag.'
+  : awayCal.end ? `${chosen.length} Tage ausgewählt.` : 'Für einen Zeitraum noch den letzten Tag antippen.';
+const cells = AWAY_WEEKDAYS.map(d => `<span class="away-wd">${d}</span>`);
 for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden="true"></span>');
 for (let n = startDay; n <= length; n++) {
 const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
@@ -257,91 +316,86 @@ $('awayGrid').innerHTML = cells.join('');
 drawAwayEditor();
 drawAwayList();
 }
+const modeButtons = (box, current) => { for (const b of box.querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === current)); };
 function drawAwayEditor() {
 const days = selectedDays();
 $('awayEditor').hidden = !days.length;
 if (!days.length) return;
 $('awayRange').textContent = days.length > 1 ? `${shortDate(days[0])} – ${shortDate(days.at(-1))}` : shortDate(days[0]);
-for (const b of $('awayMode').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === awayCal.mode));
+modeButtons($('awayMode'), awayCal.mode);
 $('awayTime').hidden = awayCal.mode === 'day' || awayCal.mode === 'maybe';
-for (const b of $('awayRepeat').querySelectorAll('[data-repeat]')) b.setAttribute('aria-pressed', String(b.dataset.repeat === awayCal.repeat));
-$('awayRepeatHint').textContent = awayCal.repeat === 'weekly'
-  ? `Wiederholt sich ${AWAY_REPEAT_WEEKS} Wochen lang. Für die Wiederholung nur einen Tag auswählen.`
-  : 'Einmaliger Termin oder mehrtägiger Zeitraum.';
 // whole day: pressed = away on every chosen day, "mixed" = on some (left alone unless clicked)
-$('awayPeople').innerHTML = allPeople().map(p => {
+$('awayPeople').innerHTML = [...new Set([...allPeople(), ...(awayCal.extra || [])])].map(p => {
 const on = awayCal.mode === 'day' ? days.filter(d => absentOn(d).includes(p)).length : 0;
 const state = on === days.length && on ? 'true' : on ? 'mixed' : p === awayCal.me ? 'true' : 'false';
 return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${state}" style="${personStyle(p)}">${esc(p)}</button>`;
 }).join('');
 }
+// the same days and kind for several people: one row
+function mergedRuns(weekly) {
+const out = [];
+for (const r of awayRuns().filter(r => !!r.weekly === weekly)) {
+  const same = out.find(x => x.cond === r.cond && x.days.join() === r.days.join());
+  if (same) same.people.push(r.p); else out.push({ ...r, people: [r.p] });
+}
+return out;
+}
+const runRow = (r, label) => {
+const payload = esc(JSON.stringify(r)), action = r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen', who = r.people || [r.p];
+return `<li><span class="away-whos">${who.map(p => `<span class="away-who" style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span><span class="away-what">${esc(label)}</span><span class="away-entry-actions"><button type="button" class="pill" data-away-edit="${payload}" aria-label="Bearbeiten: ${esc(who.join(', '))}, ${esc(label)}" title="Bearbeiten"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button><button type="button" class="pill" data-away-remove="${payload}" aria-label="${action}: ${esc(who.join(', '))}, ${esc(label)}" title="${action}">✕</button></span></li>`;
+};
 function drawAwayList() {
+const runs = mergedRuns(false);
+const shown = awayCal.allOnce ? runs : runs.slice(0, AWAY_SHOWN);
+$('awayListCount').textContent = runs.length ? String(runs.length) : '';
+$('awayList').innerHTML = shown.map(r => runRow(r, `${r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`} · ${r.cond}`)).join('')
+  || '<li class="muted">Nichts eingetragen.</li>';
+$('awayMore').hidden = runs.length <= AWAY_SHOWN;
+$('awayMore').textContent = awayCal.allOnce ? 'Weniger anzeigen' : `Alle ${runs.length} anzeigen`;
+}
+// Wiederkehrend
+function resetRepeat() {
 const today = isoDay(new Date());
-// Include historical dates for detecting a weekly pattern even with fewer than three future occurrences.
-// The underlying saved entries are never consolidated or rewritten here.
-const entries = absent.flatMap(x => (x.people || []).map(p => ({ p, day: x.day, cond: awayLabel(x) })));
-const byPerson = new Map();
-for (const it of entries) {
-  const key = JSON.stringify([it.p, it.cond]);
-  if (!byPerson.has(key)) byPerson.set(key, []);
-  byPerson.get(key).push(it);
+Object.assign(awayRep, { people: mode === 'solo' && soloPerson ? [soloPerson] : [], weekdays: [], mode: 'day', edit: null });
+$('repFrom').value = today;
+$('repUntil').value = addDay(today, AWAY_DEFAULT_WEEKS * 7 - 1);
 }
-const runs = [];
-for (const group of byPerson.values()) {
-  const dates = [...new Set(group.map(it => it.day))].sort();
-  if (!dates.length) continue;
-  const { p, cond } = group[0];
-  // Preserve consecutive-day ranges. A recurring absence is a sequence of
-  // matching weekdays separated by exactly seven days (at least 3 repeats).
-  const consecutive = dates.some((d, i) => i > 0 && addDay(dates[i - 1], 1) === d);
-  if (!consecutive) {
-    let rest = [];
-    const flushRest = () => {
-      for (const day of rest) runs.push({ p, cond, from: day, to: day, days: [day] });
-      rest = [];
-    };
-    for (let i = 0; i < dates.length;) {
-      let j = i + 1;
-      while (j < dates.length && addDay(dates[j - 1], 7) === dates[j]) j++;
-      if (j - i >= 3) {
-        flushRest();
-        runs.push({ p, cond, from: dates[i], to: dates[j - 1], days: dates.slice(i, j), weekly: true });
-      } else rest.push(...dates.slice(i, j));
-      i = j;
-    }
-    flushRest();
-  } else {
-    for (const d of dates) {
-      const prev = runs.at(-1);
-      if (prev && prev.p === p && prev.cond === cond && !prev.weekly && addDay(prev.to, 1) === d) {
-        prev.to = d; prev.days.push(d);
-      } else runs.push({ p, cond, from: d, to: d, days: [d] });
-    }
-  }
+function repeatDays() {
+const from = $('repFrom').value, until = $('repUntil').value, today = isoDay(new Date());
+if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(until)) return [];
+const days = [];
+for (let d = from < today ? today : from; d <= until && days.length < 400; d = addDay(d, 1))
+  if (awayRep.weekdays.includes(weekdayOf(d))) days.push(d);
+return days;
 }
-runs.sort((a, b) => a.from.localeCompare(b.from) || a.p.localeCompare(b.p));
-const recurring = awayCal.tab === 'recurring';
-// Show a single row per weekly series, not one row for every occurrence.
-// Only future days are included in edit/remove actions; past entries stay saved.
-const visible = runs.filter(r => Boolean(r.weekly) === recurring).map(r => {
-  const days = r.days.filter(d => d >= today);
-  return days.length ? { ...r, from: days[0], to: days.at(-1), days } : null;
-}).filter(Boolean);
-$('awayListTitle').textContent = recurring ? 'Wiederkehrende Abwesenheiten' : 'Einmalige Einträge';
-$('awayListCount').textContent = visible.length ? visible.length + (visible.length === 1 ? ' Eintrag' : ' Einträge') : '';
-$('awayList').innerHTML = visible.length ? visible.map(r => {
-  const dates = r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`;
-  const label = r.weekly ? `Jede Woche · ${r.days.length} kommende Termine · ${dates}` : dates;
-  const action = r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen';
-  const payload = esc(JSON.stringify(r));
-  return `<li><span class="away-who" style="${personStyle(r.p)}">${esc(r.p)}</span><span>${esc(label)} · ${esc(r.cond)}</span><span class="away-entry-actions"><button type="button" class="pill" data-away-edit="${payload}" aria-label="Eintrag bearbeiten: ${esc(r.p)}" title="Eintrag bearbeiten">Bearbeiten</button><button type="button" class="pill" data-away-remove="${payload}" aria-label="${action}: ${esc(r.p)}" title="${action}">✕</button></span></li>`;
-}).join('') : `<li class="muted">${recurring ? 'Keine kommenden wöchentlichen Wiederholungen.' : 'Keine kommenden einmaligen Einträge.'}</li>`;
+function drawRepeat() {
+const series = mergedRuns(true);
+$('repList').innerHTML = series.map(r => runRow(r, `jeden ${AWAY_WEEKDAYS[r.weekday]} · ${r.cond} · bis ${shortDate(r.to)}`)).join('')
+  || '<li class="muted">Noch keine Wiederholung.</li>';
+$('repFormTitle').textContent = awayRep.edit ? 'Wiederholung ändern' : 'Neue Wiederholung';
+$('repCancel').hidden = !awayRep.edit;
+$('repPeople').innerHTML = [...new Set([...allPeople(), ...awayRep.people])].map(p => `<button type="button" class="pill" data-rep-person="${esc(p)}" aria-pressed="${awayRep.people.includes(p)}" style="${personStyle(p)}">${esc(p)}</button>`).join('');
+$('repWeekdays').innerHTML = AWAY_WEEKDAYS.map((d, i) => `<button type="button" data-rep-day="${i}" aria-pressed="${awayRep.weekdays.includes(i)}">${d}</button>`).join('');
+modeButtons($('repMode'), awayRep.mode);
+$('repTime').hidden = awayRep.mode === 'day' || awayRep.mode === 'maybe';
+$('repUntil').min = $('repFrom').value || isoDay(new Date());
+$('repFrom').min = isoDay(new Date());
+$('repFrom').max = $('repUntil').max = addDay(isoDay(new Date()), AWAY_MAX_DAYS - 1);
+const days = repeatDays();
+$('repSummary').textContent = !awayRep.weekdays.length ? 'Wochentag wählen.'
+  : !days.length ? 'In diesem Zeitraum gibt es keinen solchen Tag.'
+  : `${days.length} ${days.length === 1 ? 'Termin' : 'Termine'} · ${shortDate(days[0])} bis ${shortDate(days.at(-1))}`;
 }
-// Saves the absences of the given days (the rest stay as they are).
+// Saves the absences of the given days (the rest stay as they are). The save service takes 92 days at a time.
 async function saveAway(next, days) {
 if (movesKey) return saveMoves(moves, d => d, null, next);
 if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
-try { await postDelay({ absent: next.filter(x => days.includes(x.day)), days }); }
+try {
+  for (let i = 0; i < days.length; i += 92) {
+    const part = days.slice(i, i + 92);
+    await postDelay({ absent: next.filter(x => part.includes(x.day)), days: part });
+  }
+}
 catch (e) { throw /nichts zu tun|unbekannt|unknown|not allowed|ungültig/i.test(e.message) ? new Error('der Speicherdienst kann Abwesenheiten noch nicht speichern. Bis zum Update geht es mit dem Bearbeitungszugang') : e; }
 }
 async function storeAway(next, days, done) {
@@ -349,26 +403,17 @@ $('awayMsg').textContent = 'Speichert…';
 for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = true;
 try {
 await saveAway(next, days);
-} catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return; }
+} catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return false; }
 finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
 absent = next;
+if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else drawAway();
 $('awayMsg').textContent = `${done} Alle sehen es in etwa einer Minute.`;
-drawAway();
 try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
+return true;
 }
 $('awayButton').onclick = () => openAway();
 $('awayTabCalendar').onclick = () => showAwayTab('calendar');
 $('awayTabRecurring').onclick = () => showAwayTab('recurring');
-$('awayNewRecurring').onclick = () => {
-  awayCal.start = null;
-  awayCal.end = null;
-  awayCal.repeat = 'weekly';
-  awayCal.mode = 'day';
-  awayCal.month = isoDay(new Date()).slice(0, 7);
-  $('awayMsg').textContent = '';
-  showAwayTab('calendar');
-  drawAway();
-};
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-absent]');
 if (b) openAway(b.closest('.day').dataset.date);
@@ -376,97 +421,111 @@ if (b) openAway(b.closest('.day').dataset.date);
 $('awayPrev').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() - 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
 $('awayNext').onclick = () => { const d = dayOf(awayCal.month + '-01'); d.setMonth(d.getMonth() + 1); awayCal.month = isoDay(d).slice(0, 7); drawAway(); };
 $('awayToday').onclick = () => { awayCal.month = isoDay(new Date()).slice(0, 7); drawAway(); };
+$('awayMore').onclick = () => { awayCal.allOnce = !awayCal.allOnce; drawAwayList(); };
 $('awayGrid').addEventListener('click', e => {
 const iso = e.target.closest('[data-away-day]')?.dataset.awayDay;
 if (!iso) return;
 // first tap: one day; second tap on a later day: the range up to it; one more tap starts over
-if (awayCal.repeat !== 'weekly' && awayCal.start && !awayCal.end && iso > awayCal.start) awayCal.end = iso;
+if (awayCal.start && !awayCal.end && iso > awayCal.start) awayCal.end = iso;
 else { awayCal.start = iso; awayCal.end = null; }
 $('awayMsg').textContent = '';
 drawAway();
 });
 $('awayMode').addEventListener('click', e => {
-const mode = e.target.closest('[data-mode]')?.dataset.mode;
-if (!mode) return;
-awayCal.mode = mode;
+const m = e.target.closest('[data-mode]')?.dataset.mode;
+if (!m) return;
+awayCal.mode = m;
 drawAwayEditor();
-if (mode === 'from' || mode === 'until') $('awayClock').focus();
-});
-$('awayRepeat').addEventListener('click', e => {
-const repeat = e.target.closest('[data-repeat]')?.dataset.repeat;
-if (!repeat) return;
-awayCal.repeat = repeat;
-if (repeat === 'weekly') awayCal.end = null;
-drawAway();
+if (m === 'from' || m === 'until') $('awayClock').focus();
 });
 $('awayPeople').addEventListener('click', e => {
 const b = e.target.closest('[data-away]');
 if (b) { awayCal.me = null; b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); }
 });
 $('awaySave').onclick = () => {
-const selected = selectedDays();
-if (!selected.length) { $('awayMsg').textContent = 'Bitte einen Tag wählen.'; return; }
-if (awayCal.repeat === 'weekly' && selected.length !== 1) { $('awayMsg').textContent = 'Für die wöchentliche Wiederholung nur einen Tag auswählen.'; return; }
-const days = awayCal.repeat === 'weekly'
-  ? Array.from({ length: AWAY_REPEAT_WEEKS }, (_, i) => addDay(selected[0], 7 * i))
-  : selected;
+const days = selectedDays();
+if (!days.length) { $('awayMsg').textContent = 'Bitte einen Tag wählen.'; return; }
 const chips = [...$('awayPeople').querySelectorAll('[data-away]')];
 const on = chips.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.away);
 const off = chips.filter(b => b.getAttribute('aria-pressed') === 'false').map(b => b.dataset.away);
-if (awayCal.repeat === 'weekly' && !on.length) { $('awayMsg').textContent = 'Für die Wiederholung mindestens eine Person auswählen.'; return; }
-let next;
-if (awayCal.mode === 'day') {
-next = absent.flatMap(x => {
-if (!days.includes(x.day)) return [x];
-// a whole day for someone replaces their "ab"/"bis" there; other people's times stay
-const timed = x.from || x.until || x.maybe;
-const people = (x.people || []).filter(p => !on.includes(p) && (timed || awayCal.repeat === 'weekly' || !off.includes(p)));
-return people.length ? [{ ...x, people }] : [];
-}).concat(on.length ? days.map(day => ({ day, people: on })) : []);
-} else {
-const time = awayCal.mode === 'maybe' ? true : clockOf($('awayClock').value);
-if (!time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
-if (!on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
-// one entry per person and day: a time replaces their whole day or their other time
-next = absent.flatMap(x => {
-if (!days.includes(x.day)) return [x];
-const people = (x.people || []).filter(p => !on.includes(p));
-return people.length ? [{ ...x, people }] : [];
-}).concat(days.map(day => ({ day, people: on, [awayCal.mode]: time })));
-}
-next = next.sort((a, b) => a.day.localeCompare(b.day));
-const label = (awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${clockOf($('awayClock').value)}.`)
-  + (awayCal.repeat === 'weekly' ? ` Jede Woche bis ${shortDate(days.at(-1))} (${AWAY_REPEAT_WEEKS} Termine).` : '');
-storeAway(next, days, label);
+const time = awayCal.mode === 'maybe' ? true : awayCal.mode === 'day' ? null : clockOf($('awayClock').value);
+if (awayCal.mode !== 'day' && !time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
+if (awayCal.mode !== 'day' && !on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
+const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${time}.`;
+storeAway(withAway(absent, days, on, awayCal.mode, time, off), days, label);
 };
-$('awayList').addEventListener('click', e => {
+$('repPeople').addEventListener('click', e => {
+const p = e.target.closest('[data-rep-person]')?.dataset.repPerson;
+if (!p) return;
+awayRep.people = awayRep.people.includes(p) ? awayRep.people.filter(x => x !== p) : [...awayRep.people, p];
+drawRepeat();
+});
+$('repWeekdays').addEventListener('click', e => {
+const d = e.target.closest('[data-rep-day]')?.dataset.repDay;
+if (d === undefined) return;
+const n = Number(d);
+awayRep.weekdays = awayRep.weekdays.includes(n) ? awayRep.weekdays.filter(x => x !== n) : [...awayRep.weekdays, n].sort();
+drawRepeat();
+});
+$('repMode').addEventListener('click', e => {
+const m = e.target.closest('[data-mode]')?.dataset.mode;
+if (!m) return;
+awayRep.mode = m;
+drawRepeat();
+if (m === 'from' || m === 'until') $('repClock').focus();
+});
+$('repFrom').onchange = $('repUntil').onchange = () => drawRepeat();
+$('repCancel').onclick = () => { resetRepeat(); $('awayMsg').textContent = ''; drawRepeat(); };
+$('repSave').onclick = () => {
+const days = repeatDays(), on = awayRep.people;
+const time = awayRep.mode === 'maybe' ? true : awayRep.mode === 'day' ? null : clockOf($('repClock').value);
+const say = text => { $('awayMsg').textContent = text; };
+if (!on.length) return say('Wer? Mindestens eine Person auswählen.');
+if (!awayRep.weekdays.length) return say('Mindestens einen Wochentag auswählen.');
+if ($('repUntil').value > addDay(isoDay(new Date()), AWAY_MAX_DAYS - 1)) return say('Höchstens ein Jahr im Voraus.');
+if (!days.length) return say('In diesem Zeitraum gibt es keinen solchen Tag.');
+if (awayRep.mode !== 'day' && !time) return say('Uhrzeit wie 21:00.');
+// changing a series: its remaining days go first, then the new ones are set
+const old = awayRep.edit ? awayRep.edit.days : [];
+const next = withAway(awayRep.edit ? withoutRun(absent, awayRep.edit, old) : absent, days, on, awayRep.mode, time);
+const cond = awayRep.mode === 'day' ? 'ganztägig' : awayRep.mode === 'maybe' ? 'spontan da' : `${awayRep.mode === 'from' ? 'ab' : 'bis'} ${time}`;
+const names = awayRep.weekdays.map(i => AWAY_WEEKDAYS[i]).join(', ');
+storeAway(next, [...new Set([...old, ...days])].sort(), `${on.join(', ')}: jeden ${names}, ${cond}, bis ${shortDate(days.at(-1))} (${days.length} Termine).`);
+};
+// Bearbeiten / ✕ in both lists
+$('awayDlg').addEventListener('click', e => {
 const edit = e.target.closest('[data-away-edit]')?.dataset.awayEdit;
 if (edit) {
   const run = JSON.parse(edit);
+  const p0 = (run.people || [run.p])[0];
+  const existing = absent.find(x => x.day === run.from && (x.people || []).includes(p0) && awayLabel(x) === run.cond);
+  const kind = existing?.maybe ? 'maybe' : existing?.from ? 'from' : existing?.until ? 'until' : 'day';
+  if (run.weekly) {
+    Object.assign(awayRep, { people: run.people || [run.p], weekdays: [run.weekday], mode: kind, edit: run });
+    $('repFrom').value = run.from; $('repUntil').value = run.to;
+    if (existing?.from || existing?.until) $('repClock').value = existing.from || existing.until;
+    drawRepeat();
+    $('awayMsg').textContent = '';
+    $('repForm').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return;
+  }
   awayCal.month = run.from.slice(0, 7);
   awayCal.start = run.from;
-  awayCal.end = run.weekly ? null : run.to !== run.from ? run.to : null;
-  awayCal.repeat = run.weekly ? 'weekly' : 'once';
-  const existing = absent.find(x => x.day === run.from && (x.people || []).includes(run.p) && awayLabel(x) === run.cond);
-  awayCal.mode = existing?.maybe ? 'maybe' : existing?.from ? 'from' : existing?.until ? 'until' : 'day';
+  awayCal.end = run.to !== run.from ? run.to : null;
+  awayCal.mode = kind;
+  awayCal.extra = run.people || [run.p];
   if (existing?.from || existing?.until) $('awayClock').value = existing.from || existing.until;
-  $('awayMsg').textContent = 'Eintrag ausgewählt. Änderungen vornehmen und speichern.';
-  showAwayTab('calendar');
   drawAway();
   for (const b of $('awayPeople').querySelectorAll('[data-away]'))
-    b.setAttribute('aria-pressed', String(b.dataset.away === run.p));
+    b.setAttribute('aria-pressed', String((run.people || [run.p]).includes(b.dataset.away)));
+  $('awayMsg').textContent = 'Eintrag ausgewählt. Ändern und speichern.';
   $('awayEditor').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   return;
 }
 const raw = e.target.closest('[data-away-remove]')?.dataset.awayRemove;
 if (!raw) return;
 const run = JSON.parse(raw);
-if (run.weekly && !confirm(`Alle ${run.days.length} wöchentlichen Termine für ${run.p} entfernen?`)) return;
-const days = Array.isArray(run.days) ? run.days : selectedDays();
-const next = absent.flatMap(x => {
-if (!days.includes(x.day) || awayLabel(x) !== run.cond) return [x];
-const people = (x.people || []).filter(p => p !== run.p);
-return people.length ? [{ ...x, people }] : [];
-});
-storeAway(next, days, `${run.p}: entfernt.`);
+const who = (run.people || [run.p]).join(', ');
+if (run.weekly && !confirm(`Alle ${run.days.length} kommenden Termine (jeden ${AWAY_WEEKDAYS[run.weekday]}) für ${who} entfernen?`)) return;
+storeAway(withoutRun(absent, run, run.days), run.days, `${who}: entfernt.`);
 });

@@ -300,34 +300,41 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </dialog>
 <dialog id="awayDlg" class="dlg away-dlg" aria-labelledby="awayTitle">
 <form method="dialog">
-<div class="away-head"><b id="awayTitle">Abwesenheiten</b><button value="cancel" class="round" aria-label="Schließen">✕</button></div>
-<p class="muted away-intro">Hier siehst du alle Abwesenheiten. Wiederkehrende Einträge haben einen eigenen Bereich.</p>
-<div class="away-tabs" role="tablist" aria-label="Abwesenheiten anzeigen">
+<div class="away-head"><b id="awayTitle" title="Bleibt bei einer Serie höchstens eine Person übrig, setzt sie an dem Tag aus.">Abwesenheiten</b><button value="cancel" class="round" aria-label="Schließen">✕</button></div>
+<div class="away-tabs" role="tablist" aria-label="Abwesenheiten">
 <button type="button" id="awayTabCalendar" role="tab" aria-selected="true" aria-controls="awayCalendarPanel">Kalender</button>
 <button type="button" id="awayTabRecurring" role="tab" aria-selected="false" aria-controls="awayRecurringPanel">Wiederkehrend</button>
 </div>
-<div id="awayCalendarPanel" role="tabpanel" aria-labelledby="awayTabCalendar">
+<div id="awayCalendarPanel" class="away-panel" role="tabpanel" aria-labelledby="awayTabCalendar">
 <div class="away-nav"><button type="button" id="awayPrev" class="round" aria-label="Voriger Monat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b id="awayMonth" aria-live="polite"></b><button type="button" id="awayToday" class="pill" title="Zum aktuellen Monat springen">Heute</button><button type="button" id="awayNext" class="round" aria-label="Nächster Monat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
-<div class="away-legend" aria-label="Kalenderlegende"><span><i class="away-legend-today"></i> Heute</span><span><i class="away-legend-selected"></i> Auswahl</span><span><i class="away-legend-dot"></i> Abwesend</span><span><i class="away-legend-part"></i> Teilweise</span><span><i class="away-legend-maybe"></i> Spontan da</span></div>
 <div id="awayGrid" class="away-grid" role="group" aria-label="Kalendertage"></div>
+<div class="away-legend" aria-label="Legende"><span><i class="away-legend-dot"></i> Ganzer Tag</span><span><i class="away-legend-part"></i> Ab / bis</span><span><i class="away-legend-maybe"></i> Spontan da</span></div>
 <div id="awayHint" class="away-hint" role="status" aria-live="polite"></div>
 <div id="awayEditor" class="away-editor" hidden>
 <b id="awayRange"></b>
 <div id="awayMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button><button type="button" data-mode="maybe" title="Nicht mit einplanen, kommt aber vielleicht dazu">Spontan da</button></div>
-<div class="away-repeat-setting"><span>Wiederholung</span><div id="awayRepeat" class="segmented soft" role="group" aria-label="Wiederholung"><button type="button" data-repeat="once" aria-pressed="true">Einmalig</button><button type="button" data-repeat="weekly" aria-pressed="false">Wöchentlich</button></div></div>
-<p id="awayRepeatHint" class="muted away-repeat-hint">Für einen einzelnen Termin oder einen Zeitraum.</p>
 <label id="awayTime" class="away-time" hidden>Uhrzeit <input id="awayClock" type="time" value="21:00" step="900"></label>
 <div id="awayPeople" class="day-absent"></div>
 <div class="dlg-row"><button type="button" id="awaySave" class="pill primary">Speichern</button></div>
 </div>
+<div class="away-list-heading"><b class="away-sub">Eingetragen</b><span class="muted" id="awayListCount"></span></div>
+<ul id="awayList" class="away-list"></ul>
+<button type="button" id="awayMore" class="pill away-more" hidden></button>
 </div>
-<div id="awayRecurringPanel" role="tabpanel" aria-labelledby="awayTabRecurring" hidden>
-<p class="muted away-recurring-intro">Wöchentlich wiederkehrende Abwesenheiten erscheinen hier zusammengefasst. Alle gespeicherten Termine bleiben erhalten.</p>
-<button type="button" id="awayNewRecurring" class="pill primary">+ Wiederholung eintragen</button>
+<div id="awayRecurringPanel" class="away-panel" role="tabpanel" aria-labelledby="awayTabRecurring" hidden>
+<ul id="repList" class="away-list"></ul>
+<div id="repForm" class="away-editor">
+<div class="away-list-heading"><b id="repFormTitle">Neue Wiederholung</b><button type="button" id="repCancel" class="pill" hidden>Abbrechen</button></div>
+<div class="rep-field"><span>Wer</span><div id="repPeople" class="day-absent"></div></div>
+<div class="rep-field"><span>Jeden</span><div id="repWeekdays" class="rep-weekdays" role="group" aria-label="Wochentage"></div></div>
+<div class="rep-field"><span>Wie</span><div id="repMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button><button type="button" data-mode="maybe" title="Nicht mit einplanen, kommt aber vielleicht dazu">Spontan da</button></div></div>
+<label id="repTime" class="away-time" hidden>Uhrzeit <input id="repClock" type="time" value="21:00" step="900"></label>
+<div class="rep-field rep-dates"><label>Ab <input id="repFrom" type="date"></label><label>Bis <input id="repUntil" type="date"></label></div>
+<div id="repSummary" class="away-hint" role="status" aria-live="polite"></div>
+<div class="dlg-row"><button type="button" id="repSave" class="pill primary">Speichern</button></div>
+</div>
 </div>
 <div class="muted" id="awayMsg" role="status" aria-live="polite" aria-atomic="true"></div>
-<div class="away-list-heading"><b class="away-sub" id="awayListTitle">Einmalige Einträge</b><span class="muted" id="awayListCount"></span></div>
-<ul id="awayList" class="away-list"></ul>
 </form>
 </dialog>
 <dialog id="overviewDlg" class="dlg away-dlg overview-dlg" aria-labelledby="overviewTitle">
