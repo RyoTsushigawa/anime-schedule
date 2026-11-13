@@ -126,6 +126,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
 <button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes<small id="notesAge" class="notes-age"></small></button>
 <button id="episodeCrosswalkButton" class="menu-item" aria-haspopup="dialog">Folgennummern vergleichen</button>
+<button id="deliveryButton" class="menu-item" aria-haspopup="dialog" title="Ob die täglichen Discord-Posts angekommen sind; fehlgeschlagene einmal erneut senden" hidden>Discord-Zustellung<small id="deliveryAlert" class="delivery-alert"></small></button>
 <button id="repairButton" class="menu-item" aria-haspopup="dialog" title="Gemeldete falsche Stream-Links prüfen und korrigieren" hidden>Link-Meldungen</button>
 <button id="dataButton" class="menu-item" aria-haspopup="dialog" title="Wann Guckplan, Sendetermine und Trailer zuletzt aktualisiert wurden">Datenstand</button>
 <button id="accountCheckButton" class="menu-item" aria-haspopup="dialog">Kontoverbindung prüfen</button>
@@ -450,6 +451,15 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <p id="transferIntro" class="muted sync-intro"></p>
 <div id="transferList" class="health-list"></div>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
+</form>
+</dialog>
+<dialog id="deliveryDlg" class="dlg notes-dlg" aria-labelledby="deliveryTitle">
+<form method="dialog">
+<b id="deliveryTitle">Discord-Zustellung</b>
+<p id="deliveryToday" class="muted sync-intro"></p>
+<ul id="deliveryList" class="data-list sync-list repair-list"></ul>
+<p id="deliveryStatus" class="muted" role="status"></p>
+<div class="dlg-row dlg-foot"><button type="button" id="deliveryReload" class="pill">Neu laden</button><button type="button" id="deliverySend" class="pill" hidden>Tagespost jetzt senden</button><button value="cancel" class="pill primary">OK</button></div>
 </form>
 </dialog>
 <dialog id="repairDlg" class="dlg notes-dlg" aria-labelledby="repairTitle">

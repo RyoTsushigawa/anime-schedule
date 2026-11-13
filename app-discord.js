@@ -278,3 +278,92 @@ catch { $('discordText').select(); if (!document.execCommand?.('copy')) { $('dis
 $('discordDlg').close();
 notice('Für Discord kopiert.');
 };
+
+// N63 Discord-Zustellung (plan owner only): the daily posts and post updates of the last days from the
+// workflow's runs, failed ones marked. A failed run from today can be started again once (GitHub's re-run;
+// run_attempt > 1 means it was already retried). If today's post never went out at all, "Jetzt senden"
+// starts the workflow once. Either way the script itself refuses a second post for the same day
+// (daily-post.json), so a retry can't post twice.
+const REPO_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule';
+const DELIVERY_KINDS = ['Tagespost', 'Tagespost (erneut)', 'Aktualisierung'];
+const berlinIso = (d = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(d);
+// runs from before the workflow named them: an edit is a push, the daily post the helper's start between 08:30 and 09:59
+function deliveryKind(r) {
+if (DELIVERY_KINDS.includes(r.display_title) || r.display_title === 'Probe') return r.display_title;
+if (r.event === 'push') return 'Aktualisierung';
+const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(r.created_at));
+return r.event === 'repository_dispatch' && hm >= '08:30' && hm < '10:00' ? 'Tagespost' : 'Probe';
+}
+function deliveryState(runs, post, now = new Date()) {
+const today = berlinIso(now);
+const list = runs.map(r => ({ ...r, display_title: deliveryKind(r) })).filter(r => DELIVERY_KINDS.includes(r.display_title)).slice(0, 14);
+const busy = list.some(r => r.status !== 'completed');
+const postedToday = post?.date === today && !!post.id;
+const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(now));
+const rows = list.map(r => {
+const failed = r.status === 'completed' && r.conclusion !== 'success' && r.conclusion !== 'skipped';
+// one retry: today's, failed, not retried yet, and no other run still going; a failed post that later went out needs none
+const retry = failed && !busy && berlinIso(new Date(r.created_at)) === today && (r.run_attempt || 1) < 2 && !(r.display_title !== 'Aktualisierung' && postedToday);
+return { id: r.id, kind: r.display_title, at: r.created_at, url: r.html_url, state: r.status !== 'completed' ? 'busy' : failed ? 'failed' : 'ok', attempt: r.run_attempt || 1, retry };
+});
+const sentToday = list.some(r => r.display_title.startsWith('Tagespost') && berlinIso(new Date(r.created_at)) === today);
+const sendNow = !postedToday && !busy && hour >= 9 && !rows.some(r => r.retry) && !sentToday;
+return { rows, postedToday, sendNow, attention: sendNow || rows.some(r => r.retry) };
+}
+async function loadDeliveries() {
+const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
+const [runs, post] = await Promise.all([
+fetch(REPO_API + '/actions/workflows/discord-daily.yml/runs?per_page=40&_=' + Date.now(), { headers, cache: 'no-store' })
+.then(r => r.ok ? r.json() : Promise.reject(new Error('GitHub antwortet ' + r.status))),
+fetch(REPO_API + '/contents/daily-post.json?ref=main&_=' + Date.now(), { headers, cache: 'no-store' })
+.then(r => r.ok ? r.json() : null).then(meta => meta?.content ? JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))) : null).catch(() => null),
+]);
+return deliveryState(runs.workflow_runs || [], post);
+}
+let deliveries = null;
+function drawDeliveries() {
+const d = deliveries;
+const when = at => new Date(at).toLocaleString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+$('deliveryToday').textContent = d.postedToday ? 'Der heutige Tagespost ist raus.' : 'Der heutige Tagespost ist noch nicht raus.';
+$('deliverySend').hidden = !d.sendNow;
+$('deliveryList').innerHTML = d.rows.length ? d.rows.map(r => `<li class="${r.state === 'failed' ? 'failed' : ''}"><b>${r.state === 'ok' ? '✓' : r.state === 'busy' ? '…' : '✕'} ${esc(r.kind)}</b>
+<span>${r.state === 'busy' ? 'läuft gerade' : r.state === 'failed' ? 'fehlgeschlagen' : 'zugestellt'}${r.attempt > 1 ? ` · ${r.attempt}. Versuch` : ''} · <a href="${safeUrl(r.url)}" target="_blank" rel="noopener">Protokoll</a></span>
+<small>${esc(when(r.at))}</small>${r.retry ? `<span class="repair-actions"><button type="button" class="pill primary" data-delivery-retry="${r.id}">Erneut versuchen</button></span>` : ''}</li>`).join('')
+: '<li class="muted">Noch keine Zustellungen.</li>';
+$('deliveryAlert').textContent = d.attention ? '⚠' : '';
+}
+async function refreshDeliveries(showErrors = true) {
+if (!movesKey) return;
+try { deliveries = await loadDeliveries(); drawDeliveries(); }
+catch (e) { if (showErrors) $('deliveryList').innerHTML = `<li class="muted">Nicht geladen: ${esc(e.message)}</li>`; }
+}
+const actionsError = status => status === 403 || status === 404 ? 'der GitHub-Schlüssel darf Workflows nicht starten (Recht „Actions: Lesen und Schreiben“ fehlt)' : 'GitHub antwortet ' + status;
+async function retryDelivery(run) {
+const res = await fetch(`${REPO_API}/actions/runs/${run}/rerun`, { method: 'POST', headers: { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' } });
+if (!res.ok) throw new Error(actionsError(res.status));
+}
+async function sendDeliveryNow() {
+const res = await fetch(REPO_API + '/dispatches', { method: 'POST', headers: { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+body: JSON.stringify({ event_type: 'discord-daily', client_payload: { retry: true } }) });
+if (!res.ok) throw new Error(actionsError(res.status));
+}
+async function deliveryAction(action, button) {
+button.disabled = true;
+$('deliveryStatus').textContent = 'Wird gestartet …';
+try {
+// look again right before: another browser may have retried already
+deliveries = await loadDeliveries();
+const run = button.dataset.deliveryRetry;
+if (run ? !deliveries.rows.some(r => String(r.id) === run && r.retry) : !deliveries.sendNow) { drawDeliveries(); $('deliveryStatus').textContent = 'Schon erledigt oder schon neu gestartet.'; return; }
+await action();
+$('deliveryStatus').textContent = 'Gestartet. Der Post kommt in ein paar Minuten; hier steht es dann.';
+setTimeout(() => refreshDeliveries(false), 5000);
+} catch (e) { $('deliveryStatus').textContent = 'Nicht gestartet: ' + e.message; button.disabled = false; }
+}
+$('deliveryList').addEventListener('click', e => { const b = e.target.closest('[data-delivery-retry]'); if (b) deliveryAction(() => retryDelivery(b.dataset.deliveryRetry), b); });
+$('deliverySend').onclick = () => deliveryAction(sendDeliveryNow, $('deliverySend'));
+$('deliveryButton').onclick = () => { showSettings(false); $('deliveryStatus').textContent = ''; $('deliveryList').innerHTML = '<li class="muted">Wird geladen …</li>'; $('deliveryDlg').showModal(); refreshDeliveries(); };
+$('deliveryReload').onclick = () => refreshDeliveries();
+$('deliveryButton').hidden = !movesKey;
+// a failed delivery today shows as ⚠ on the menu entry
+refreshDeliveries(false);
