@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../workers/season-votes/index.js';
+import './votes-identity-stub.mjs';
 // The Awards part of the votes helper: secret ballots in KV until "Auflösen".
 const origin='https://ryotsushigawa.github.io';
 function kv(){
@@ -8,10 +9,11 @@ function kv(){
  return {data,
   get:async key=>data.has(key)?data.get(key):null,
   put:async (key,value)=>{data.set(key,value);},
+  delete:async key=>{data.delete(key);},
   list:async ({prefix})=>({keys:[...data.keys()].filter(k=>k.startsWith(prefix)).map(name=>({name})),list_complete:true})};
 }
 const call=async (env,path,body,method=body?'POST':'GET')=>{
- const res=await worker.fetch(new Request('https://votes.test'+path,{method,headers:{Origin:origin,...(body&&{'Content-Type':'application/json'})},...(body&&{body:JSON.stringify(body)})}),env);
+ const res=await worker.fetch(new Request('https://votes.test'+path,{method,headers:{Origin:origin,'X-Person-Pin':'1234',...(body&&{'Content-Type':'application/json'})},...(body&&{body:JSON.stringify(body)})}),env);
  return {status:res.status,body:await res.json()};
 };
 const season='Herbst 2026';

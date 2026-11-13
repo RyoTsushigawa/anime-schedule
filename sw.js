@@ -35,7 +35,7 @@ self.addEventListener('fetch', event => {
   // dedicated UI assets. Offline users still get the saved version. The games too: their pages import
   // modules, and an older saved copy next to a newer one (or a stale module after a slow answer) stops
   // the game from starting at all, so they always come fresh together.
-  const previewAsset = /\/(?:season-preview\.(?:html|css|js)|(?:games|cover-game|synopsis|trivia|boerse)\.(?:html|css|js)|game-guard\.js|[\w-]+\.mjs)$/.test(url.pathname);
+  const previewAsset = /\/(?:season-preview\.(?:html|css|js)|(?:games|cover-game|synopsis|trivia|boerse)\.(?:html|css|js)|game-guard\.js|identity\.js|[\w-]+\.mjs)$/.test(url.pathname);
   const fresh = () => fetch(request, { cache: pageFile && !previewAsset ? 'default' : 'no-cache' }).then(async response => {
     if (response.ok && !response.redirected) await (await caches.open(CACHE)).put(key, response.clone());
     return response;

@@ -57,3 +57,14 @@ The weekly plan's day menu has "Falschen Link melden". Reports are kept in the s
 - `POST /reports/resolve` `{ id, status, resolution? }`: closes or reopens one.
 
 The optional group code applies here too. Tests: `node --test tests/link-reports-worker.test.mjs`.
+
+## Only for yourself (Awards ballots, Börse orders, your own Börse account)
+
+The helper checks who is acting. A person with an AniList account in "Wer ist wer" (`wrapped-profiles.json` on the
+site) sends their AniList login (`X-AniList-Token`); the helper asks AniList whose it is (`Viewer`) and keeps
+nothing. MaRyo's two accounts are two people (RyoTsushigawa = Ryo, MilkyWay95 = Marvin, `ACCOUNT_PERSON`). A person
+without AniList sends a PIN (`X-Person-Pin`), set the first time; only a salted SHA-256 is kept (`pin:<person>`),
+and 5 wrong tries lock it for 15 minutes. A person with AniList can't be claimed with a PIN.
+`GET /identity?person=` says which applies; `POST /identity/check` tests it; the owner resets a PIN with
+`POST /identity/pin-reset` `{ person }` and the site's GitHub key in `X-Owner-Key` (checked with GitHub).
+Tests: `node --test tests/votes-identity.test.mjs`.

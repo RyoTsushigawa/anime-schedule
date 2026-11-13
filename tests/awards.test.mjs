@@ -214,3 +214,59 @@ test('N84 Ruhmeshalle: only revealed seasons, their winners, and who picked winn
   assert.match(byId('awardsHallBody').textContent, /Bestes Opening\s*Dandadan/);
   assert.match(byId('awardsHallBody').querySelector('.awards-hall-note').textContent, /Ryo \(2\), Mia \(1\), Rei \(1\)/);
 });
+
+test('only for yourself: your AniList login picks and confirms you; without AniList a PIN; the proof goes along', async t => {
+  const dom = new JSDOM(read('awards.html'), { url: 'https://schedule.example/awards.html', runScripts: 'outside-only' });
+  const { window } = dom;
+  t.after(() => window.close());
+  const byId = id => window.document.getElementById(id);
+  window.localStorage.setItem('anilistAccounts', JSON.stringify([{ name: 'RyoTsushigawa', token: 'ryo-token' }]));
+  const sent = [];
+  window.fetch = async (url, options = {}) => {
+    const u = new URL(url, 'https://schedule.example/');
+    const reply = data => ({ ok: true, status: 200, json: async () => data });
+    if (u.pathname.endsWith('wrapped-profiles.json')) return reply({ MaRyo: [{ provider: 'anilist', name: 'RyoTsushigawa' }, { provider: 'anilist', name: 'MilkyWay95' }] });
+    if (u.host !== 'votes.test') return { ok: false, status: 404, json: async () => ({}) };
+    if (u.pathname === '/awards') return reply({ revealed: false, voters: [] });
+    if (u.pathname === '/awards/ceddl') return reply({ candidates: [] });
+    if (u.pathname === '/awards/ballot') { sent.push({ person: JSON.parse(options.body).person, headers: options.headers }); return reply({ ok: true }); }
+    throw Error('unexpected ' + url);
+  };
+  window.eval(`
+    const $ = id => document.getElementById(id);
+    const SHEET_ID = 'test-sheet';
+    const norm = value => value.toLowerCase();
+    const config = async () => ({ previewVotesUrl: 'https://votes.test/' });
+    const guckplanTabs = async () => [{ gid: '2', name: 'Guckplan Herbst 2026' }];
+    const tabFor = tabs => tabs[0];
+    const loadPlan = async () => ({ people: ['MaRyo', 'Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }] });
+    ${read('identity.js')}
+    ${read('awards.js')}
+  `);
+  const tick = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)); };
+  await tick();
+  assert.equal(byId('awardsPerson').value, 'Ryo', 'your own name first');
+  assert.match(byId('awardsIdentity').textContent, /Ryo, bestätigt über AniList \(RyoTsushigawa\)/);
+  const best = byId('awardsBallot').querySelector('[data-category="best"] input');
+  best.value = 'The Alpha'; best.dispatchEvent(new window.Event('change'));
+  byId('awardsSubmit').click(); await tick();
+  assert.deepEqual(sent.map(s => [s.person, s.headers['X-AniList-Token']]), [['Ryo', 'ryo-token']]);
+  // Marvin's account isn't in this browser: connect AniList, no PIN
+  byId('awardsPerson').value = 'Marvin'; byId('awardsPerson').dispatchEvent(new window.Event('change')); await tick();
+  assert.match(byId('awardsIdentity').textContent, /Marvin meldet sich mit AniList an.*milkyway95/);
+  assert.equal(byId('awardsSubmit').disabled, true);
+  // Rei has no AniList: a PIN
+  byId('awardsPerson').value = 'Rei'; byId('awardsPerson').dispatchEvent(new window.Event('change')); await tick();
+  const pin = byId('awardsIdentity').querySelector('input[type="password"]');
+  assert.ok(pin);
+  const b2 = byId('awardsBallot').querySelector('[data-category="best"] input');
+  b2.value = 'The Alpha'; b2.dispatchEvent(new window.Event('change'));
+  assert.equal(byId('awardsSubmit').disabled, true, 'not before the PIN');
+  pin.value = 'rei-pin'; byId('awardsIdentity').querySelector('button').click(); await tick();
+  assert.match(byId('awardsIdentity').textContent, /PIN für Rei ist für diese Sitzung gemerkt/);
+  assert.equal(byId('awardsSubmit').disabled, false);
+  byId('awardsSubmit').click(); await tick();
+  assert.deepEqual(sent.at(-1), { person: 'Rei', headers: sent.at(-1).headers });
+  assert.equal(sent.at(-1).headers['X-Person-Pin'], 'rei-pin');
+  assert.equal(sent.at(-1).headers['X-AniList-Token'], undefined);
+});

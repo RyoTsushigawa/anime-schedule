@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../workers/season-votes/index.js';
+import './votes-identity-stub.mjs';
 // Anime-Börse in the votes helper: trading at the day's close, fees, T+1, short sales, circuit breaker
 const origin='https://ryotsushigawa.github.io';
 function kv(){
  const data=new Map();
- return {data,get:async key=>data.has(key)?data.get(key):null,put:async (key,value)=>{data.set(key,value);},
+ return {data,get:async key=>data.has(key)?data.get(key):null,put:async (key,value)=>{data.set(key,value);},delete:async key=>{data.delete(key);},
   list:async ({prefix})=>({keys:[...data.keys()].filter(k=>k.startsWith(prefix)).map(name=>({name})),list_complete:true})};
 }
 let n=0;
@@ -14,13 +15,13 @@ function site(shows){
  const url='https://site'+(++n)+'.test/';
  const file={seasons:{'Winter 2027':{days:['2027-01-04'],shows}}};
  const real=globalThis.fetch;
- globalThis.fetch=async u=>String(u).startsWith(url)?new Response(JSON.stringify(file)):real(u);
+ globalThis.fetch=async (u,init)=>String(u).startsWith(url+'boerse-prices.json')?new Response(JSON.stringify(file)):real(u,init);
  return {url,file};
 }
 const at=iso=>String(Date.parse(iso));
 const env=(url,now='2027-01-04T15:00:00Z',store=kv())=>({SITE_ORIGIN:origin,AWARDS:store,SITE_URL:url,TEST_NOW:at(now)});
 const call=async (e,path,body)=>{
- const res=await worker.fetch(new Request('https://votes.test'+path,{method:body?'POST':'GET',headers:{Origin:origin,...(body&&{'Content-Type':'application/json'})},...(body&&{body:JSON.stringify(body)})}),e);
+ const res=await worker.fetch(new Request('https://votes.test'+path,{method:body?'POST':'GET',headers:{Origin:origin,'X-Person-Pin':'1234',...(body&&{'Content-Type':'application/json'})},...(body&&{body:JSON.stringify(body)})}),e);
  return {status:res.status,body:await res.json()};
 };
 const season='Winter 2027';
