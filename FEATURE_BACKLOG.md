@@ -9,10 +9,10 @@ The feature challenge has **13 of 50 approved standalone features** and **30 app
 | N1 | Seasonal Anime Awards | Merged in [PR #161](https://github.com/RyoTsushigawa/anime-schedule/pull/161); shared voting, secret until „Auflösen“, in [PR #163](https://github.com/RyoTsushigawa/anime-schedule/pull/163). |
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
 | N24 | Anime List Health Check | Approved. |
-| N35 | Anime Title Lookup | Approved. Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
+| N35 | Anime Title Lookup | Done (backlog batch 3). Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
 | N38 | Group Availability Grid | Done (backlog batch 3). Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
 | N39 | Schedule Data Status | Done (backlog batch 2). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
-| N44 | Watch Progress Sync History | Approved. Show recent AniList and MyAnimeList episode updates from this browser, with successes and failures. |
+| N44 | Watch Progress Sync History | Done (backlog batch 3). Show recent AniList and MyAnimeList episode updates from this browser, with successes and failures. |
 
 ## Approved updates
 
