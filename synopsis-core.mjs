@@ -45,3 +45,15 @@ export function blackOut(text, words) {
   }
   return out.replace(new RegExp(`${BLACK}(?:[\\s-]+${BLACK})+`, 'g'), BLACK);
 }
+
+// U23: statistics from this browser's results, { 'YYYY-MM-DD': { tries, solved, done } }
+// streak: solved days in a row, ending today (or yesterday, if today isn't played yet)
+export function synopsisStats(history, today) {
+  const days = Object.entries(history || {}).filter(([, r]) => r?.done);
+  const solved = days.filter(([, r]) => r.solved);
+  const prev = d => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); return t.toISOString().slice(0, 10); };
+  let streak = 0, d = history?.[today]?.done ? today : prev(today);
+  while (history?.[d]?.solved) { streak++; d = prev(d); }
+  return { played: days.length, solved: solved.length, firstTry: solved.filter(([, r]) => r.tries === 1).length,
+    rate: days.length ? Math.round(solved.length / days.length * 100) : 0, streak };
+}

@@ -21,3 +21,16 @@ test('giveaways blacked out: title words and character names, whole words only',
   const out = blackOut('Frieren travels with Fern and Stark beyond the mountains; Fernando is someone else.', giveaways(media));
   assert.equal(out, `${BLACK} travels with ${BLACK} and ${BLACK} the mountains; Fernando is someone else.`, "neighbouring words merge into one block");
 });
+import { synopsisStats } from '../synopsis-core.mjs';
+test('U23: statistics count played, solved, first tries and the streak up to today', () => {
+  const h = {
+    '2026-11-09': { tries: 2, solved: false, done: true },
+    '2026-11-10': { tries: 1, solved: true, done: true },
+    '2026-11-11': { tries: 2, solved: true, done: true },
+    '2026-11-12': { tries: 1, solved: true, done: true },
+    '2026-11-13': { tries: 1, solved: false, done: false },
+  };
+  assert.deepEqual(synopsisStats(h, '2026-11-13'), { played: 4, solved: 3, firstTry: 2, rate: 75, streak: 3 });
+  assert.equal(synopsisStats({ ...h, '2026-11-13': { tries: 2, solved: false, done: true } }, '2026-11-13').streak, 0);
+  assert.deepEqual(synopsisStats({}, '2026-11-13'), { played: 0, solved: 0, firstTry: 0, rate: 0, streak: 0 });
+});

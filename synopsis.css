@@ -10,3 +10,7 @@
 .syn-end details summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 @media (max-width: 520px) { .syn-end { grid-template-columns: 80px minmax(0, 1fr); } .syn-end img { width: 80px; } }
 .syn-black { display: inline-block; width: 3.2em; height: .95em; margin: 0 1px; vertical-align: -2px; border-radius: 3px; background: var(--text); opacity: .85; }
+
+/* U21 archive of earlier days, U23 statistics */
+.syn-archive select { font-size: 12px; }
+.syn-stats { margin: 0; font-size: 12.5px; color: var(--muted); }

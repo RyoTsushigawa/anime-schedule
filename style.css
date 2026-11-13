@@ -1155,7 +1155,7 @@ text-align: center;
 .away-tabbar { display: flex; gap: 8px; align-items: center; min-width: 0; }
 .away-tabbar .away-tabs { flex: 1; min-width: 0; }
 .away-who-filter { flex: none; max-width: 40%; font-size: 12px; }
-.away-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 99px; background: var(--card); border: 1px solid var(--line); }
+.away-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; border-radius: 99px; background: var(--card); border: 1px solid var(--line); }
 .away-tabs [role="tab"] { min-height: 32px; padding: 4px 10px; border: 0; background: transparent; color: var(--muted); border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .away-tabs [role="tab"][aria-selected="true"] { background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
 .away-tabs [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1610,3 +1610,23 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .data-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
 .data-list li { display: grid; gap: 2px; font-size: 13px; }
 .data-list span { color: var(--muted); }
+
+/* U25: pin a show to the top of Catch-up */
+.pin-show { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-left: 6px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); vertical-align: -4px; cursor: pointer; opacity: .55; }
+.pin-show:hover, .pin-show:focus-visible { opacity: 1; color: var(--text); }
+.pin-show.on { opacity: 1; color: var(--accent); }
+.pin-show.on svg path { fill: currentColor; }
+
+/* N38: the group's week */
+.away-week-scroll { overflow-x: auto; }
+.away-week { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 12px; }
+.away-week th { font-weight: 600; color: var(--muted); padding: 2px; }
+.away-week thead th small { display: block; font-weight: 500; }
+.away-week thead th.aw-today { color: var(--accent); }
+.away-week tbody th { text-align: left; white-space: nowrap; }
+.away-week td { text-align: center; padding: 6px 2px; border-radius: 7px; background: var(--bg); min-width: 34px; white-space: nowrap; }
+.away-week .aw-free, .away-legend .aw-free { color: var(--green, #5cc285); }
+.away-week td.aw-off { background: color-mix(in srgb, #b45555 22%, var(--bg)); color: var(--text); }
+.away-week td.aw-part { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); color: var(--text); font-size: 11px; }
+.away-week td.aw-maybe { border: 1px dashed var(--muted); }
+.away-legend b { font-weight: 700; }
