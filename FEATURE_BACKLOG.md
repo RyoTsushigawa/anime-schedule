@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **10 of 50 approved standalone features** and **24 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **12 of 50 approved standalone features** and **25 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -10,6 +10,8 @@ The feature challenge has **10 of 50 approved standalone features** and **24 app
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
 | N24 | Anime List Health Check | Approved. |
 | N35 | Anime Title Lookup | Approved. Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
+| N38 | Group Availability Grid | Approved. Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
+| N39 | Schedule Data Status | Approved. Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
 
 ## Approved updates
 
@@ -24,6 +26,7 @@ The feature challenge has **10 of 50 approved standalone features** and **24 app
 | U27 | Season Preview · Next Unvoted Show | Approved. After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
 | U29 | Absences · Filter by Person | Approved. Filter entries in Kalender and Wiederkehrend by person, with an All option. |
 | U32 | Weekly Plan · Hide Covers | Approved. Add a text-only view that keeps times, episode numbers, and watch controls visible. |
+| U34 | Discord Schedule · Compact Copy | Approved. Offer a shorter copy format with start times, titles, and episode numbers. |
 
 ## Curation decisions
 
