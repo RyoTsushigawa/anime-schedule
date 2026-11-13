@@ -123,6 +123,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button>
 <button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes</button>
 <button id="dataButton" class="menu-item" aria-haspopup="dialog" title="Wann Guckplan, Sendetermine und Trailer zuletzt aktualisiert wurden">Datenstand</button>
+<button id="accountCheckButton" class="menu-item" aria-haspopup="dialog">Kontoverbindung prüfen</button>
 <button id="healthButton" class="menu-item" aria-haspopup="dialog" title="Prüft deine AniList-Liste auf vergessene, unvollständige oder fehlende Einträge">Listen-Check</button>
 <button id="syncButton" class="menu-item" aria-haspopup="dialog" title="Die letzten Häkchen und Änderungen an AniList und MyAnimeList aus diesem Browser">Sync-Verlauf</button>
 <button id="settingsExport" class="menu-item" type="button" title="Deine Anzeige-Einstellungen als Datei speichern (ohne Logins und Schlüssel)">Einstellungen exportieren</button>
@@ -414,6 +415,13 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 </form>
 </dialog>
 <div id="update" role="status" hidden><span>Neue Version ist da.</span><button id="updateReload" class="pill">Neuladen</button></div>
+<dialog id="accountCheckDlg" class="dlg notes-dlg" aria-labelledby="accountCheckTitle">
+<form method="dialog">
+<b id="accountCheckTitle">Kontoverbindung prüfen</b>
+<ul id="accountCheckResults" class="data-list" role="status" aria-live="polite"></ul>
+<div class="dlg-row dlg-foot"><button type="button" id="accountCheckRetry" class="pill">Erneut prüfen</button><button value="cancel" class="pill primary">OK</button></div>
+</form>
+</dialog>
 <dialog id="healthDlg" class="dlg notes-dlg" aria-labelledby="healthTitle">
 <form method="dialog">
 <b id="healthTitle">Listen-Check</b>

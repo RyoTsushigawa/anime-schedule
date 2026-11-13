@@ -183,6 +183,12 @@ try {
     : `<li><b>${esc(i.show.english || i.show.romaji)}</b><span>${esc(i.text)}</span></li>`).join('')}</ul></section>`).join('');
 } catch (e) { $('healthIntro').textContent = `Die Liste konnte nicht geladen werden: ${e.message}`; }
 }
+$('accountCheckButton').onclick = () => {
+  showSettings(false);
+  $('accountCheckDlg').showModal();
+  checkListConnection();
+};
+$('accountCheckRetry').onclick = checkListConnection;
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
 $('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
