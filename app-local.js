@@ -273,7 +273,7 @@ option.hidden = option.disabled = option.value.toLowerCase() === ownName;
 if (option.hidden && option.selected) friendList.value = '';
 }
 }
-fetch('wrapped-profiles.json').then(r => r.ok ? r.json() : {}).then(profiles => {
+const accountProfilesReady = fetch('wrapped-profiles.json').then(r => r.ok ? r.json() : {}).then(profiles => {
 profileList = profiles && typeof profiles === 'object' ? profiles : {};
 if (lastWeekRender && view === 'week') redraw();   // ✓ follows the account's person (accountPerson)
 for (const [person, accounts] of Object.entries(profiles)) {

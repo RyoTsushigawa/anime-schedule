@@ -33,6 +33,10 @@ dispatchEvent(new CustomEvent('mal-session-renewed'));
 }
 return body;
 }
+const probeList = async account => {
+  const result = await request(account, '/list?offset=0');
+  return Array.isArray(result.data);
+};
 const profile = account => request(account, '/me');
 async function exchange(code) {
 if (!/^[a-f0-9]{64}$/.test(code)) throw new Error('Ungültiger MyAnimeList-Anmeldecode. Bitte neu verbinden.');
@@ -151,7 +155,7 @@ return { id: malId, ...normalizedEntry(saved) };
 async function remove(account, malId) {
 await request(account, '/anime/' + malId, { method: 'DELETE' }); invalidate(account);
 }
-return { rememberMedia, seed, exchange, profile, list, entry, save, remove, invalidate, anilistId,
+return { rememberMedia, seed, exchange, profile, probeList, list, entry, save, remove, invalidate, anilistId,
 connect: () => { location.href = base + '/auth/start'; },
 logout: account => request(account, '/logout', { method: 'POST' }),
 };

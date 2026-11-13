@@ -62,6 +62,63 @@ if (e.status === 401 && auth === account) disconnect();
 throw e;
 }
 }
+let accountCheckRun = 0;
+async function checkListConnection() {
+  const run = ++accountCheckRun, account = auth;
+  const results = $('accountCheckResults'), retry = $('accountCheckRetry');
+  const current = () => run === accountCheckRun && $('accountCheckDlg').open && auth === account;
+  const add = message => {
+    const row = document.createElement('li');
+    row.textContent = message;
+    results.append(row);
+    return row;
+  };
+  results.replaceChildren();
+  retry.disabled = false;
+  if (!account?.token || !account.name) {
+    add('Kein Listen-Konto verbunden. Verbinde AniList oder MyAnimeList im Kontomenü.');
+    return;
+  }
+  retry.disabled = true;
+  const service = listService();
+  const login = add(service + ': Anmeldung wird geprüft …');
+  try {
+    const profile = account.provider === 'mal'
+      ? await MAL.profile(account)
+      : (await anilist('query { Viewer { id name } }', {}, account.token, { retries: 0 })).Viewer;
+    if (!current()) return;
+    if (profile?.name?.toLowerCase() !== account.name.toLowerCase()) {
+      login.textContent = service + ': Konto stimmt nicht überein. Bitte neu verbinden.';
+      return;
+    }
+    login.textContent = service + ': Anmeldung gültig (' + profile.name + ').';
+    await accountProfilesReady;
+    if (!current()) return;
+    const person = accountPerson();
+    add(person ? 'Guckplan: Zuordnung zu ' + person + '.' :
+      'Guckplan: Keine feste Personenzuordnung. Prüfe „Wer ist wer“ in Anime Wrapped.');
+    const list = add('Listenzugriff wird geprüft …');
+    try {
+      if (account.provider === 'mal') {
+        if (!await MAL.probeList(account)) throw Error('Missing list');
+      } else {
+        const data = await anilist(
+          'query ($id: Int) { Page(perPage: 1) { mediaList(userId: $id, type: ANIME) { id } } }',
+          { id: profile.id }, account.token, { retries: 0 });
+        if (!Array.isArray(data?.Page?.mediaList)) throw Error('Missing list');
+      }
+      if (current()) list.textContent = 'Listenzugriff: Lesen funktioniert.';
+    } catch {
+      if (current()) list.textContent = 'Listenzugriff: Die aktuelle Liste konnte nicht gelesen werden. Versuche es erneut.';
+    }
+  } catch (error) {
+    if (current()) login.textContent = error.status === 401 || error.status === 403
+      ? service + ': Anmeldung ungültig. Bitte neu verbinden.'
+      : service + ': Anmeldung konnte gerade nicht geprüft werden. Versuche es erneut.';
+  } finally {
+    if (run === accountCheckRun) retry.disabled = false;
+  }
+}
 function disconnect() {
 if (pendingChanges.size || bulkSaving || undoing) { notice('Bitte warte, bis die aktuelle Listenänderung fertig ist.'); return; }
 if (auth?.provider === 'mal') MAL.logout(auth).catch(() => {});
