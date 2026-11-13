@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **28 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **29 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -31,6 +31,7 @@ The feature challenge has **13 of 50 approved standalone features** and **28 app
 | U37 | Season Preview · Remember My Filters | Approved. Restore the last selected voter and filters. |
 | U38 | Weekly Plan · Time Zone Override | Approved. Show the same schedule in Berlin time, device-local time, or a chosen time zone through the existing time settings. |
 | U39 | Weekly Plan · Explain Absence Pauses | Approved. Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
+| U41 | Weekly Plan · Remind Me Before a Show | Approved. Offer an optional reminder from the existing watch-slot menu. |
 
 ## Curation decisions
 
