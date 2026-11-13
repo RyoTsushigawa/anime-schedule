@@ -50,7 +50,9 @@ const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 
 function draw() {
   const win = tradingWindow(seasonName()), open = !!state?.open && !!state?.account;
-  $('stockWindow').textContent = !win ? '' : open ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
+  // the season's dates decide what the line says, also when the helper can't be reached
+  const running = win && (state ? state.open : win.open);
+  $('stockWindow').textContent = !win ? '' : running ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
     : Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand';
   const a = state?.account || { cash: CASH, pending: [], holdings: {}, trades: [] };
   const value = accountValue(a, prices);
