@@ -352,19 +352,29 @@ rows[5][1] = await trailers; draw();
 function drawSyncHistory() {
 let list = [];
 try { list = JSON.parse(localStorage.getItem(SYNC_LOG) || '[]'); } catch {}
-const what = e => e.ok
+const what = e => e.removed ? 'Von der Liste genommen (Listen-Check)' : e.ok
   ? [e.score !== undefined ? `Wertung ${e.score}` : e.status === 'DROPPED' ? 'gedroppt' : e.from !== e.to ? `Folge ${e.from ?? 0} → ${e.to}` : `Folge ${e.to}`, e.note].filter(Boolean).join(' · ')
   : `Nicht gespeichert${e.to != null ? ` (Folge ${e.to})` : ''}: ${e.error}`;
 $('syncList').innerHTML = list.length ? list.map(e => `<li class="${e.ok ? 'ok' : 'failed'}"><b>${e.ok ? '✓' : '✕'} ${esc(e.title)}</b><span>${esc(what(e))}</span><small>${esc(ago(e.at))}${e.account ? ' · ' + esc(e.account) : ''}</small></li>`).join('')
   : '<li class="muted">Noch nichts gespeichert.</li>';
 }
-// N24 Listen-Check: problems in an AniList list, each with a link to fix it there (nothing is changed here)
+// N24 Listen-Check: problems in an AniList list, each with a link to fix it there. Only "Nicht in deinem Guckplan"
+// changes something, and only on request: a show on the list as watching although the Guckplan says "Nein" for
+// you (left over from before 12 Nov, when ✓ in the group view could tick other people's shows into your list)
+// can be taken off the connected list.
 const HEALTH_QUERY = `query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING, PAUSED, COMPLETED, PLANNING]) {
-  lists { entries { status progress updatedAt media { id status episodes siteUrl synonyms title { romaji english } } } } } }`;
+  lists { entries { id status progress updatedAt media { id status episodes siteUrl synonyms title { romaji english } } } } } }`;
 const HEALTH_STALE_DAYS = 90;
-function listHealth(entries, planned, now = Date.now()) {
+function listHealth(entries, planned, now = Date.now(), notMine = []) {
 const title = m => m.title.english || m.title.romaji;
-const stale = [], beyond = [], incomplete = [], missing = [];
+const stale = [], beyond = [], incomplete = [], missing = [], stray = [];
+// this season's Guckplan shows that aren't yours, but are on your list as watching (or paused)
+for (const e of entries) {
+  if (!['CURRENT', 'REPEATING', 'PAUSED'].includes(e.status)) continue;
+  const titles = [e.media.title.romaji, e.media.title.english, ...(e.media.synonyms || [])].filter(Boolean);
+  const show = notMine.find(s => titleMatches([s.romaji, s.english], titles));
+  if (show) stray.push({ m: e.media, entry: e.id, text: `Bei Folge ${e.progress || 0} auf „${e.status === 'PAUSED' ? 'Pausiert' : 'Schaue ich'}“, im Guckplan steht bei dir „${show.votes?.[show.person] || 'Nein'}“` });
+}
 for (const { status, progress, updatedAt, media: m } of entries) {
   if (status === 'CURRENT' && m.status === 'FINISHED' && updatedAt && now - updatedAt * 1000 > HEALTH_STALE_DAYS * 864e5)
     stale.push({ m, text: `Seit ${Math.floor((now - updatedAt * 1000) / 864e5)} Tagen nicht weitergeschaut, bei Folge ${progress || 0}${m.episodes ? ' von ' + m.episodes : ''}` });
@@ -379,6 +389,7 @@ return [
   ['Mehr Folgen als die Serie hat', '', beyond],
   ['Unvollständig abgeschlossen', '', incomplete],
   ['Fehlt auf der Liste', 'Serien aus deinem Guckplan dieser Season', missing],
+  ['Nicht in deinem Guckplan', 'Auf der Liste, obwohl du sie laut Guckplan nicht schaust. Bis zum 12. Nov. konnte ein ✓ in der Gruppenansicht fremde Serien in deine Liste schreiben.', stray],
 ].map(([name, note, items]) => ({ name, note, items: items.sort((a, b) => (a.m ? title(a.m) : a.show.english || a.show.romaji).localeCompare(b.m ? title(b.m) : b.show.english || b.show.romaji)) }));
 }
 async function drawHealth() {
@@ -390,14 +401,34 @@ $('healthIntro').textContent = `Prüfe die AniList-Liste von ${anilistName} …`
 try {
   const entries = (await anilist(HEALTH_QUERY, { user: anilistName })).MediaListCollection.lists.flatMap(l => l.entries);
   const sheet = lastWeekRender ? [...lastWeekRender[2].values()].find(s => s?.people?.includes(person)) : null;
-  const planned = sheet && person ? [...picks(sheet, person).keys()].filter(s => !s.hidden) : [];
-  const groups = listHealth(entries, planned), found = groups.reduce((n, g) => n + g.items.length, 0);
+  const mine = sheet && person ? new Set(picks(sheet, person).keys()) : new Set();
+  const planned = [...mine].filter(s => !s.hidden);
+  // the season's shows this person doesn't watch (an empty or "Default" vote counts as not watching)
+  const notMine = sheet && person ? sheet.shows.filter(s => !s.hidden && !mine.has(s) && !watchesAlone(s, person)).map(s => ({ ...s, person })) : [];
+  const groups = listHealth(entries, planned, Date.now(), notMine), found = groups.reduce((n, g) => n + g.items.length, 0);
+  const canRemove = !!auth && auth.provider !== 'mal' && auth.name.toLowerCase() === anilistName.toLowerCase();
   $('healthIntro').textContent = found ? `${entries.length} Einträge von ${anilistName} geprüft · ${found} ${found === 1 ? 'Hinweis' : 'Hinweise'}. Ändern geht auf AniList.` : `${entries.length} Einträge von ${anilistName} geprüft: alles in Ordnung ✓`;
   $('healthList').innerHTML = groups.filter(g => g.items.length).map(g => `<section><h3>${esc(g.name)} <span>${g.items.length}</span></h3>${g.note ? `<p class="muted">${esc(g.note)}</p>` : ''}<ul class="data-list">${g.items.map(i => i.m
-    ? `<li><a href="${safeUrl(i.m.siteUrl)}" target="_blank" rel="noopener"><b>${esc(i.m.title.english || i.m.title.romaji)}</b></a><span>${esc(i.text)}</span></li>`
+    ? `<li${i.entry ? ` data-stray="${i.entry}" data-media="${i.m.id}"` : ''}><a href="${safeUrl(i.m.siteUrl)}" target="_blank" rel="noopener"><b>${esc(i.m.title.english || i.m.title.romaji)}</b></a><span>${esc(i.text)}</span>${i.entry && canRemove ? '<span class="repair-actions"><button type="button" class="pill" data-stray-remove>Von meiner Liste nehmen</button></span>' : ''}</li>`
     : `<li><b>${esc(i.show.english || i.show.romaji)}</b><span>${esc(i.text)}</span></li>`).join('')}</ul></section>`).join('');
 } catch (e) { $('healthIntro').textContent = `Die Liste konnte nicht geladen werden: ${e.message}`; }
 }
+$('healthList').addEventListener('click', async event => {
+  const button = event.target.closest('[data-stray-remove]');
+  if (!button) return;
+  const row = button.closest('[data-stray]'), title = row.querySelector('b').textContent;
+  if (!confirm(`„${title}“ von deiner AniList-Liste nehmen? Der Eintrag mit deinem Fortschritt wird gelöscht.`)) return;
+  button.disabled = true;
+  try {
+    await anilistAsMe('mutation ($id: Int) { DeleteMediaListEntry(id: $id) { deleted } }', { id: Number(row.dataset.stray) });
+    const mediaId = Number(row.dataset.media);
+    knownEntries.delete(mediaId); myProgress.delete(mediaId); notOnList.add(mediaId);
+    invalidateAccount(auth);
+    logSync({ mediaId, title, account: 'AniList ' + auth.name, ok: true, removed: true });
+    row.querySelector('.repair-actions').textContent = '✓ Von der Liste genommen';
+    if (view === 'catchup') load(true);
+  } catch (e) { button.disabled = false; button.closest('.repair-actions').append(Object.assign(document.createElement('small'), { textContent: ' Nicht gelöscht: ' + e.message })); }
+});
 $('accountCheckButton').onclick = () => {
   showSettings(false);
   $('accountCheckDlg').showModal();

@@ -30,7 +30,7 @@ const SITE_FEATURES = [
   ]],
   ['Einstellungen & Werkzeuge', [
     'Hell / dunkel', 'Akzentfarben, auch die eigene Guckplan-Farbe', 'Dichte (bequem, kompakt, nur Text)', 'Schriftgröße', 'Hoher Kontrast',
-    'Einstellungen exportieren und importieren', 'Datenstand', 'Sync-Verlauf', 'Listen-Check', 'Kontoverbindung prüfen',
+    'Einstellungen exportieren und importieren', 'Datenstand', 'Sync-Verlauf', 'Listen-Check (auch Fremdeinträge aus dem Guckplan entfernen)', 'Kontoverbindung prüfen',
     'AniList ↔ MAL vergleichen', 'Hilfe mit Themen und Tastenkürzeln', 'Patch-Notes mit „Letztes neues Feature“', 'Feedback-Link',
   ]],
   ['Season Preview', [
