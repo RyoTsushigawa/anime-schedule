@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **23 of 50 approved standalone features** and **48 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **22 of 50 approved standalone features** and **49 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -61,6 +61,8 @@ The feature challenge has **23 of 50 approved standalone features** and **48 app
 | U63 | Weekly Plan · Warn When Moving Before Airing | Approved. Flag a proposed slot before the episode’s confirmed release time and show that time in the existing move dialog. |
 | U72 | Allein · Catch-up on Release | In [PR #173](https://github.com/RyoTsushigawa/anime-schedule/pull/173). Use the existing Sheet choice to send aired, unwatched episodes to personal Catch-up without waiting for the group slot. |
 | U66 | Weekly Plan · End Date for a Temporary Move | Approved. Let the temporary slot run through a chosen week and then restore the regular slot automatically. |
+
+| U73 (N80) | Personal Catch-up Planner | Approved. Build on the existing multi-day Nachholen planner and add per-day time budgets around existing watch slots. Use the existing planner entry point. |
 
 ## Curation decisions
 
