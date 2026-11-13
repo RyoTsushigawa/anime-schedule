@@ -1,6 +1,7 @@
 // Inhalts-Rätsel: every day the description of one of your shows (from the Guckplan, via streams-de.json),
 // names and title words blacked out; four choices, two tries. Result kept in this browser for the day.
 import { berlinDay } from './cover-core.mjs';
+import { anilist } from './game-data.mjs';
 import { dailyPuzzle, cleanDescription, giveaways, blackOut, BLACK, synopsisStats } from './synopsis-core.mjs';
 
 const $ = id => document.getElementById(id);
@@ -12,13 +13,6 @@ const dayBefore = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate
 let puzzle = null, titles = new Map(), target = null, tries = [];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const message = text => { $('synStatus').textContent = text; };
-async function anilist(query, variables) {
-  const response = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query, variables }) });
-  if (!response.ok) throw new Error('AniList antwortet ' + response.status);
-  const data = await response.json();
-  if (data.errors?.length) throw new Error('AniList hat die Anfrage abgelehnt');
-  return data.data;
-}
 const solved = () => tries.includes(target.id), done = () => solved() || tries.length >= TRIES;
 function draw() {
   const finished = done();

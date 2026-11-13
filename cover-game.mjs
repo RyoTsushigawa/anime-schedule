@@ -1,4 +1,5 @@
 import { MAL_IDS, berlinDay, buildRounds, scoreAnswers } from './cover-core.mjs';
+import { anilist, BLOCKED } from './game-data.mjs';
 
 const $ = id => document.getElementById(id);
 const storeKey = 'animeCoverQuizV2';   // V2: the shows come from the Guckplan
@@ -29,17 +30,7 @@ async function start() {
   message('Cover werden geladen …');
   try {
     // the shows from your Guckplan (streams-de.json: AniList IDs); the fixed list if there are too few
-    const ask = async (filter, ids, page) => {
-      const response = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ query: `query ($ids: [Int], $page: Int) { Page(page: $page, perPage: 50) { pageInfo { hasNextPage } media(${filter}: $ids, type: ANIME) { idMal title { english romaji } coverImage { large extraLarge } } } }`, variables: { ids, page } })
-      });
-      if (!response.ok) throw new Error('AniList HTTP ' + response.status);
-      const data = await response.json();
-      if (data.errors?.length) throw new Error('AniList hat die Anfrage abgelehnt.');
-      return data.data?.Page || {};
-    };
+    const ask = async (filter, ids, page) => (await anilist(`query ($ids: [Int], $page: Int) { Page(page: $page, perPage: 50) { pageInfo { hasNextPage } media(${filter}: $ids, type: ANIME) { idMal title { english romaji } coverImage { large extraLarge } } } }`, { ids, page })).Page || {};
     let catalog = [];
     try {
       const streams = await (await fetch('streams-de.json', { cache: 'no-cache' })).json();
@@ -62,7 +53,7 @@ async function start() {
     if (answers.length >= rounds.length) finish();
     else render();
   } catch (error) {
-    message('Die Cover konnten nicht geladen werden. Bitte erneut versuchen.');
+    message(error?.message === BLOCKED ? BLOCKED : /zu viele/.test(error?.message) ? error.message : 'Die Cover konnten nicht geladen werden. Bitte erneut versuchen.');
     $('coverRetry').hidden = false;
     console.warn('Anime Cover Quiz:', error);
   }
