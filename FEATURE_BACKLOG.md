@@ -44,7 +44,7 @@ Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED
 | U39 | Weekly Plan · Explain Absence Pauses | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
 | U42 | Season Preview · Save an Unsent Vote | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Keep a failed vote as a draft on its show so the voter can retry later. |
 | U43 | Weekly Plan · Hide Watched Episodes | Approved. Add an on/off toggle in the existing Solo view controls. On hides watched episodes. Off restores the full plan in one click. |
-| U44 | Seasonal Anime Awards · Search Nominees | Approved. Make the existing nominee picker searchable by title. |
+| U44 | Seasonal Anime Awards · Search Nominees | Done with the Awards rebuild (13 Nov): every place is a search field over the category's choices. |
 | U45 | Weekly Plan · Report a Wrong Streaming Link | Done: day menu › Falschen Link melden; reports stored by the votes helper (see workers/season-votes/README.md) for the repair queue N55. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
 | U46 | Seasonal Anime Awards · Ballot Progress | Done with the shared voting ([PR #163](https://github.com/RyoTsushigawa/anime-schedule/pull/163)): ✓ chips show who has voted, choices stay secret. |
 | U48 | Search · Clear Recent Searches | Approved. Clear this browser's recent title suggestions from the existing settings menu. |
@@ -64,6 +64,11 @@ Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED
 | U74 | Watch-Planer · Take Over Absences | Done: Watch-Planer › Feste Termine › Aus Abwesenheiten. Recurring absences (e.g. „Sophie jeden Sa“) are taken over as busy times in the Watch planner instead of being entered by hand. |
 
 | U73 (N80) | Personal Catch-up Planner | Done as N80. |
+
+## Owner requests outside the challenge (13 Nov)
+
+- **Awards rebuild:** Eurovision points (12 / 10 / 8 per category, voter-by-voter reveal show), 22 categories like the Crunchyroll Anime Awards (Hauptpreise, Genres, Figuren, Handwerk) and **Ceddl of the Year** from candidates the group collects over the season. Done.
+- **Anime-Börse:** a stock market with play money for the season's real anime; trading only at the start of the season; a share's value comes from the group's own ratings. Next.
 
 ## Curation decisions
 

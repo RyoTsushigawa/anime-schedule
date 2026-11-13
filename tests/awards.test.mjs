@@ -26,7 +26,7 @@ test('seasonal ballots isolate voters and seasons, persist choices, and share th
     if (failLoad) return Promise.reject(new Error('offline'));
     const plan = {
       people: ['Ryo', 'Mia'],
-      shows: [{ romaji: 'Alpha', english: 'The Alpha' }, { romaji: 'Hidden', hidden: true }]
+      shows: [{ romaji: 'Alpha', english: 'The Alpha' }, { romaji: 'Beta', english: 'Beta EN' }, { romaji: 'Hidden', hidden: true }]
     };
     if (tab === tabs[0]) return plan;
     return new Promise(resolve => { completeOldRequest = () => resolve(plan); });
@@ -43,62 +43,77 @@ test('seasonal ballots isolate voters and seasons, persist choices, and share th
   `);
   const tick = () => new Promise(resolve => setImmediate(resolve));
   await tick();
-  const award = () => byId('awardsBallot').querySelector('select');
+  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] input`)[i];
   const change = (field, value) => {
     field.value = value;
     field.dispatchEvent(new window.Event('change'));
   };
-  assert.deepEqual(Array.from(award().options, option => option.text), ['Keine Auswahl', 'The Alpha']);
-  change(award(), 'alpha');
+  // 22 categories in groups, three places each; the choices are the visible shows
+  assert.equal(byId('awardsBallot').querySelectorAll('fieldset').length, 22);
+  assert.equal(byId('awardsBallot').querySelectorAll('[data-category="best"] .awards-points').length, 3);
+  assert.deepEqual([...byId('awardsList-show').options].map(o => o.value), ['Beta EN', 'The Alpha']);
+  change(place('best'), 'The Alpha');
+  // not in the list, or already on another place: not taken
+  change(place('best', 1), 'Nope');
+  assert.ok(place('best', 1).classList.contains('bad'));
+  change(place('best', 1), 'The Alpha');
+  assert.ok(place('best', 1).classList.contains('bad'));
+  change(place('best', 1), 'Beta EN');
+  assert.ok(!place('best', 1).classList.contains('bad'));
+  assert.match(byId('awardsProgress').textContent, /1 von 22/);
   change(byId('awardsPerson'), 'Mia');
-  assert.equal(award().value, '');
+  assert.equal(place('best').value, '');
   change(byId('awardsPerson'), 'Ryo');
-  assert.equal(award().value, 'alpha');
+  assert.equal(place('best').value, 'The Alpha');
 
   change(byId('awardsSeason'), '2');
   assert.equal(byId('awardsCopy').disabled, true);
   change(byId('awardsSeason'), '1');
   completeOldRequest();
   await tick();
-  assert.equal(award().value, 'alpha');
+  assert.equal(place('best').value, 'The Alpha');
 
   change(byId('awardsSeason'), '2');
   completeOldRequest();
   await tick();
-  assert.equal(award().value, '');
+  assert.equal(place('best').value, '');
   change(byId('awardsSeason'), '1');
   await tick();
-  assert.equal(award().value, 'alpha');
+  assert.equal(place('best', 1).value, 'Beta EN');
 
   byId('awardsCopy').click();
   await tick();
   assert.equal(byId('awardsManual').hidden, false);
-  assert.match(byId('awardsText').value, /Sommer 2026 · Ryo\nAnime der Season: The Alpha/);
-  change(award(), '');
+  assert.match(byId('awardsText').value, /Sommer 2026 · Ryo\nAnime der Season: 12 The Alpha · 10 Beta EN/);
+  change(place('best'), '');
+  change(place('best', 1), '');
   assert.equal(byId('awardsCopy').disabled, true);
   assert.equal(byId('awardsManual').hidden, true);
 
   failLoad = true;
   change(byId('awardsSeason'), '2');
   await tick();
-  assert.equal(award(), null);
+  assert.equal(place('best'), undefined);
   assert.match(byId('awardsStatus').textContent, /konnte nicht geladen werden/);
 });
 
-test('shared voting: who voted shows before Auflösen, the winners after; nothing secret before', async t => {
+test('shared voting: who voted shows before Auflösen; then the Eurovision show and the points', async t => {
   const dom = new JSDOM(read('awards.html'), { url: 'https://schedule.example/awards.html', runScripts: 'outside-only' });
   const { window } = dom;
   t.after(() => window.close());
   const { document } = window;
   const byId = id => document.getElementById(id);
-  // a tiny votes helper: ballots stay here until reveal
-  const ballots = new Map(); let open = true; const calls = [];
+  // a tiny votes helper: ballots stay here until reveal; Ceddl candidates are collected
+  const ballots = new Map(); let open = true; const calls = []; let ceddl = [];
   window.fetch = async (url, options = {}) => {
-    const u = new URL(url); calls.push(options.method + ' ' + u.pathname);
+    const u = new URL(url, 'https://schedule.example/'); calls.push((options.method || 'GET') + ' ' + u.pathname);
     const reply = data => ({ ok: true, status: 200, json: async () => data });
+    if (u.host !== 'votes.test') return { ok: false, status: 404, json: async () => ({}) };
     if (u.pathname === '/awards') return reply({ season: u.searchParams.get('season'), revealed: !open, voters: [...ballots.keys()],
       ...(!open && { ballots: [...ballots.values()] }) });
+    if (u.pathname === '/awards/ceddl' && !options.body) return reply({ candidates: ceddl });
     const body = JSON.parse(options.body);
+    if (u.pathname === '/awards/ceddl') { ceddl = [...ceddl, { id: 'c' + ceddl.length, name: body.name, anime: body.anime, by: body.by }]; return reply({ ok: true, candidates: ceddl }); }
     if (u.pathname === '/awards/ballot') { ballots.set(body.person, { person: body.person, picks: body.picks }); return reply({ ok: true }); }
     if (u.pathname === '/awards/reveal') { open = false; return reply({ ok: true }); }
     throw Error('unexpected ' + url);
@@ -111,36 +126,56 @@ test('shared voting: who voted shows before Auflösen, the winners after; nothin
     const config = async () => ({ previewVotesUrl: 'https://votes.test/' });
     const guckplanTabs = async () => [{ gid: '2', name: 'Guckplan Herbst 2026' }];
     const tabFor = tabs => tabs[0];
-    const loadPlan = async () => ({ people: ['MaRyo', 'Mia', 'Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }, { romaji: 'Beta', english: 'Beta EN' }] });
+    const loadPlan = async () => ({ people: ['MaRyo', 'Mia', 'Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }, { romaji: 'Beta', english: 'Beta EN' }, { romaji: 'Gamma', english: 'Gamma EN' }] });
     ${read('awards.js')}
   `);
-  const tick = async () => { for (let i = 0; i < 5; i++) await new Promise(r => setImmediate(r)); };
+  const tick = async () => { for (let i = 0; i < 8; i++) await new Promise(r => setImmediate(r)); };
   await tick();
-  const best = () => byId('awardsBallot').querySelector('select');
-  const vote = async (person, value) => {
+  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] input`)[i];
+  const vote = async (person, picks) => {
     byId('awardsPerson').value = person; byId('awardsPerson').dispatchEvent(new window.Event('change'));
-    best().value = value; best().dispatchEvent(new window.Event('change'));
+    picks.forEach((value, i) => { place('best', i).value = value; place('best', i).dispatchEvent(new window.Event('change')); });
     byId('awardsSubmit').click(); await tick();
   };
   assert.equal(byId('awardsGroup').hidden, false);
   assert.equal(byId('awardsReveal').disabled, true);
   // the shared MaRyo column: Marvin and Ryo each vote
   assert.deepEqual([...byId('awardsPerson').options].map(o => o.value), ['Marvin', 'Ryo', 'Mia', 'Rei']);
-  await vote('Marvin', 'alpha');
-  await vote('Ryo', 'alpha');
-  await vote('Mia', 'alpha');
-  await vote('Rei', 'beta');
+  // Ceddl of the Year: a candidate collected now can get points later
+  assert.equal(byId('awardsCeddl').hidden, false);
+  byId('awardsCeddlName').value = 'Anya Forger'; byId('awardsCeddlAnime').value = 'Spy x Family';
+  byId('awardsCeddlAdd').click(); await tick();
+  assert.match(byId('awardsCeddlList').textContent, /Anya Forger/);
+  assert.deepEqual([...byId('awardsList-ceddl').options].map(o => o.value), ['Anya Forger (Spy x Family)']);
+  await vote('Marvin', ['The Alpha', 'Beta EN', 'Gamma EN']);
+  await vote('Ryo', ['The Alpha', 'Gamma EN']);
+  await vote('Mia', ['Beta EN', 'The Alpha']);
+  await vote('Rei', ['Beta EN']);
   assert.match(byId('awardsStatus').textContent, /Rei abgegeben/);
-  assert.deepEqual([...ballots.get('Ryo').picks ? Object.entries(ballots.get('Ryo').picks) : []], [['best', 'The Alpha']]);
+  assert.deepEqual(ballots.get('Ryo').picks, { best: ['The Alpha', 'Gamma EN'] });
   assert.match(byId('awardsGroup').textContent, /✓ Marvin.*✓ Ryo.*✓ Mia.*✓ Rei/s);
   assert.equal(byId('awardsResults').hidden, true);
   byId('awardsReveal').click(); await tick();
   assert.equal(byId('awardsResults').hidden, false);
   assert.equal(byId('awardsBallot').hidden, true);
-  const first = byId('awardsResults').querySelector('.awards-result');
-  assert.match(first.querySelector('li.winner').textContent, /The Alpha.*3 Stimmen/);
-  assert.match(byId('awardsResults').textContent, /Rei: Anime der Season Beta EN/);
-  assert.match(byId('awardsResults').textContent, /Marvin: Anime der Season The Alpha/);
+  assert.equal(byId('awardsCeddl').hidden, true);
+  // points: The Alpha 12+12+10 = 34, Beta EN 10+12+12 = 34, Gamma 8+10 = 18; the tie: both have two 12s and
+  // one 10, so A–Z decides
+  const best = [...byId('awardsResultGrid').querySelectorAll('.awards-result')].find(c => /Anime der Season/.test(c.textContent));
+  assert.deepEqual([...best.querySelectorAll('li')].map(li => li.textContent), ['Beta EN34 Punkte', 'The Alpha34 Punkte', 'Gamma EN18 Punkte']);
+  assert.match(byId('awardsBallotsList').textContent, /Rei: Anime der Season 12 Beta EN/);
+  // the show: "Anime der Season" is last; step through it voter by voter
+  const pick = byId('awardsShowPick');
+  pick.value = String([...pick.options].findIndex(o => o.text === 'Anime der Season'));
+  pick.dispatchEvent(new window.Event('change'));
+  assert.equal(pick.options[pick.options.length - 1].text, 'Anime der Season');
+  assert.match(byId('awardsShowLine').textContent, /Gleich geht es los/);
+  const steps = 3 + 2 + 2 + 1;
+  for (let i = 0; i < steps; i++) byId('awardsShowNext').click();
+  assert.match(byId('awardsShowLine').textContent, /12 Punkte|Punkte an/);
+  assert.equal(byId('awardsShowBoard').querySelectorAll('li').length, 3);
+  assert.ok(byId('awardsShowBoard').querySelector('li.winner'));
+  assert.equal(byId('awardsShowNext').textContent, 'Fertig');
   assert.ok(calls.includes('POST /awards/reveal'));
 });
 

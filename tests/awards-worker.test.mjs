@@ -32,7 +32,7 @@ test('voting again replaces the ballot; Auflösen shows all and closes voting',a
  assert.equal((await call(env,'/awards/reveal',{season})).status,200);
  const state=(await call(env,'/awards?season='+encodeURIComponent(season))).body;
  assert.equal(state.revealed,true);
- assert.deepEqual(state.ballots,[{person:'Rei',picks:{best:'Dandadan',ending:'Frieren'}}]);
+ assert.deepEqual(state.ballots,[{person:'Rei',picks:{best:['Dandadan'],ending:['Frieren']}}]);
  const late=await call(env,'/awards/ballot',{season,person:'Belly',picks:{best:'Frieren'}});
  assert.equal(late.status,409);
  // another season is separate
@@ -58,4 +58,33 @@ test('bad input, empty seasons and a missing store are refused',async()=>{
 test('with a group code set, Awards need it too',async()=>{
  const env={SITE_ORIGIN:origin,AWARDS:kv(),GROUP_ACCESS_CODE:'TEST-ONLY-MEMBER-CODE-934257'};
  assert.equal((await call(env,'/awards?season='+encodeURIComponent(season))).status,401);
+});
+
+test('points: up to three different picks per category in order; an old single pick still counts',async()=>{
+ const env={SITE_ORIGIN:origin,AWARDS:kv()};
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{best:['Frieren','Dandadan','Gachiakuta'],villain:['Sukuna (JJK)'],comedy:['','Spy x Family']}})).status,200);
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Mia',picks:{best:'Frieren'}})).status,200);
+ for(const picks of [{best:['A','B','C','D']},{best:['A','A']},{best:['<b>']},{nope:['A']}])
+  assert.equal((await call(env,'/awards/ballot',{season,person:'Bad',picks})).status,400,JSON.stringify(picks));
+ await call(env,'/awards/reveal',{season});
+ const state=(await call(env,'/awards?season='+encodeURIComponent(season))).body;
+ assert.deepEqual(state.ballots,[{person:'Mia',picks:{best:['Frieren']}},{person:'Rei',picks:{best:['Frieren','Dandadan','Gachiakuta'],villain:['Sukuna (JJK)'],comedy:['','Spy x Family']}}]);
+});
+
+test('Ceddl of the Year: candidates are collected, without doubles, and closed after Auflösen',async()=>{
+ const env={SITE_ORIGIN:origin,AWARDS:kv()};
+ const add=await call(env,'/awards/ceddl',{season,name:'Anya Forger',anime:'Spy x Family',by:'Rei'});
+ assert.equal(add.status,200);
+ assert.equal((await call(env,'/awards/ceddl',{season,name:'anya forger',anime:'spy x family'})).body.duplicate,true);
+ await call(env,'/awards/ceddl',{season,name:'Frieren',anime:'Frieren'});
+ let list=(await call(env,'/awards/ceddl?season='+encodeURIComponent(season))).body.candidates;
+ assert.deepEqual(list.map(c=>c.name),['Anya Forger','Frieren']);
+ assert.equal(list[0].by,'Rei');
+ assert.equal((await call(env,'/awards/ceddl/remove',{season,id:list[1].id})).status,200);
+ assert.equal((await call(env,'/awards/ceddl',{season,name:''})).status,400);
+ await call(env,'/awards/ballot',{season,person:'Rei',picks:{ceddl:['Anya Forger (Spy x Family)']}});
+ await call(env,'/awards/reveal',{season});
+ assert.equal((await call(env,'/awards/ceddl',{season,name:'Late',anime:'X'})).status,409);
+ list=(await call(env,'/awards/ceddl?season='+encodeURIComponent(season))).body.candidates;
+ assert.deepEqual(list.map(c=>c.name),['Anya Forger']);
 });

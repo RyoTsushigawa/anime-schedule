@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://anime-season-preview-votes.shigeruhagano.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://graphql.anilist.co https://anime-season-preview-votes.shigeruhagano.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Seasonal Anime Awards</title>
 <link rel="icon" type="image/png" href="icon-72.png">
 <script src="frame-guard.js"></script>
@@ -15,7 +15,7 @@
 <header><div class="bar">
 <a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
 <h1>Seasonal Anime Awards</h1>
-<div>Alle stimmen ab · „Auflösen“ zeigt die Gewinner</div>
+<div>12, 10 und 8 Punkte pro Kategorie · „Auflösen“ startet die Punktevergabe</div>
 </div>
 </div></header>
 <main class="awards-page">
@@ -23,11 +23,30 @@
 <label>Season <select id="awardsSeason" class="pill" disabled></select></label>
 <label>Person <select id="awardsPerson" class="pill" disabled></select></label>
 </div>
-<p id="awardsIntro">Wähle pro Kategorie einen Anime aus dem Guckplan.</p>
+<p id="awardsIntro">Vergib pro Kategorie 12, 10 und 8 Punkte, wie beim Eurovision Song Contest. Tippen sucht in der Auswahl; leere Plätze sind erlaubt.</p>
+<p id="awardsProgress" class="awards-progress"></p>
 <p id="awardsStatus" role="status">Lade Guckplan…</p>
 <div id="awardsBallot" class="awards-ballot"></div>
+<div id="awardsLists" hidden></div>
+<section id="awardsCeddl" class="awards-ceddl" hidden>
+<h2>Ceddl of the Year · Kandidaten</h2>
+<p class="awards-hint">Über die Season sammeln: wer hier steht, kann in „Ceddl of the Year“ Punkte bekommen.</p>
+<ul id="awardsCeddlList"></ul>
+<div class="awards-ceddl-add"><input id="awardsCeddlName" class="pill" list="awardsList-char" placeholder="Figur" maxlength="80" aria-label="Figur"><input id="awardsCeddlAnime" class="pill" list="awardsList-show" placeholder="Anime (optional)" maxlength="120" aria-label="Anime"><button type="button" id="awardsCeddlAdd" class="pill">Nominieren</button></div>
+<p id="awardsCeddlMsg" class="awards-hint" role="status"></p>
+</section>
 <div id="awardsGroup" class="awards-group" hidden></div>
-<div id="awardsResults" class="awards-results" hidden></div>
+<div id="awardsResults" class="awards-results" hidden>
+<section id="awardsShow" class="awards-show" hidden>
+<h2>🏆 Die Punktevergabe</h2>
+<div class="awards-show-head"><b id="awardsShowCat"></b><select id="awardsShowPick" class="pill" aria-label="Kategorie wählen"></select></div>
+<p id="awardsShowLine" class="awards-show-line" role="status" aria-live="polite"></p>
+<ol id="awardsShowBoard" class="awards-board"></ol>
+<div class="awards-actions"><button type="button" id="awardsShowNext" class="pill primary">Nächste Wertung ▸</button><button type="button" id="awardsShowAll" class="pill">Kategorie ganz zeigen</button></div>
+</section>
+<details class="awards-all"><summary>Alle Ergebnisse auf einmal</summary><div id="awardsResultGrid" class="awards-result-grid"></div></details>
+<details class="awards-ballots"><summary>Wer hat was gewählt?</summary><div id="awardsBallotsList"></div></details>
+</div>
 <details id="awardsHall" class="awards-hall" hidden><summary>Ruhmeshalle · alle aufgelösten Seasons</summary><div id="awardsHallBody"><p class="awards-hall-note">Lädt …</p></div></details>
 <button id="awardsCopy" class="pill primary" type="button" disabled>Für Discord kopieren</button>
 <div id="awardsManual" hidden>

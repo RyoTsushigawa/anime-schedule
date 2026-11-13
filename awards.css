@@ -3,8 +3,7 @@
   margin: 2rem auto;
 }
 
-.awards-toolbar,
-.awards-ballot {
+.awards-toolbar {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
   gap: 1rem;
@@ -56,3 +55,40 @@
 .awards-hall-season ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
 .awards-hall-season li { display: flex; justify-content: space-between; gap: 1rem; font-size: 13px; }
 .awards-hall-season li span { color: var(--muted); }
+
+/* 22 categories, 12 / 10 / 8 points each */
+.awards-ballot { display: grid; gap: .75rem; margin-bottom: 1rem; }
+.awards-block { border: 1px solid var(--line); border-radius: 14px; padding: .4rem .9rem .9rem; background: var(--card); }
+.awards-block > summary { cursor: pointer; font-weight: 650; padding: .5rem 0; }
+.awards-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: .9rem; }
+.awards-cat { border: 0; margin: 0; padding: 0; display: grid; gap: .35rem; min-width: 0; }
+.awards-cat legend { font-size: 13px; font-weight: 650; padding: 0 0 .3rem; }
+.awards-page .awards-place { display: flex; align-items: center; gap: .4rem; }
+.awards-place input { flex: 1; min-width: 0; font-size: 13px; }
+.awards-place input.bad { border-color: #e5737a; }
+.awards-points { flex: none; width: 2rem; text-align: center; font-weight: 700; font-size: 12px; color: var(--accent); }
+.awards-x { color: var(--muted); }
+.awards-hint, .awards-progress { color: var(--muted); font-size: 12px; margin: 0; }
+/* Ceddl of the Year candidates */
+.awards-ceddl { margin: 1rem 0; padding: .9rem; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--line)); border-radius: 14px; }
+.awards-ceddl h2 { margin: 0 0 .3rem; font-size: 1rem; }
+.awards-ceddl ul { list-style: none; padding: 0; margin: .6rem 0; display: flex; flex-wrap: wrap; gap: .4rem; }
+.awards-ceddl li { display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .3rem .2rem .7rem; border: 1px solid var(--line); border-radius: 99px; font-size: 13px; }
+.awards-ceddl li small { color: var(--muted); }
+.awards-ceddl li button { padding: 0 .45rem; min-height: 0; }
+.awards-ceddl-add { display: flex; flex-wrap: wrap; gap: .4rem; }
+.awards-ceddl-add input { flex: 1 1 10rem; min-width: 0; }
+/* the reveal show */
+.awards-show { padding: 1rem; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--card); margin-bottom: 1rem; }
+.awards-show h2 { margin: 0 0 .5rem; }
+.awards-show-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; }
+.awards-show-line { min-height: 1.5em; font-size: 1.05rem; margin: .8rem 0; }
+.awards-board { list-style: none; margin: 0 0 .8rem; padding: 0; display: grid; gap: .3rem; }
+.awards-board li { position: relative; display: flex; justify-content: space-between; gap: .6rem; padding: .35rem .6rem; border-radius: 8px; overflow: hidden; font-size: 14px; transition: background .3s; }
+.awards-board li i { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--accent) 16%, transparent); z-index: 0; transition: width .4s; }
+.awards-board li span, .awards-board li b { position: relative; z-index: 1; }
+.awards-board li.fresh { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.awards-board li.winner { font-weight: 700; }
+.awards-board li.winner span::before { content: '🏆 '; }
+.awards-all { margin: 1rem 0; }
+.awards-all > summary { cursor: pointer; margin-bottom: .6rem; }
