@@ -36,6 +36,14 @@ jobs:
             echo "::error::Missing Google access: SEASON_GOOGLE_REFRESH_TOKEN (plus YOUTUBE_CLIENT_ID/SECRET), or a service account"
             exit 1
           fi
+      - name: Awards storage (Cloudflare KV "anime-awards"), created on the first run
+        run: |
+          find_id() { npx --yes wrangler@4 kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const list=JSON.parse(s.slice(s.indexOf("[")));const n=list.find(x=>x.title==="anime-awards"||x.title.endsWith("-anime-awards"));process.stdout.write(n?n.id:"")})'; }
+          id=$(find_id)
+          if [ -z "$id" ]; then npx --yes wrangler@4 kv namespace create anime-awards; id=$(find_id); fi
+          if [ -z "$id" ]; then echo "::error::KV namespace anime-awards not found or created"; exit 1; fi
+          printf '\n[[kv_namespaces]]\nbinding = "AWARDS"\nid = "%s"\n' "$id" >> workers/season-votes/wrangler.toml
+          tail -4 workers/season-votes/wrangler.toml
       - name: Deploy voting Worker
         run: npx --yes wrangler@4 deploy --config workers/season-votes/wrangler.toml
       - name: Apply Worker secrets

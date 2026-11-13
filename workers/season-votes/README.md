@@ -33,3 +33,11 @@ Google login (the same OAuth client as the trailer playlists, but a separate key
 This is **lightweight shared access**, not anonymous public editing. The key is never embedded in the static site, and the Cloudflare service-account credentials never reach the browser. A code is a bearer secret: anyone with it can select a friend's column, and the Worker cannot determine which friend actually voted. Share only with trusted group members and rotate the code if it leaks. Browser dev tools, browser extensions, or an XSS attack may access a code stored in sessionStorage. Restrict Worker CORS to the GitHub Pages origin; CORS alone is not authentication and direct HTTP clients can still send requests if they have the code. Configure rate limiting and review logs as appropriate before wider public use. Never set `GROUP_ACCESS_CODE` to a publicly known value.
 
 Run `node --test tests/season-votes-worker.test.mjs` to verify the access and vote restrictions.
+
+## Seasonal Anime Awards
+
+The same Worker keeps the ballots for `awards.html` in a Cloudflare KV namespace `anime-awards` (binding `AWARDS`),
+which the deploy workflow creates on its first run. `GET /awards?season=Herbst 2026` gives only the names of who has
+voted until someone presses **Auflösen** (`POST /awards/reveal`); after that it gives all ballots and
+`POST /awards/ballot` is refused for that season. The optional group code applies here too. Tests:
+`node --test tests/awards-worker.test.mjs`.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://anime-season-preview-votes.shigeruhagano.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Seasonal Anime Awards</title>
 <link rel="icon" type="image/png" href="icon-72.png">
 <script src="frame-guard.js"></script>
@@ -15,7 +15,7 @@
 <header><div class="bar">
 <a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
 <h1>Seasonal Anime Awards</h1>
-<div>Deine Favoriten der Season · bleibt in diesem Browser</div>
+<div>Alle stimmen ab · „Auflösen“ zeigt die Gewinner</div>
 </div>
 </div></header>
 <main class="awards-page">
@@ -23,9 +23,11 @@
 <label>Season <select id="awardsSeason" class="pill" disabled></select></label>
 <label>Person <select id="awardsPerson" class="pill" disabled></select></label>
 </div>
-<p>Wähle pro Kategorie einen Anime aus dem Guckplan.</p>
+<p id="awardsIntro">Wähle pro Kategorie einen Anime aus dem Guckplan.</p>
 <p id="awardsStatus" role="status">Lade Guckplan…</p>
 <div id="awardsBallot" class="awards-ballot"></div>
+<div id="awardsGroup" class="awards-group" hidden></div>
+<div id="awardsResults" class="awards-results" hidden></div>
 <button id="awardsCopy" class="pill primary" type="button" disabled>Für Discord kopieren</button>
 <div id="awardsManual" hidden>
 <label for="awardsText">Stimmzettel zum Kopieren</label>
