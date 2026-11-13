@@ -4,7 +4,11 @@ name: Sheet backup
 
 on:
   schedule:
-    - cron: '41 2 * * *'   # 03:41 / 04:41 German time; GitHub may start it late
+    - cron: '41 2 * * *'   # 03:41 / 04:41 German time; GitHub may start it late, or skip it (it did on 13 Nov)
+  # The Cloudflare helper starts the daily Discord post with this event every morning (twice, one is a rehearsal):
+  # a second, reliable start for the backup. It only commits when the Sheet changed.
+  repository_dispatch:
+    types: [discord-daily]
   workflow_dispatch:
 
 permissions:

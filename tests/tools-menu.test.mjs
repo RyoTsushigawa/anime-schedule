@@ -21,7 +21,7 @@ test('More keeps all planning, recap and extra links without duplicating Games',
  assert.deepEqual(headings,['Anime','Sonstiges']);
  const hrefs=[...menu.matchAll(/<a href="([^"]+)"/g)].map(m=>m[1]);
  assert.deepEqual(hrefs,[
-  'season-preview.html','planner.html','wrapped.html','tierlist.html','masterset/','https://mcdelivery.de/'
+  'season-preview.html','planner.html','wrapped.html','awards.html','tierlist.html','masterset/','https://mcdelivery.de/'
  ]);
  assert.ok(!menu.includes('href="games.html"'));
  assert.ok(!menu.includes('href="ranker/"'));

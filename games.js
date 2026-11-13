@@ -18,7 +18,7 @@ async function json(url,options) {
 const wordMap = entries => new Map(entries.map(e=>[e.word,e]));
 const mergeEntries = (...sets) => [...wordMap(sets.flat()).values()];
 const sourceWordSet = entries => new Set(entries.map(e=>e.word));
-// Hard mode: any common English word of the right length counts as a guess (SCOWL list,
+// Both modes: any common English word of the right length counts as a guess (SCOWL list,
 // see games-guesses.json); without it you could only guess words from someone's titles.
 let guessWords=null;
 async function dictionaryWords(length) {
@@ -264,7 +264,7 @@ function press(key){
   const len=puzzle.word.length;
   if(key==='Enter'){
     if(typing.length<len)return message('Das Wort hat '+len+' Buchstaben.');
-    if(!allowed.has(typing))return message(puzzle.level==='hard'?'Nur echte englische Wörter sind erlaubt.':'Nur echte englische Wörter aus den Anime-Titeln sind erlaubt.');
+    if(!allowed.has(typing))return message('Nur echte englische Wörter sind erlaubt.');
     if(puzzle.level==='hard'){
       const hint=hardHintError(typing,state.guesses,puzzle.word);
       if(hint)return message('Schwerer Modus: '+hint);

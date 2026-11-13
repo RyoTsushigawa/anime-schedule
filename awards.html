@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Seasonal Anime Awards</title>
+<link rel="icon" type="image/png" href="icon-72.png">
+<script src="frame-guard.js"></script>
+<script src="tool-theme.js" data-accent></script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="awards.css">
+</head>
+<body>
+<header><div class="bar">
+<a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
+<h1>Seasonal Anime Awards</h1>
+<div>Deine Favoriten der Season · bleibt in diesem Browser</div>
+</div>
+</div></header>
+<main class="awards-page">
+<div class="awards-toolbar">
+<label>Season <select id="awardsSeason" class="pill" disabled></select></label>
+<label>Person <select id="awardsPerson" class="pill" disabled></select></label>
+</div>
+<p>Wähle pro Kategorie einen Anime aus dem Guckplan.</p>
+<p id="awardsStatus" role="status">Lade Guckplan…</p>
+<div id="awardsBallot" class="awards-ballot"></div>
+<button id="awardsCopy" class="pill primary" type="button" disabled>Für Discord kopieren</button>
+<div id="awardsManual" hidden>
+<label for="awardsText">Stimmzettel zum Kopieren</label>
+<textarea id="awardsText" readonly rows="8"></textarea>
+</div>
+</main>
+<script src="common.js"></script>
+<script src="awards.js"></script>
+</body>
+</html>
