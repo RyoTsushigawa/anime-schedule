@@ -58,10 +58,28 @@ test('missing list data must not discard saved AniList-only rankings',()=>{
 test('profile selection, pagination, filter and export include AniList results without extra buttons',()=>{
   assert.match(html,/id="tierAniStatus"/);
   assert.match(source,/wrapped-profiles\.json/);
-  assert.match(source,/mediaList\(userName:\$user,type:ANIME\)/);
-  assert.match(source,/pageInfo\{hasNextPage\}/);
+  assert.match(source,/MediaListCollection\(userName:\$user,type:ANIME/);
+  assert.match(source,/hasNextChunk/);
   assert.match(source,/aniOwnKeys\.has\(keyOf\(s\)\)/);
   assert.match(source,/const byKey = new Map\(allTierShows\(\)\.map/);
   assert.match(source,/if\(request!==aniRequest \|\| \$\('tierPerson'\)\.value!==person/);
   assert.doesNotMatch(html,/id="tierAniButton"/);
+});
+
+test('loads AniList-only seasonal shows from later chunks and skips planned titles',async()=>{
+  const requests=[];
+  const anilist=async (query,{chunk})=>{
+    requests.push(chunk);
+    const seasonal={...media(21,'Personal','Personal'),season:null,seasonYear:null,startDate:{year:2026,month:10}};
+    const entries=chunk===1
+      ? [{status:'PLANNING',media:media(20,'Planned','Planned')},{status:'CURRENT',media:media(1,'Alpha','Alpha')}]
+      : [{status:'CURRENT',media:seasonal},{status:'CURRENT',media:media(1,'Alpha','Alpha')}];
+    return {MediaListCollection:{hasNextChunk:chunk===1,lists:[{entries}]}};
+  };
+  const fetchList=new Function('anilist','aniUserCache',
+    source.slice(begin,end)+'\nreturn tierAniList;')(anilist,new Map());
+  const shows=helpers.seasonalAniMedia(await fetchList('Viewer'),tab);
+  const merged=helpers.mergeSeasonalShows([{romaji:'Alpha'}],shows);
+  assert.deepEqual(requests,[1,2]);
+  assert.deepEqual([...merged.own],['Alpha','anilist:21']);
 });
