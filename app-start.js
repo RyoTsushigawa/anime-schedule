@@ -115,6 +115,75 @@ if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
 // N39 Datenstand: when each source was last updated, and whether a saved copy is in use
 const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
+let readinessRun = 0;
+$('list').addEventListener('click', async event => {
+  if (!event.target.closest('#planReadinessButton')) return;
+  const run = ++readinessRun;
+  const dialog = $('planReadinessDlg'), status = $('planReadinessStatus'), list = $('planReadinessList');
+  const current = () => dialog.open && run === readinessRun;
+  const first = new Date(), end = new Date(first);
+  end.setDate(first.getDate() + 6);
+  const from = isoDay(first), to = isoDay(end);
+  const offsets = weekStart(1) <= end ? [0, 1] : [0];
+  list.replaceChildren();
+  status.textContent = 'Guckplan und Sendetermine werden geprüft …';
+  dialog.showModal();
+  const results = await Promise.allSettled(offsets.map(async offset => {
+    const start = weekStart(offset), previous = new Date(start);
+    previous.setDate(start.getDate() - 7);
+    const needed = new Map();
+    for (let d = new Date(previous); d < new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7); d.setDate(d.getDate() + 1))
+      for (const tab of activeTabs(tabs, d)) needed.set(tab.gid, tab);
+    const [items, plans] = await Promise.all([
+      Promise.all([fetchWeek(previous), fetchWeek(start)]),
+      Promise.all([...needed.values()].map(async tab => [tab.gid, await sheetFor(tab)])),
+    ]);
+    if (!current()) return [];
+    if (!plans.length || ![...plans].some(([, plan]) => plan.people.length)) throw Error('Missing Guckplan');
+    return render(items.flat(), start, new Map(plans), true, false, null, true)
+      .filter(issue => !issue.date || (issue.date >= from && issue.date <= to))
+      .map(issue => ({ ...issue, offset }));
+  }));
+  if (!current()) return;
+  const issues = results.flatMap(result => result.status === 'fulfilled' ? result.value : []);
+  const seen = new Set();
+  for (const { show, slot, date, reason, offset } of issues) {
+    const title = show.english || show.romaji;
+    const key = JSON.stringify([show.romaji || title, date, reason]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const row = document.createElement('li');
+    const label = document.createElement('b');
+    label.textContent = title;
+    const detail = document.createElement('span');
+    detail.textContent = (date ? shortDate(date) + ' · ' : '') + reason;
+    row.append(label, detail);
+    if (movesKey) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'pill';
+      edit.textContent = 'Slot bearbeiten';
+      edit.dataset.moveTitle = show.romaji || title;
+      edit.dataset.moveName = title;
+      edit.dataset.tag = slot?.tag || '';
+      edit.dataset.time = slot?.time || '';
+      edit.onclick = async () => {
+        dialog.close();
+        weekOffset = offset;
+        setRange('week');
+        await load();
+        if (view === 'week' && weekOffset === offset) openMoveDialog(edit);
+      };
+      row.append(edit);
+    }
+    list.append(row);
+  }
+  status.textContent = results.every(result => result.status === 'rejected')
+    ? 'Der Zeitraum konnte nicht geprüft werden.'
+    : results.some(result => result.status === 'rejected') || !streamsDe
+    ? 'Ein Teil der Daten konnte nicht geprüft werden.'
+    : seen.size ? seen.size + ' Hinweise' : 'Für diesen Zeitraum sind keine offenen Punkte bekannt.';
+});
 async function drawDataStatus() {
 const notes = [...dataNotes.keys()];
 const saved = prefix => notes.some(k => k.startsWith(prefix));
