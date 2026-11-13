@@ -246,6 +246,77 @@ function externalUrl(input){
   return url.href;
  }catch{return '';}
 }
+// Vote suggestions (#84): a sequel whose direct AniList prequel this person completed → "Ja", dropped → "Nein".
+// Only a suggestion: it's saved when clicked, and a vote already in the Sheet always wins.
+const SEQUEL_GRAPH_QUERY = `query ($ids:[Int]) { Page(page:1,perPage:50) { media(idMal_in:$ids,type:ANIME) { idMal relations { edges { relationType node { id } } } } } }`;
+const SEQUEL_LIST_QUERY = `query ($user:String) { MediaListCollection(userName:$user,type:ANIME,status_in:[COMPLETED,DROPPED]) { lists { entries { status media { id } } } } }`;
+// Only explicit AniList PREQUEL relations. These are non-persisted suggestions;
+// saved votes from Google Sheets always take priority.
+const sequelGraphs=new Map(),sequelLists=new Map();
+let sequelProfiles=null,sequelSuggestions=new Map(),sequelRequest=0;
+function sequelSuggestion(prequels,statuses){
+ const values=new Set((prequels||[]).map(id=>statuses.get(id)).filter(x=>x==='COMPLETED'||x==='DROPPED'||x==='CONFLICT'));
+ return values.size===1?(values.has('COMPLETED')?'Ja':values.has('DROPPED')?'Nein':''):'';
+}
+async function sequelGraph(tab,items){
+ if(!sequelGraphs.has(tab.gid))sequelGraphs.set(tab.gid,(async()=>{
+  const ids=[...new Set(items.flatMap(show=>catalogIds(tab,show)).map(Number).filter(Number.isSafeInteger))];
+  const graph=new Map();
+  for(let i=0;i<ids.length;i+=40){
+   const data=await anilist(SEQUEL_GRAPH_QUERY,{ids:ids.slice(i,i+40)});
+   for(const media of data.Page?.media||[])graph.set(media.idMal,
+    (media.relations?.edges||[]).filter(e=>e.relationType==='PREQUEL'&&Number.isSafeInteger(e.node?.id)).map(e=>e.node.id));
+  }
+  return graph;
+ })().catch(error=>{sequelGraphs.delete(tab.gid);throw error;}));
+ return sequelGraphs.get(tab.gid);
+}
+async function sequelStatuses(person){
+ if(!sequelProfiles)sequelProfiles=fetch('wrapped-profiles.json',{cache:'no-cache'})
+  .then(r=>{if(!r.ok)throw Error('Profile nicht verfügbar');return r.json();})
+  .catch(error=>{sequelProfiles=null;throw error;});
+ const profiles=await sequelProfiles;
+ const accounts=(Object.entries(profiles).find(([name])=>name.toLowerCase()===person.toLowerCase())?.[1]||[])
+  .filter(a=>a.provider==='anilist'&&clean(a.name)).map(a=>a.name);
+ if(!accounts.length)return new Map();
+ if(!sequelLists.has(person))sequelLists.set(person,(async()=>{
+  const records=await Promise.all(accounts.map(async user=>{
+   const data=await anilist(SEQUEL_LIST_QUERY,{user});
+   return (data.MediaListCollection?.lists||[]).flatMap(list=>list.entries||[]);
+  }));
+  const statuses=new Map();
+  for(const entry of records.flat()){
+   const id=entry.media?.id,status=entry.status;
+   if(!Number.isSafeInteger(id)||!['COMPLETED','DROPPED'].includes(status))continue;
+   const old=statuses.get(id);
+   statuses.set(id,old&&old!==status?'CONFLICT':old||status);
+  }
+  return statuses;
+ })().catch(error=>{sequelLists.delete(person);throw error;}));
+ return sequelLists.get(person);
+}
+async function loadSequelSuggestions(){
+ const tab=current,person=member?currentVoter():'',request=++sequelRequest;
+ sequelSuggestions=new Map();
+ if(!tab||!person)return;
+ try{
+  const [graph,statuses]=await Promise.all([sequelGraph(tab,shows),sequelStatuses(person)]);
+  if(request!==sequelRequest||current?.gid!==tab.gid||currentVoter()!==person||!member)return;
+  const hints=new Map();
+  for(const show of shows){
+   const ids=catalogIds(tab,show);
+   if(ids.length!==1)continue;
+   const choice=sequelSuggestion(graph.get(Number(ids[0])),statuses);
+   if(choice)hints.set(show.key,choice);
+  }
+  sequelSuggestions=hints;
+  render();
+ }catch(error){console.warn('Sequel-Vorschläge nicht verfügbar:',error);}
+}
+function autoVote(s,voter){
+ const suggestion=voter&&voteValue(s,voter)==='Default'&&!saving.has(s.key)?sequelSuggestions.get(s.key):'';
+ return suggestion?'<button type="button" class="preview-auto" data-auto-vote="'+suggestion+'" data-anime="'+safeText(s.key)+'" title="AniList: direkter Vorgänger '+(suggestion==='Ja'?'abgeschlossen':'abgebrochen')+'. Antippen speichert den Vorschlag.">Vorschlag: '+suggestion+'</button>':'';
+}
 function voteValue(show,person){
  const vote=show.votes.find(v=>v.name===person)?.value||'';
  return !vote||vote.toLowerCase()==='default'?'Default':vote;
@@ -404,6 +475,13 @@ pv('previewList').addEventListener('click',event=>{
   if(show){try{localStorage.removeItem(externalKey(show));}catch{}render();}
   return;
  }
+ const auto=event.target.closest('button[data-auto-vote]');
+ if(auto){
+  const show=shows.find(s=>s.key===auto.dataset.anime);
+  if(show&&voteValue(show,currentVoter())==='Default'&&sequelSuggestions.get(show.key)===auto.dataset.autoVote)
+   saveVote(show,auto.dataset.autoVote);
+  return;
+ }
  const vote=event.target.closest('button[data-vote]');
  if(vote){
   const show=shows.find(s=>s.key===vote.dataset.anime);
@@ -420,7 +498,7 @@ pv('previewList').addEventListener('click',event=>{
 });
 pv('previewPerson').addEventListener('change',()=>{
  try{localStorage.setItem('previewVotePerson',pv('previewPerson').value);}catch{}
- render();
+ render();loadSequelSuggestions();
 });
 pv('previewAccessForm').addEventListener('submit',async event=>{
  event.preventDefault();
@@ -438,7 +516,7 @@ pv('previewAccessForm').addEventListener('submit',async event=>{
   pv('previewGroupCode').value='';
   state('Gruppenabstimmung freigeschaltet.');
  }catch(error){memberError=error.message;state('Nicht freigeschaltet: '+error.message);}
- finally{button.disabled=false;updateMemberUI();if(current)render();}
+ finally{button.disabled=false;updateMemberUI();if(current){render();loadSequelSuggestions();}}
 });
 pv('previewLock').addEventListener('click',()=>{
  if(saving.size)return;
@@ -488,7 +566,7 @@ function render(){
   const start=s.start?'ab '+shortDate(s.start,{weekday:'short',day:'numeric',month:'short'}):'';
   const note=trailer&&!start?'':'<span class="preview-none">'+[trailer?'':(sequel?'Sequel':'Noch kein Trailer'),start].filter(Boolean).join(' · ')+'</span>';
   const cover=covers.get(s.key);
-  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+votingControls(s)+'</div>';
+  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+autoVote(s,voter)+votingControls(s)+'</div>';
   parent.append(article);
  }
 }
@@ -506,6 +584,7 @@ async function selectSeason(gid){
   updateMemberUI();
   render();
   loadCovers(next,latest).then(()=>{if(current?.gid===gid)render();});
+  loadSequelSuggestions();
  }catch(e){
   if(request!==seasonRequest)return;
   shows=[];pv('previewList').replaceChildren();
@@ -527,6 +606,7 @@ async function start(){
   const future=tabs.filter(t=>{const m=t.name.match(PV_SEASONS);return m&&(+m[2]*12+PV_MONTHS[m[1].toLowerCase()])>=(new Date().getFullYear()*12+new Date().getMonth());});
   const chosen=future.length?future.at(-1):tabs[0];sel.value=chosen.gid;await selectSeason(chosen.gid);
   await configureVoting();
+  loadSequelSuggestions();
   sel.addEventListener('change',()=>selectSeason(sel.value));
  }catch(e){state('Season-Listen sind gerade nicht verfügbar: '+e.message);}
 }
