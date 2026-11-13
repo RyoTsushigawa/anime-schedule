@@ -8,6 +8,7 @@ on:
       - 'season-preview.js'
       - 'season-preview.html'
       - 'tests/season-votes-worker.test.mjs'
+      - 'tests/awards-worker.test.mjs'
       - 'tests/season-preview-vote-ui.test.mjs'
       - '.github/votes-test-request.txt'
   push:
@@ -17,6 +18,7 @@ on:
       - 'season-preview.js'
       - 'season-preview.html'
       - 'tests/season-votes-worker.test.mjs'
+      - 'tests/awards-worker.test.mjs'
       - 'tests/season-preview-vote-ui.test.mjs'
       - '.github/votes-test-request.txt'
 permissions:
@@ -38,4 +40,4 @@ jobs:
           node --check season-preview.js
           node --check workers/season-votes/index.js
       - name: Check member votes, shared code and Sheets restrictions
-        run: node --test tests/season-votes-worker.test.mjs tests/season-preview-vote-ui.test.mjs
+        run: node --test tests/season-votes-worker.test.mjs tests/awards-worker.test.mjs tests/season-preview-vote-ui.test.mjs

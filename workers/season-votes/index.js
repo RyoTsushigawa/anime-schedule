@@ -122,6 +122,71 @@ async function saveVote(body,env){
   fail(409,'Die gespeicherte Stimme stimmt nicht mit der Tabelle überein. Bitte aktualisieren.');
  return {ok:true,person,choice};
 }
+// Seasonal Anime Awards (awards.html): one secret ballot per person and season in KV (binding AWARDS),
+// "ballot:<season>:<person>" = { person, picks: { category: anime title }, at }. Before "Auflösen" only the names
+// of who voted are given out; "meta:<season>" = { revealed: true, revealedAt } then shows everything and closes voting.
+const AWARD_CATEGORIES=['best','surprise','animation','opening','ending','finale'];
+const AWARD_SEASON=/^(Winter|Frühling|Sommer|Herbst) 20\d{2}$/;
+const AWARD_NAME=/^[\p{L}\p{N} ._'-]{1,40}$/u;
+function awardSeason(value){
+ const season=str(value);
+ if(!AWARD_SEASON.test(season))fail(400,'Ungültige Season.');
+ return season;
+}
+function awardsStore(env){
+ if(!env.AWARDS)fail(503,'Die Awards-Abstimmung ist noch nicht eingerichtet.');
+ return env.AWARDS;
+}
+async function awardsState(env,season){
+ const store=awardsStore(env);
+ const meta=JSON.parse(await store.get('meta:'+season)||'{}');
+ const ballots=[];
+ let cursor;
+ do{
+  const page=await store.list({prefix:'ballot:'+season+':',cursor});
+  for(const key of page.keys){
+   const value=await store.get(key.name);
+   try{const ballot=JSON.parse(value||'null');if(ballot?.person&&ballot.picks)ballots.push(ballot);}catch{}
+  }
+  cursor=page.list_complete?undefined:page.cursor;
+ }while(cursor);
+ ballots.sort((a,b)=>a.person.localeCompare(b.person,'de'));
+ return {meta,ballots};
+}
+async function awardsGet(url,env){
+ const season=awardSeason(url.searchParams.get('season'));
+ const {meta,ballots}=await awardsState(env,season);
+ const revealed=meta.revealed===true;
+ return {season,revealed,...(revealed&&{revealedAt:meta.revealedAt}),voters:ballots.map(b=>b.person),
+  ...(revealed&&{ballots:ballots.map(b=>({person:b.person,picks:b.picks}))})};
+}
+async function awardsBallot(body,env){
+ const season=awardSeason(body.season),person=str(body.person);
+ if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+ const picks={};
+ if(!body.picks||typeof body.picks!=='object'||Array.isArray(body.picks))fail(400,'Ungültiger Stimmzettel.');
+ for(const [category,title] of Object.entries(body.picks)){
+  if(!AWARD_CATEGORIES.includes(category))fail(400,'Unbekannte Kategorie.');
+  const value=str(title);
+  if(!value)continue;
+  if(value.length>200||/[<>]/.test(value))fail(400,'Ungültiger Anime-Titel.');
+  picks[category]=value;
+ }
+ if(!Object.keys(picks).length)fail(400,'Mindestens eine Kategorie wählen.');
+ const store=awardsStore(env);
+ const meta=JSON.parse(await store.get('meta:'+season)||'{}');
+ if(meta.revealed)fail(409,'Die Awards dieser Season sind schon aufgelöst.');
+ await store.put('ballot:'+season+':'+person,JSON.stringify({person,picks,at:new Date().toISOString()}));
+ return {ok:true,season,person};
+}
+async function awardsReveal(body,env){
+ const season=awardSeason(body.season);
+ const {meta,ballots}=await awardsState(env,season);
+ if(meta.revealed)return {ok:true,season,revealed:true};
+ if(!ballots.length)fail(409,'Noch hat niemand abgestimmt.');
+ await awardsStore(env).put('meta:'+season,JSON.stringify({revealed:true,revealedAt:new Date().toISOString()}));
+ return {ok:true,season,revealed:true};
+}
 export default {
  async fetch(request,env){
   const origin=request.headers.get('Origin')||'';
@@ -141,6 +206,17 @@ export default {
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
     return json(await saveVote(body,env),200,cors);
+   }
+   if(request.method==='GET'&&path==='/awards'){
+    await authorized(request,env);
+    return json(await awardsGet(new URL(request.url),env),200,cors);
+   }
+   if(request.method==='POST'&&(path==='/awards/ballot'||path==='/awards/reveal')){
+    if(Number(request.headers.get('Content-Length')||0)>4096)fail(413,'Anfrage zu groß.');
+    await authorized(request,env);
+    const body=await request.json();
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    return json(path==='/awards/ballot'?await awardsBallot(body,env):await awardsReveal(body,env),200,cors);
    }
    return json({error:'Nicht gefunden.'},404,cors);
   }catch(error){return json({error:error?.status?error.message:'Die Abstimmung konnte nicht verarbeitet werden.'},error?.status||500,cors);}
