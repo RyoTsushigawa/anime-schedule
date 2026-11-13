@@ -1,0 +1,44 @@
+# Anime-Börse: one closing price per show and day (tools/boerse-prices.mjs → boerse-prices.json), from the
+# Guckplan in the Sheet backup, AniList and the group's own ratings. The votes helper trades at the latest close.
+name: Anime-Börse prices
+
+on:
+  schedule:
+    - cron: '23 21 * * *'   # 22:23 / 23:23 German time, the day's close; GitHub may start it late or skip it
+  # The Cloudflare helper starts the daily Discord post with this event every morning: a second, reliable start.
+  # The same day is recomputed from the day before, so both runs agree.
+  repository_dispatch:
+    types: [discord-daily]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # boerse-prices.json
+
+concurrency:
+  group: boerse-prices
+  cancel-in-progress: false
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0, pinned
+        with:
+          ref: main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0, pinned
+        with:
+          node-version: 22
+      - name: The Guckplan as of now (only read, not committed here)
+        run: node tools/sheet-backup.mjs || echo "Sheet not reachable; using the last backup"
+      - name: Today's closes
+        run: node tools/boerse-prices.mjs
+      - name: Save the prices
+        run: |
+          git add boerse-prices.json
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git commit -qm "Anime-Börse prices"
+          git pull --rebase origin main
+          git push

@@ -14,7 +14,7 @@
 <header><div class="bar">
 <a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand">
 <h1>Anime-Börse</h1>
-<div>Spielgeld, echte Anime · gehandelt wird nur zum Start der Season</div>
+<div>Spielgeld, echte Anime · Kurse bewegen sich täglich</div>
 </div>
 </div></header>
 <main class="boerse-page">
@@ -25,26 +25,37 @@
 <p id="stockWindow" class="boerse-window"></p>
 <details class="boerse-rules"><summary>So funktioniert's</summary>
 <ul>
-<li>Jede Person bekommt 1.000 Taler und kauft damit Aktien der Season-Anime, je 100 Taler.</li>
-<li>Gehandelt wird nur zum Start der Season: von 14 Tagen vorher bis 14 Tage danach. Danach ist das Depot fest.</li>
-<li>Der Kurs kommt aus euren eigenen Bewertungen auf AniList: Durchschnitt × 20 (5/10 = 100, 8/10 = 160). Ohne Bewertungen bleibt es bei 100.</li>
-<li>Ein Drop drückt den Kurs stark, je früher desto mehr: nach Folge 1 gedroppt zählt als 0/10, kurz vor Schluss als 4/10 (nie mehr als die eigene Wertung).</li>
-<li>Solange gehandelt wird, sind die Depots geheim. Danach sieht jede Person alle Depots und die Rangliste.</li>
+<li>Jede Person startet mit 1.000 Taler. Gehandelt wird die ganze Season, jederzeit, zum Schlusskurs des Tages.</li>
+<li>Die Kurse bewegen sich einmal am Tag: AniList (Community-Wertung, neue Mitglieder, Trending) und eure eigenen Bewertungen, die umso stärker zählen, je mehr von euch bewertet haben. Dazu ein kleines Rauschen von ±1,5 %.</li>
+<li>Drops drücken den Kurs stark, je früher desto mehr; ein neuer Drop lässt die Aktie am selben Tag fallen.</li>
+<li>Regeln wie an der Wall Street: jede Order kostet 1 Taler Gebühr. Geld aus Verkäufen ist erst am nächsten Tag verfügbar (T+1). Leerverkäufe (mehr verkaufen, als du hast) sind bis 1.000 Taler erlaubt. Fällt ein Kurs an einem Tag um 7 % oder mehr, ist die Aktie für den Rest des Tages ausgesetzt (Circuit Breaker).</li>
+<li>Die Rangliste nach Depotwert sieht jede Person; wer was hält, wird erst nach der Season gezeigt.</li>
 </ul>
 </details>
 <p id="stockStatus" role="status">Lädt …</p>
 <section id="stockWallet" class="boerse-wallet" hidden>
-<div><small>Taler übrig</small><b id="stockCash">0</b></div>
+<div><small>Verfügbar</small><b id="stockCash">0</b></div>
+<div><small>Ab morgen (T+1)</small><b id="stockPending">0</b></div>
 <div><small>Depotwert</small><b id="stockValue">0</b></div>
 <div><small>Gewinn</small><b id="stockGain">0</b></div>
 </section>
-<ul id="stockTraders" class="boerse-traders" hidden></ul>
+<section id="stockChartBox" class="boerse-chart-box" hidden><h2>Dein Depot</h2><div id="stockChart" class="boerse-chart"></div></section>
+<div class="boerse-list-head"><h2>Kurse</h2><label class="boerse-qty">Stück <input id="stockQty" class="pill" type="number" min="1" max="50" value="1" inputmode="numeric"></label></div>
 <div id="stockList" class="boerse-list"></div>
-<div class="boerse-actions"><button type="button" id="stockSave" class="pill primary" hidden>Depot speichern</button><span id="stockMsg" class="boerse-hint" role="status"></span></div>
+<p id="stockMsg" class="boerse-hint" role="status"></p>
+<details id="stockTradesBox" class="boerse-trades" hidden><summary>Deine Orders</summary><ol id="stockTrades"></ol></details>
 <section id="stockBoard" class="boerse-board" hidden>
 <h2>Rangliste</h2>
 <ol id="stockRanking"></ol>
 </section>
+<dialog id="stockDlg" class="dlg boerse-dlg" aria-labelledby="stockDlgTitle">
+<form method="dialog">
+<b id="stockDlgTitle"></b>
+<div id="stockDlgChart" class="boerse-chart"></div>
+<ul id="stockDlgFacts" class="boerse-facts"></ul>
+<div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
+</form>
+</dialog>
 </main>
 <script src="common.js"></script>
 <script type="module" src="boerse.mjs"></script>

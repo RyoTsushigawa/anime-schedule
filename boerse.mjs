@@ -1,14 +1,16 @@
-// Anime-Börse (boerse.html): play money for the season's real anime. Portfolios are kept by the votes helper
-// (workers/season-votes, /stocks); prices come live from the group's own AniList ratings (wrapped-profiles.json).
-import { anilist } from './game-data.mjs';
-import { CASH, PRICE, tradingWindow, priceOf, spent, portfolioValue, ranking } from './boerse-core.mjs';
+// Anime-Börse (boerse.html): play money for the season's real anime, traded the whole season at the day's close.
+// Prices: boerse-prices.json (tools/boerse-prices.mjs, daily). Accounts and trades: the votes helper
+// (workers/season-votes, /stocks). Rules: boerse-core.mjs.
+import { CASH, FEE, PRICE, tradingWindow, berlinDay, latestPrices, pendingSum, accountValue } from './boerse-core.mjs';
 
 const BALLOT_PEOPLE = { MaRyo: ['Marvin', 'Ryo'] };
 const voters = names => names.flatMap(name => BALLOT_PEOPLE[name] || [name]);
-let voteApi = '', tabs = [], titles = [], people = [], state = null, prices = new Map(), rated = new Map(), mine = {}, request = 0;
+let voteApi = '', tabs = [], titles = [], people = [], state = null, priced = { days: [], shows: {} }, prices = new Map(), request = 0;
 const seasonName = () => $('stockSeason').selectedOptions[0]?.textContent || '';
-const day = ms => new Date(ms).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
-const taler = n => Math.round(n).toLocaleString('de-DE');
+const day = v => new Date(typeof v === 'string' ? v + 'T12:00:00' : v).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+const taler = n => (Math.round(n * 100) / 100).toLocaleString('de-DE', { maximumFractionDigits: 2 });
+const pct = n => (n > 0 ? '+' : '') + n.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
+const cls = n => n > 0 ? 'up' : n < 0 ? 'down' : '';
 
 async function call(path, body) {
   let code = '';
@@ -20,138 +22,133 @@ async function call(path, body) {
   return data;
 }
 
-// the season's shows on AniList: ids from streams-de.json by title, else from seasons.json by MyAnimeList id
-async function anilistIds(list) {
-  const ids = new Map();
-  try {
-    const streams = await (await fetch('streams-de.json', { cache: 'no-cache' })).json();
-    const byTitle = new Map();
-    for (const [id, s] of Object.entries(streams.status || {})) for (const t of s.titles || []) byTitle.set(norm(t), Number(id));
-    for (const show of list) { const id = byTitle.get(norm(show.romaji || '')) || byTitle.get(norm(show.english || '')); if (id) ids.set(show.title, id); }
-  } catch {}
-  const missing = list.filter(s => !ids.has(s.title));
-  if (missing.length) try {
-    const catalog = await (await fetch('seasons.json', { cache: 'no-cache' })).json();
-    const mal = new Map();
-    for (const shows of Object.values(catalog.seasons || {})) for (const s of shows || []) if (s.mal)
-      for (const t of [s.romaji, s.english]) if (t) mal.set(norm(t), Number(s.mal));
-    const wanted = new Map(missing.map(s => [mal.get(norm(s.romaji || '')) || mal.get(norm(s.english || '')), s.title]).filter(([m]) => m));
-    if (wanted.size) {
-      const data = await anilist('query ($mal: [Int]) { Page(perPage: 50) { media(idMal_in: $mal, type: ANIME) { id idMal } } }', { mal: [...wanted.keys()] });
-      for (const m of data?.Page?.media || []) ids.set(wanted.get(m.idMal), m.id);
-    }
-  } catch {}
-  return ids;
+// a line chart as SVG (the area under it), with the dates and the low and high underneath as text
+export function chart(values, { width = 600, height = 170, labels = [], spark = false } = {}) {
+  if (!values.length) return '<p class="boerse-hint">Noch keine Kurse.</p>';
+  const v = values.length === 1 ? [values[0], values[0]] : values;
+  const min = Math.min(...v), max = Math.max(...v), pad = spark ? 2 : 6, span = max - min || 1;
+  const x = i => pad + i * (width - 2 * pad) / (v.length - 1), y = n => height - pad - (n - min) * (height - 2 * pad) / span;
+  const line = v.map((n, i) => `${x(i).toFixed(1)},${y(n).toFixed(1)}`).join(' ');
+  const trend = cls(v[v.length - 1] - v[0]) || 'flat';
+  const svg = `<svg class="boerse-svg ${trend}${spark ? ' spark' : ''}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Verlauf von ${taler(v[0])} auf ${taler(v[v.length - 1])}">
+    <polygon points="${x(0)},${height} ${line} ${x(v.length - 1)},${height}" class="area"/><polyline points="${line}" class="line"/></svg>`;
+  if (spark) return svg;
+  return svg + `<div class="boerse-axis"><span>${esc(labels[0] || '')}</span><span>Tief ${taler(min)} · Hoch ${taler(max)}</span><span>${esc(labels[labels.length - 1] || '')}</span></div>`;
 }
-// the group's ratings: every AniList account in "Wer ist wer" (wrapped-profiles.json), only these shows
-async function loadPrices(list) {
-  const ids = await anilistIds(list);
-  const byId = new Map([...ids].map(([title, id]) => [id, title]));
-  const ratings = new Map(list.map(s => [s.title, []]));
-  if (byId.size) {
-    const profiles = await (await fetch('wrapped-profiles.json', { cache: 'no-cache' })).json();
-    const accounts = [...new Set(Object.values(profiles).flat().filter(a => a?.provider === 'anilist' && /^[\w-]{2,40}$/.test(a.name)).map(a => a.name))];
-    for (const user of accounts) {
-      try {
-        const data = await anilist('query ($user: String, $ids: [Int]) { Page(perPage: 50) { mediaList(userName: $user, mediaId_in: $ids, type: ANIME) { mediaId status progress score(format: POINT_100) media { episodes } } } }', { user, ids: [...byId.keys()] });
-        for (const e of data?.Page?.mediaList || []) ratings.get(byId.get(e.mediaId))?.push({ score: e.score, status: e.status, progress: e.progress, episodes: e.media?.episodes });
-      } catch {}
-    }
-  }
-  return ratings;
+// the portfolio's value day by day: trades replayed against each day's close
+function valueHistory(account) {
+  const trades = account?.trades || [];
+  return priced.days.map((d, i) => {
+    let cash = CASH; const held = {};
+    for (const t of trades) if (t.day <= d) { cash += -t.qty * t.price - t.fee; held[t.title] = (held[t.title] || 0) + t.qty; }
+    return cash + Object.entries(held).reduce((n, [title, c]) => n + c * (priced.shows[title]?.closes?.[i] ?? PRICE), 0);
+  });
 }
+const change = title => { const c = priced.shows[title]?.closes || []; return c.length > 1 ? (c[c.length - 1] / c[c.length - 2] - 1) * 100 : 0; };
+const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 
-const drops = title => (rated.get(title) || []).filter(r => r.status === 'DROPPED').length;
 function draw() {
-  const win = tradingWindow(seasonName());
-  const open = !!state?.open, list = $('stockList');
-  $('stockWindow').textContent = !win ? '' : open ? `Handel offen bis ${day(win.to)}` : Date.now() < win.from
-    ? `Handel öffnet am ${day(win.from)}` : `Handel geschlossen seit ${day(win.to)} · die Kurse folgen euren Bewertungen.`;
-  const cash = CASH - spent(mine), value = portfolioValue(mine, prices);
+  const win = tradingWindow(seasonName()), open = !!state?.open;
+  $('stockWindow').textContent = !win ? '' : open ? `Handel offen bis ${day(win.to)} · Schlusskurs vom ${priced.days.length ? day(priced.days[priced.days.length - 1]) : '–'}`
+    : Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand';
+  const a = state?.account || { cash: CASH, pending: [], holdings: {}, trades: [] };
+  const value = accountValue(a, prices);
   $('stockWallet').hidden = !state;
-  $('stockCash').textContent = taler(cash);
+  $('stockCash').textContent = taler(a.cash ?? CASH);
+  $('stockPending').textContent = taler(pendingSum(a));
   $('stockValue').textContent = taler(value);
   $('stockGain').textContent = (value >= CASH ? '+' : '') + taler(value - CASH);
-  $('stockGain').className = value > CASH ? 'up' : value < CASH ? 'down' : '';
-  const sorted = [...titles].sort((a, b) => (mine[b] || 0) - (mine[a] || 0) || (prices.get(b) ?? PRICE) - (prices.get(a) ?? PRICE) || a.localeCompare(b, 'de'));
-  list.innerHTML = sorted.map(title => {
-    const price = prices.get(title) ?? PRICE, have = mine[title] || 0, change = price - PRICE, n = (rated.get(title) || []).length;
-    return `<div class="boerse-row${have ? ' owned' : ''}" data-title="${esc(title)}">
-      <span class="boerse-title">${esc(title)}<small>${n ? n + (n === 1 ? ' Bewertung' : ' Bewertungen') : 'noch unbewertet'}${drops(title) ? ` · <b class="down">${drops(title)}× gedroppt</b>` : ''}</small></span>
-      <span class="boerse-price">${price}<small class="${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${change > 0 ? '▲ +' : change < 0 ? '▼ ' : '± '}${change}</small></span>
-      <span class="boerse-have">${open ? `<button type="button" class="pill" data-trade="-1" aria-label="Eine Aktie ${esc(title)} verkaufen"${have ? '' : ' disabled'}>−</button>` : ''}<b>${have}</b>${open ? `<button type="button" class="pill" data-trade="1" aria-label="Eine Aktie ${esc(title)} kaufen"${cash >= PRICE ? '' : ' disabled'}>+</button>` : ''}</span>
+  $('stockGain').className = cls(value - CASH);
+  const history = valueHistory(a);
+  $('stockChartBox').hidden = !state?.account?.trades?.length || priced.days.length < 2;
+  if (!$('stockChartBox').hidden) $('stockChart').innerHTML = chart(history, { labels: priced.days.map(day) });
+  const holdings = a.holdings || {};
+  const sorted = [...titles].sort((x, y) => Math.abs(holdings[y] || 0) - Math.abs(holdings[x] || 0) || (prices.get(y) ?? PRICE) - (prices.get(x) ?? PRICE) || x.localeCompare(y, 'de'));
+  $('stockList').innerHTML = sorted.map(title => {
+    const s = priced.shows[title] || {}, price = prices.get(title) ?? PRICE, have = holdings[title] || 0, ch = change(title), halt = haltedToday(title);
+    const meta = [s.ratings ? `${s.ratings} ${s.ratings === 1 ? 'Bewertung' : 'Bewertungen'}` : 'noch unbewertet', s.drops ? `<b class="down">${s.drops}× gedroppt</b>` : ''].filter(Boolean).join(' · ');
+    return `<div class="boerse-row${have ? ' owned' : ''}${have < 0 ? ' short' : ''}" data-title="${esc(title)}">
+      <button type="button" class="boerse-title" data-chart>${esc(title)}<small>${meta}${halt ? ' · <b class="down">ausgesetzt</b>' : ''}</small></button>
+      <span class="boerse-spark" data-chart>${chart(s.closes || [PRICE], { width: 90, height: 28, spark: true })}</span>
+      <span class="boerse-price">${taler(price)}<small class="${cls(ch)}">${pct(Math.round(ch * 10) / 10)}</small></span>
+      <span class="boerse-have"><b title="${have < 0 ? 'Leerverkauf' : 'Deine Aktien'}">${have}</b>${open ? `<button type="button" class="pill" data-trade="buy"${halt ? ' disabled' : ''}>Kaufen</button><button type="button" class="pill" data-trade="sell"${halt ? ' disabled' : ''} title="${have > 0 ? 'Verkaufen' : 'Leerverkauf: auf fallenden Kurs setzen'}">Verkaufen</button>` : ''}</span>
     </div>`;
-  }).join('');
-  $('stockSave').hidden = !open;
-  const traders = state?.traders || [];
-  $('stockTraders').hidden = !open;
-  $('stockTraders').innerHTML = open ? `<li class="label">Depot angelegt</li>${people.map(p => `<li class="${traders.includes(p) ? 'done' : ''}">${traders.includes(p) ? '✓ ' : ''}${esc(p)}</li>`).join('')}` : '';
-  const board = state?.portfolios?.length ? ranking(state.portfolios, prices) : [];
+  }).join('') || '<p class="boerse-hint">Für diese Season gibt es noch keine Kurse.</p>';
+  $('stockQty').closest('label').hidden = !open;
+  const trades = state?.account?.trades || [];
+  $('stockTradesBox').hidden = !trades.length;
+  $('stockTrades').innerHTML = [...trades].reverse().map(t => `<li><span>${day(t.day)}</span> ${t.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(t.qty)}× ${esc(t.title)} zu ${taler(t.price)} <small>(+${t.fee} Gebühr)</small></li>`).join('');
+  const board = state?.ranking || [];
   $('stockBoard').hidden = !board.length;
-  $('stockRanking').innerHTML = board.map(r => `<li><b>${esc(r.person)}</b><span>${taler(r.value)} Taler <small class="${r.value > CASH ? 'up' : r.value < CASH ? 'down' : ''}">${r.value >= CASH ? '+' : ''}${Math.round((r.value / CASH - 1) * 100)} %</small></span>
-    <small class="boerse-holdings">${Object.entries(r.holdings).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${c}× ${esc(t)}`).join(' · ')}</small></li>`).join('');
+  const held = new Map((state?.portfolios || []).map(p => [p.person, p.holdings]));
+  $('stockRanking').innerHTML = board.map(r => `<li><b>${esc(r.person)}</b><span>${taler(r.value)} Taler <small class="${cls(r.value - CASH)}">${pct(Math.round((r.value / CASH - 1) * 1000) / 10)}</small></span>
+    ${held.has(r.person) ? `<small class="boerse-holdings">${Object.entries(held.get(r.person)).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1])).map(([t, c]) => `${c}× ${esc(t)}`).join(' · ')}</small>` : ''}</li>`).join('');
 }
-$('stockList').addEventListener('click', e => {
+function openChart(title) {
+  const s = priced.shows[title] || {};
+  $('stockDlgTitle').textContent = title;
+  $('stockDlgChart').innerHTML = chart(s.closes || [PRICE], { labels: priced.days.slice(-(s.closes || []).length).map(day) });
+  const closes = s.closes || [PRICE];
+  $('stockDlgFacts').innerHTML = [
+    ['Kurs', taler(closes[closes.length - 1])], ['Heute', pct(Math.round(change(title) * 10) / 10)],
+    ['Seit Start', pct(Math.round((closes[closes.length - 1] / closes[0] - 1) * 1000) / 10)],
+    ['Hoch / Tief', `${taler(Math.max(...closes))} / ${taler(Math.min(...closes))}`],
+    ['AniList-Wertung', s.score ? s.score + ' %' : '–'], ['AniList-Mitglieder', s.members ? s.members.toLocaleString('de-DE') : '–'],
+    ['Eure Bewertungen', s.ratings || 0], ['Drops', s.drops || 0],
+  ].map(([k, v]) => `<li><small>${k}</small><b>${esc(String(v))}</b></li>`).join('');
+  $('stockDlg').showModal();
+}
+$('stockList').addEventListener('click', async e => {
+  const row = e.target.closest('[data-title]');
+  if (!row) return;
+  const title = row.dataset.title;
+  if (e.target.closest('[data-chart]')) { openChart(title); return; }
   const b = e.target.closest('[data-trade]');
   if (!b || !state?.open) return;
-  const title = b.closest('[data-title]').dataset.title, step = Number(b.dataset.trade);
-  const next = (mine[title] || 0) + step;
-  if (next < 0 || (step > 0 && CASH - spent(mine) < PRICE)) return;
-  if (next) mine[title] = next; else delete mine[title];
-  $('stockMsg').textContent = 'Noch nicht gespeichert.';
-  draw();
-});
-$('stockSave').onclick = async () => {
-  $('stockSave').disabled = true;
-  $('stockMsg').textContent = 'Wird gespeichert …';
+  const qty = Math.max(1, Math.min(50, Math.round(Number($('stockQty').value) || 1))) * (b.dataset.trade === 'sell' ? -1 : 1);
+  const price = prices.get(title) ?? PRICE;
+  const short = qty < 0 && (state.account?.holdings?.[title] || 0) + qty < 0;
+  if (short && !confirm(`Leerverkauf: Du verkaufst ${-qty}× ${title}, die du nicht (alle) hast. Fällt der Kurs, gewinnst du; steigt er, verlierst du. Weiter?`)) return;
+  row.querySelectorAll('button[data-trade]').forEach(x => { x.disabled = true; });
+  $('stockMsg').textContent = 'Order wird ausgeführt …';
   try {
-    await call('/stocks/portfolio', { season: seasonName(), person: $('stockPerson').value, holdings: mine });
-    state = { ...state, traders: [...new Set([...(state.traders || []), $('stockPerson').value])] };
-    $('stockMsg').textContent = 'Depot gespeichert. Bis Handelsschluss sieht es niemand.';
-    draw();
-  } catch (err) { $('stockMsg').textContent = 'Nicht gespeichert: ' + err.message; }
-  finally { $('stockSave').disabled = false; }
-};
+    const r = await call('/stocks/trade', { season: seasonName(), person: $('stockPerson').value, title, qty });
+    state = { ...state, account: r.account };
+    $('stockMsg').textContent = `${qty > 0 ? 'Gekauft' : 'Verkauft'}: ${Math.abs(qty)}× ${title} zu ${taler(r.price ?? price)} (+${FEE} Taler Gebühr)${qty < 0 ? '. Das Geld ist ab morgen verfügbar.' : '.'}`;
+    loadPerson(false);
+  } catch (err) { $('stockMsg').textContent = 'Nicht ausgeführt: ' + err.message; draw(); }
+});
 
-async function loadPerson() {
+async function loadPerson(clear = true) {
   const turn = request;
-  mine = {};
   try {
     state = await call('/stocks?season=' + encodeURIComponent(seasonName()) + '&person=' + encodeURIComponent($('stockPerson').value));
     if (turn !== request) return;
-    mine = { ...(state.mine || {}) };
     $('stockStatus').textContent = '';
   } catch (err) { if (turn === request) { state = null; $('stockStatus').textContent = 'Die Börse ist gerade nicht erreichbar: ' + err.message; } }
-  $('stockMsg').textContent = '';
+  if (clear) $('stockMsg').textContent = '';
   draw();
 }
 async function loadSeason() {
   const turn = ++request;
   const tab = tabs[$('stockSeason').selectedIndex];
-  $('stockStatus').textContent = 'Lade Guckplan …';
+  $('stockStatus').textContent = 'Lade Kurse …';
   $('stockPerson').disabled = true;
   try {
-    const plan = await loadPlan(tab);
+    const [plan, file] = await Promise.all([loadPlan(tab), fetch('boerse-prices.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({}))]);
     if (turn !== request) return;
-    const shows = plan.shows.filter(s => !s.hidden).map(s => ({ ...s, title: s.english || s.romaji })).filter(s => s.title);
-    titles = [...new Set(shows.map(s => s.title))];
+    priced = file.seasons?.[seasonName()] || { days: [], shows: {} };
+    prices = latestPrices(priced);
+    titles = [...new Set([...plan.shows.filter(s => !s.hidden).map(s => s.english || s.romaji).filter(Boolean)].filter(t => priced.shows[t] || !Object.keys(priced.shows).length))];
     const wanted = $('stockPerson').value;
     people = voters(plan.people);
     $('stockPerson').replaceChildren(...people.map(p => new Option(p, p)));
     if (people.includes(wanted)) $('stockPerson').value = wanted;
     $('stockPerson').disabled = false;
-    prices = new Map(); rated = new Map();
     await loadPerson();
-    // prices fill in when the ratings arrive
-    loadPrices(shows).then(ratings => {
-      if (turn !== request) return;
-      rated = ratings;
-      prices = new Map([...ratings].map(([title, r]) => [title, priceOf(r)]));
-      draw();
-    }, () => { if (turn === request) $('stockMsg').textContent = 'Bewertungen gerade nicht erreichbar: Kurse stehen auf 100.'; });
   } catch { if (turn === request) $('stockStatus').textContent = 'Der Guckplan konnte nicht geladen werden.'; }
 }
-$('stockPerson').onchange = loadPerson;
+$('stockPerson').onchange = () => loadPerson();
 $('stockSeason').onchange = loadSeason;
 
 (async () => {
@@ -160,9 +157,9 @@ $('stockSeason').onchange = loadSeason;
   if (!voteApi) { $('stockStatus').textContent = 'Die Börse ist hier nicht eingerichtet.'; return; }
   try { tabs = await guckplanTabs(); } catch { tabs = []; }
   if (!tabs.length) tabs = [FALLBACK_TAB];
-  // the season whose trading is open or comes next, else the current one
   const names = tabs.map(t => t.name.replace(/^Guckplan\s+/i, ''));
   const now = Date.now();
+  // the newest season that is trading, else the current one
   let pick = names.findIndex(n => tradingWindow(n, now)?.open);
   if (pick < 0) pick = tabs.indexOf(tabFor(tabs, now));
   $('stockSeason').replaceChildren(...names.map((n, i) => new Option(n, String(i))));
