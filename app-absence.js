@@ -132,10 +132,15 @@ const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
 moves = body.moves || moves;
 delays = body.delays || [];
-absent = Array.isArray(body.absent) ? body.absent : absent;
+if (Array.isArray(body.moves)) { // the whole saved file
+  absentDays = Array.isArray(body.absent) ? body.absent : [];
+  absentRules = goodRules(body.absentRules);
+  mergeAbsent();
+}
 if (body.reasons) reasonList = goodReasons(body.reasons);
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
+return body;
 }
 async function changeDelays(day, show, add, oldShow = show) {
 const mine = x => x.day === day && (x.show === show || x.show === oldShow);
@@ -189,11 +194,12 @@ if (edit) openDelay(edit.closest('.day').dataset.date, edit.dataset.delayEdit);
 });
 // Abwesenheiten: two tabs. "Kalender" is a month calendar (top bar button, or any day's "Abwesend") for one day
 // or a range, the whole day or only "ab"/"bis" a time. "Wiederkehrend" sets up weekly absences: who, which
-// weekdays, the kind and from when until when. Everything is saved per day, so a single day of a series can
-// still be changed in the calendar. Shows with too few people left are skipped on the schedule and in Discord.
-const awayCal = { month: null, start: null, end: null, mode: 'day', tab: 'calendar', allOnce: false };
+// weekdays, the kind, from when and (if at all) until when. Those are saved as rules (absentRules, see
+// app-moves.js) with no end needed; a single day of a rule can still be changed in the calendar, which saves
+// it as an exception of the rule. Shows with too few people left are skipped on the schedule and in Discord.
+const awayCal = { month: null, start: null, end: null, mode: 'day', tab: 'calendar', allOnce: false, extra: [] };
 const awayRep = { people: [], weekdays: [], mode: 'day', edit: null };
-const AWAY_DEFAULT_WEEKS = 12, AWAY_MAX_DAYS = 366, AWAY_SHOWN = 4;
+const AWAY_SHOWN = 4, AWAY_AHEAD = 400;
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const AWAY_WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const allPeople = () => {
@@ -203,15 +209,25 @@ return fromPlan.length ? fromPlan : [...$('soloPerson').options].map(o => o.valu
 const dayOf = iso => new Date(iso + 'T12:00:00');
 const addDay = (iso, n) => { const d = dayOf(iso); d.setDate(d.getDate() + n); return isoDay(d); };
 const shortDate = iso => `${shortDayName(dayOf(iso))} ${germanDate(dayOf(iso))}`;
-const weekdayOf = iso => (dayOf(iso).getDay() + 6) % 7; // 0 = Monday
+const weekdayOf = ruleWeekday; // 0 = Monday
+const plain = ({ rule, ...x }) => x;
 function selectedDays() {
 if (!awayCal.start) return [];
 const days = [];
 for (let d = awayCal.start; d <= (awayCal.end || awayCal.start) && days.length < 92; d = addDay(d, 1)) days.push(d);
 return days;
 }
-// The absences with person p (or anyone in `on`) set on `days`, the rest left as they are.
-// Whole day: replaces their "ab"/"bis"/"spontan da" there; people in `off` lose their whole day.
+// Rules in one fixed shape, so the site and the save service can compare them
+function canonRule(r) {
+const skip = [...new Set(r.skip || [])].filter(d => d >= addDay(isoDay(new Date()), -2) && ruleCovers({ ...r, skip: [] }, d)).sort();
+return { id: r.id, person: r.person, weekdays: [...new Set(r.weekdays)].sort(), start: r.start, ...(r.end && { end: r.end }), ...ruleKind(r), ...(skip.length && { skip }) };
+}
+// the save service drops what's over a little earlier or later than the site: only compare from today on
+const rulesFromToday = list => JSON.stringify(goodRules(list).map(canonRule).filter(r => !r.end || r.end >= isoDay(new Date()))
+  .map(r => ({ ...r, skip: (r.skip || []).filter(d => d >= isoDay(new Date())) })));
+const newRuleId = () => Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+// The absences (single days, as `absent` shows them) with the people in `on` set on `days`, the rest left as
+// they are. Whole day: replaces their "ab"/"bis"/"spontan da" there; people in `off` lose their whole day.
 function withAway(list, days, on, mode, time, off = []) {
 const kept = list.flatMap(x => {
   if (!days.includes(x.day)) return [x];
@@ -222,6 +238,22 @@ const kept = list.flatMap(x => {
 const added = !on.length ? [] : days.map(day => mode === 'day' ? { day, people: on } : { day, people: on, [mode]: time });
 return kept.concat(added).sort((a, b) => a.day.localeCompare(b.day));
 }
+// What `days` should look like (wanted, single days) → saved single days and rules: a day a rule still gives
+// stays the rule's (an old exception there goes), a day it no longer gives becomes an exception of the rule.
+function splitAway(wanted, days) {
+const want = wanted.filter(x => days.includes(x.day)).map(x => ({ ...plain(x), people: [...x.people] }));
+const rules = absentRules.map(r => ({ ...r, skip: [...(r.skip || [])] }));
+for (const r of rules) for (const d of days) {
+  if (!ruleCovers(r, d)) continue;
+  const hit = want.find(x => x.day === d && x.people.includes(r.person) && awayLabel(x) === awayLabel(ruleKind(r)));
+  if (hit) { hit.people = hit.people.filter(p => p !== r.person); r.skip = r.skip.filter(s => s !== d); }
+  else if (!r.skip.includes(d)) r.skip.push(d);
+}
+return {
+  days: absentDays.filter(x => !days.includes(x.day)).concat(want.filter(x => x.people.length)).sort((a, b) => a.day.localeCompare(b.day)),
+  rules: rules.map(canonRule),
+};
+}
 function withoutRun(list, run, days) {
 return list.flatMap(x => {
   if (!days.includes(x.day) || awayLabel(x) !== run.cond) return [x];
@@ -230,12 +262,11 @@ return list.flatMap(x => {
   return people.length ? [{ ...x, people }] : [];
 });
 }
-// Saved days, grouped for the lists: a weekly series is the same person, kind and weekday every 7 days
-// (at least 3 times, and not just the inside of one long stretch); everything else is single days or ranges.
-// Only for showing: nothing saved is merged or rewritten.
+// Saved single days, grouped for the lists: a weekly series (from before rules: the same person, kind and
+// weekday every 7 days, at least 3 times, not just the inside of one long stretch); the rest single days or ranges.
 function awayRuns() {
 const groups = new Map();
-for (const x of absent) for (const p of x.people || []) {
+for (const x of absentDays) for (const p of x.people || []) {
   const key = JSON.stringify([p, awayLabel(x)]);
   if (!groups.has(key)) groups.set(key, new Set());
   groups.get(key).add(x.day);
@@ -267,6 +298,26 @@ return runs.map(r => {
   const days = r.days.filter(d => d >= today);
   return days.length ? { ...r, days, from: days[0], to: days.at(-1) } : null;
 }).filter(Boolean).sort((a, b) => a.from.localeCompare(b.from) || a.p.localeCompare(b.p));
+}
+// the same days and kind for several people: one row
+function mergedRuns(weekly) {
+const out = [];
+for (const r of awayRuns().filter(r => !!r.weekly === weekly)) {
+  const same = out.find(x => x.cond === r.cond && x.days.join() === r.days.join());
+  if (same) same.people.push(r.p); else out.push({ ...r, people: [r.p] });
+}
+return out;
+}
+// Rules for the list: one row for people with the same weekdays, kind and dates
+function ruleGroups() {
+const out = [];
+for (const r of absentRules) {
+  const key = JSON.stringify([r.weekdays, awayLabel(ruleKind(r)), r.start, r.end || '']);
+  const same = out.find(g => g.key === key);
+  if (same) { same.people.push(r.person); same.ids.push(r.id); }
+  else out.push({ key, ids: [r.id], people: [r.person], weekdays: r.weekdays, cond: awayLabel(ruleKind(r)), start: r.start, end: r.end || '' });
+}
+return out.sort((a, b) => a.weekdays[0] - b.weekdays[0] || a.people[0].localeCompare(b.people[0]));
 }
 function showAwayTab(tab) {
 awayCal.tab = tab === 'recurring' ? 'recurring' : 'calendar';
@@ -309,7 +360,7 @@ for (let i = 0; i < lead; i++) cells.push('<span class="away-empty" aria-hidden=
 for (let n = startDay; n <= length; n++) {
 const iso = `${awayCal.month}-${String(n).padStart(2, '0')}`;
 const entries = absent.filter(x => x.day === iso);
-const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}"${x.maybe ? ' class="maybe"' : x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
+const dots = entries.flatMap(x => (x.people || []).map(p => `<i style="${personStyle(p)}" title="${esc(p)} ${awayLabel(x)}${x.rule ? ' (wöchentlich)' : ''}"${x.maybe ? ' class="maybe"' : x.from || x.until ? ' class="part"' : ''}></i>`)).join('');
 cells.push(`<button type="button" class="away-day${iso === today ? ' today' : ''}${sel.has(iso) ? ' sel' : ''}${entries.length ? ' has-entries' : ''}" data-away-day="${iso}"${iso < today ? ' disabled' : ''}${iso === today ? ' aria-current="date"' : ''} aria-pressed="${sel.has(iso)}" aria-label="${esc(shortDate(iso))}${entries.length ? ': ' + esc(awayText(iso).join(', ')) : ''}"><b>${n}</b><span class="away-dots">${dots}</span></button>`);
 }
 $('awayGrid').innerHTML = cells.join('');
@@ -325,24 +376,17 @@ $('awayRange').textContent = days.length > 1 ? `${shortDate(days[0])} – ${shor
 modeButtons($('awayMode'), awayCal.mode);
 $('awayTime').hidden = awayCal.mode === 'day' || awayCal.mode === 'maybe';
 // whole day: pressed = away on every chosen day, "mixed" = on some (left alone unless clicked)
-$('awayPeople').innerHTML = [...new Set([...allPeople(), ...(awayCal.extra || [])])].map(p => {
+$('awayPeople').innerHTML = [...new Set([...allPeople(), ...awayCal.extra])].map(p => {
 const on = awayCal.mode === 'day' ? days.filter(d => absentOn(d).includes(p)).length : 0;
 const state = on === days.length && on ? 'true' : on ? 'mixed' : p === awayCal.me ? 'true' : 'false';
 return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${state}" style="${personStyle(p)}">${esc(p)}</button>`;
 }).join('');
 }
-// the same days and kind for several people: one row
-function mergedRuns(weekly) {
-const out = [];
-for (const r of awayRuns().filter(r => !!r.weekly === weekly)) {
-  const same = out.find(x => x.cond === r.cond && x.days.join() === r.days.join());
-  if (same) same.people.push(r.p); else out.push({ ...r, people: [r.p] });
-}
-return out;
-}
+const pencil = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+const awayRow = (who, label, edit, remove, action) => `<li><span class="away-whos">${who.map(p => `<span class="away-who" style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span><span class="away-what">${esc(label)}</span><span class="away-entry-actions"><button type="button" class="pill" ${edit} aria-label="Bearbeiten: ${esc(who.join(', '))}, ${esc(label)}" title="Bearbeiten">${pencil}</button><button type="button" class="pill" ${remove} aria-label="${action}: ${esc(who.join(', '))}, ${esc(label)}" title="${action}">✕</button></span></li>`;
 const runRow = (r, label) => {
-const payload = esc(JSON.stringify(r)), action = r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen', who = r.people || [r.p];
-return `<li><span class="away-whos">${who.map(p => `<span class="away-who" style="${personStyle(p)}">${esc(p)}</span>`).join('')}</span><span class="away-what">${esc(label)}</span><span class="away-entry-actions"><button type="button" class="pill" data-away-edit="${payload}" aria-label="Bearbeiten: ${esc(who.join(', '))}, ${esc(label)}" title="Bearbeiten"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button><button type="button" class="pill" data-away-remove="${payload}" aria-label="${action}: ${esc(who.join(', '))}, ${esc(label)}" title="${action}">✕</button></span></li>`;
+const payload = esc(JSON.stringify(r));
+return awayRow(r.people || [r.p], label, `data-away-edit="${payload}"`, `data-away-remove="${payload}"`, r.weekly ? 'Wiederholung entfernen' : 'Eintrag entfernen');
 };
 function drawAwayList() {
 const runs = mergedRuns(false);
@@ -354,23 +398,24 @@ $('awayMore').hidden = runs.length <= AWAY_SHOWN;
 $('awayMore').textContent = awayCal.allOnce ? 'Weniger anzeigen' : `Alle ${runs.length} anzeigen`;
 }
 // Wiederkehrend
-function resetRepeat() {
+const weekdayNames = list => list.map(i => AWAY_WEEKDAYS[i]).join(', ');
+function ruleLabel(g) {
 const today = isoDay(new Date());
+const span = g.start > today ? `ab ${shortDate(g.start)}` : '';
+const end = g.end ? `bis ${shortDate(g.end)}` : 'bis auf Weiteres';
+return [`jeden ${weekdayNames(g.weekdays)}`, g.cond, span, end].filter(Boolean).join(' · ');
+}
+function resetRepeat() {
 Object.assign(awayRep, { people: mode === 'solo' && soloPerson ? [soloPerson] : [], weekdays: [], mode: 'day', edit: null });
-$('repFrom').value = today;
-$('repUntil').value = addDay(today, AWAY_DEFAULT_WEEKS * 7 - 1);
+$('repFrom').value = isoDay(new Date());
+$('repUntil').value = '';
+$('repOpen').checked = true;
 }
-function repeatDays() {
-const from = $('repFrom').value, until = $('repUntil').value, today = isoDay(new Date());
-if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(until)) return [];
-const days = [];
-for (let d = from < today ? today : from; d <= until && days.length < 400; d = addDay(d, 1))
-  if (awayRep.weekdays.includes(weekdayOf(d))) days.push(d);
-return days;
-}
+const repEnd = () => $('repOpen').checked ? '' : $('repUntil').value;
 function drawRepeat() {
-const series = mergedRuns(true);
-$('repList').innerHTML = series.map(r => runRow(r, `jeden ${AWAY_WEEKDAYS[r.weekday]} · ${r.cond} · bis ${shortDate(r.to)}`)).join('')
+const groups = ruleGroups(), legacy = mergedRuns(true);
+$('repList').innerHTML = groups.map(g => awayRow(g.people, ruleLabel(g), `data-rule-edit="${esc(g.key)}"`, `data-rule-remove="${esc(g.key)}"`, 'Wiederholung entfernen')).join('')
+  + legacy.map(r => runRow(r, `jeden ${AWAY_WEEKDAYS[r.weekday]} · ${r.cond} · bis ${shortDate(r.to)}`)).join('')
   || '<li class="muted">Noch keine Wiederholung.</li>';
 $('repFormTitle').textContent = awayRep.edit ? 'Wiederholung ändern' : 'Neue Wiederholung';
 $('repCancel').hidden = !awayRep.edit;
@@ -378,25 +423,35 @@ $('repPeople').innerHTML = [...new Set([...allPeople(), ...awayRep.people])].map
 $('repWeekdays').innerHTML = AWAY_WEEKDAYS.map((d, i) => `<button type="button" data-rep-day="${i}" aria-pressed="${awayRep.weekdays.includes(i)}">${d}</button>`).join('');
 modeButtons($('repMode'), awayRep.mode);
 $('repTime').hidden = awayRep.mode === 'day' || awayRep.mode === 'maybe';
-$('repUntil').min = $('repFrom').value || isoDay(new Date());
-$('repFrom').min = isoDay(new Date());
-$('repFrom').max = $('repUntil').max = addDay(isoDay(new Date()), AWAY_MAX_DAYS - 1);
-const days = repeatDays();
+$('repUntilBox').hidden = $('repOpen').checked;
+const today = isoDay(new Date());
+$('repFrom').min = today; $('repFrom').max = addDay(today, AWAY_AHEAD - 30);
+$('repUntil').min = $('repFrom').value || today;
+const start = $('repFrom').value > today ? $('repFrom').value : today, end = repEnd();
+let first = '';
+for (let d = start, i = 0; i < 7 && !first; d = addDay(d, 1), i++) if (awayRep.weekdays.includes(weekdayOf(d))) first = d;
 $('repSummary').textContent = !awayRep.weekdays.length ? 'Wochentag wählen.'
-  : !days.length ? 'In diesem Zeitraum gibt es keinen solchen Tag.'
-  : `${days.length} ${days.length === 1 ? 'Termin' : 'Termine'} · ${shortDate(days[0])} bis ${shortDate(days.at(-1))}`;
+  : !first || (end && first > end) ? 'In diesem Zeitraum gibt es keinen solchen Tag.'
+  : `Erster Termin ${shortDate(first)} · ${end ? `letzter ${shortDate(end)}` : 'ohne Ende, bis ihr es ändert'}`;
 }
-// Saves the absences of the given days (the rest stay as they are). The save service takes 92 days at a time.
+// Saves `next` ({ days, rules }); `days` are the single days that changed. The save service takes 92 days at a
+// time; rules go along with the first part (only when they changed), and its answer must have them.
 async function saveAway(next, days) {
 if (movesKey) return saveMoves(moves, d => d, null, next);
 if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
+const rulesChanged = JSON.stringify(next.rules) !== JSON.stringify(absentRules.map(canonRule));
 try {
-  for (let i = 0; i < days.length; i += 92) {
-    const part = days.slice(i, i + 92);
-    await postDelay({ absent: next.filter(x => part.includes(x.day)), days: part });
+  const parts = [];
+  for (let i = 0; i < days.length; i += 92) parts.push(days.slice(i, i + 92));
+  if (!parts.length) parts.push([]);
+  for (const [i, part] of parts.entries()) {
+    const withRules = rulesChanged && i === 0;
+    const body = await postDelay({ absent: next.days.filter(x => part.includes(x.day)), days: part, ...(withRules && { rules: next.rules }) });
+    if (withRules && rulesFromToday(body.absentRules) !== rulesFromToday(next.rules))
+      throw new Error('der Speicherdienst kennt wöchentliche Abwesenheiten noch nicht (Helfer-Update v19 nötig)');
   }
 }
-catch (e) { throw /nichts zu tun|unbekannt|unknown|not allowed|ungültig/i.test(e.message) ? new Error('der Speicherdienst kann Abwesenheiten noch nicht speichern. Bis zum Update geht es mit dem Bearbeitungszugang') : e; }
+catch (e) { throw /nichts zu tun|unbekannt|unknown|not allowed|ungültige Tage/i.test(e.message) ? new Error('der Speicherdienst kann das noch nicht speichern (Helfer-Update v19 nötig). Bis dahin geht es mit dem Bearbeitungszugang') : e; }
 }
 async function storeAway(next, days, done) {
 $('awayMsg').textContent = 'Speichert…';
@@ -405,7 +460,7 @@ try {
 await saveAway(next, days);
 } catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return false; }
 finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
-absent = next;
+absentDays = next.days; absentRules = next.rules; mergeAbsent();
 if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else drawAway();
 $('awayMsg').textContent = `${done} Alle sehen es in etwa einer Minute.`;
 try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
@@ -452,7 +507,7 @@ const time = awayCal.mode === 'maybe' ? true : awayCal.mode === 'day' ? null : c
 if (awayCal.mode !== 'day' && !time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (awayCal.mode !== 'day' && !on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
 const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${time}.`;
-storeAway(withAway(absent, days, on, awayCal.mode, time, off), days, label);
+storeAway(splitAway(withAway(absent, days, on, awayCal.mode, time, off), days), days, label);
 };
 $('repPeople').addEventListener('click', e => {
 const p = e.target.closest('[data-rep-person]')?.dataset.repPerson;
@@ -475,34 +530,72 @@ drawRepeat();
 if (m === 'from' || m === 'until') $('repClock').focus();
 });
 $('repFrom').onchange = $('repUntil').onchange = () => drawRepeat();
+$('repOpen').onchange = () => { if (!$('repOpen').checked && !$('repUntil').value) $('repUntil').value = addDay($('repFrom').value || isoDay(new Date()), 12 * 7 - 1); drawRepeat(); };
 $('repCancel').onclick = () => { resetRepeat(); $('awayMsg').textContent = ''; drawRepeat(); };
 $('repSave').onclick = () => {
-const days = repeatDays(), on = awayRep.people;
+const today = isoDay(new Date()), on = awayRep.people, say = text => { $('awayMsg').textContent = text; };
+const start = $('repFrom').value > today ? $('repFrom').value : today, end = repEnd();
 const time = awayRep.mode === 'maybe' ? true : awayRep.mode === 'day' ? null : clockOf($('repClock').value);
-const say = text => { $('awayMsg').textContent = text; };
 if (!on.length) return say('Wer? Mindestens eine Person auswählen.');
 if (!awayRep.weekdays.length) return say('Mindestens einen Wochentag auswählen.');
-if ($('repUntil').value > addDay(isoDay(new Date()), AWAY_MAX_DAYS - 1)) return say('Höchstens ein Jahr im Voraus.');
-if (!days.length) return say('In diesem Zeitraum gibt es keinen solchen Tag.');
+if (!/^\d{4}-\d{2}-\d{2}$/.test($('repFrom').value)) return say('Ab wann? Bitte ein Datum wählen.');
+if (start > addDay(today, AWAY_AHEAD - 30)) return say('Der Start darf höchstens ein Jahr entfernt sein.');
+if (!$('repOpen').checked && !/^\d{4}-\d{2}-\d{2}$/.test(end)) return say('Bis wann? Datum wählen oder „Ohne Ende“ ankreuzen.');
+if (end && end < start) return say('Das Ende liegt vor dem Start.');
 if (awayRep.mode !== 'day' && !time) return say('Uhrzeit wie 21:00.');
-// changing a series: its remaining days go first, then the new ones are set
-const old = awayRep.edit ? awayRep.edit.days : [];
-const next = withAway(awayRep.edit ? withoutRun(absent, awayRep.edit, old) : absent, days, on, awayRep.mode, time);
+const edit = awayRep.edit;
+// a change replaces the rules being edited (or an old series of single days); their exceptions stay where they still fit
+const oldRules = edit?.ids ? absentRules.filter(r => edit.ids.includes(r.id)) : [];
+const kept = absentRules.filter(r => !oldRules.includes(r));
+const made = on.map(person => canonRule({ id: oldRules.find(r => r.person === person)?.id || newRuleId(), person, weekdays: awayRep.weekdays, start, ...(end && { end }),
+  ...(awayRep.mode === 'maybe' ? { maybe: true } : awayRep.mode === 'day' ? {} : { [awayRep.mode]: time }), skip: oldRules.find(r => r.person === person)?.skip }));
+// single days of these people that the new rules now cover give way to them
+const covered = absentDays.filter(x => x.day >= start && (!end || x.day <= end) && awayRep.weekdays.includes(weekdayOf(x.day)) && x.people.some(p => on.includes(p))).map(x => x.day);
+const legacyDays = edit && !edit.ids ? edit.days : [];
+let daysList = absentDays;
+if (legacyDays.length) daysList = withoutRun(daysList, edit, legacyDays);
+daysList = daysList.flatMap(x => {
+  if (!covered.includes(x.day)) return [x];
+  const people = x.people.filter(p => !on.includes(p));
+  return people.length ? [{ ...x, people }] : [];
+});
 const cond = awayRep.mode === 'day' ? 'ganztägig' : awayRep.mode === 'maybe' ? 'spontan da' : `${awayRep.mode === 'from' ? 'ab' : 'bis'} ${time}`;
-const names = awayRep.weekdays.map(i => AWAY_WEEKDAYS[i]).join(', ');
-storeAway(next, [...new Set([...old, ...days])].sort(), `${on.join(', ')}: jeden ${names}, ${cond}, bis ${shortDate(days.at(-1))} (${days.length} Termine).`);
+const rules = kept.map(canonRule).concat(made);
+storeAway({ days: daysList, rules }, [...new Set([...covered, ...legacyDays])].sort(),
+  `${on.join(', ')}: jeden ${weekdayNames(awayRep.weekdays)}, ${cond}, ${end ? `bis ${shortDate(end)}` : 'bis auf Weiteres'}.`);
 };
 // Bearbeiten / ✕ in both lists
 $('awayDlg').addEventListener('click', e => {
+const ruleEdit = e.target.closest('[data-rule-edit]')?.dataset.ruleEdit;
+const ruleRemove = e.target.closest('[data-rule-remove]')?.dataset.ruleRemove;
+if (ruleEdit || ruleRemove) {
+  const g = ruleGroups().find(x => x.key === (ruleEdit || ruleRemove));
+  if (!g) return;
+  if (ruleRemove) {
+    if (!confirm(`Wiederholung für ${g.people.join(', ')} (jeden ${weekdayNames(g.weekdays)}) beenden?`)) return;
+    storeAway({ days: absentDays, rules: absentRules.filter(r => !g.ids.includes(r.id)).map(canonRule) }, [], `${g.people.join(', ')}: Wiederholung beendet.`);
+    return;
+  }
+  const r = absentRules.find(x => x.id === g.ids[0]);
+  Object.assign(awayRep, { people: [...g.people], weekdays: [...g.weekdays], mode: r.maybe ? 'maybe' : r.from ? 'from' : r.until ? 'until' : 'day', edit: { ids: g.ids } });
+  $('repFrom').value = g.start < isoDay(new Date()) ? isoDay(new Date()) : g.start;
+  $('repOpen').checked = !g.end; $('repUntil').value = g.end;
+  if (r.from || r.until) $('repClock').value = r.from || r.until;
+  $('awayMsg').textContent = '';
+  drawRepeat();
+  $('repForm').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  return;
+}
 const edit = e.target.closest('[data-away-edit]')?.dataset.awayEdit;
 if (edit) {
   const run = JSON.parse(edit);
   const p0 = (run.people || [run.p])[0];
-  const existing = absent.find(x => x.day === run.from && (x.people || []).includes(p0) && awayLabel(x) === run.cond);
+  const existing = absentDays.find(x => x.day === run.from && (x.people || []).includes(p0) && awayLabel(x) === run.cond);
   const kind = existing?.maybe ? 'maybe' : existing?.from ? 'from' : existing?.until ? 'until' : 'day';
   if (run.weekly) {
+    // an old series of single days: edited, it becomes a rule
     Object.assign(awayRep, { people: run.people || [run.p], weekdays: [run.weekday], mode: kind, edit: run });
-    $('repFrom').value = run.from; $('repUntil').value = run.to;
+    $('repFrom').value = run.from; $('repOpen').checked = false; $('repUntil').value = run.to;
     if (existing?.from || existing?.until) $('repClock').value = existing.from || existing.until;
     drawRepeat();
     $('awayMsg').textContent = '';
@@ -527,5 +620,5 @@ if (!raw) return;
 const run = JSON.parse(raw);
 const who = (run.people || [run.p]).join(', ');
 if (run.weekly && !confirm(`Alle ${run.days.length} kommenden Termine (jeden ${AWAY_WEEKDAYS[run.weekday]}) für ${who} entfernen?`)) return;
-storeAway(withoutRun(absent, run, run.days), run.days, `${who}: entfernt.`);
+storeAway({ days: withoutRun(absentDays, run, run.days), rules: absentRules.map(canonRule) }, run.days, `${who}: entfernt.`);
 });

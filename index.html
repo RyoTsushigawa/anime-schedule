@@ -329,7 +329,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="rep-field"><span>Jeden</span><div id="repWeekdays" class="rep-weekdays" role="group" aria-label="Wochentage"></div></div>
 <div class="rep-field"><span>Wie</span><div id="repMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button><button type="button" data-mode="maybe" title="Nicht mit einplanen, kommt aber vielleicht dazu">Spontan da</button></div></div>
 <label id="repTime" class="away-time" hidden>Uhrzeit <input id="repClock" type="time" value="21:00" step="900"></label>
-<div class="rep-field rep-dates"><label>Ab <input id="repFrom" type="date"></label><label>Bis <input id="repUntil" type="date"></label></div>
+<div class="rep-dates"><label>Ab <input id="repFrom" type="date"></label><label class="rep-open"><input type="checkbox" id="repOpen" checked> Ohne Ende</label><label id="repUntilBox" hidden>Bis <input id="repUntil" type="date"></label></div>
 <div id="repSummary" class="away-hint" role="status" aria-live="polite"></div>
 <div class="dlg-row"><button type="button" id="repSave" class="pill primary">Speichern</button></div>
 </div>

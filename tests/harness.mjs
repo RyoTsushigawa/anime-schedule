@@ -173,6 +173,8 @@ export async function openPage(opts = {}) {
       if (opts.delaysDown) { state.delayTries = (state.delayTries || 0) + 1; throw new TypeError('Failed to fetch'); }
       const op = JSON.parse(init.body);
       (state.delayPosts ||= []).push(op);
+      // opts.delaysReply(op): a different answer (e.g. the helper's file after saving absences)
+      if (opts.delaysReply) return json(opts.delaysReply(op));
       return json({ updated: new Date(NOW).toISOString(), moves: [], delays: op.add ? [op.add] : [], ...(op.remember && { reasons: [op.add.reason] }) });
     }
     throw new Error('unexpected fetch: ' + url);

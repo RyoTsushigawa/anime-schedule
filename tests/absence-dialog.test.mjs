@@ -41,29 +41,79 @@ test('a long stretch of days is one entry, not a weekly series', async () => {
   } finally { p.close(); }
 });
 
-test('the form saves every chosen weekday between the two dates', async () => {
+const fill = async (p, { people, days, mode, clock, from, until }) => {
+  for (const b of p.$('repPeople').querySelectorAll('[aria-pressed="true"]')) b.click();
+  for (const name of people) await p.click(p.$('repPeople').querySelector(`[data-rep-person="${name}"]`));
+  for (const b of p.$('repWeekdays').querySelectorAll('[aria-pressed="true"]')) b.click();
+  for (const d of days) await p.click(p.$('repWeekdays').querySelector(`[data-rep-day="${d}"]`));
+  await p.click(p.$('repMode').querySelector(`[data-mode="${mode || 'day'}"]`));
+  if (clock) p.$('repClock').value = clock;
+  if (from) p.$('repFrom').value = from;
+  p.$('repOpen').checked = !until;
+  if (until) p.$('repUntil').value = until;
+  p.$('repOpen').dispatchEvent(new p.window.Event('change'));
+  if (until) { p.$('repUntil').value = until; p.$('repUntil').dispatchEvent(new p.window.Event('change')); }
+};
+
+test('the form saves a rule without an end, and the schedule reads it far ahead', async () => {
   const p = await open([]);
   try {
     await p.click(p.$('awayTabRecurring'));
-    for (const b of p.$('repPeople').querySelectorAll('[aria-pressed="true"]')) b.click();
-    await p.click(p.$('repPeople').querySelector('[data-rep-person="Belly"]'));
-    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="1"]'));   // Di
-    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="3"]'));   // Do
-    await p.click(p.$('repMode').querySelector('[data-mode="from"]'));
-    p.$('repClock').value = '22:00';
-    p.$('repFrom').value = '2026-11-01'; p.$('repUntil').value = '2026-11-30';
-    p.$('repUntil').dispatchEvent(new p.window.Event('change'));
-    assert.match(p.$('repSummary').textContent, /^8 Termine · Di 3\. Nov\. bis Do 26\. Nov\./);
+    await fill(p, { people: ['Belly'], days: [1, 3], mode: 'from', clock: '22:00', from: '2026-11-01' });
+    assert.match(p.$('repSummary').textContent, /Erster Termin Di 3\. Nov\. · ohne Ende/);
     await p.click(p.$('repSave'), 300);
-    const saved = p.state.movesSaved.absent;
-    assert.deepEqual(saved.map(x => x.day), ['2026-11-03', '2026-11-05', '2026-11-10', '2026-11-12', '2026-11-17', '2026-11-19', '2026-11-24', '2026-11-26']);
-    assert.ok(saved.every(x => x.from === '22:00' && x.people.join() === 'Belly'));
-    assert.deepEqual(rows(p, 'repList'), ['Belly jeden Di · ab 22:00 · bis Di 24. Nov.', 'Belly jeden Do · ab 22:00 · bis Do 26. Nov.']);
+    const file = p.state.movesSaved;
+    assert.equal(file.absent, undefined);
+    assert.equal(file.absentRules.length, 1);
+    const { id, ...rule } = file.absentRules[0];
+    assert.match(id, /^[a-z0-9]{8}$/);
+    assert.deepEqual(rule, { person: 'Belly', weekdays: [1, 3], start: '2026-11-01', from: '22:00' });
+    assert.deepEqual(rows(p, 'repList'), ['Belly jeden Di, Do · ab 22:00 · ab So 1. Nov. · bis auf Weiteres']);
+    // a Tuesday next autumn, still there
+    assert.equal(p.run("awayAt('2027-10-26', 'Belly', 22 * 60 + 30)"), true);
+    assert.equal(p.run("awayAt('2027-10-26', 'Belly', 21 * 60)"), false);
+    assert.equal(p.run("awayAt('2027-10-27', 'Belly', 22 * 60 + 30)"), false);
   } finally { p.close(); }
 });
 
-test('changing a series replaces its remaining days, ✕ removes them; other people stay', async () => {
-  const p = await open([...weekly('2026-11-03', 4, ['Belly', 'Rei'])]);
+test('a rule with an end date stops there', async () => {
+  const p = await open([]);
+  try {
+    await p.click(p.$('awayTabRecurring'));
+    await fill(p, { people: ['MaRyo'], days: [5], until: '2026-11-21' });
+    assert.match(p.$('repSummary').textContent, /Erster Termin Sa 31\. Okt\. · letzter Sa 21\. Nov\./);
+    await p.click(p.$('repSave'), 300);
+    assert.equal(p.state.movesSaved.absentRules[0].end, '2026-11-21');
+    assert.equal(p.run("JSON.stringify(absentOn('2026-11-21'))"), JSON.stringify(['MaRyo']));
+    assert.equal(p.run("JSON.stringify(absentOn('2026-11-28'))"), JSON.stringify([]));
+  } finally { p.close(); }
+});
+
+test('changing one day of a rule in the calendar saves an exception, undoing it removes the exception', async () => {
+  const rule = { id: 'abcd1234', person: 'MaRyo', weekdays: [5], start: '2026-10-28' };
+  const p = await openPage({ storage: { movesKey: 'fixture-only' }, movesFile: { moves: [], absentRules: [rule] } });
+  try {
+    p.window.Element.prototype.scrollIntoView = () => {};
+    await p.click(p.$('awayButton'));
+    await p.click(p.$('awayGrid').querySelector('[data-away-day="2026-10-31"]'));
+    const chip = () => p.$('awayPeople').querySelector('[data-away="MaRyo"]');
+    assert.equal(chip().getAttribute('aria-pressed'), 'true');
+    await p.click(chip());
+    await p.click(p.$('awaySave'), 300);
+    assert.deepEqual(p.state.movesSaved.absentRules, [{ ...rule, skip: ['2026-10-31'] }]);
+    assert.equal(p.state.movesSaved.absent, undefined);
+    assert.equal(p.run("JSON.stringify(absentOn('2026-10-31'))"), JSON.stringify([]));
+    assert.equal(p.run("JSON.stringify(absentOn('2026-11-07'))"), JSON.stringify(['MaRyo']));
+    await p.click(p.$('awayGrid').querySelector('[data-away-day="2026-10-31"]'));
+    await p.click(chip());
+    await p.click(p.$('awaySave'), 300);
+    assert.deepEqual(p.state.movesSaved.absentRules, [rule]);
+    assert.equal(p.state.movesSaved.absent, undefined);
+  } finally { p.close(); }
+});
+
+test('an old series of single days becomes a rule when changed; ✕ ends a rule', async () => {
+  const p = await open([...weekly('2026-11-03', 4, ['Belly', 'Rei']), { day: '2026-11-05', people: ['Belly'] }]);
   try {
     await p.click(p.$('awayTabRecurring'));
     await p.click(p.$('repList').querySelector('[data-away-edit]'));
@@ -71,12 +121,33 @@ test('changing a series replaces its remaining days, ✕ removes them; other peo
     assert.equal(p.$('repFrom').value, '2026-11-03');
     assert.equal(p.$('repUntil').value, '2026-11-24');
     await p.click(p.$('repPeople').querySelector('[data-rep-person="Rei"]'));      // only Belly from now on
-    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="1"]'));
-    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="2"]'));         // Mi instead of Di
+    p.$('repOpen').checked = true; p.$('repOpen').dispatchEvent(new p.window.Event('change'));
     await p.click(p.$('repSave'), 300);
-    assert.deepEqual(p.state.movesSaved.absent.map(x => x.day + ' ' + x.people.join()), ['2026-11-04 Belly', '2026-11-11 Belly', '2026-11-18 Belly']);
+    const file = p.state.movesSaved;
+    assert.deepEqual(file.absent, [{ day: '2026-11-05', people: ['Belly'] }]);
+    assert.deepEqual(file.absentRules.map(({ id, ...r }) => r), [{ person: 'Belly', weekdays: [1], start: '2026-11-03' }]);
     p.window.confirm = () => true;
-    await p.click(p.$('repList').querySelector('[data-away-remove]'), 300);
-    assert.deepEqual(p.state.movesSaved.absent || [], []);
+    await p.click(p.$('repList').querySelector('[data-rule-remove]'), 300);
+    assert.equal(p.state.movesSaved.absentRules, undefined);
+    assert.deepEqual(p.state.movesSaved.absent, [{ day: '2026-11-05', people: ['Belly'] }]);
   } finally { p.close(); }
+});
+
+test('without the GitHub key, rules go to the save service, which must give them back', async () => {
+  for (const helper of ['v19', 'v18']) {
+    const p = await openPage({ config: { delaysUrl: 'https://helper.test/' }, movesFile: { moves: [] },
+      delaysReply: op => ({ moves: [], ...(op.absent.length && { absent: op.absent }), ...(helper === 'v19' && op.rules?.length && { absentRules: op.rules }) }) });
+    try {
+      p.window.Element.prototype.scrollIntoView = () => {};
+      await p.click(p.$('awayButton'));
+      await p.click(p.$('awayTabRecurring'));
+      await fill(p, { people: ['Belly'], days: [4] });
+      await p.click(p.$('repSave'), 300);
+      const post = p.state.delayPosts.at(-1);
+      assert.deepEqual(post.days, []);
+      assert.equal(post.rules.length, 1);
+      if (helper === 'v19') assert.match(p.$('awayMsg').textContent, /Belly: jeden Fr, ganztägig, bis auf Weiteres/);
+      else assert.match(p.$('awayMsg').textContent, /Nicht gespeichert: .*v19/);
+    } finally { p.close(); }
+  }
 });
