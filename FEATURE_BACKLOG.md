@@ -6,7 +6,7 @@ The feature challenge has **9 of 50 approved standalone features** and **23 appr
 
 | ID | Feature | Status |
 | --- | --- | --- |
-| N1 | Seasonal Anime Awards | Implementation in [PR #150](https://github.com/RyoTsushigawa/anime-schedule/pull/150). Check its status before starting. |
+| N1 | Seasonal Anime Awards | Implementation rebuilt on current main in [PR #161](https://github.com/RyoTsushigawa/anime-schedule/pull/161), superseding PR #150. |
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
 | N24 | Anime List Health Check | Approved. |
 
@@ -27,5 +27,5 @@ The feature challenge has **9 of 50 approved standalone features** and **23 appr
 
 - Count only approved standalone features toward 50. Keep updates in their own list.
 - Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
-- Rejected ideas stay excluded, including N27 Season Vote Results Board U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, and U30 Season Preview · Mark Trailers Watched. Keep new game ideas out of future rounds.
+- Rejected ideas stay excluded, including N27 Season Vote Results Board U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, and U31 Tier List · Undo Last Move. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
