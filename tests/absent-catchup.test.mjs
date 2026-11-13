@@ -18,3 +18,17 @@ test('a show set out because of an absence is in Catch-up as soon as it has aire
 test('without the absence it waits for its watch slot', async () => {
   assert.equal(await run(null), false);
 });
+
+test('U39: the Abwesend tag on a set-out show explains who is away and why', async () => {
+  const p = await openPage({ list: { 1: { status: 'CURRENT', progress: 3 } }, movesFile: { moves: [], absent: [{ day: '2026-10-28', people: ['MaRyo'], from: '19:00' }] } });
+  try {
+    await p.click(p.$('viewWeek'));
+    const tag = p.$('list').querySelector('[data-away-why]');
+    assert.ok(tag, 'tag is a button');
+    const box = tag.closest('.info').querySelector('.away-why');
+    assert.equal(box.hidden, true);
+    await p.click(tag);
+    assert.equal(box.hidden, false);
+    assert.match(box.textContent, /Um 20:00 fehlen: MaRyo \(ab 19:00\)\. Übrig: Belly\./);
+  } finally { p.close(); }
+});

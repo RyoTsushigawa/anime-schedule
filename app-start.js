@@ -113,6 +113,28 @@ if (!seen && !returningVisitor) return;
 const fresh = PATCH_NOTES.filter(n => !seen || n.id > seen);
 if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
+// N39 Datenstand: when each source was last updated, and whether a saved copy is in use
+const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
+async function drawDataStatus() {
+const notes = [...dataNotes.keys()];
+const saved = prefix => notes.some(k => k.startsWith(prefix));
+let week = null; try { week = JSON.parse(localStorage.getItem('week:' + weekStart(weekOffset).getTime()) || 'null'); } catch {}
+const rows = [
+['Guckplan (Google Sheet)', saved('missing ') ? 'nicht geladen · Google Sheets antwortet gerade nicht' : saved('sheet ') ? 'gespeicherte Kopie in diesem Browser · Google Sheets antwortet gerade nicht' : dataStamps.has('sheet') ? 'aktuell · geladen ' + ago(dataStamps.get('sheet')) : 'aus diesem Browser, wird gerade geprüft'],
+['Sendetermine (AniList)', notes.some(k => k.startsWith('week:') && /LiveChart/.test(dataNotes.get(k))) ? 'Ersatz von LiveChart · AniList antwortet nicht' : saved('week:') ? 'gespeicherte Kopie vom ' + ago(week?.time) : week?.time ? 'geladen ' + ago(week.time) : 'unbekannt'],
+['Pausen & Stream-Status (LiveChart)', streamsDe ? 'Stand ' + ago(streamsDe.statusUpdated || streamsDe.generated) : 'nicht geladen'],
+['Verschiebungen & Abwesenheiten', movesUpdated ? 'zuletzt geändert ' + ago(movesUpdated) : 'unbekannt'],
+['Season-Katalog', '…'], ['Trailer-Listen', '…'],
+];
+const draw = () => { $('dataList').innerHTML = rows.map(([name, text]) => `<li><b>${esc(name)}</b><span>${esc(text)}</span></li>`).join(''); };
+draw();
+const catalog = fetch('seasons.json', { cache: 'no-cache' }).then(r => r.json()).then(j => 'Stand ' + ago(j.generated), () => 'nicht erreichbar');
+const trailers = fetch('https://api.github.com/repos/RyoTsushigawa/anime-schedule/commits?path=season-trailers.json&per_page=1', { headers: { Accept: 'application/vnd.github+json' } })
+.then(r => r.ok ? r.json() : Promise.reject()).then(list => 'zuletzt geändert ' + ago(list[0]?.commit?.committer?.date), () => 'unbekannt (GitHub nicht erreichbar)');
+rows[4][1] = await catalog; draw();
+rows[5][1] = await trailers; draw();
+}
+$('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
 $('notesButton').onclick = () => {
 showSettings(false);
 showNotes(PATCH_NOTES);

@@ -164,7 +164,7 @@ let delays = [];
 // absentRules: weekly absences without an end, [{ id, person, weekdays: [0 = Mo … 6 = So], start, end?,
 // from? | until? | maybe?, skip?: [days it doesn't apply] }]. moves.json keeps both ("absent", "absentRules");
 // absencesForDay combines dated entries and recurring rules for the requested day.
-let absentDays = [], absentRules = [];
+let absentDays = [], absentRules = [], movesUpdated = '';
 const ruleWeekday = day => (new Date(day + 'T12:00:00').getDay() + 6) % 7;
 const ruleCovers = (r, day) => day >= r.start && (!r.end || day <= r.end) && r.weekdays.includes(ruleWeekday(day));
 const ruleKind = r => r.maybe ? { maybe: true } : r.from ? { from: r.from } : r.until ? { until: r.until } : {};
@@ -206,6 +206,7 @@ try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 delays = newest?.delays || [];
+movesUpdated = newest?.updated || '';
 absentDays = Array.isArray(newest?.absent) ? newest.absent : [];
 absentRules = goodRules(newest?.absentRules);
 reasonList = goodReasons(newest?.reasons);

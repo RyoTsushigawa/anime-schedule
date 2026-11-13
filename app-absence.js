@@ -477,6 +477,15 @@ try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, tr
 return true;
 }
 $('awayButton').onclick = () => openAway();
+// U39: the "Abwesend" tag on a set-out show opens why
+$('list').addEventListener('click', e => {
+const tag = e.target.closest('[data-away-why]');
+if (!tag) return;
+const box = tag.closest('.info')?.querySelector('.away-why');
+if (!box) return;
+box.hidden = !box.hidden;
+tag.setAttribute('aria-expanded', String(!box.hidden));
+});
 $('awayTabCalendar').onclick = () => showAwayTab('calendar');
 $('awayTabRecurring').onclick = () => showAwayTab('recurring');
 $('list').addEventListener('click', e => {

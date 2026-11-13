@@ -60,6 +60,19 @@ return withEmotes((lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\n
 + (away.length ? `\n\nAbwesend: ${away.join(', ')}` : '')
 + (out.length ? `\n\nFällt aus:\n${out.join('\n')}` : ''));
 }
+// U34: a short format to copy: date, then one line per show with start time, title and episode(s)
+let discordFormat = 'full';
+try { if (localStorage.getItem('discordFormat') === 'short') discordFormat = 'short'; } catch {}
+function discordShort({ date, groups }) {
+const lines = groups.flat().map(r => {
+const time = new Date(r.watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const eps = r.episodes?.length ? (r.episodes.length > 1 ? ` · Folge ${r.episodes[0]}–${r.episodes.at(-1)}` : ` · Folge ${r.episodes[0]}`) : '';
+return `${time} ${r.show.english || r.show.romaji}${eps}`;
+});
+return `${shortDayName(date)} ${germanDate(date)}\n` + (lines.length ? lines.join('\n') : 'Nichts geplant.');
+}
+const currentMessage = () => discordFormat === 'short' ? discordShort(discordOpen) : discordMessage(discordOpen);
+const drawDiscordFormat = () => { for (const b of $('discordFormat').querySelectorAll('[data-format]')) b.setAttribute('aria-pressed', String(b.dataset.format === discordFormat)); };
 function discordDay(iso) {
 const found = lastWeekRender && render(...lastWeekRender, true).find(d => isoDay(d.date) === iso);
 if (!found) return null;
@@ -160,7 +173,7 @@ const typedNicks = () => Object.fromEntries([...$('discordNickList').querySelect
 const previewNicks = () => {
 const saved = nicknames;
 nicknames = cleanNicknames({ ...saved, ...typedNicks() });
-$('discordText').value = readable(discordMessage(discordOpen));
+$('discordText').value = readable(currentMessage());
 nicknames = saved;
 };
 async function openNickEditor(date, day = null, setup = false) {
@@ -172,8 +185,9 @@ async function openNickEditor(date, day = null, setup = false) {
   nickDayFilter = setup ? 'all' : String((date.getDay() + 6) % 7);
   $('discordDlg').classList.toggle('nickname-setup', setup);
   $('discordName').textContent = setup ? 'Spitznamen einrichten' : `${dayName(date)}, ${germanDate(date)}`;
-  $('discordText').value = readable(discordMessage(discordOpen));
+  $('discordText').value = readable(currentMessage());
   $('discordMsg').textContent = '';
+  drawDiscordFormat();
   showNickFields();
   $('discordNicks').hidden = false;
   $('discordNickToggle').setAttribute('aria-expanded', 'true');
@@ -220,7 +234,7 @@ $('discordNickSave').disabled = true;
 $('discordMsg').textContent = 'Speichere …';
 try {
 nicknames = await saveNicknames(typed);
-$('discordText').value = readable(discordMessage(discordOpen));
+$('discordText').value = readable(currentMessage());
 $('discordMsg').textContent = 'Spitznamen gespeichert, auch für den täglichen Post.';
 } catch (err) {
 $('discordMsg').textContent = `Nicht gespeichert: ${err.message}.`;
@@ -249,6 +263,14 @@ if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401
 }
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
+$('discordFormat').addEventListener('click', e => {
+const b = e.target.closest('[data-format]');
+if (!b || !discordOpen) return;
+discordFormat = b.dataset.format;
+try { localStorage.setItem('discordFormat', discordFormat); } catch {}
+drawDiscordFormat();
+$('discordText').value = readable(currentMessage());
+});
 $('discordCopy').onclick = async () => {
 const text = forDiscord($('discordText').value);
 try { await navigator.clipboard.writeText(text); }
