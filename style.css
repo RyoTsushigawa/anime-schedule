@@ -1188,6 +1188,8 @@ text-align: center;
 .away-more { justify-self: center; font-size: 12px; }
 .rep-field { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; }
 .rep-field > span { color: var(--muted); font-size: 12px; }
+#repDaily { margin-bottom: 6px; }
+#repDaily[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .rep-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .rep-weekdays button { min-height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .rep-weekdays button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }

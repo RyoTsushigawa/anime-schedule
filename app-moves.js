@@ -163,34 +163,28 @@ let delays = [];
 // or maybe: true ("spontan da": not planned with, but might turn up).
 // absentRules: weekly absences without an end, [{ id, person, weekdays: [0 = Mo … 6 = So], start, end?,
 // from? | until? | maybe?, skip?: [days it doesn't apply] }]. moves.json keeps both ("absent", "absentRules");
-// `absent` is both together as single days (yesterday to a bit over a year ahead), which everything else reads.
-let absentDays = [], absentRules = [], absent = [];
+// absencesForDay combines dated entries and recurring rules for the requested day.
+let absentDays = [], absentRules = [];
 const ruleWeekday = day => (new Date(day + 'T12:00:00').getDay() + 6) % 7;
 const ruleCovers = (r, day) => day >= r.start && (!r.end || day <= r.end) && r.weekdays.includes(ruleWeekday(day));
 const ruleKind = r => r.maybe ? { maybe: true } : r.from ? { from: r.from } : r.until ? { until: r.until } : {};
-const ruleDay = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDay(d); };
 function goodRules(list) {
 return (Array.isArray(list) ? list : []).filter(r => r && typeof r.person === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.start)
   && Array.isArray(r.weekdays) && r.weekdays.length && (!r.end || r.end >= r.start));
 }
-function mergeAbsent() {
-const first = ruleDay(isoDay(new Date()), -2), last = ruleDay(first, 400);
-const fromRules = [];
-for (const r of absentRules) {
-  const skip = new Set(r.skip || []);
-  for (let d = r.start > first ? r.start : first; d <= last && (!r.end || d <= r.end); d = ruleDay(d, 1))
-    if (r.weekdays.includes(ruleWeekday(d)) && !skip.has(d)) fromRules.push({ day: d, people: [r.person], ...ruleKind(r), rule: r.id });
-}
-absent = absentDays.concat(fromRules).sort((a, b) => a.day.localeCompare(b.day));
-}
-const absentOn = date => absent.filter(x => x.day === date && !x.from && !x.until && !x.maybe).flatMap(x => x.people || []);
+const absencesForDay = day => [
+  ...absentDays.filter(x => x.day === day),
+  ...absentRules.filter(rule => ruleCovers(rule, day) && !rule.skip?.includes(day))
+    .map(rule => ({ day, people: [rule.person], ...ruleKind(rule), rule: rule.id }))
+];
+const absentOn = date => absencesForDay(date).filter(x => !x.from && !x.until && !x.maybe).flatMap(x => x.people || []);
 const clockMinutes = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
 // minute: minutes after the day's midnight (after midnight counts on: 00:30 = 1470); null = unknown time
-const awayAt = (date, person, minute) => absent.some(x => x.day === date && x.people?.includes(person)
+const awayAt = (date, person, minute) => absencesForDay(date).some(x => x.people?.includes(person)
 && (!x.from || (minute != null && minute >= clockMinutes(x.from)))
 && (!x.until || (minute != null && minute < clockMinutes(x.until))));
 const awayLabel = x => x.maybe ? 'spontan da' : x.from ? `ab ${x.from}` : x.until ? `bis ${x.until}` : 'ganztägig';
-const awayText = date => absent.filter(x => x.day === date).flatMap(x => (x.people || []).map(p => x.from || x.until || x.maybe ? `${p} (${awayLabel(x)})` : p));
+const awayText = date => absencesForDay(date).flatMap(x => (x.people || []).map(p => x.from || x.until || x.maybe ? `${p} (${awayLabel(x)})` : p));
 let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); } });
@@ -214,7 +208,6 @@ moves = newest?.moves || [];
 delays = newest?.delays || [];
 absentDays = Array.isArray(newest?.absent) ? newest.absent : [];
 absentRules = goodRules(newest?.absentRules);
-mergeAbsent();
 reasonList = goodReasons(newest?.reasons);
 }
 function moveFor(show, monday) {
@@ -227,14 +220,14 @@ next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 864000
 const before = { moves, absentDays, absentRules };
 if (!changeDelays) {
 moves = next;
-if (absentNext) { absentDays = absentNext.days; absentRules = absentNext.rules; mergeAbsent(); }
+if (absentNext) { absentDays = absentNext.days; absentRules = absentNext.rules; }
 if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true);
 }
 movesPending++;
 const job = movesQueue.catch(() => {}).then(() => saveMovesNow(next, changeDelays, reasons, absentNext)).finally(() => movesPending--);
 movesQueue = job;
 return job.catch(e => {
-if (!changeDelays) { moves = before.moves; absentDays = before.absentDays; absentRules = before.absentRules; mergeAbsent(); if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); }
+if (!changeDelays) { moves = before.moves; absentDays = before.absentDays; absentRules = before.absentRules; if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); }
 throw e;
 });
 }
@@ -263,7 +256,7 @@ if (res.ok) {
 const sha = (await res.json().catch(() => null))?.content?.sha;
 movesWritten = sha && meta?.sha ? { replaced: meta.sha, sha, file } : null;
 const later = movesPending > 1;
-if (!later) { moves = file.moves; absentDays = nextAbsent; absentRules = nextRules; mergeAbsent(); }
+if (!later) { moves = file.moves; absentDays = nextAbsent; absentRules = nextRules; }
 delays = nextDelays;
 reasonList = file.reasons;
 movesSeen = movesStamp();
