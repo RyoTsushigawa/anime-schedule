@@ -66,7 +66,22 @@ $('updateReload').onclick = () => {
 try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, pickedDay, y: scrollY })); } catch {}
 reloadPage();
 };
+// When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
+const LAST_FEATURE = { at: '2026-11-13T19:01:48Z', name: 'Link-Meldungen' };
 const PATCH_NOTES = [
+{ id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
+'Seasonal Anime Awards are now voted together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
+'New game: the daily Anime-Quiz, five questions about the shows in the Guckplan, the same for everyone. The games page now has four games.',
+'Titel-Rätsel: any common English word counts as a guess, Hard mode is solvable, and it still works when AniList is unreachable. Inhalts-Rätsel got an archive of past days and stats.',
+'Games load more reliably: fewer AniList requests, a clear message when a blocker stops AniList, and a „Neu laden“ button when a game can\'t start.',
+'Absences: the calendar has tabs for single days, recurring absences (every Tuesday from 20:00, for example) and a week overview. Click an absence note to see why someone is away.',
+'„Startet bald“ in the last weeks of a season: the next season\'s premieres that got „Ja“ votes, with their dates.',
+'Wrong stream link? Day menu › „Falschen Link melden“. Reports go to a queue where the plan owner checks and fixes them for everyone.',
+'Search box „Nachschlagen“: find any anime (nicknames work too) and see where and when it runs.',
+'Settings: Lesbarkeit (larger text, higher contrast), Datenstand, Sync-Verlauf, Listen-Check for your AniList, and an AniList ↔ MAL comparison.',
+'Catch-up: pin shows to the top. Season Preview: votes are kept as drafts, sequels of shows you watched are suggested, and your filter is remembered.',
+'Watch Planner: „Aus Abwesenheiten“ marks the evenings people are away.',
+] },
 { id: '2026-11-10', title: 'Long episodes, clearer days and a tidier editor', items: [
 'Long episodes: „Lang“ in the move dialog gives an episode two slots, and later shows move back 30 minutes. LiveChart notes such as „Double-length premiere“ are picked up automatically. A „Lang“ tag marks the episode, and pushed times are coloured.',
 '„Doppelt“ now also takes two slots, survives dragging and the day editor, and shows as „(x2)“ in the Discord message.',
@@ -99,7 +114,21 @@ const PATCH_NOTES = [
 ] },
 ];
 const NOTES_KEY = 'notesSeen';
+// how long ago, as „3 Tagen, 4 Std.“ / „2 Std. 15 Min.“ / „5 Min.“ (short: only the largest part)
+function sinceText(at, short = false, now = Date.now()) {
+const min = Math.max(0, Math.floor((now - Date.parse(at)) / 60000));
+const d = Math.floor(min / 1440), h = Math.floor(min % 1440 / 60), m = min % 60;
+const parts = d ? [`${d} ${d === 1 ? 'Tag' : 'Tagen'}`, h && `${h} Std.`] : h ? [`${h} Std.`, m && `${m} Min.`] : [`${m} Min.`];
+return 'vor ' + (short ? parts[0] : parts.filter(Boolean).join(d ? ', ' : ' '));
+}
+function drawFeatureTimer() {
+$('notesTimer').textContent = `Letztes neues Feature (${LAST_FEATURE.name}): ${sinceText(LAST_FEATURE.at)}`;
+$('notesAge').textContent = sinceText(LAST_FEATURE.at, true);
+}
+drawFeatureTimer();
+setInterval(drawFeatureTimer, 60000);
 function showNotes(list) {
+drawFeatureTimer();
 $('notesList').innerHTML = list.map(n => `<section class="notes-entry"><h3>${esc(n.title)}<span>${esc(new Date(n.id + 'T12:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' }))}</span></h3>
     <ul>${n.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
 $('notesDlg').showModal();

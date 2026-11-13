@@ -24,3 +24,7 @@ This is the proposed order for the approved work in [FEATURE_BACKLOG.md](FEATURE
 - **Discord Delivery Queue** starts with [PR #183](https://github.com/RyoTsushigawa/anime-schedule/pull/183) (merged), which blocks repeat sends for recorded posts. Next, add persistent delivery attempts and reconcile uncertain outcomes before offering retries.
 
 For each item, check current main and open PRs, record the owner or branch in the shared backlog, and use the existing UI entry point where possible. Keep the PR focused on one workflow and verify it through that entry point before marking it ready.
+
+## Feature timer
+
+The Patch-Notes show how long ago the newest feature went live (`LAST_FEATURE` in `app-start.js`). When a new feature is merged, set `LAST_FEATURE.at` to its merge time (UTC) and `LAST_FEATURE.name` to its short German name. Bug fixes don't reset it.
