@@ -18,7 +18,7 @@ const SITE_FEATURES = [
   ['Plan bearbeiten', [
     'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig oder dauerhaft), auch per Ziehen', 'Tag bearbeiten',
     'Serie überspringen, mit „Zeiten beibehalten“', 'Verspätungen für alle, mit Gründe-Liste', 'Nachholen: Folgen in den Plan legen',
-    'Automatisch einplanen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Discord-Zustellung',
+    'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Discord-Zustellung',
   ]],
   ['Abwesenheiten', [
     'Abwesenheits-Kalender (Tage, Zeiträume, ab/bis Uhrzeit)', 'Wiederkehrende Abwesenheiten', 'Wochenübersicht der Abwesenheiten',
