@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **37 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **39 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -24,15 +24,15 @@ The feature challenge has **13 of 50 approved standalone features** and **37 app
 | U21 | Synopsis Quiz Daily Archive | Approved. |
 | U23 | Synopsis Quiz Statistics | Approved. |
 | U25 | Catch-up Pinned Anime | Approved. |
-| U27 | Season Preview · Next Unvoted Show | In [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
-| U29 | Absences · Filter by Person | In [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Filter entries in Kalender and Wiederkehrend by person, with an All option. |
+| U27 | Season Preview · Next Unvoted Show | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
+| U29 | Absences · Filter by Person | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Filter entries in Kalender and Wiederkehrend by person, with an All option. |
 | U32 | Weekly Plan · Hide Covers | Approved. Add a text-only view that keeps times, episode numbers, and watch controls visible. |
 | U34 | Discord Schedule · Compact Copy | Approved. Offer a shorter copy format with start times, titles, and episode numbers. |
-| U37 | Season Preview · Remember My Filters | In [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Restore the last selected voter and filters. |
+| U37 | Season Preview · Remember My Filters | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Restore the last selected voter and filters. |
 | U38 | Weekly Plan · Time Zone Override | Approved. Show the same schedule in Berlin time, device-local time, or a chosen time zone through the existing time settings. |
 | U39 | Weekly Plan · Explain Absence Pauses | Approved. Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
 | U41 | Weekly Plan · Remind Me Before a Show | Approved. Offer an optional reminder from the existing watch-slot menu. |
-| U42 | Season Preview · Save an Unsent Vote | In [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Keep a failed vote as a draft on its show so the voter can retry later. |
+| U42 | Season Preview · Save an Unsent Vote | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Keep a failed vote as a draft on its show so the voter can retry later. |
 | U43 | Weekly Plan · Hide Watched Episodes | Approved. Add an on/off toggle in the existing Solo view controls. On hides watched episodes. Off restores the full plan in one click. |
 | U44 | Seasonal Anime Awards · Search Nominees | Approved. Make the existing nominee picker searchable by title. |
 | U45 | Weekly Plan · Report a Wrong Streaming Link | Approved. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
@@ -40,6 +40,8 @@ The feature challenge has **13 of 50 approved standalone features** and **37 app
 | U48 | Search · Clear Recent Searches | Approved. Clear this browser's recent title suggestions from the existing settings menu. |
 | U50 | Catch-up · Restore One Snoozed Show | Approved. Open the existing Später count to restore one show while keeping the others snoozed. |
 | U51 | Absences · Undo Accidental Removal | Approved. Restore the removed absence from the existing save notice, including its dates and time rules. |
+| U52 | Season Preview · Trailer Length | Approved. Show the runtime in the existing trailer link when known. |
+| U53 | Weekly Plan · Hide Empty Days | Approved. Add a toggle in the existing view controls. Keep days with pauses or absences visible. |
 
 ## Curation decisions
 
