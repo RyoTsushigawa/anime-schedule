@@ -133,7 +133,7 @@ async function wrappedList(profile, fresh) {
 }
 // A playful food translation of seasonal plans and, when available, favourite genres.
 // These are fictional Subway-style orders, never real menu availability claims.
-function wrappedFoodTaste(stats, genre='') {
+function wrappedFoodTaste(stats, genre='', person='', people=[]) {
  const g=String(genre).toLowerCase();
  const options=[
   [/action|adventure|sports/,'gegartes Hähnchen','Chili-Joghurt-Sauce'],
@@ -146,13 +146,22 @@ function wrappedFoodTaste(stats, genre='') {
  const late=stats.night?.minutes>=1320;
  const selected=match||options[late?4:stats.parallel?1:stats.exclusive.length?2:3];
  const title=late?'Night-Owl Sub':stats.parallel?'Multiverse Sub':stats.exclusive.length?'Hidden-Gem Sub':'Season-Favoriten Sub';
+ // Assign a distinct pair of toppings to each plan entry, independent of render order
+ // or whether anyone else's list data is available.
+ const index=[...new Set(people)].sort().indexOf(person);
+ const crunchy=['Gurke','rote Zwiebeln','geraspelte Karotten','Rotkohl','Radieschen'];
+ const extras=['Tomaten','geröstete Paprika','Mais','eingelegte Gurken','Jalapeños','Oliven'];
+ const cheeses=['Gouda','Cheddar','Feta','Emmentaler','Provolone'];
+ const vegetables=index<0
+  ? (stats.parallel?'Salat, Tomaten und rote Zwiebeln':'Salat, Gurke und Tomaten')
+  : 'Salat, '+crunchy[index%crunchy.length]+' und '+extras[(index+Math.floor(index/crunchy.length)*2)%extras.length];
  return {title,bread:stats.shows>=12?'Vollkornbrot':'Italian-Brot',
-  protein:selected[1],sauce:selected[2],cheese:stats.exclusive.length?'Cheddar':'Gouda',
-  vegetables:stats.parallel?'Salat, Tomaten und rote Zwiebeln':'Salat, Gurke und Tomaten',
+  protein:selected[1],sauce:selected[2],cheese:index<0?(stats.exclusive.length?'Cheddar':'Gouda'):cheeses[(index+Math.floor(index/crunchy.length)*2)%cheeses.length],
+  vegetables,
   why:match?'Häufigstes Genre der Season-Abschlüsse: '+genre+'.':late?'Ein später Start im Plan sorgt für kräftige Würze.':stats.parallel?'Parallele Serien bringen Abwechslung.':stats.exclusive.length?'Eure Geheimtipps geben dem Sub seinen Charakter.':'Eine gemütliche Mischung aus dem Guckplan.'};
 }
-function wrappedFoodCards(stats,genre,season,name) {
- const f=wrappedFoodTaste(stats,genre);
+function wrappedFoodCards(stats,genre,season,name,person,people) {
+ const f=wrappedFoodTaste(stats,genre,person,people);
  const fillings=f.protein+', '+f.cheese+', '+f.vegetables;
  return [{
   kicker:season+' · Anime trifft Sandwich',title:'Dein Anime-Geschmack als Sub: '+f.title,color:'#ffc764',
@@ -238,7 +247,7 @@ async function wrappedRender(fresh=false) {
   $('status').textContent='Plan geladen · Listen-Statistiken werden gelesen…';
   if(!allowLists){
     cards.push({kicker:season+' · zum Schluss',title:person?(shared?'Das war eure gemeinsame Season.':'Das war deine Season.'):'So unterschiedlich. Trotzdem eine Runde.',color:'#d6ff79',html:'<p>'+(person?'Ob gemeinsame Serien oder die eigene Auswahl: Schön, dass '+(shared?'ihr':'du')+' dabei '+(shared?'seid.':'bist.'):'Zehn verschiedene Geschmäcker müssen nicht denselben Anime mögen, um einen schönen gemeinsamen Abend zu haben.').replace('Zehn verschiedene',WrappedStats.peopleCount(wrappedPlan.people)+' verschiedene')+'</p><p>Für '+wrappedSafe(season)+' bleiben wir bewusst beim Guckplan. Listen-Statistiken kommen erst ab Winter 2027 dazu.</p>',note:'Keine AniList- oder MAL-Daten für diesen Rückblick. Der Plan ist eine Momentaufnahme der Season.'});
-    cards.push(...wrappedFoodCards(stats,'',season,name));
+    cards.push(...wrappedFoodCards(stats,'',season,name,person,wrappedPlan.people));
     const index=wrappedIndex;wrappedDraw(cards);wrappedShow(index);
     $('status').textContent=wrappedTabNote||wrappedPlanNote?'Gespeicherter Guckplan · Neu laden versucht es erneut.':season+' · nur aus eurem Guckplan.';
     $('sources').textContent=(wrappedTabNote+' '+wrappedPlanNote+' Dieser Rückblick basiert auf dem aktuellen Guckplan, einschließlich Vielleicht und bedingter Zusagen. MaRyo zählt als zwei Menschen mit einem gemeinsamen Plan. Keine Listen- oder Watch-Historie; keine temporären Wochenverschiebungen.').trim();
@@ -294,7 +303,7 @@ async function wrappedRender(fresh=false) {
     }
     undated=summary.undated;
   } else cards.push({kicker:'Noch mehr Wrapped?',title:'Dein Plan kennt nur die halbe Story.',color:'#f4a9d1',html:'<p>Ordne unter <button class="inline-action" data-open-profiles>Profile</button> einer Person ihre AniList- oder MAL-Konten zu. Dann kommen Abschlüsse, Favoriten und Genres dazu.</p>',note:'Persönliche Plan-Statistiken funktionieren auch ohne Konto. Gruppen-Listenstatistiken sind nur so vollständig wie die zugeordneten Konten.'});
-  cards.push(...wrappedFoodCards(stats,foodGenre,season,name));
+  cards.push(...wrappedFoodCards(stats,foodGenre,season,name,person,wrappedPlan.people));
   const index=wrappedIndex;
   wrappedDraw(cards);wrappedShow(index);
   $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:(wrappedTabNote||wrappedPlanNote?'Gespeicherte Daten · Neu laden versucht es erneut.':'Dein Wrapped ist bereit.');

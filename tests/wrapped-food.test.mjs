@@ -5,10 +5,10 @@ const source=readFileSync(new URL('../wrapped.js',import.meta.url),'utf8');
 const start=source.indexOf('function wrappedFoodTaste(');
 const end=source.indexOf('function wrappedShow(',start);
 assert.ok(start>=0&&end>start,'Wrapped food helpers exist');
-const load=new Function('stats','genre',`
+const load=new Function('stats','genre','person','people',`
  const wrappedSafe = text => String(text ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  ${source.slice(start,end)}
- return {taste:wrappedFoodTaste(stats,genre),cards:wrappedFoodCards(stats,genre,'Winter 2027','Person')};
+ return {taste:wrappedFoodTaste(stats,genre,person,people),cards:wrappedFoodCards(stats,genre,'Winter 2027',person || 'Person',person,people)};
 `);
 const basic=()=>({shows:8,parallel:0,exclusive:[],night:null});
 test('action anime yields a chicken sub and a matching wrap recipe',()=>{
@@ -39,6 +39,23 @@ test('taste strings are safely escaped in the generated story cards',()=>{
  assert.match(cards[0].html,/&lt;img/);
 });
 test('both no-list and list paths add the food cards',()=>{
- assert.match(source,/cards\.push\(\.\.\.wrappedFoodCards\(stats,'',season,name\)\)/);
- assert.match(source,/cards\.push\(\.\.\.wrappedFoodCards\(stats,foodGenre,season,name\)\)/);
+ assert.match(source,/cards\.push\(\.\.\.wrappedFoodCards\(stats,'',season,name,person,wrappedPlan\.people\)\)/);
+ assert.match(source,/cards\.push\(\.\.\.wrappedFoodCards\(stats,foodGenre,season,name,person,wrappedPlan\.people\)\)/);
+});
+
+test('ten people with identical viewing tastes get distinct fillings in both cards',()=>{
+ const people=Array.from({length:10},(_,i)=>'Person '+i);
+ for (const genre of ['', 'Action']) {
+  const variants=people.map(person=>load(basic(),genre,person,people));
+  assert.equal(new Set(variants.map(({taste})=>taste.vegetables)).size,people.length);
+  assert.equal(new Set(variants.map(({cards})=>cards[0].html)).size,people.length);
+  assert.equal(new Set(variants.map(({cards})=>cards[1].html)).size,people.length);
+  for (const [i,{taste,cards}] of variants.entries()) {
+   assert.deepEqual(taste,load(basic(),genre,people[i],[...people].reverse()).taste);
+   for (const card of cards) {
+    assert.ok(card.html.includes(taste.vegetables));
+    assert.ok(card.html.includes(taste.cheese));
+   }
+  }
+ }
 });
