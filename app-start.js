@@ -134,6 +134,17 @@ const trailers = fetch('https://api.github.com/repos/RyoTsushigawa/anime-schedul
 rows[4][1] = await catalog; draw();
 rows[5][1] = await trailers; draw();
 }
+function drawSyncHistory() {
+let list = [];
+try { list = JSON.parse(localStorage.getItem(SYNC_LOG) || '[]'); } catch {}
+const what = e => e.ok
+  ? [e.score !== undefined ? `Wertung ${e.score}` : e.status === 'DROPPED' ? 'gedroppt' : e.from !== e.to ? `Folge ${e.from ?? 0} → ${e.to}` : `Folge ${e.to}`, e.note].filter(Boolean).join(' · ')
+  : `Nicht gespeichert${e.to != null ? ` (Folge ${e.to})` : ''}: ${e.error}`;
+$('syncList').innerHTML = list.length ? list.map(e => `<li class="${e.ok ? 'ok' : 'failed'}"><b>${e.ok ? '✓' : '✕'} ${esc(e.title)}</b><span>${esc(what(e))}</span><small>${esc(ago(e.at))}${e.account ? ' · ' + esc(e.account) : ''}</small></li>`).join('')
+  : '<li class="muted">Noch nichts gespeichert.</li>';
+}
+$('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
+$('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
 $('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
 $('notesButton').onclick = () => {
 showSettings(false);

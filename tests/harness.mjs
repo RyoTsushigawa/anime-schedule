@@ -108,6 +108,8 @@ export async function openPage(opts = {}) {
     if (query.includes('id_in')) return { Page: { media: (v.ids || []).map(id => MEDIA[id] ? { ...MEDIA[id], ...opts.media?.[id] } : null).filter(Boolean).map(m => opts.planNext ? { ...m, nextAiringEpisode: opts.planNext } : m) } };
     if (query.includes('Media(id:')) return { Media: MEDIA[v.id] };
     if (query.includes('Media(search')) return { Media: opts.search?.[v.search] ?? null };
+    // opts.lookup: the media AniList finds for the search box's "Nachschlagen" (N35)
+    if (query.includes('search: Page')) return { search: { media: opts.lookup || [] }, nick: { media: (opts.lookup || []).filter(m => v.ids?.includes(m.id)) } };
     throw new Error('unexpected AniList query: ' + query.slice(0, 60));
   };
   window.fetch = async (url, init = {}) => {

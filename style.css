@@ -1630,3 +1630,19 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .away-week td.aw-part { background: color-mix(in srgb, var(--accent) 16%, var(--bg)); color: var(--text); font-size: 11px; }
 .away-week td.aw-maybe { border: 1px dashed var(--muted); }
 .away-legend b { font-weight: 700; }
+
+/* N44 Sync-Verlauf */
+.sync-intro { margin: 4px 0 0; font-size: 12.5px; }
+.sync-list { max-height: min(60dvh, 460px); overflow-y: auto; }
+.sync-list li.failed b { color: #e5737a; }
+.sync-list small { color: var(--muted); font-size: 11px; }
+
+/* N35 Nachschlagen */
+.title-lookup .lookup-match { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.title-lookup .lookup-match > div { min-width: 0; }
+.title-lookup small { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.lookup-chip { font-size: 11px; padding: 0 6px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); }
+.lookup-chip.on { border-color: var(--accent); color: var(--text); }
+.lookup-links { display: flex; gap: 6px; flex: none; }
+.lookup-links a { font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 99px; color: var(--text); text-decoration: none; }
+.lookup-links a:hover { border-color: var(--accent); }

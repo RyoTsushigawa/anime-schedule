@@ -152,7 +152,28 @@ if (button) button.disabled = accountLoading || bulkSaving || pendingChanges.siz
 $('syncTarget').disabled = bulkSaving || pendingChanges.size > 0;
 $('syncBoth').disabled = bulkSaving || pendingChanges.size > 0 || !$('syncTarget').value;
 }
+// N44: the last 60 list updates from this browser (AniList and MyAnimeList), with successes and failures
+const SYNC_LOG = 'syncHistoryV1';
+const syncTitle = mediaId => document.querySelector(`[data-media="${mediaId}"]`)?.closest('.row, .shared')?.querySelector('.title')?.textContent.trim() || `Serie ${mediaId}`;
+function logSync(entry) {
+let list = [];
+try { list = JSON.parse(localStorage.getItem(SYNC_LOG) || '[]'); } catch {}
+list.unshift({ at: Date.now(), ...entry });
+try { localStorage.setItem(SYNC_LOG, JSON.stringify(list.slice(0, 60))); } catch {}
+}
 async function change(mediaId, vars) {
+const title = syncTitle(mediaId), account = auth ? `${auth.provider === 'mal' ? 'MyAnimeList' : 'AniList'} ${auth.name}` : '';
+try {
+const record = await changeNow(mediaId, vars);
+logSync({ mediaId, title, account, ok: true, from: record.before?.progress ?? null, to: record.after?.progress ?? null, status: record.after?.status,
+  ...(vars.score !== undefined && { score: record.after?.score }), ...(record.syncMessage ? { note: record.syncMessage } : record.linked ? { note: 'Auch in ' + record.linked[0].account.name + ' gespeichert.' } : {}) });
+return record;
+} catch (error) {
+if (!/noch gespeichert/.test(error.message)) logSync({ mediaId, title, account, ok: false, error: error.message, to: vars.progress ?? null, status: vars.status });
+throw error;
+}
+}
+async function changeNow(mediaId, vars) {
 if (pendingChanges.has(mediaId)) throw new Error('Diese Serie wird noch gespeichert.');
 pendingChanges.add(mediaId);
 syncSavingButtons();

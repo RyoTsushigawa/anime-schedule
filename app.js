@@ -666,6 +666,46 @@ none.firstElementChild.textContent = `Keine Serie passt zu „${$('search').valu
 if (!none.isConnected) $('list').prepend(none);
 } else none?.remove();
 seasonMatches(q);
+titleLookup(q);
+}
+// N35 Nachschlagen: below the search results, matching anime from AniList (English, romaji or Japanese title)
+// and your Discord nicknames, each with whether it's in the Guckplan and links to AniList and MyAnimeList
+const LOOKUP_FIELDS = 'id idMal siteUrl format seasonYear title { english romaji native }';
+const lookupCache = new Map();
+let lookupTimer = null, lookupTurn = 0;
+function titleLookup(q) {
+document.getElementById('titleLookup')?.remove();
+clearTimeout(lookupTimer);
+if (q.length < 3 || !['week', 'catchup'].includes(view)) return;
+if (lookupCache.has(q)) { drawLookup(q, lookupCache.get(q)); return; }
+const turn = ++lookupTurn, raw = $('search').value.trim();
+lookupTimer = setTimeout(async () => {
+  const nickIds = Object.entries(nicknames).filter(([k, v]) => /^\d+$/.test(k) && norm(v).includes(q)).map(([k]) => Number(k)).slice(0, 5);
+  try {
+    const data = await anilist(`query ($s: String${nickIds.length ? ', $ids: [Int]' : ''}) { search: Page(perPage: 5) { media(search: $s, type: ANIME, isAdult: false) { ${LOOKUP_FIELDS} } }${nickIds.length ? ` nick: Page(perPage: 5) { media(id_in: $ids, type: ANIME) { ${LOOKUP_FIELDS} } }` : ''} }`,
+      { s: raw, ...(nickIds.length && { ids: nickIds }) }, undefined, { retries: 0 });
+    const media = [...new Map([...(data.nick?.media || []), ...(data.search?.media || [])].map(m => [m.id, m])).values()];
+    lookupCache.set(q, media);
+    if (turn === lookupTurn && norm($('search').value) === q) drawLookup(q, media);
+  } catch {}
+}, 700);
+}
+function drawLookup(q, media) {
+document.getElementById('titleLookup')?.remove();
+if (!media.length) return;
+const planned = new Set();
+for (const sheet of lastWeekRender?.[2]?.values() || []) for (const show of sheet?.shows || []) if (!show.hidden) for (const t of [show.romaji, show.english]) if (t) planned.add(norm(t));
+const box = document.createElement('section');
+box.id = 'titleLookup';
+box.className = 'season-matches title-lookup';
+box.innerHTML = `<h3>Nachschlagen</h3>${media.map(m => {
+  const nick = nicknames[String(m.id)] || '';
+  const inPlan = [m.title.english, m.title.romaji].some(t => t && planned.has(norm(t)));
+  const sub = [m.title.english && m.title.romaji !== m.title.english ? m.title.romaji : '', m.title.native, [m.format?.replace('_', ' '), m.seasonYear].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+  return `<div class="season-match lookup-match"><div><b>${esc(m.title.english || m.title.romaji)}</b>${nick ? ` <span class="lookup-chip" title="Spitzname">„${esc(nick)}“</span>` : ''}${inPlan ? ' <span class="lookup-chip on">im Guckplan</span>' : ''}<small>${esc(sub)}</small></div>`
+    + `<span class="lookup-links"><a href="${safeUrl(m.siteUrl || 'https://anilist.co/anime/' + m.id)}" target="_blank" rel="noopener">AniList</a>${m.idMal ? `<a href="https://myanimelist.net/anime/${m.idMal}" target="_blank" rel="noopener">MAL</a>` : ''}</span></div>`;
+}).join('')}`;
+$('list').append(box);
 }
 // Suche über die ganze Season (idea 132): in the Zeitplan, shows of the shown week's Guckplan that match but
 // aren't on this week, with their usual day and time and who watches them
