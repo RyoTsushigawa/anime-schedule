@@ -16,6 +16,11 @@ test('Crosswalk uses a known offset and leaves other numbering unconfirmed', asy
   input.dispatchEvent(new p.window.Event('input'));
   assert.match(p.$('episodeCrosswalkResults').textContent, /AniList: Folge 5Guckplan: Folge 1/);
   assert.match(p.$('episodeCrosswalkResults').textContent, /MyAnimeList: Nummerierung nicht bestätigt/);
+  const from = p.$('episodeCrosswalkFrom');
+  from.value = 'plan';
+  input.value = '1';
+  from.dispatchEvent(new p.window.Event('change'));
+  assert.match(p.$('episodeCrosswalkResults').textContent, /AniList: Folge 5Guckplan: Folge 1/);
   input.value = '2.5';
   input.dispatchEvent(new p.window.Event('input'));
   assert.match(p.$('episodeCrosswalkResults').textContent, /ganze Folgennummer/);

@@ -435,7 +435,8 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <form method="dialog">
 <b id="episodeCrosswalkTitle">Folgennummern vergleichen</b>
 <p><label>Serie <select id="episodeCrosswalkShow" class="pill"></select></label></p>
-<p><label>AniList-Folge <input id="episodeCrosswalkNumber" type="number" min="1" max="99999" step="1" value="1"></label></p>
+<p><label>Nummerierung <select id="episodeCrosswalkFrom" class="pill"><option value="anilist">AniList</option><option value="plan">Guckplan</option></select></label></p>
+<p><label>Folgennummer <input id="episodeCrosswalkNumber" type="number" min="1" max="99999" step="1" value="1"></label></p>
 <ul id="episodeCrosswalkResults" class="data-list" aria-live="polite"></ul>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
 </form>

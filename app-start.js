@@ -191,12 +191,14 @@ function drawEpisodeCrosswalk() {
   const input = $('episodeCrosswalkNumber');
   const result = $('episodeCrosswalkResults');
   const episode = input.valueAsNumber;
-  const mapped = episode - lagOf(show);
+  const fromPlan = $('episodeCrosswalkFrom').value === 'plan';
+  const aniList = fromPlan ? episode + lagOf(show) : episode;
+  const plan = fromPlan ? episode : episode - lagOf(show);
   const rows = !show ? ['Keine bestätigte Nummernabweichung geladen.']
     : !Number.isSafeInteger(episode) || !input.validity.valid ? ['Gib eine ganze Folgennummer ab 1 ein.']
     : [
-      'AniList: Folge ' + episode,
-      mapped > 0 ? 'Guckplan: Folge ' + mapped : 'Guckplan: Keine Zuordnung für diese Folge',
+      aniList > 0 ? 'AniList: Folge ' + aniList : 'AniList: Keine Zuordnung für diese Folge',
+      plan > 0 ? 'Guckplan: Folge ' + plan : 'Guckplan: Keine Zuordnung für diese Folge',
       'MyAnimeList: Nummerierung nicht bestätigt',
       'Streamingdienste: Staffel- und Folgennummern nicht bestätigt',
     ];
@@ -209,12 +211,13 @@ $('episodeCrosswalkButton').onclick = () => {
     .filter(([id, entry]) => Number.isSafeInteger(entry.lag) && entry.lag !== 0 && streamsDe.status?.[id]?.titles?.[0])
     .map(([id]) => new Option(streamsDe.status[id].titles[0], id));
   select.replaceChildren(...options);
-  select.disabled = input.disabled = !options.length;
+  select.disabled = input.disabled = $('episodeCrosswalkFrom').disabled = !options.length;
   drawEpisodeCrosswalk();
   $('episodeCrosswalkDlg').showModal();
 };
 $('episodeCrosswalkShow').onchange = drawEpisodeCrosswalk;
 $('episodeCrosswalkNumber').oninput = drawEpisodeCrosswalk;
+$('episodeCrosswalkFrom').onchange = drawEpisodeCrosswalk;
 $('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
 $('notesButton').onclick = () => {
 showSettings(false);
