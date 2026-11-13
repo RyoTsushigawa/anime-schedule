@@ -39,6 +39,13 @@ const dryRun = process.argv.includes('--dry-run');
 const update = process.argv.includes('--update');
 const webhook = process.env.DISCORD_WEBHOOK || '';
 const POST_FILE = 'daily-post.json';
+function readRecordedPost() {
+  try { return JSON.parse(readFileSync(POST_FILE, 'utf8')); }
+  catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw new Error('Cannot verify the last Discord post from ' + POST_FILE, { cause: error });
+  }
+}
 // A webhook can edit its own messages: .../webhooks/<id>/<token>/messages/<message id>
 const editUrl = (hook, id) => { const u = new URL(hook); u.pathname = u.pathname.replace(/\/$/, '') + '/messages/' + id; return u.href; };
 const send = async (url, method, content, mentions) => {
@@ -97,10 +104,15 @@ const berlin = (d = new Date()) => {
 
 const waitForNine = process.env.WAIT_FOR_NINE === 'true';
 const todayIso = (() => { const b = berlin(); return `${b.year}-${b.month}-${b.day}`; })();
-let posted = null;
-if (update) {
-  try { posted = JSON.parse(readFileSync(POST_FILE, 'utf8')); } catch {}
-  if (posted?.date !== todayIso || !posted?.id) { console.log("Today's post isn't out yet (or wasn't recorded); nothing to update."); process.exit(0); }
+const posted = readRecordedPost();
+const recordedToday = posted?.date === todayIso && !!posted.id;
+if (update && !recordedToday) {
+  console.log("Today's post isn't out yet (or wasn't recorded); nothing to update.");
+  process.exit(0);
+}
+if (!update && !dryRun && recordedToday) {
+  console.log("Today's post is already recorded; nothing posted.");
+  process.exit(0);
 }
 if (!dryRun && !webhook) {
   console.log('No DISCORD_WEBHOOK secret set; nothing posted.');
@@ -171,13 +183,11 @@ try {
 
   // role pings (e.g. Sophie's) go through, @everyone/@here never
   const sent = await send(webhook + (webhook.includes('?') ? '&' : '?') + 'wait=true', 'POST', message, { parse: ['roles', 'users'] });
-  let before = null;
-  try { before = JSON.parse(readFileSync(POST_FILE, 'utf8')); } catch {}
   writeFileSync(POST_FILE, JSON.stringify({ date: todayIso, id: sent.id, channel: sent.channel_id, text: message }, null, 1) + '\n');
   // the new post is pinned, the one from the day before is let go
   const pinned = await pin(sent.channel_id, sent.id);
   console.log('Pin: ' + pinned);
-  if (pinned.startsWith('pinned') && before?.id && before.id !== sent.id) console.log('Pin: ' + await unpin(before.channel || sent.channel_id, before.id));
+  if (pinned.startsWith('pinned') && posted?.id && posted.id !== sent.id) console.log('Pin: ' + await unpin(posted.channel || sent.channel_id, posted.id));
   console.log('Posted to Discord.');
 } finally {
   await browser.close();
