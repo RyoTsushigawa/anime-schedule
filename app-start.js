@@ -115,6 +115,46 @@ if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
 // N39 Datenstand: when each source was last updated, and whether a saved copy is in use
 const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
+$('list').addEventListener('click', event => {
+  const button = event.target.closest('[data-plan-diagnostic]');
+  if (!button) return;
+  const { week, shows } = JSON.parse(button.dataset.planDiagnostic);
+  const picker = $('planDiagnosticShow'), report = $('planDiagnosticText'), status = $('planDiagnosticStatus');
+  const dialog = $('planDiagnosticDlg');
+  const id = value => Number.isSafeInteger(value) && value > 0 ? value : 'unbekannt';
+  let weekTime;
+  try { weekTime = JSON.parse(localStorage.getItem('week:' + week))?.time; } catch {}
+  picker.replaceChildren(...shows.map((show, i) => new Option(show.title, i)));
+  const draw = () => {
+    const show = shows[picker.selectedIndex];
+    const mal = show.mal || fallbackLinks.byAnilist[show.aniList]?.malId;
+    report.value = [
+      'Seriendaten · ' + show.title,
+      'AniList-ID: ' + id(show.aniList),
+      'MyAnimeList-ID: ' + id(mal),
+      'Quelle im Plan: ' + show.source,
+      'AniList-Wochendaten geladen: ' + ago(weekTime),
+      'LiveChart-Datenstand: ' + ago(streamsDe?.statusUpdated || streamsDe?.generated),
+      'Guckplan zuletzt geladen: ' + ago(dataStamps.get('sheet')),
+    ].join('\n');
+    status.textContent = '';
+  };
+  picker.onchange = draw;
+  $('planDiagnosticCopy').onclick = async () => {
+    const text = report.value;
+    try {
+      await navigator.clipboard.writeText(text);
+      if (dialog.open && report.value === text) status.textContent = 'Bericht kopiert.';
+    } catch {
+      if (!dialog.open || report.value !== text) return;
+      report.focus();
+      report.select();
+      status.textContent = 'Bericht markiert. Du kannst ihn manuell kopieren.';
+    }
+  };
+  draw();
+  dialog.showModal();
+});
 async function drawDataStatus() {
 const notes = [...dataNotes.keys()];
 const saved = prefix => notes.some(k => k.startsWith(prefix));
