@@ -20,7 +20,7 @@ The feature challenge has **22 of 50 approved standalone features** and **49 app
 | N61 | Guckplan Editor Access | Approved. Let the plan owner grant trusted members permission to move shows without sharing the owner's GitHub key. Keep management owner-only. |
 | N63 | Discord Delivery Queue | Approved. Show failed schedule deliveries and allow one retry with duplicate protection. |
 | N66 | Plan Issue Diagnostic Report | Approved. Generate a shareable report for a show with missing or inconsistent data, including title IDs, source, and last refresh. Exclude credentials and personal watch progress. |
-| N74 | Linked Account Troubleshooter | Approved. Diagnose login, profile mapping, and list access problems. |
+| N74 | Linked Account Troubleshooter | In [PR #175](https://github.com/RyoTsushigawa/anime-schedule/pull/175). Diagnose login, profile mapping, and list access problems. |
 | N75 | Upcoming Plan Readiness | Approved. Surface upcoming sessions that need a decision and link to the existing editor. |
 | N80 | Personal Catch-up Planner | Approved. Build on the existing multi-day Nachholen planner and add per-day time budgets around existing watch slots. Use the existing planner entry point. |
 
