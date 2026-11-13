@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../wrapped.js',import.meta.url),'utf8');
+const start=source.indexOf('function wrappedFoodTaste(');
+const end=source.indexOf('function wrappedShow(',start);
+assert.ok(start>=0&&end>start,'Wrapped food helpers exist');
+const load=new Function('stats','genre',`
+ const wrappedSafe = text => String(text ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ ${source.slice(start,end)}
+ return {taste:wrappedFoodTaste(stats,genre),cards:wrappedFoodCards(stats,genre,'Winter 2027','Person')};
+`);
+const basic=()=>({shows:8,parallel:0,exclusive:[],night:null});
+test('action anime yields a chicken sub and a matching wrap recipe',()=>{
+ const {taste,cards}=load(basic(),'Action');
+ assert.equal(taste.protein,'gegartes Hähnchen');
+ assert.equal(cards.length,2);
+ assert.match(cards[0].html,/gegartes Hähnchen/);
+ assert.match(cards[1].html,/gegartes Hähnchen/);
+ assert.match(cards[1].html,/Tortilla/);
+ assert.match(cards[1].html,/vollständig durchgaren/);
+});
+test('fantasy taste yields a vegetarian falafel version',()=>{
+ const {taste,cards}=load(basic(),'Fantasy');
+ assert.equal(taste.protein,'Falafel');
+ assert.match(cards[1].html,/Falafel/);
+});
+test('without list metadata, the recipe still derives from the plan',()=>{
+ const stats={shows:15,parallel:2,exclusive:[],night:null};
+ const {taste,cards}=load(stats,'');
+ assert.equal(taste.bread,'Vollkornbrot');
+ assert.equal(taste.title,'Multiverse Sub');
+ assert.equal(cards.length,2);
+ assert.match(cards[0].note,/Keine offizielle Bestellung/);
+});
+test('taste strings are safely escaped in the generated story cards',()=>{
+ const {cards}=load(basic(),'Action <img src=x>');
+ assert.doesNotMatch(cards[0].html,/<img/);
+ assert.match(cards[0].html,/&lt;img/);
+});
+test('both no-list and list paths add the food cards',()=>{
+ assert.match(source,/cards\.push\(\.\.\.wrappedFoodCards\(stats,'',season,name\)\)/);
+ assert.match(source,/cards\.push\(\.\.\.wrappedFoodCards\(stats,foodGenre,season,name\)\)/);
+});
