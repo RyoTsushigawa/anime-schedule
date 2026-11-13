@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **40 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **42 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -43,6 +43,8 @@ The feature challenge has **13 of 50 approved standalone features** and **40 app
 | U52 | Season Preview · Trailer Length | Approved. Show the runtime in the existing trailer link when known. |
 | U53 | Weekly Plan · Hide Empty Days | Approved. Add a toggle in the existing view controls. Keep days with pauses or absences visible. |
 | U54 | Seasonal Anime Awards · Voting Deadline | Approved. Show the deadline and automatically close voting at the start of the following anime season. Keep the reveal manual. |
+| U56 | Absences · Flag Overlapping Entries | Approved. Show overlapping recurring rules for the same person in the existing editor. |
+| U57 | Weekly Plan · Copy Streaming Link | Approved. Copy the stream link already shown on the row from the existing show menu. |
 
 ## Curation decisions
 
