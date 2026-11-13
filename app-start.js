@@ -143,6 +143,47 @@ const what = e => e.ok
 $('syncList').innerHTML = list.length ? list.map(e => `<li class="${e.ok ? 'ok' : 'failed'}"><b>${e.ok ? '✓' : '✕'} ${esc(e.title)}</b><span>${esc(what(e))}</span><small>${esc(ago(e.at))}${e.account ? ' · ' + esc(e.account) : ''}</small></li>`).join('')
   : '<li class="muted">Noch nichts gespeichert.</li>';
 }
+// N24 Listen-Check: problems in an AniList list, each with a link to fix it there (nothing is changed here)
+const HEALTH_QUERY = `query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status_in: [CURRENT, REPEATING, PAUSED, COMPLETED, PLANNING]) {
+  lists { entries { status progress updatedAt media { id status episodes siteUrl synonyms title { romaji english } } } } } }`;
+const HEALTH_STALE_DAYS = 90;
+function listHealth(entries, planned, now = Date.now()) {
+const title = m => m.title.english || m.title.romaji;
+const stale = [], beyond = [], incomplete = [], missing = [];
+for (const { status, progress, updatedAt, media: m } of entries) {
+  if (status === 'CURRENT' && m.status === 'FINISHED' && updatedAt && now - updatedAt * 1000 > HEALTH_STALE_DAYS * 864e5)
+    stale.push({ m, text: `Seit ${Math.floor((now - updatedAt * 1000) / 864e5)} Tagen nicht weitergeschaut, bei Folge ${progress || 0}${m.episodes ? ' von ' + m.episodes : ''}` });
+  if (m.episodes && progress > m.episodes) beyond.push({ m, text: `Fortschritt ${progress}, die Serie hat nur ${m.episodes} Folgen` });
+  if (status === 'COMPLETED' && m.episodes && (progress || 0) < m.episodes) incomplete.push({ m, text: `Abgeschlossen, aber nur ${progress || 0} von ${m.episodes} Folgen abgehakt` });
+}
+const onList = new Set(entries.flatMap(e => [e.media.title.romaji, e.media.title.english, ...(e.media.synonyms || [])]).filter(Boolean).map(norm));
+for (const show of planned) if (![show.romaji, show.english].some(t => t && onList.has(norm(t))))
+  missing.push({ show, text: 'Im Guckplan, aber nicht auf der Liste' });
+return [
+  ['Vergessen?', 'Noch auf „Schaue ich“, obwohl die Serie längst fertig ist', stale],
+  ['Mehr Folgen als die Serie hat', '', beyond],
+  ['Unvollständig abgeschlossen', '', incomplete],
+  ['Fehlt auf der Liste', 'Serien aus deinem Guckplan dieser Season', missing],
+].map(([name, note, items]) => ({ name, note, items: items.sort((a, b) => (a.m ? title(a.m) : a.show.english || a.show.romaji).localeCompare(b.m ? title(b.m) : b.show.english || b.show.romaji)) }));
+}
+async function drawHealth() {
+const person = ownPerson();
+const anilistName = auth && auth.provider !== 'mal' ? auth.name : (profileList[person] || []).find(a => (a?.provider || 'anilist') === 'anilist')?.name;
+$('healthList').innerHTML = '';
+if (!anilistName) { $('healthIntro').textContent = 'Melde dich mit AniList an (oder trag unter „Wer ist wer“ ein AniList-Konto ein), dann wird die Liste geprüft.'; return; }
+$('healthIntro').textContent = `Prüfe die AniList-Liste von ${anilistName} …`;
+try {
+  const entries = (await anilist(HEALTH_QUERY, { user: anilistName })).MediaListCollection.lists.flatMap(l => l.entries);
+  const sheet = lastWeekRender ? [...lastWeekRender[2].values()].find(s => s?.people?.includes(person)) : null;
+  const planned = sheet && person ? [...picks(sheet, person).keys()].filter(s => !s.hidden) : [];
+  const groups = listHealth(entries, planned), found = groups.reduce((n, g) => n + g.items.length, 0);
+  $('healthIntro').textContent = found ? `${entries.length} Einträge von ${anilistName} geprüft · ${found} ${found === 1 ? 'Hinweis' : 'Hinweise'}. Ändern geht auf AniList.` : `${entries.length} Einträge von ${anilistName} geprüft: alles in Ordnung ✓`;
+  $('healthList').innerHTML = groups.filter(g => g.items.length).map(g => `<section><h3>${esc(g.name)} <span>${g.items.length}</span></h3>${g.note ? `<p class="muted">${esc(g.note)}</p>` : ''}<ul class="data-list">${g.items.map(i => i.m
+    ? `<li><a href="${safeUrl(i.m.siteUrl)}" target="_blank" rel="noopener"><b>${esc(i.m.title.english || i.m.title.romaji)}</b></a><span>${esc(i.text)}</span></li>`
+    : `<li><b>${esc(i.show.english || i.show.romaji)}</b><span>${esc(i.text)}</span></li>`).join('')}</ul></section>`).join('');
+} catch (e) { $('healthIntro').textContent = `Die Liste konnte nicht geladen werden: ${e.message}`; }
+}
+$('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
 $('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
 $('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
