@@ -32,11 +32,15 @@ const catchupPinned = () => { try { return new Set(JSON.parse(localStorage.getIt
 const PIN_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M9 3h6l-1 6 4 3v2h-5v7l-1 1-1-1v-7H6v-2l4-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 const pinButton = (m, pinned) => `<button type="button" class="pin-show${pinned ? ' on' : ''}" data-pin="${m.id}" aria-pressed="${pinned}" title="${pinned ? 'Nicht mehr oben halten' : 'Oben anheften'}" aria-label="${pinned ? 'Lösen' : 'Anheften'}">${PIN_ICON}</button>`;
 const laterButton = r => r.idleWeeks >= IDLE_WEEKS ? `<button type="button" class="drop later" data-later="${r.m.id}" title="Zwei Wochen aus Catch-up ausblenden">Später</button>` : '';
+const watchesAlone = (show, person) =>
+  Boolean(person && !show.hidden && /^allein$/i.test(show.votes?.[person]?.trim() || ''));
+
 function catchupRows(entries, planShows, plan, person = soloPerson) {
 const now = Date.now() / 1000;
 const away = absenceSkips();
 const week = 7 * 86400;
 const mySlots = plan && person ? [...picks(plan, person)] : [];
+const soloShows = plan?.shows.filter(show => watchesAlone(show, person)) || [];
 const recent = m => {
 const s = m.startDate;
 if (!s?.year) return m.status !== 'FINISHED';
@@ -48,11 +52,12 @@ const offset = streamsDe?.release?.[m.id]?.offset || 0;
 const next = m.nextAiringEpisode;
 const show = plan?.shows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
 const mine = mySlots.find(([s]) => titleMatches([s.romaji, s.english], mediaTitles(m)));
+const alone = !mine && soloShows.find(s => titleMatches([s.romaji, s.english], mediaTitles(m)));
 const slot = mine?.[1] || show;
 const lag = lagOf(m.id);
 const released = ep => next.airingAt - (next.episode - lag - ep) * week + offset;
 let out = next ? next.episode - lag - 1 : m.status === 'FINISHED' ? m.episodes : 0;
-while (next && out > progress && (away.has(m.id + ':' + out) ? released(out) : dueAt(released(out), slot, mine?.[0] || show)) > now) out--;
+while (next && out > progress && (alone || away.has(m.id + ':' + out) ? released(out) : dueAt(released(out), slot, mine?.[0] || show)) > now) out--;
 if (!out || out <= progress) continue;
 const first = progress + 1;
 const since = next ? released(first) : 0;
@@ -60,7 +65,7 @@ const nextAt = next ? released(out + 1) : 0;
 // Eingeschlafen (idea 113): on the list, but not continued for three weeks or more
 const idleWeeks = !missing && updatedAt ? Math.floor((now - updatedAt) / week) : 0;
 const row = { m, first, out, since, nextAt, missing, progress, idleWeeks, links: streamLinks(m, show?.wo, m.title.english || m.title.romaji) };
-(missing || show || recent(m) ? rows : ownPace).push(row);
+(missing || alone || show || recent(m) ? rows : ownPace).push(row);
 }
 return { rows, ownPace };
 }
@@ -406,26 +411,36 @@ if (!plan || !soloPerson) return [];
 const account = localMode ? null : auth, person = soloPerson;
 const current = () => (!localMode ? auth === account : true) && soloPerson === person;
 const listed = new Set(entries.map(e => e.media.id));
-const ids = [];
-for (const show of picks(plan, soloPerson).keys()) {
+const ids = new Set();
+const selected = new Set([...picks(plan, person).keys(), ...plan.shows.filter(show => watchesAlone(show, person))]);
+for (const show of selected) {
 const id = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches([show.romaji, show.english], s.titles))?.[0];
-if (id && !listed.has(Number(id))) ids.push(Number(id));
+if (id && !listed.has(Number(id))) ids.add(Number(id));
 }
-if (!ids.length) return [];
-const key = ids.join() + (account ? ':' + (account.provider || 'anilist') + ':' + account.name : ':local');
+if (!ids.size) return [];
+const key = [...ids].join() + (account ? ':' + (account.provider || 'anilist') + ':' + account.name : ':local');
 if (planShowsCache.key !== key || Date.now() - planShowsCache.time > LIST_CACHE_MS) {
 const query = `query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) {
       id status episodes duration siteUrl synonyms title { romaji english } coverImage { medium }
       externalLinks { site url } nextAiringEpisode { episode airingAt } startDate { year month day } ${account ? 'mediaListEntry { progress status }' : ''}
     } } }`;
 try {
-let data;
-if (account?.provider === 'mal') {
-data = await anilist(query.replace('mediaListEntry { progress status }', 'idMal'), { ids });
-for (const m of data.Page.media) { if (!current()) return []; MAL.rememberMedia(m); m.mediaListEntry = await MAL.entry(account, m.id); }
-} else data = account ? await anilistAsMe(query, { ids }, account) : await anilist(query, { ids });
+const media = [], allIds = [...ids];
+for (let start = 0; start < allIds.length; start += 50) {
+const variables = { ids: allIds.slice(start, start + 50) };
+const data = account?.provider === 'mal'
+  ? await anilist(query.replace('mediaListEntry { progress status }', 'idMal'), variables)
+  : account ? await anilistAsMe(query, variables, account) : await anilist(query, variables);
 if (!current()) return [];
-planShowsCache = { key, time: Date.now(), media: data.Page.media };
+if (account?.provider === 'mal') for (const m of data.Page.media) {
+  if (!current()) return [];
+  MAL.rememberMedia(m);
+  m.mediaListEntry = await MAL.entry(account, m.id);
+}
+media.push(...data.Page.media);
+}
+if (!current()) return [];
+planShowsCache = { key, time: Date.now(), media };
 setNote('catchup:missing', null);
 } catch {
 if (!current()) return [];

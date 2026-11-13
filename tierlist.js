@@ -73,7 +73,11 @@ function seasonalAniMedia(entries, tab) {
   if(!info)return [];
   const ids=new Set();
   return entries.flatMap(media=>{
-    if(!media || media.season!==info.season || media.seasonYear!==info.year ||
+    const date=media?.startDate;
+    const season=media?.season || (date?.month >= 1 && date.month <= 12
+      ? ['WINTER','SPRING','SUMMER','FALL'][Math.floor((date.month-1)/3)] : null);
+    const year=media?.seasonYear || date?.year;
+    if(!media || season!==info.season || year!==info.year ||
       !Number.isSafeInteger(media.id) || media.id<=0 || ids.has(media.id) ||
       !(media.title?.romaji || media.title?.english))return [];
     ids.add(media.id);
@@ -126,14 +130,22 @@ async function tierAniList(username){
   if(aniUserCache.has(key))return aniUserCache.get(key);
   const pending=(async()=>{
     const found=new Map();
-    const query='query ($user:String,$page:Int){Page(page:$page,perPage:50){pageInfo{hasNextPage} mediaList(userName:$user,type:ANIME){media{id season seasonYear title{romaji english} coverImage{medium}}}}}';
-    for(let page=1;page<=30;page++){
-      const data=await anilist(query,{user:username,page},undefined,{retries:0,timeout:12000});
-      if(!data?.Page?.mediaList)throw Error('AniList-Liste nicht verfügbar.');
-      for(const entry of data.Page.mediaList)if(entry?.media?.id)found.set(entry.media.id,entry.media);
-      if(!data.Page.pageInfo?.hasNextPage)return [...found.values()];
+    const query=`query ($user:String,$chunk:Int) {
+      MediaListCollection(userName:$user,type:ANIME,chunk:$chunk,perChunk:500) {
+        hasNextChunk
+        lists { entries { status media { id season seasonYear startDate { year month }
+          title { romaji english } coverImage { medium } } } }
+      }
+    }`;
+    for(let chunk=1;;chunk++){
+      const data=await anilist(query,{user:username,chunk},undefined,{retries:1,timeout:12000});
+      const collection=data?.MediaListCollection;
+      if(!Array.isArray(collection?.lists))throw Error('AniList-Liste nicht verfügbar.');
+      for(const list of collection.lists) for(const entry of list.entries || []){
+        if(entry.status!=='PLANNING' && entry.media?.id)found.set(entry.media.id,entry.media);
+      }
+      if(!collection.hasNextChunk)return [...found.values()];
     }
-    throw Error('AniList-Liste zu groß, um sie vollständig zu laden.');
   })();
   aniUserCache.set(key,pending);
   try{return await pending;}catch(error){aniUserCache.delete(key);throw error;}
@@ -150,14 +162,15 @@ async function loadPersonAni(){
     const profiles=await tierProfiles();
     const names=profiles[person]||[];
     if(request!==aniRequest)return;
-    if(!names.length){status.textContent='';return;}
+    if(!names.length){status.textContent=' · Kein AniList-Profil zugeordnet (Anime Wrapped → Profile).';return;}
     const results=await Promise.allSettled(names.map(tierAniList));
     if(request!==aniRequest || $('tierPerson').value!==person || $('tierSeason').value!==tab.gid)return;
     const media=seasonalAniMedia(results.filter(r=>r.status==='fulfilled').flatMap(r=>r.value),tab);
     aniExtraShows=media;
     const merged=mergeSeasonalShows(sheet.shows,media);
     aniOwnKeys=merged.own;
-    status.textContent=merged.added?' · '+merged.added+' weitere aus AniList':'';
+    status.textContent=' · '+merged.added+' weitere aus AniList';
+    if(results.every(r=>r.status==='rejected'))throw Error('AniList nicht verfügbar.');
     if(results.some(r=>r.status==='rejected'))status.textContent+=' · AniList teilweise nicht verfügbar';
     draw();
   }catch{

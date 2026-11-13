@@ -96,6 +96,7 @@ export async function openPage(opts = {}) {
     if (query.includes('DeleteMediaListEntry')) { delete list[v.id - 900]; return { DeleteMediaListEntry: { deleted: true } }; }
     if (query.includes('mediaListEntry { progress status score } } }'))
       return { Media: { mediaListEntry: list[v.id] ? { progress: list[v.id].progress, status: list[v.id].status, score: list[v.id].score || 0 } : null } };
+    if (query.includes('mediaList(userId: $id')) return opts.accountCheckListUnavailable ? {} : { Page: { mediaList: [] } };
     if (query.includes('MediaListCollection')) {
       // No status filter (Wrapped) → the whole list, like AniList
       const wanted = query.includes('DROPPED') ? ['DROPPED'] : query.includes('COMPLETED') ? ['COMPLETED'] : query.includes('CURRENT') ? ['CURRENT', 'REPEATING'] : ['CURRENT', 'REPEATING', 'COMPLETED', 'DROPPED', 'PAUSED', 'PLANNING'];

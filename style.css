@@ -321,7 +321,9 @@ background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix
 body.searching .daystrip { display: none; }
 .weekline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 6px; }
 .weekline > .daystrip { flex: 1 1 340px; min-width: 0; margin: 0; }
+.weekline > .schedule-inbox-button { order: 1; }
 .weekline > .alerts-chip { order: 1; margin-left: auto; }
+.weekline > #planReadinessButton { order: 1; }
 .weekline > .alerts-body { order: 2; flex: 0 0 100%; margin: 2px 0 4px; padding: 0 2px; }
 .alerts-body[hidden] { display: none; }
 .cr { --svc: var(--accent); flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; background: color-mix(in srgb, var(--svc) 8%, transparent); color: color-mix(in srgb, color-mix(in srgb, var(--svc) var(--svc-ink), #000), #fff calc(var(--text-lift, 0%) * var(--lift-on))); text-decoration: none; font-weight: 600; line-height: 1.2; border-radius: 99px; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 1px 3px rgba(0, 0, 0, .22); }

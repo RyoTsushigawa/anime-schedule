@@ -131,40 +131,41 @@ async function wrappedList(profile, fresh) {
     throw error;
   }
 }
-// A playful food translation of seasonal plans and, when available, favourite genres.
-// These are fictional Subway-style orders, never real menu availability claims.
-function wrappedFoodTaste(stats, genre='') {
- const g=String(genre).toLowerCase();
- const options=[
-  [/action|adventure|sports/,'gegartes Hähnchen','Chili-Joghurt-Sauce'],
-  [/fantasy|supernatural|sci-fi|mystery/,'Falafel','Kräuter-Joghurt-Sauce'],
-  [/romance|drama/,'Mozzarella','Basilikum-Pesto'],
-  [/comedy|slice of life/,'Hummus','milde Joghurt-Sauce'],
-  [/thriller|horror|psychological/,'gegartes Hähnchen','rauchige BBQ-Sauce']
+// Complete recipes are assigned by profile so shared watch habits don't repeat the same dish.
+function wrappedFoodTaste(person, people) {
+ const recipes=[
+  ['Teriyaki-Hähnchen','Sesambrot','gegartes Hähnchen','Karotten und Frühlingszwiebeln','Teriyaki-Sauce'],
+  ['Falafel-Tahini','Fladenbrot','Falafel','Gurke und Rotkohl','Zitronen-Tahini'],
+  ['Caprese','Ciabatta','Mozzarella','Tomaten und Rucola','Basilikum-Pesto'],
+  ['BBQ-Pulled-Pork','Brioche','gegartes Pulled Pork','Krautsalat und Gewürzgurken','rauchige BBQ-Sauce'],
+  ['Pilz-Cheesesteak','Weizenbrot','gebratene Portobello-Pilze','Paprika, Zwiebeln und Provolone','Knoblauch-Aioli'],
+  ['Thunfisch-Dill','Roggenbrötchen','Thunfisch','Gurke, Sellerie und Dill','Zitronen-Mayonnaise'],
+  ['Gochujang-Tofu','Vollkornbrot','gebratener Tofu','Karotten und eingelegter Rettich','Gochujang-Sauce'],
+  ['Pute-Cranberry','Mehrkornbrot','Putenbrust-Aufschnitt','Babyspinat und Apfel','Cranberry-Senf'],
+  ['Shawarma-Kichererbse','Sesamfladenbrot','geröstete Kichererbsen','Tomaten und eingelegte Zwiebeln','Minz-Joghurt'],
+  ['Chipotle-Rind','Maisbrötchen','gegartes Rindfleisch','Mais und rote Zwiebeln','Chipotle-Creme'],
+  ['Curry-Ei','Dinkelbrötchen','gekochte Eier','Kresse und Gurke','Curry-Mayonnaise'],
+  ['Räucherlachs','Pumpernickel','Räucherlachs','Gurke und rote Zwiebeln','Meerrettich-Frischkäse']
  ];
- const match=options.find(o=>o[0].test(g));
- const late=stats.night?.minutes>=1320;
- const selected=match||options[late?4:stats.parallel?1:stats.exclusive.length?2:3];
- const title=late?'Night-Owl Sub':stats.parallel?'Multiverse Sub':stats.exclusive.length?'Hidden-Gem Sub':'Season-Favoriten Sub';
- return {title,bread:stats.shows>=12?'Vollkornbrot':'Italian-Brot',
-  protein:selected[1],sauce:selected[2],cheese:stats.exclusive.length?'Cheddar':'Gouda',
-  vegetables:stats.parallel?'Salat, Tomaten und rote Zwiebeln':'Salat, Gurke und Tomaten',
-  why:match?'Häufigstes Genre der Season-Abschlüsse: '+genre+'.':late?'Ein später Start im Plan sorgt für kräftige Würze.':stats.parallel?'Parallele Serien bringen Abwechslung.':stats.exclusive.length?'Eure Geheimtipps geben dem Sub seinen Charakter.':'Eine gemütliche Mischung aus dem Guckplan.'};
+ const group=['Ofengemüse-Feta','Focaccia','Feta','geröstete Zucchini, Auberginen und Paprika','Paprika-Aufstrich'];
+ const roster=[...new Set([...people, person].filter(Boolean))].sort();
+ const [title,bread,protein,vegetables,sauce]=person ? recipes[roster.indexOf(person)%recipes.length] : group;
+ return {title,bread,protein,vegetables,sauce};
 }
-function wrappedFoodCards(stats,genre,season,name) {
- const f=wrappedFoodTaste(stats,genre);
- const fillings=f.protein+', '+f.cheese+', '+f.vegetables;
+function wrappedFoodCards(season,name,person,people) {
+ const f=wrappedFoodTaste(person,people);
+ const fillings=f.protein+', '+f.vegetables;
  return [{
-  kicker:season+' · Anime trifft Sandwich',title:'Dein Anime-Geschmack als Sub: '+f.title,color:'#ffc764',
-  html:'<p><b>Brot:</b> '+wrappedSafe(f.bread)+'</p><p><b>Belag:</b> '+wrappedSafe(fillings)+'</p><p><b>Sauce:</b> '+wrappedSafe(f.sauce)+'</p><p>'+wrappedSafe(f.why)+'</p>',
+  kicker:season+' · Anime trifft Sandwich',title:f.title+' Sub',color:'#ffc764',
+  html:'<p><b>Brot:</b> '+wrappedSafe(f.bread)+'</p><p><b>Belag:</b> '+wrappedSafe(fillings)+'</p><p><b>Sauce:</b> '+wrappedSafe(f.sauce)+'</p>',
   note:'Spielerischer Subway-inspirierter Vorschlag für '+name+'. Keine offizielle Bestellung oder Garantie für ein erhältliches Menü.'
  },{
-  kicker:season+' · Anime Wrap für zu Hause',title:'Mach den '+f.title+' als Wrap!',color:'#94dce0',
-  html:'<p><b>Zutaten für 1 Wrap:</b> 1 große Tortilla, ca. 100 g '+wrappedSafe(f.protein)+', '+wrappedSafe(f.vegetables)+', 2 EL '+wrappedSafe(f.cheese)+', 1–2 EL '+wrappedSafe(f.sauce)+'.</p>'+
-   '<p><b>1.</b> Belag vorbereiten: Gemüse waschen und schneiden; Hähnchen vollständig durchgaren oder Falafel nach Packungsangabe erwärmen.</p>'+
-   '<p><b>2.</b> Tortilla kurz erwärmen, Sauce darauf verstreichen und Gemüse, Belag und Käse darauf verteilen.</p>'+
+  kicker:season+' · Anime Wrap für zu Hause',title:f.title+' Wrap',color:'#94dce0',
+  html:'<p><b>Zutaten für 1 Wrap:</b> 1 große Tortilla, ca. 100 g '+wrappedSafe(f.protein)+', '+wrappedSafe(f.vegetables)+', 1–2 EL '+wrappedSafe(f.sauce)+'.</p>'+
+   '<p><b>1.</b> Belag vorbereiten: Gemüse waschen und schneiden. Den Belag wie in der Zutatenliste angegeben vorbereiten.</p>'+
+   '<p><b>2.</b> Tortilla kurz erwärmen, Sauce darauf verstreichen und Gemüse und Belag darauf verteilen.</p>'+
    '<p><b>3.</b> Seiten einklappen, fest einrollen und nach Wunsch kurz in einer Pfanne anrösten.</p>',
-  note:'Einfaches selbstgemachtes Rezept, kein offizielles Subway-Produkt. Fertige Falafel oder Hummus funktionieren als Alternative.'
+  note:'Einfaches selbstgemachtes Rezept, kein offizielles Subway-Produkt.'
  }];
 }
 function wrappedShow(index) {
@@ -238,7 +239,7 @@ async function wrappedRender(fresh=false) {
   $('status').textContent='Plan geladen · Listen-Statistiken werden gelesen…';
   if(!allowLists){
     cards.push({kicker:season+' · zum Schluss',title:person?(shared?'Das war eure gemeinsame Season.':'Das war deine Season.'):'So unterschiedlich. Trotzdem eine Runde.',color:'#d6ff79',html:'<p>'+(person?'Ob gemeinsame Serien oder die eigene Auswahl: Schön, dass '+(shared?'ihr':'du')+' dabei '+(shared?'seid.':'bist.'):'Zehn verschiedene Geschmäcker müssen nicht denselben Anime mögen, um einen schönen gemeinsamen Abend zu haben.').replace('Zehn verschiedene',WrappedStats.peopleCount(wrappedPlan.people)+' verschiedene')+'</p><p>Für '+wrappedSafe(season)+' bleiben wir bewusst beim Guckplan. Listen-Statistiken kommen erst ab Winter 2027 dazu.</p>',note:'Keine AniList- oder MAL-Daten für diesen Rückblick. Der Plan ist eine Momentaufnahme der Season.'});
-    cards.push(...wrappedFoodCards(stats,'',season,name));
+    cards.push(...wrappedFoodCards(season,name,person,wrappedPlan.people));
     const index=wrappedIndex;wrappedDraw(cards);wrappedShow(index);
     $('status').textContent=wrappedTabNote||wrappedPlanNote?'Gespeicherter Guckplan · Neu laden versucht es erneut.':season+' · nur aus eurem Guckplan.';
     $('sources').textContent=(wrappedTabNote+' '+wrappedPlanNote+' Dieser Rückblick basiert auf dem aktuellen Guckplan, einschließlich Vielleicht und bedingter Zusagen. MaRyo zählt als zwei Menschen mit einem gemeinsamen Plan. Keine Listen- oder Watch-Historie; keine temporären Wochenverschiebungen.').trim();
@@ -256,7 +257,7 @@ async function wrappedRender(fresh=false) {
       (String(pair.target).toLowerCase()===id && source.toLowerCase().startsWith('anilist:') && present.has(source.toLowerCase()))));
   });
   const covered=selected.filter(p=>(wrappedProfiles[p]||[]).length).length;
-  const results=[],failures=[];let undated=0,foodGenre='';
+  const results=[],failures=[];let undated=0;
   // Keep public APIs happy: one list at a time, each at most once per group.
   for(const profile of profiles) {
     if(generation!==wrappedGeneration)return;
@@ -271,7 +272,6 @@ async function wrappedRender(fresh=false) {
     if(summary.rated)cards.push({kicker:'Die Kritikerloge',title:summary.mean>=80?'Da waren viele schöne Treffer dabei.':summary.mean>=60?'Eine Season mit Licht und Schatten.':'Nicht jede Serie konnte überzeugen.',color:'#ffc764',html:'<div class="big">'+(summary.mean/10).toLocaleString('de-DE',{maximumFractionDigits:1})+'</div><p>von 10 Punkten im Schnitt. Basierend auf '+summary.rated+' bewerteten Abschlüssen in dieser Season.</p>',note:'Nur zugeordnete Listen mit vollständigem Abschlussdatum. Unbewertete Serien zählen nicht als 0.'});
     if(summary.finishDay){const [date,count]=summary.finishDay;const [y,m,d]=date.split('-').map(Number);cards.push({kicker:'Tag der Endings',title:'An diesem Tag gingen Geschichten zu Ende.',color:'#f4a9d1',html:'<div class="big">'+count+'</div><p>Listen-Abschlüsse am '+new Date(y,m-1,d).toLocaleDateString('de-DE')+'. Vielleicht war da auch ein Lieblings-Ending dabei.</p>',note:'Der Tag mit den meisten eingetragenen Abschlüssen, keine Messung eines Binges. Gruppenwerte zählen Abschlüsse pro verknüpfter Person.'});}
     if(!person&&summary.debate)cards.push({kicker:'Geschmacksgericht',title:summary.debate.title,color:'#ffb78d',html:'<div class="big">'+(summary.debate.gap/10).toLocaleString('de-DE')+'</div><p>Punkte Unterschied zwischen der höchsten und niedrigsten Bewertung. Da hattet ihr offenbar unterschiedliche Eindrücke.</p>',note:'Größte Bewertungsdifferenz bei derselben in dieser Season abgeschlossenen Serie. Nur die zugeordneten Konten mit Wertung zählen.'});
-    foodGenre=summary.genre?.[0]||'';
     if(summary.genre)cards.push({kicker:plural?'Euer häufigstes Genre':'Dein häufigstes Genre',title:summary.genre[0],color:'#c8a6ff',html:`<div class="big">${summary.genre[1]}</div><p>abgeschlossene Serien mit diesem Genre. Das hat diese Season einen guten Teil der Auswahl ausgemacht.</p>`,note:'Aus Serien mit Abschlussdatum in der gewählten Season. Serien können mehrere Genres haben; fehlende Metadaten zählen nicht.'});
     if(summary.favourites.length)cards.push({kicker:'Die Favoritenliste',title:plural?'Die kamen bei euch besonders gut an.':'Die kamen bei dir besonders gut an.',color:'#ffb78d',html:wrappedRank(summary.favourites.map(f=>[f.title,(f.score/10).toLocaleString('de-DE')+'/10'])),note:'Bewertungen der in dieser Season abgeschlossenen Serien. AniList/MAL auf 10 Punkte umgerechnet; gleich bewertete Serien sind gleichauf.'});
     // Watch time this season, and the comparison with the season before (same lists, the three months before)
@@ -294,7 +294,7 @@ async function wrappedRender(fresh=false) {
     }
     undated=summary.undated;
   } else cards.push({kicker:'Noch mehr Wrapped?',title:'Dein Plan kennt nur die halbe Story.',color:'#f4a9d1',html:'<p>Ordne unter <button class="inline-action" data-open-profiles>Profile</button> einer Person ihre AniList- oder MAL-Konten zu. Dann kommen Abschlüsse, Favoriten und Genres dazu.</p>',note:'Persönliche Plan-Statistiken funktionieren auch ohne Konto. Gruppen-Listenstatistiken sind nur so vollständig wie die zugeordneten Konten.'});
-  cards.push(...wrappedFoodCards(stats,foodGenre,season,name));
+  cards.push(...wrappedFoodCards(season,name,person,wrappedPlan.people));
   const index=wrappedIndex;
   wrappedDraw(cards);wrappedShow(index);
   $('status').textContent=failures.length?`Teilweise Daten: ${failures.join(' · ')}`:(wrappedTabNote||wrappedPlanNote?'Gespeicherte Daten · Neu laden versucht es erneut.':'Dein Wrapped ist bereit.');

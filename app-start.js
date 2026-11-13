@@ -115,6 +115,190 @@ if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
 // N39 Datenstand: when each source was last updated, and whether a saved copy is in use
 const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
+$('list').addEventListener('click', event => {
+  const button = event.target.closest('[data-plan-diagnostic]');
+  if (!button) return;
+  const { week, shows } = JSON.parse(button.dataset.planDiagnostic);
+  const picker = $('planDiagnosticShow'), report = $('planDiagnosticText'), status = $('planDiagnosticStatus');
+  const dialog = $('planDiagnosticDlg');
+  const id = value => Number.isSafeInteger(value) && value > 0 ? value : 'unbekannt';
+  let weekTime;
+  try { weekTime = JSON.parse(localStorage.getItem('week:' + week))?.time; } catch {}
+  picker.replaceChildren(...shows.map((show, i) => new Option(show.title, i)));
+  const draw = () => {
+    const show = shows[picker.selectedIndex];
+    const mal = show.mal || fallbackLinks.byAnilist[show.aniList]?.malId;
+    report.value = [
+      'Seriendaten · ' + show.title,
+      'AniList-ID: ' + id(show.aniList),
+      'MyAnimeList-ID: ' + id(mal),
+      'Quelle im Plan: ' + show.source,
+      'AniList-Wochendaten geladen: ' + ago(weekTime),
+      'LiveChart-Datenstand: ' + ago(streamsDe?.statusUpdated || streamsDe?.generated),
+      'Guckplan zuletzt geladen: ' + ago(dataStamps.get('sheet')),
+    ].join('\n');
+    status.textContent = '';
+  };
+  picker.onchange = draw;
+  $('planDiagnosticCopy').onclick = async () => {
+    const text = report.value;
+    try {
+      await navigator.clipboard.writeText(text);
+      if (dialog.open && report.value === text) status.textContent = 'Bericht kopiert.';
+    } catch {
+      if (!dialog.open || report.value !== text) return;
+      report.focus();
+      report.select();
+      status.textContent = 'Bericht markiert. Du kannst ihn manuell kopieren.';
+    }
+  };
+  draw();
+  dialog.showModal();
+});
+let readinessRun = 0;
+$('list').addEventListener('click', async event => {
+  if (!event.target.closest('#planReadinessButton')) return;
+  const run = ++readinessRun;
+  const dialog = $('planReadinessDlg'), status = $('planReadinessStatus'), list = $('planReadinessList');
+  const current = () => dialog.open && run === readinessRun;
+  const first = new Date(), end = new Date(first);
+  end.setDate(first.getDate() + 6);
+  const from = isoDay(first), to = isoDay(end);
+  const offsets = weekStart(1) <= end ? [0, 1] : [0];
+  list.replaceChildren();
+  status.textContent = 'Guckplan und Sendetermine werden geprüft …';
+  dialog.showModal();
+  const results = await Promise.allSettled(offsets.map(async offset => {
+    const start = weekStart(offset), previous = new Date(start);
+    previous.setDate(start.getDate() - 7);
+    const needed = new Map();
+    for (let d = new Date(previous); d < new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7); d.setDate(d.getDate() + 1))
+      for (const tab of activeTabs(tabs, d)) needed.set(tab.gid, tab);
+    const [items, plans] = await Promise.all([
+      Promise.all([fetchWeek(previous), fetchWeek(start)]),
+      Promise.all([...needed.values()].map(async tab => [tab.gid, await sheetFor(tab)])),
+    ]);
+    if (!current()) return [];
+    if (!plans.length || ![...plans].some(([, plan]) => plan.people.length)) throw Error('Missing Guckplan');
+    return render(items.flat(), start, new Map(plans), true, false, null, true)
+      .filter(issue => !issue.date || (issue.date >= from && issue.date <= to))
+      .map(issue => ({ ...issue, offset }));
+  }));
+  if (!current()) return;
+  const issues = results.flatMap(result => result.status === 'fulfilled' ? result.value : []);
+  const seen = new Set();
+  for (const { show, slot, date, reason, offset } of issues) {
+    const title = show.english || show.romaji;
+    const key = JSON.stringify([show.romaji || title, date, reason]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const row = document.createElement('li');
+    const label = document.createElement('b');
+    label.textContent = title;
+    const detail = document.createElement('span');
+    detail.textContent = (date ? shortDate(date) + ' · ' : '') + reason;
+    row.append(label, detail);
+    if (movesKey) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'pill';
+      edit.textContent = 'Slot bearbeiten';
+      edit.dataset.moveTitle = show.romaji || title;
+      edit.dataset.moveName = title;
+      edit.dataset.tag = slot?.tag || '';
+      edit.dataset.time = slot?.time || '';
+      edit.onclick = async () => {
+        dialog.close();
+        weekOffset = offset;
+        setRange('week');
+        await load();
+        if (view === 'week' && weekOffset === offset) openMoveDialog(edit);
+      };
+      row.append(edit);
+    }
+    list.append(row);
+  }
+  status.textContent = results.every(result => result.status === 'rejected')
+    ? 'Der Zeitraum konnte nicht geprüft werden.'
+    : results.some(result => result.status === 'rejected') || !streamsDe
+    ? 'Ein Teil der Daten konnte nicht geprüft werden.'
+    : seen.size ? seen.size + ' Hinweise' : 'Für diesen Zeitraum sind keine offenen Punkte bekannt.';
+});
+// One baseline per person and week. Keep it until the user acknowledges the changes.
+function scheduleInboxEntries(days) {
+  return Object.fromEntries(days.flatMap(day => day.rows.flatMap(row => {
+    const title = row.show?.english || row.show?.romaji;
+    if (!title || row.extra || row.fallback) return [];
+    const key = norm(row.show.romaji || title);
+    const at = row.watchAt ?? row.plannedAt;
+    const time = !row.pause && Number.isFinite(at)
+      ? new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
+    return [[key, { title, day: isoDay(day.date), time, paused: !!row.pause }]];
+  })));
+}
+let scheduleInboxRun = 0;
+$('list').addEventListener('click', async event => {
+  if (!event.target.closest('#scheduleInboxButton')) return;
+  const run = ++scheduleInboxRun, person = soloPerson, start = weekStart(weekOffset);
+  const dialog = $('scheduleInboxDlg'), status = $('scheduleInboxStatus');
+  const list = $('scheduleInboxList'), read = $('scheduleInboxRead');
+  const current = () => dialog.open && run === scheduleInboxRun;
+  list.replaceChildren();
+  read.hidden = true;
+  status.textContent = 'Aktueller Guckplan wird geprüft …';
+  dialog.showModal();
+  try {
+    await ready;
+    const previous = new Date(start);
+    previous.setDate(start.getDate() - 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const needed = new Map([previous, start, end].flatMap(day =>
+      activeTabs(tabs, day).map(tab => [tab.gid, tab])));
+    const [airings, plans] = await Promise.all([
+      Promise.all([downloadAirings(previous), downloadAirings(start)]),
+      Promise.all([...needed.values()].map(async tab => [tab.gid, await loadPlan(tab, true)])),
+    ]);
+    if (!current()) return;
+    if (!plans.some(([, plan]) => plan.people.includes(person))) {
+      status.textContent = 'Für ' + person + ' gibt es keinen Plan in dieser Woche.';
+      return;
+    }
+    const entries = scheduleInboxEntries(render(airings.flat(), start, new Map(plans), true, false, null, false, person));
+    const key = 'scheduleInbox:v1:' + JSON.stringify([SHEET, person, isoDay(start)]);
+    const prior = JSON.parse(localStorage.getItem(key) || 'null');
+    const save = () => localStorage.setItem(key, JSON.stringify({ ...prior, ...entries }));
+    if (!prior) {
+      save();
+      status.textContent = person + ' · Erster Vergleichspunkt gespeichert.';
+      return;
+    }
+    for (const [id, row] of Object.entries(entries)) {
+      const old = Object.hasOwn(prior, id) ? prior[id] : null;
+      const change = !old ? 'Neu im Plan' : row.paused && !old.paused ? 'Pausiert'
+        : !row.paused && old.paused ? 'Wieder im Plan'
+        : row.day !== old.day || row.time !== old.time ? 'Verschoben' : '';
+      if (!change) continue;
+      const item = document.createElement('li');
+      item.textContent = row.title + ' · ' + change + ' · ' + shortDate(row.day) + (row.time ? ' · ' + row.time : '');
+      list.append(item);
+    }
+    status.textContent = person + ' · ' + (list.children.length ? list.children.length + ' Änderungen' : 'Keine Änderungen');
+    read.hidden = !list.children.length;
+    read.onclick = () => {
+      try {
+        save();
+        list.replaceChildren();
+        read.hidden = true;
+        status.textContent = 'Änderungen als gelesen markiert.';
+      } catch {
+        status.textContent = 'Lesestand konnte nicht gespeichert werden.';
+      }
+    };
+  } catch {
+    if (current()) status.textContent = 'Planänderungen konnten gerade nicht geprüft werden. Der letzte Vergleichspunkt bleibt erhalten.';
+  }
+});
 async function drawDataStatus() {
 const notes = [...dataNotes.keys()];
 const saved = prefix => notes.some(k => k.startsWith(prefix));
@@ -183,9 +367,47 @@ try {
     : `<li><b>${esc(i.show.english || i.show.romaji)}</b><span>${esc(i.text)}</span></li>`).join('')}</ul></section>`).join('');
 } catch (e) { $('healthIntro').textContent = `Die Liste konnte nicht geladen werden: ${e.message}`; }
 }
+$('accountCheckButton').onclick = () => {
+  showSettings(false);
+  $('accountCheckDlg').showModal();
+  checkListConnection();
+};
+$('accountCheckRetry').onclick = checkListConnection;
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
 $('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
+function drawEpisodeCrosswalk() {
+  const show = $('episodeCrosswalkShow').value;
+  const input = $('episodeCrosswalkNumber');
+  const result = $('episodeCrosswalkResults');
+  const episode = input.valueAsNumber;
+  const fromPlan = $('episodeCrosswalkFrom').value === 'plan';
+  const aniList = fromPlan ? episode + lagOf(show) : episode;
+  const plan = fromPlan ? episode : episode - lagOf(show);
+  const rows = !show ? ['Keine bestätigte Nummernabweichung geladen.']
+    : !Number.isSafeInteger(episode) || !input.validity.valid ? ['Gib eine ganze Folgennummer ab 1 ein.']
+    : [
+      aniList > 0 ? 'AniList: Folge ' + aniList : 'AniList: Keine Zuordnung für diese Folge',
+      plan > 0 ? 'Guckplan: Folge ' + plan : 'Guckplan: Keine Zuordnung für diese Folge',
+      'MyAnimeList: Nummerierung nicht bestätigt',
+      'Streamingdienste: Staffel- und Folgennummern nicht bestätigt',
+    ];
+  result.replaceChildren(...rows.map(text => Object.assign(document.createElement('li'), { textContent: text })));
+}
+$('episodeCrosswalkButton').onclick = () => {
+  showSettings(false);
+  const select = $('episodeCrosswalkShow'), input = $('episodeCrosswalkNumber');
+  const options = Object.entries(streamsDe?.release || {})
+    .filter(([id, entry]) => Number.isSafeInteger(entry.lag) && entry.lag !== 0 && streamsDe.status?.[id]?.titles?.[0])
+    .map(([id]) => new Option(streamsDe.status[id].titles[0], id));
+  select.replaceChildren(...options);
+  select.disabled = input.disabled = $('episodeCrosswalkFrom').disabled = !options.length;
+  drawEpisodeCrosswalk();
+  $('episodeCrosswalkDlg').showModal();
+};
+$('episodeCrosswalkShow').onchange = drawEpisodeCrosswalk;
+$('episodeCrosswalkNumber').oninput = drawEpisodeCrosswalk;
+$('episodeCrosswalkFrom').onchange = drawEpisodeCrosswalk;
 $('dataButton').onclick = () => { showSettings(false); $('dataDlg').showModal(); drawDataStatus(); };
 $('notesButton').onclick = () => {
 showSettings(false);
