@@ -12,10 +12,10 @@ This is the proposed order for the approved work tracked in [PR #159](https://gi
 ## Proposed work order
 
 1. **Plan Issue Diagnostic Report** — In review in [PR #179](https://github.com/RyoTsushigawa/anime-schedule/pull/179). The existing day menu opens a show picker and a copyable report with known title IDs, data source, and freshness. Leave unknown values explicit and keep credentials, account names, and watch progress out. This can be reviewed independently and later attached to a repair report.
-2. **Upcoming Plan Readiness** — Next. Add a view of sessions in the next seven days that need a decision. Reuse existing schedule and attendance logic, and link to the relevant editor. Use the existing alert area as the entry point.
-3. **Personal Schedule Change Inbox** — Reuse the schedule facts from Readiness. Compare snapshots for the selected person and show moves, pauses, and additions. Treat the first visit as the baseline. A failed or cached refresh should never make a show look newly removed.
-4. **Report a Wrong Streaming Link + Maintainer Repair Queue** — Build the report action and the maintainer workflow together. Keep suggestions pending until a maintainer verifies them, and track resolution in the queue.
-5. **Episode Number Crosswalk** — Start with confirmed mappings for known problem shows. Display the service, Guckplan, AniList, and MAL numbering where available. Leave missing mappings explicit.
+2. **Upcoming Plan Readiness** — In review in [PR #180](https://github.com/RyoTsushigawa/anime-schedule/pull/180). Add a view of sessions in the next seven days that need a decision. Reuse existing schedule and attendance logic, and link to the relevant editor. Use the existing alert area as the entry point.
+3. **Personal Schedule Change Inbox** — In review in [PR #181](https://github.com/RyoTsushigawa/anime-schedule/pull/181). Uses the existing schedule renderer. Compare snapshots for the selected person and show moves, pauses, and additions. Treat the first visit as the baseline. A failed or cached refresh should never make a show look newly removed.
+4. **Report a Wrong Streaming Link + Maintainer Repair Queue** — Claude is building the report action. Review its data contract before implementing the queue. Keep suggestions pending until a maintainer verifies them, and track resolution in the queue.
+5. **Episode Number Crosswalk** — Initial version in review in [PR #182](https://github.com/RyoTsushigawa/anime-schedule/pull/182). AniList to Guckplan works for the one confirmed mapping. MAL and streaming mappings still need verified data. Display the service, Guckplan, AniList, and MAL numbering where available. Leave missing mappings explicit.
 
 ## Parallel work
 
