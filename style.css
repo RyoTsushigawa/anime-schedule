@@ -1191,15 +1191,17 @@ text-align: center;
 .rep-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .rep-weekdays button { min-height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .rep-weekdays button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.rep-dates { grid-template-columns: 1fr 1fr; }
+.rep-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .rep-dates label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); min-width: 0; }
-.rep-dates input { flex: 1; min-width: 0; }
+.rep-dates input[type="date"] { min-width: 0; }
+.rep-open { color: var(--text) !important; cursor: pointer; }
+.rep-open input { margin: 0; accent-color: var(--accent); }
+#repUntilBox[hidden] { display: none; }
 @media (max-width: 420px) {
  .away-day { min-height: 42px; padding: 4px 1px; }
  .away-grid { gap: 3px; }
  .away-mode button { padding-inline: 4px; font-size: 12px; }
  .rep-field { grid-template-columns: 1fr; gap: 5px; }
- .rep-dates { grid-template-columns: 1fr 1fr; }
 }
 
 /* Clarity pass: keep action labels readable on narrow screens. */

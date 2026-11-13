@@ -159,9 +159,30 @@ try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 let delays = [];
-let absent = [];
-// absent: [{ day, people }] for the whole day, or with from ("ab 21:00") / until ("bis 20:00"),
+// absentDays: [{ day, people }] for the whole day, or with from ("ab 21:00") / until ("bis 20:00"),
 // or maybe: true ("spontan da": not planned with, but might turn up).
+// absentRules: weekly absences without an end, [{ id, person, weekdays: [0 = Mo … 6 = So], start, end?,
+// from? | until? | maybe?, skip?: [days it doesn't apply] }]. moves.json keeps both ("absent", "absentRules");
+// `absent` is both together as single days (yesterday to a bit over a year ahead), which everything else reads.
+let absentDays = [], absentRules = [], absent = [];
+const ruleWeekday = day => (new Date(day + 'T12:00:00').getDay() + 6) % 7;
+const ruleCovers = (r, day) => day >= r.start && (!r.end || day <= r.end) && r.weekdays.includes(ruleWeekday(day));
+const ruleKind = r => r.maybe ? { maybe: true } : r.from ? { from: r.from } : r.until ? { until: r.until } : {};
+const ruleDay = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return isoDay(d); };
+function goodRules(list) {
+return (Array.isArray(list) ? list : []).filter(r => r && typeof r.person === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.start)
+  && Array.isArray(r.weekdays) && r.weekdays.length && (!r.end || r.end >= r.start));
+}
+function mergeAbsent() {
+const first = ruleDay(isoDay(new Date()), -2), last = ruleDay(first, 400);
+const fromRules = [];
+for (const r of absentRules) {
+  const skip = new Set(r.skip || []);
+  for (let d = r.start > first ? r.start : first; d <= last && (!r.end || d <= r.end); d = ruleDay(d, 1))
+    if (r.weekdays.includes(ruleWeekday(d)) && !skip.has(d)) fromRules.push({ day: d, people: [r.person], ...ruleKind(r), rule: r.id });
+}
+absent = absentDays.concat(fromRules).sort((a, b) => a.day.localeCompare(b.day));
+}
 const absentOn = date => absent.filter(x => x.day === date && !x.from && !x.until && !x.maybe).flatMap(x => x.people || []);
 const clockMinutes = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
 // minute: minutes after the day's midnight (after midnight counts on: 00:30 = 1470); null = unknown time
@@ -191,7 +212,9 @@ try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 delays = newest?.delays || [];
-absent = Array.isArray(newest?.absent) ? newest.absent : [];
+absentDays = Array.isArray(newest?.absent) ? newest.absent : [];
+absentRules = goodRules(newest?.absentRules);
+mergeAbsent();
 reasonList = goodReasons(newest?.reasons);
 }
 function moveFor(show, monday) {
@@ -201,17 +224,17 @@ return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.fin
 let movesQueue = Promise.resolve(), movesPending = 0;
 function saveMoves(next, changeDelays = null, reasons = null, absentNext = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
-const before = { moves, absent };
+const before = { moves, absentDays, absentRules };
 if (!changeDelays) {
 moves = next;
-if (absentNext) absent = absentNext;
+if (absentNext) { absentDays = absentNext.days; absentRules = absentNext.rules; mergeAbsent(); }
 if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true);
 }
 movesPending++;
 const job = movesQueue.catch(() => {}).then(() => saveMovesNow(next, changeDelays, reasons, absentNext)).finally(() => movesPending--);
 movesQueue = job;
 return job.catch(e => {
-if (!changeDelays) { moves = before.moves; absent = before.absent; if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); }
+if (!changeDelays) { moves = before.moves; absentDays = before.absentDays; absentRules = before.absentRules; mergeAbsent(); if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); }
 throw e;
 });
 }
@@ -229,8 +252,10 @@ let nextDelays = remote.delays || [];
 if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
 const remoteReasons = goodReasons(remote.reasons);
-const nextAbsent = (absentNext || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
-const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
+const nextAbsent = (absentNext?.days || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
+// rules that ended more than two days ago go, like single days
+const nextRules = goodRules(absentNext ? absentNext.rules : remote.absentRules).filter(r => !r.end || Date.parse(r.end) > Date.now() - 2 * 86400000);
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), ...(nextRules.length && { absentRules: nextRules }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : absentNext ? 'Abwesend' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
@@ -238,7 +263,7 @@ if (res.ok) {
 const sha = (await res.json().catch(() => null))?.content?.sha;
 movesWritten = sha && meta?.sha ? { replaced: meta.sha, sha, file } : null;
 const later = movesPending > 1;
-if (!later) { moves = file.moves; absent = nextAbsent; }
+if (!later) { moves = file.moves; absentDays = nextAbsent; absentRules = nextRules; mergeAbsent(); }
 delays = nextDelays;
 reasonList = file.reasons;
 movesSeen = movesStamp();
@@ -249,7 +274,7 @@ if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401
 }
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
-const movesStamp = () => JSON.stringify([moves, delays, absent]);
+const movesStamp = () => JSON.stringify([moves, delays, absentDays, absentRules]);
 let movesSeen = '';
 let followingMoves = false;
 const canFollowMoves = () => document.visibilityState === 'visible' && view === 'week' && lastWeekRender &&
