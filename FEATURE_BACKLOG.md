@@ -1,6 +1,6 @@
 # Anime Schedule feature backlog
 
-The feature challenge has **13 of 50 approved standalone features** and **43 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
+The feature challenge has **13 of 50 approved standalone features** and **44 approved updates**. This file lists the approvals confirmed by name so far. The earlier chat history available for this handoff does not show all the names, so this list is partial.
 
 ## Approved standalone features
 
@@ -10,8 +10,8 @@ The feature challenge has **13 of 50 approved standalone features** and **43 app
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
 | N24 | Anime List Health Check | Approved. |
 | N35 | Anime Title Lookup | Approved. Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
-| N38 | Group Availability Grid | Approved. Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
-| N39 | Schedule Data Status | In [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
+| N38 | Group Availability Grid | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
+| N39 | Schedule Data Status | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
 | N44 | Watch Progress Sync History | Approved. Show recent AniList and MyAnimeList episode updates from this browser, with successes and failures. |
 
 ## Approved updates
@@ -21,16 +21,16 @@ The feature challenge has **13 of 50 approved standalone features** and **43 app
 | | Catch-up Quick Actions | Main already has episode steppers and bulk actions. Confirm which additional action is needed before implementing. |
 | | Catch-up Search & Filters | Main already has title search. Check existing filters before extending it. |
 | | Catch-up Progress Bar | Merged in [PR #151](https://github.com/RyoTsushigawa/anime-schedule/pull/151). |
-| U21 | Synopsis Quiz Daily Archive | Approved. |
-| U23 | Synopsis Quiz Statistics | Approved. |
-| U25 | Catch-up Pinned Anime | Approved. |
+| U21 | Synopsis Quiz Daily Archive | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
+| U23 | Synopsis Quiz Statistics | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
+| U25 | Catch-up Pinned Anime | In [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). |
 | U27 | Season Preview · Next Unvoted Show | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
 | U29 | Absences · Filter by Person | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Filter entries in Kalender and Wiederkehrend by person, with an All option. |
-| U32 | Weekly Plan · Hide Covers | In [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Add a text-only view that keeps times, episode numbers, and watch controls visible. |
-| U34 | Discord Schedule · Compact Copy | In [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Offer a shorter copy format with start times, titles, and episode numbers. |
+| U32 | Weekly Plan · Hide Covers | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Add a text-only view that keeps times, episode numbers, and watch controls visible. |
+| U34 | Discord Schedule · Compact Copy | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Offer a shorter copy format with start times, titles, and episode numbers. |
 | U37 | Season Preview · Remember My Filters | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Restore the last selected voter and filters. |
 | U38 | Weekly Plan · Time Zone Override | Approved. Show the same schedule in Berlin time, device-local time, or a chosen time zone through the existing time settings. |
-| U39 | Weekly Plan · Explain Absence Pauses | In [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
+| U39 | Weekly Plan · Explain Absence Pauses | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
 | U41 | Weekly Plan · Remind Me Before a Show | Approved. Offer an optional reminder from the existing watch-slot menu. |
 | U42 | Season Preview · Save an Unsent Vote | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Keep a failed vote as a draft on its show so the voter can retry later. |
 | U43 | Weekly Plan · Hide Watched Episodes | Approved. Add an on/off toggle in the existing Solo view controls. On hides watched episodes. Off restores the full plan in one click. |
@@ -46,6 +46,7 @@ The feature challenge has **13 of 50 approved standalone features** and **43 app
 | U56 | Absences · Flag Overlapping Entries | Approved. Show overlapping recurring rules for the same person in the existing editor. |
 | U57 | Weekly Plan · Copy Streaming Link | Approved. Copy the stream link already shown on the row from the existing show menu. |
 | U59 | Seasonal Anime Awards · Skip a Category | Approved. Let voters explicitly skip a category and distinguish it from an unanswered category during ballot review. |
+| U61 | Weekly Plan · Flag a Scheduling Conflict | Approved. Warn in the existing move dialog when the new slot overlaps another show for any of the same viewers. Leave the decision to the editor. |
 
 ## Curation decisions
 
@@ -54,5 +55,5 @@ The feature challenge has **13 of 50 approved standalone features** and **43 app
 - Check current main, open PRs, and approved backlog items for overlapping workflows. Improve an existing feature when it already serves the same purpose.
 - Count only approved standalone features toward 50. Keep updates in their own list.
 - Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
-- Rejected ideas stay excluded, including N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, N34 Guckplan Comparison, N36 Episode Runtime Calculator, N37 Anime Source Material Finder, U33 Weekly Plan · Copy Day Link, N40 Episode Finder, N41 Personal Rating Breakdown, U35 Catch-up · Time per Show, N42 Guckplan Validator, N43 Season Finale Calendar, U36 Weekly Plan · Collapse All Days, N45 Guckplan Backup Browser, U40 Weekly Plan · Jump to a Date, N46 Watch Night Display, N47 Group Watch Progress, U47 Catch-up · Choose How Long to Snooze, U49 Weekly Plan · High-Contrast Labels, U55 Weekly Plan · Pause a Whole Day, and U58 Weekly Plan · Jump from an Alert to Its Show. Keep new game ideas out of future rounds.
+- Rejected ideas stay excluded, including N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, N34 Guckplan Comparison, N36 Episode Runtime Calculator, N37 Anime Source Material Finder, U33 Weekly Plan · Copy Day Link, N40 Episode Finder, N41 Personal Rating Breakdown, U35 Catch-up · Time per Show, N42 Guckplan Validator, N43 Season Finale Calendar, U36 Weekly Plan · Collapse All Days, N45 Guckplan Backup Browser, U40 Weekly Plan · Jump to a Date, N46 Watch Night Display, N47 Group Watch Progress, U47 Catch-up · Choose How Long to Snooze, U49 Weekly Plan · High-Contrast Labels, U55 Weekly Plan · Pause a Whole Day, U58 Weekly Plan · Jump from an Alert to Its Show, and U60 Tier List · Find a Title. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
