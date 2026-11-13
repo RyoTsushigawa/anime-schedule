@@ -77,6 +77,9 @@ export async function openPage(opts = {}) {
   const malNode = id => ({ id:id+100, title:MEDIA[id].title.romaji, status:opts.malMediaStatus?.[id] || 'currently_airing', num_episodes:12,
     start_date:'2026-10-01', main_picture:{medium:''} });
   const malStatus = e => ({ status:e.status || 'watching', num_episodes_watched:e.progress || 0, score:e.score || 0, is_rewatching:e.rewatching || false, finish_date:e.finish_date });
+  // Web Crypto (SHA-256 for editor codes, N61) and TextEncoder from Node; jsdom has neither
+  if (!window.crypto?.subtle) Object.defineProperty(window, 'crypto', { value: globalThis.crypto, configurable: true });
+  if (!window.TextEncoder) window.TextEncoder = TextEncoder;
   for (const [k, v] of Object.entries(opts.storage || {})) window.localStorage.setItem(k, v);
   for (const [k, v] of Object.entries(opts.session || {})) window.sessionStorage.setItem(k, v);
 

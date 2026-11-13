@@ -14,7 +14,7 @@ part, so this section says what runs where and what is still open. Keep it up to
 |---|---|---|
 | GitHub (this repository, branch `main`) | The site itself (GitHub Pages), `moves.json` and `nicknames.json` written by the page | The copy here is the current one. Changes go in through pull requests. |
 | GitHub Actions | `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status), `source-health.yml`, `masterset-prices.yml` | GitHub's own timer runs hours late or skips days. The daily post is therefore started from Cloudflare. |
-| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v19** (13 Nov: weekly absences as rules, `absentRules`; reads the planning channel secret as `DISCORD_WEBHOOK_ABSENCE` or `…_ABSENCES`). Confirmed on 11 Nov with v18: the 09:00 post and absences in the planning channel work. `DISCORD_WEBHOOK` is the schedule channel. The PC downloads the deployed version at logon (task "Helfer herunterladen"). Its code is **not** in this repository (see below). |
+| Cloudflare Worker `schedule-delays` | Saves delays and absences for everyone, posts them to Discord, and starts the daily post at 08:50 German time (cron `50 6,7 * * *`) | Deployed: **v19**; **v20 is ready** (N61 Bearbeiter-Zugang: saves `moves` for a trusted member whose editor code matches a hash in `moves.json` `editors`; no new secrets). v19 (13 Nov: weekly absences as rules, `absentRules`; reads the planning channel secret as `DISCORD_WEBHOOK_ABSENCE` or `…_ABSENCES`). Confirmed on 11 Nov with v18: the 09:00 post and absences in the planning channel work. `DISCORD_WEBHOOK` is the schedule channel. The PC downloads the deployed version at logon (task "Helfer herunterladen"). Its code is **not** in this repository (see below). |
 | The owner's PC | `tools/build-streams.mjs` (must run from Germany), `tools/publish.mjs` and the weekly checks, with the tokens | These tools exist only on the PC. Since 10 Nov `publish.mjs` uploads data only (see below). |
 | Discord bot (separate zip, v7) | `/delay`, `/abwesend` and status | Not in this repository. Whether v7 is installed is unconfirmed. |
 
@@ -109,6 +109,13 @@ day of a rule in the calendar saves it as an exception (`skip`). Single days are
 before rules (12 single weeks) still show and become a rule when edited. Everyone can enter absences, without the
 GitHub key through the Cloudflare helper (v9 or later; "Spontan da" needs v17; recurring rules need **v19**, older
 helpers refuse them and the site says so). The bot's `/abwesend` only knows single days: it can't end a rule.
+
+**Bearbeiter-Zugang (N61):** the owner (with the GitHub key) creates a personal link per trusted member under
+Bearbeitungszugang › Bearbeiter. The link (`#editor=…`) stores a random code in that browser; `moves.json`
+`editors` keeps only its SHA-256 with the name. With it, the member can move, skip and plan catch-up (the
+`moves` list only), saved through the Cloudflare helper (**v20** or later), which checks the code first.
+"Entfernen" stops a link at once. Keys, the editor list, nicknames, link reports and Discord delivery stay
+owner-only.
 
 **Verspätung:** the clock on today's heading adds a delay from one show on; it and every later show move,
 and delays add up. **Edit** on the delay line changes or removes it. Everyone can add one (see

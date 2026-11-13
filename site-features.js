@@ -18,7 +18,7 @@ const SITE_FEATURES = [
   ['Plan bearbeiten', [
     'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig oder dauerhaft), auch per Ziehen', 'Tag bearbeiten',
     'Serie überspringen, mit „Zeiten beibehalten“', 'Verspätungen für alle, mit Gründe-Liste', 'Nachholen: Folgen in den Plan legen',
-    'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Discord-Zustellung',
+    'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Bearbeiter-Zugang für vertraute Leute (ohne den GitHub-Schlüssel)', 'Discord-Zustellung',
   ]],
   ['Abwesenheiten', [
     'Abwesenheits-Kalender (Tage, Zeiträume, ab/bis Uhrzeit)', 'Wiederkehrende Abwesenheiten', 'Wochenübersicht der Abwesenheiten',
@@ -51,9 +51,6 @@ const SITE_FEATURES = [
 // What's coming: approved in the feature challenge (FEATURE_BACKLOG.md) but not built yet. Move a line up to
 // SITE_FEATURES when it's live.
 const SITE_PLANNED = [
-  ['Neue Funktionen', [
-    'Bearbeiter-Zugang: vertrauten Leuten erlauben, Serien zu verschieben, ohne den GitHub-Schlüssel zu teilen',
-  ]],
   ['Verbesserungen', [
     'Wochenplan: gesehene Folgen in der eigenen Ansicht ausblenden', 'Wochenplan: leere Tage ausblenden',
     'Wochenplan: Stream-Link kopieren', 'Verschieben: Warnung, wenn der neue Slot mit einer anderen Serie derselben Leute kollidiert',
