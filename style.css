@@ -1646,3 +1646,11 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .lookup-links { display: flex; gap: 6px; flex: none; }
 .lookup-links a { font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 99px; color: var(--text); text-decoration: none; }
 .lookup-links a:hover { border-color: var(--accent); }
+
+/* N24 Listen-Check */
+.health-list { display: grid; gap: 14px; margin-top: 10px; max-height: min(62dvh, 520px); overflow-y: auto; }
+.health-list h3 { margin: 0 0 2px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); display: flex; gap: 8px; align-items: baseline; }
+.health-list h3 span { color: var(--muted); font-weight: 500; }
+.health-list p { margin: 2px 0 0; font-size: 12px; }
+.health-list a { color: var(--text); text-decoration: none; }
+.health-list a:hover b { text-decoration: underline; }

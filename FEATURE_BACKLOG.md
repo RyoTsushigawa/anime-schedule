@@ -8,7 +8,7 @@ The feature challenge has **13 of 50 approved standalone features** and **30 app
 | --- | --- | --- |
 | N1 | Seasonal Anime Awards | Merged in [PR #161](https://github.com/RyoTsushigawa/anime-schedule/pull/161); shared voting, secret until „Auflösen“, in [PR #163](https://github.com/RyoTsushigawa/anime-schedule/pull/163). |
 | N21 | Anime Screenshot Quiz | Approved before the decision to stop proposing new games. |
-| N24 | Anime List Health Check | Approved. |
+| N24 | Anime List Health Check | Done: Settings › Listen-Check (forgotten „watching“, progress beyond the episodes, incomplete „completed“, Guckplan shows missing from the list). |
 | N35 | Anime Title Lookup | Done (backlog batch 3). Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
 | N38 | Group Availability Grid | Done (backlog batch 3). Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
 | N39 | Schedule Data Status | Done (backlog batch 2). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
@@ -29,7 +29,6 @@ The feature challenge has **13 of 50 approved standalone features** and **30 app
 | U32 | Weekly Plan · Hide Covers | Done (backlog batch 2). Add a text-only view that keeps times, episode numbers, and watch controls visible. |
 | U34 | Discord Schedule · Compact Copy | Done (backlog batch 2). Offer a shorter copy format with start times, titles, and episode numbers. |
 | U37 | Season Preview · Remember My Filters | Done (backlog batch 1). Restore the last selected voter and filters. |
-| U38 | Weekly Plan · Time Zone Override | Approved. Show the same schedule in Berlin time, device-local time, or a chosen time zone through the existing time settings. |
 | U39 | Weekly Plan · Explain Absence Pauses | Done (backlog batch 2). Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
 | U41 | Weekly Plan · Remind Me Before a Show | Approved. Offer an optional reminder from the existing watch-slot menu. |
 | U42 | Season Preview · Save an Unsent Vote | Done (backlog batch 1). Keep a failed vote as a draft on its show so the voter can retry later. |
@@ -41,5 +40,5 @@ The feature challenge has **13 of 50 approved standalone features** and **30 app
 - Check current main, open PRs, and approved backlog items for overlapping workflows. Improve an existing feature when it already serves the same purpose.
 - Count only approved standalone features toward 50. Keep updates in their own list.
 - Preserve the four earlier maybes and the undecided N7–N9. N26 Anime Airing Changes Tracker is a separate maybe.
-- Rejected ideas stay excluded, including N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, N34 Guckplan Comparison, N36 Episode Runtime Calculator, N37 Anime Source Material Finder, U33 Weekly Plan · Copy Day Link, N40 Episode Finder, N41 Personal Rating Breakdown, U35 Catch-up · Time per Show, N42 Guckplan Validator, N43 Season Finale Calendar, U36 Weekly Plan · Collapse All Days, N45 Guckplan Backup Browser, U40 Weekly Plan · Jump to a Date, and N46 Watch Night Display. Keep new game ideas out of future rounds.
+- Rejected ideas stay excluded, including U38 Weekly Plan · Time Zone Override (scrapped by the owner), N27 Season Vote Results Board, U28 Weekly Plan · Estimated Finish Time, N28 Calendar Export, N29 Group Watch Journal, N30 Anime Cast Explorer, N31 New Season Setup Checklist, U30 Season Preview · Mark Trailers Watched, N32 Anime Franchise Guide, N33 Anime Recommendation Inbox, U31 Tier List · Undo Last Move, N34 Guckplan Comparison, N36 Episode Runtime Calculator, N37 Anime Source Material Finder, U33 Weekly Plan · Copy Day Link, N40 Episode Finder, N41 Personal Rating Breakdown, U35 Catch-up · Time per Show, N42 Guckplan Validator, N43 Season Finale Calendar, U36 Weekly Plan · Collapse All Days, N45 Guckplan Backup Browser, U40 Weekly Plan · Jump to a Date, and N46 Watch Night Display. Keep new game ideas out of future rounds.
 - Check current main and open PRs before claiming an item. Update the status here when implementation moves forward.
