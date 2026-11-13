@@ -154,6 +154,7 @@ $('list').addEventListener('click', event => {
   };
   draw();
   dialog.showModal();
+});
 let readinessRun = 0;
 $('list').addEventListener('click', async event => {
   if (!event.target.closest('#planReadinessButton')) return;
@@ -222,6 +223,7 @@ $('list').addEventListener('click', async event => {
     : results.some(result => result.status === 'rejected') || !streamsDe
     ? 'Ein Teil der Daten konnte nicht geprüft werden.'
     : seen.size ? seen.size + ' Hinweise' : 'Für diesen Zeitraum sind keine offenen Punkte bekannt.';
+});
 // One baseline per person and week. Keep it until the user acknowledges the changes.
 function scheduleInboxEntries(days) {
   return Object.fromEntries(days.flatMap(day => day.rows.flatMap(row => {
@@ -262,7 +264,7 @@ $('list').addEventListener('click', async event => {
       status.textContent = 'Für ' + person + ' gibt es keinen Plan in dieser Woche.';
       return;
     }
-    const entries = scheduleInboxEntries(render(airings.flat(), start, new Map(plans), true, false, null, person));
+    const entries = scheduleInboxEntries(render(airings.flat(), start, new Map(plans), true, false, null, false, person));
     const key = 'scheduleInbox:v1:' + JSON.stringify([SHEET, person, isoDay(start)]);
     const prior = JSON.parse(localStorage.getItem(key) || 'null');
     const save = () => localStorage.setItem(key, JSON.stringify({ ...prior, ...entries }));
