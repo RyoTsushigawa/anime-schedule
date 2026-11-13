@@ -319,14 +319,32 @@ for (const r of absentRules) {
 return out.sort((a, b) => a.weekdays[0] - b.weekdays[0] || a.people[0].localeCompare(b.people[0]));
 }
 function showAwayTab(tab) {
-awayCal.tab = tab === 'recurring' ? 'recurring' : 'calendar';
-const calendar = awayCal.tab === 'calendar';
-$('awayCalendarPanel').hidden = !calendar;
-$('awayRecurringPanel').hidden = calendar;
-$('awayTabCalendar').setAttribute('aria-selected', String(calendar));
-$('awayTabRecurring').setAttribute('aria-selected', String(!calendar));
+awayCal.tab = ['recurring', 'week'].includes(tab) ? tab : 'calendar';
+for (const [id, name] of [['Calendar', 'calendar'], ['Recurring', 'recurring'], ['Week', 'week']]) {
+  $('away' + id + 'Panel').hidden = awayCal.tab !== name;
+  $('awayTab' + id).setAttribute('aria-selected', String(awayCal.tab === name));
+}
+$('awayWho').hidden = awayCal.tab === 'week';
 $('awayMsg').textContent = '';
-if (calendar) drawAway(); else drawRepeat();
+if (awayCal.tab === 'calendar') drawAway(); else if (awayCal.tab === 'recurring') drawRepeat(); else drawAwayWeek();
+}
+// N38: the whole group's week at a glance: who is there, away all day, only partly (ab/bis) or spontan da
+function drawAwayWeek() {
+const monday = isoDay(weekStart(awayCal.weekOffset || 0));
+const days = Array.from({ length: 7 }, (_, i) => addDay(monday, i)), today = isoDay(new Date());
+$('awayWeekTitle').textContent = `${shortDate(days[0])} – ${shortDate(days[6])}`;
+const people = [...new Set([...allPeople(), ...days.flatMap(d => absencesForDay(d).flatMap(x => x.people || []))])];
+const cell = (p, d) => {
+  const x = absencesForDay(d).find(e => e.people?.includes(p));
+  const rec = x?.rule ? ' (wiederkehrend)' : '';
+  if (!x) return '<td class="aw-free" title="da">✓</td>';
+  if (x.maybe) return `<td class="aw-maybe" title="spontan da${rec}">?</td>`;
+  if (x.from) return `<td class="aw-part" title="ab ${esc(x.from)} weg${rec}">ab ${esc(x.from)}</td>`;
+  if (x.until) return `<td class="aw-part" title="erst ab ${esc(x.until)} da${rec}">bis ${esc(x.until)}</td>`;
+  return `<td class="aw-off" title="ganzer Tag weg${rec}">✕</td>`;
+};
+$('awayWeek').innerHTML = `<thead><tr><th></th>${days.map(d => `<th${d === today ? ' class="aw-today"' : ''}>${esc(AWAY_WEEKDAYS[weekdayOf(d)])}<small>${dayOf(d).getDate()}.</small></th>`).join('')}</tr></thead>`
+  + `<tbody>${people.map(p => `<tr><th><span class="away-who" style="${personStyle(p)}">${esc(p)}</span></th>${days.map(d => cell(p, d)).join('')}</tr>`).join('')}</tbody>`;
 }
 function openAway(date) {
 const today = isoDay(new Date());
@@ -471,7 +489,7 @@ await saveAway(next, days);
 } catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return false; }
 finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
 absentDays = next.days; absentRules = next.rules;
-if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else drawAway();
+if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else if (awayCal.tab === 'week') drawAwayWeek(); else drawAway();
 $('awayMsg').textContent = `${done} Alle sehen es in etwa einer Minute.`;
 try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
 return true;
@@ -488,6 +506,9 @@ tag.setAttribute('aria-expanded', String(!box.hidden));
 });
 $('awayTabCalendar').onclick = () => showAwayTab('calendar');
 $('awayTabRecurring').onclick = () => showAwayTab('recurring');
+$('awayTabWeek').onclick = () => { awayCal.weekOffset = view === 'week' ? weekOffset : 0; showAwayTab('week'); };
+$('awayWeekPrev').onclick = () => { awayCal.weekOffset = (awayCal.weekOffset || 0) - 1; drawAwayWeek(); };
+$('awayWeekNext').onclick = () => { awayCal.weekOffset = (awayCal.weekOffset || 0) + 1; drawAwayWeek(); };
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-day-absent]');
 if (b) openAway(b.closest('.day').dataset.date);

@@ -27,6 +27,10 @@ const IDLE_WEEKS = 3, LATER_MS = 14 * 86400000;
 const catchupLater = () => { try { const all = JSON.parse(localStorage.getItem('catchupLater')) || {}; return Object.fromEntries(Object.entries(all).filter(([, until]) => until > Date.now())); } catch { return {}; } };
 const saveCatchupLater = all => { try { localStorage.setItem('catchupLater', JSON.stringify(all)); } catch {} };
 const idleTag = r => r.idleWeeks >= IDLE_WEEKS ? `<span class="idle-tag" title="Zuletzt auf der Liste weitergeschaut vor ${r.idleWeeks} Wochen">seit ${r.idleWeeks} Wochen nicht weitergeschaut</span>` : '';
+// U25: pinned shows stay at the top of Catch-up (own list, this browser)
+const catchupPinned = () => { try { return new Set(JSON.parse(localStorage.getItem('catchupPinned') || '[]')); } catch { return new Set(); } };
+const PIN_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M9 3h6l-1 6 4 3v2h-5v7l-1 1-1-1v-7H6v-2l4-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+const pinButton = (m, pinned) => `<button type="button" class="pin-show${pinned ? ' on' : ''}" data-pin="${m.id}" aria-pressed="${pinned}" title="${pinned ? 'Nicht mehr oben halten' : 'Oben anheften'}" aria-label="${pinned ? 'Lösen' : 'Anheften'}">${PIN_ICON}</button>`;
 const laterButton = r => r.idleWeeks >= IDLE_WEEKS ? `<button type="button" class="drop later" data-later="${r.m.id}" title="Zwei Wochen aus Catch-up ausblenden">Später</button>` : '';
 function catchupRows(entries, planShows, plan, person = soloPerson) {
 const now = Date.now() / 1000;
@@ -243,6 +247,8 @@ rows.sort(choices.sort === 'az' ? byTitle
 : choices.sort === 'quick' ? (a, b) => (a.out - a.first) - (b.out - b.first) || a.since - b.since
 : choices.sort === 'next' ? (a, b) => (a.nextAt || Infinity) - (b.nextAt || Infinity) || a.since - b.since
 : (a, b) => a.since - b.since);
+const pinned = !friend ? catchupPinned() : new Set();
+if (pinned.size) rows.sort((a, b) => pinned.has(b.m.id) - pinned.has(a.m.id));
 const nextHint = (nextAt, out) => choices.sort !== 'next' || !nextAt ? ''
 : `<span class="next-hint"> · ${nextAt * 1000 <= Date.now() ? `Folge ${out + 1} schon da` : 'neu ' + (new Date(nextAt * 1000).toDateString() === new Date().toDateString() ? 'heute' + savedAt(nextAt * 1000).slice(2) : savedAt(nextAt * 1000))}</span>`;
 const mine = local || (!friend && auth?.name && user.toLowerCase() === auth.name.toLowerCase());
@@ -254,7 +260,7 @@ const selector = m => `<button class="watch${skipped.has(m.id) ? '' : ' done'}" 
     title="Bei „Alle ✓“ mitnehmen">✓</button>`;
 const check = (m, ep, missing) => selecting ? selector(m) : local ? localWatchButton(m.id, ep) : watchButton(m.id, ep, missing);
 const single = singleEpisodes;
-const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a></div>`;
+const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a>${mine ? pinButton(m, pinned.has(m.id)) : ''}</div>`;
 const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
 const progressBar = (progress, m) => Number.isSafeInteger(m.episodes) && m.episodes > 0
   ? `<progress class="catchup-progress" value="${Math.max(0, Math.min(progress, m.episodes))}" max="${m.episodes}" aria-label="${esc(seen(progress, m))}"></progress>`
@@ -437,6 +443,15 @@ return planShowsCache.media
 .map(m => ({ progress: m.mediaListEntry?.progress || 0, media: m, missing: true }));
 }
 
+$('list').addEventListener('click', e => {
+const pin = e.target.closest('[data-pin]');
+if (!pin) return;
+const all = catchupPinned(), id = Number(pin.dataset.pin);
+all.has(id) ? all.delete(id) : all.add(id);
+try { localStorage.setItem('catchupPinned', JSON.stringify([...all])); } catch {}
+notice(all.has(id) ? 'Oben angeheftet' : 'Nicht mehr angeheftet');
+loadCatchupContent();
+});
 // "Später" on a sleeping show, and showing them again
 $('list').addEventListener('click', e => {
 const later = e.target.closest('[data-later]'), back = e.target.closest('[data-later-show]');

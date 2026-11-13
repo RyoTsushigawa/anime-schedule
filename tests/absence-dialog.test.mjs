@@ -200,3 +200,24 @@ test('U29: the lists can show one person; Alle shows everyone again', async () =
     assert.equal(rows(p, 'awayList').length, 2);
   } finally { p.close(); }
 });
+
+test('N38: the Woche tab shows everyone for the week: away, partly, spontan da and recurring', async () => {
+  const rule = { id: 'abcd1234', person: 'Belly', weekdays: [4], start: '2026-10-01' };
+  const p = await openPage({ storage: { movesKey: 'fixture-only' }, movesFile: { moves: [], absent: [
+    { day: '2026-10-27', people: ['MaRyo'] }, { day: '2026-10-29', people: ['MaRyo'], from: '21:00' }, { day: '2026-10-31', people: ['Rei'], maybe: true }], absentRules: [rule] } });
+  try {
+    p.window.Element.prototype.scrollIntoView = () => {};
+    await p.click(p.$('awayButton'));
+    await p.click(p.$('awayTabWeek'));
+    assert.equal(p.$('awayWeekPanel').hidden, false);
+    assert.equal(p.$('awayWho').hidden, true);
+    const row = name => [...p.$('awayWeek').querySelectorAll('tbody tr')].find(tr => tr.querySelector('th').textContent === name);
+    const cells = name => [...row(name).querySelectorAll('td')].map(td => td.textContent);
+    assert.deepEqual(cells('MaRyo'), ['✓', '✕', '✓', 'ab 21:00', '✓', '✓', '✓']);
+    assert.deepEqual(cells('Belly'), ['✓', '✓', '✓', '✓', '✕', '✓', '✓']);
+    assert.match(row('Belly').querySelectorAll('td')[4].title, /wiederkehrend/);
+    assert.deepEqual(cells('Rei'), ['✓', '✓', '✓', '✓', '✓', '?', '✓']);
+    await p.click(p.$('awayWeekNext'));
+    assert.deepEqual(cells('MaRyo'), ['✓', '✓', '✓', '✓', '✓', '✓', '✓']);
+  } finally { p.close(); }
+});

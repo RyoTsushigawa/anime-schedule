@@ -305,6 +305,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="away-tabbar"><div class="away-tabs" role="tablist" aria-label="Abwesenheiten">
 <button type="button" id="awayTabCalendar" role="tab" aria-selected="true" aria-controls="awayCalendarPanel">Kalender</button>
 <button type="button" id="awayTabRecurring" role="tab" aria-selected="false" aria-controls="awayRecurringPanel">Wiederkehrend</button>
+<button type="button" id="awayTabWeek" role="tab" aria-selected="false" aria-controls="awayWeekPanel">Woche</button>
 </div><select id="awayWho" class="pill away-who-filter" aria-label="Einträge zeigen von"><option value="">Alle</option></select></div>
 <div id="awayCalendarPanel" class="away-panel" role="tabpanel" aria-labelledby="awayTabCalendar">
 <div class="away-nav"><button type="button" id="awayPrev" class="round" aria-label="Voriger Monat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b id="awayMonth" aria-live="polite"></b><button type="button" id="awayToday" class="pill" title="Zum aktuellen Monat springen">Heute</button><button type="button" id="awayNext" class="round" aria-label="Nächster Monat"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
@@ -321,6 +322,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="away-list-heading"><b class="away-sub">Eingetragen</b><span class="muted" id="awayListCount"></span></div>
 <ul id="awayList" class="away-list"></ul>
 <button type="button" id="awayMore" class="pill away-more" hidden></button>
+</div>
+<div id="awayWeekPanel" class="away-panel" role="tabpanel" aria-labelledby="awayTabWeek" hidden>
+<div class="away-nav"><button type="button" id="awayWeekPrev" class="round" aria-label="Vorige Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b id="awayWeekTitle" aria-live="polite"></b><button type="button" id="awayWeekNext" class="round" aria-label="Nächste Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+<div class="away-week-scroll"><table id="awayWeek" class="away-week"></table></div>
+<div class="away-legend" aria-label="Legende"><span><b class="aw-free">✓</b> da</span><span><b class="aw-off">✕</b> ganzer Tag weg</span><span><b class="aw-part">ab/bis</b> teilweise</span><span><b class="aw-maybe">?</b> spontan da</span></div>
 </div>
 <div id="awayRecurringPanel" class="away-panel" role="tabpanel" aria-labelledby="awayTabRecurring" hidden>
 <ul id="repList" class="away-list"></ul>
