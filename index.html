@@ -446,6 +446,12 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <textarea id="planDiagnosticText" class="discord-text" rows="8" readonly></textarea>
 <div class="dlg-row dlg-foot"><button type="button" id="planDiagnosticCopy" class="pill">Kopieren</button><button value="cancel" class="pill primary">OK</button></div>
 <p id="planDiagnosticStatus" class="muted" role="status"></p>
+<dialog id="planReadinessDlg" class="dlg notes-dlg" aria-labelledby="planReadinessTitle">
+<form method="dialog">
+<b id="planReadinessTitle">Plan-Check · nächste 7 Tage</b>
+<p id="planReadinessStatus" class="muted" role="status"></p>
+<ul id="planReadinessList" class="data-list"></ul>
+<div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
 </form>
 </dialog>
 <dialog id="dataDlg" class="dlg notes-dlg" aria-labelledby="dataTitle">

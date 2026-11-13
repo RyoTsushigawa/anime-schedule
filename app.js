@@ -1054,7 +1054,7 @@ cursor = next;
 }
 // shifted: the group's final times from a first pass (delays, Lang/Doppelt), so "ab 21:00" absences
 // are checked at the time a show is really watched
-function render(items, start, plans, everyone = false, keepDays = false, shifted = null) {
+function render(items, start, plans, everyone = false, keepDays = false, shifted = null, readiness = false) {
 if (!everyone) lastWeekRender = [items, start, plans];
 const restore = everyone ? null : preserveListPosition();
 if (!everyone) updateFallbackControls();
@@ -1272,7 +1272,33 @@ applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d
 for (const r of d.rows) if (r.extra) r.when = new Date(r.watchAt);
 }
 if (everyone && !shifted && [...absentDays, ...absentRules].some(x => x.from || x.until) && days.some(d => d.rows.some(r => r.plannedAt != null && r.plannedAt !== r.watchAt)))
-  return render(items, start, plans, true, keepDays, new Map(days.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
+  return render(items, start, plans, true, keepDays, new Map(days.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))), readiness);
+if (readiness) {
+const issues = [];
+const add = (show, slot, date, reason) => issues.push({ show, slot, date: date && isoDay(date), reason });
+const scheduledDate = slot => days.find(day => WEEKDAYS[(day.date.getDay() + 6) % 7] === norm(slot?.tag || '').slice(0, 2))?.date;
+const unscheduled = new Set();
+for (const gid of weekTabs) for (const [show, slot] of chosen.get(plans.get(gid)) || []) {
+  if (slot.skip) continue;
+  if (!scheduledDate(slot)) {
+    unscheduled.add(show);
+    add(show, slot, null, 'Kein Guck-Tag eingetragen');
+  }
+}
+for (const day of days) for (const row of day.rows) {
+  if (!row.show || row.extra || unscheduled.has(row.show)) continue;
+  if (!row.pause && !parseTime(row.slot?.time)) add(row.show, row.slot, day.date, 'Keine Guck-Uhrzeit eingetragen');
+  if (row.skipped && row.missing?.length) add(row.show, row.slot, day.date, 'Zu wenige Zuschauer');
+  else if (row.fallback) add(row.show, row.slot, day.date, 'Ausstrahlung unbestätigt');
+}
+for (const { show, why } of unknown) {
+  const slot = [...chosen.values()].find(picks => picks.has(show))?.get(show);
+  if (slot?.skip || unscheduled.has(show)) continue;
+  const date = scheduledDate(slot);
+  add(show, slot, date, date ? (why || 'Ausstrahlung unbestätigt') : 'Kein Guck-Tag eingetragen');
+}
+return issues;
+}
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
 const picked = range === 'day' && !searching() && days.find(d => isoDay(d.date) === pickedDay);
@@ -1412,9 +1438,10 @@ const lines = [
 ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
 ];
 // The chip stays where it is (right of the day strip); what it lists opens underneath, across the full width.
+const readinessButton = '<button type="button" class="pill" id="planReadinessButton" aria-haspopup="dialog">Plan-Check</button>';
 const alerts = !lines.length ? '' : `<button type="button" id="airingWarnings" class="alerts-chip" aria-expanded="${alertsOpen}" aria-controls="airingBody"><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></button>`;
 const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts alerts-body"${alertsOpen ? '' : ' hidden'}>${lines.join('')}</div>`;
-html = `${staleNotice}<div class="weekline">${strip}${alerts}${alertsBody}</div>` + html;
+html = `${staleNotice}<div class="weekline">${strip}${alerts}${readinessButton}${alertsBody}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
