@@ -21,6 +21,6 @@ This is the proposed order for the approved work tracked in [PR #159](https://gi
 
 - **Suggested for Claude: AniList ↔ MyAnimeList Transfer Assistant, preview first.** Match entries by verified provider IDs. Show additions, conflicts, and unmatched shows. Add explicit selection and writes in a follow-up, with per-entry results and a retry path.
 - **Guckplan Editor Access** needs a server-side permission design before implementation. Scope grants to the allowed actions and verify revocation and denied writes.
-- **Discord Delivery Queue** needs delivery records and a duplicate-safe retry design. Inspect the existing posting workflow before adding a second way to send the same schedule.
+- **Discord Delivery Queue** starts with [PR #183](https://github.com/RyoTsushigawa/anime-schedule/pull/183), which blocks repeat sends for recorded posts. Next, add persistent delivery attempts and reconcile uncertain outcomes before offering retries.
 
 For each item, check current main and open PRs, record the owner or branch in the shared backlog, and use the existing UI entry point where possible. Keep the PR focused on one workflow and verify it through that entry point before marking it ready.
