@@ -290,6 +290,11 @@ await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
 const WEEKDAYS = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'];
 const NIGHT_UNTIL = 6;
 const parseTime = time => (time || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).map(Number);
+// The group code of the votes helper (Season Preview, Awards, Börse): entered once, remembered on this device,
+// so pages opened in a new tab have it too. Kept in this browser only, never in scripts or URLs.
+const groupCode = () => { try { return sessionStorage.getItem('previewGroupCode') || localStorage.getItem('previewGroupCode') || ''; } catch { return ''; } };
+const rememberGroupCode = code => { try { sessionStorage.setItem('previewGroupCode', code); localStorage.setItem('previewGroupCode', code); } catch {} };
+const forgetGroupCode = () => { try { sessionStorage.removeItem('previewGroupCode'); localStorage.removeItem('previewGroupCode'); } catch {} };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const safeUrl = u => esc(/^https:\/\/[^\s"'<>]+$/i.test(String(u || '')) ? u : '#');
 function isSeasonFinalWeek(now = new Date()) {

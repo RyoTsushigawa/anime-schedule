@@ -337,9 +337,9 @@ function validChoices(person){
 }
 function currentVoter(){return pv('previewPerson').value||member?.person||'';}
 // A shared code unlocks group voting, without pretending to identify individual voters.
-// Keep the code in session storage, not in public scripts or URLs.
+// Keep the code in this browser (common.js groupCode), not in public scripts or URLs.
 function storedGroupCode(){
- try{return sessionStorage.getItem('previewGroupCode')||'';}catch{return '';}
+ return groupCode();
 }
 // the name chosen here before, else the person from the schedule's Solo view
 function selectedGroupPerson(){
@@ -382,7 +382,7 @@ async function configureVoting(){
   // first without a code: if the service has none, voting is open right away
   try{await checkGroupAccess(groupCode);member={account:'Gruppe'};}
   catch(error){
-   if(groupCode){groupCode='';try{sessionStorage.removeItem('previewGroupCode');}catch{}memberError=error.message;}
+   if(groupCode){groupCode='';forgetGroupCode();memberError=error.message;}
   }
  }
  updateMemberUI();
@@ -441,7 +441,7 @@ async function saveVote(show,choice){
    body:JSON.stringify({gid,title:show.title,person,choice,expected:old})
   });
   const data=await response.json().catch(()=>({}));
-  if(!response.ok){conflict=response.status===409;if(response.status===401){groupCode='';member=null;try{sessionStorage.removeItem('previewGroupCode');}catch{}updateMemberUI();}throw new Error(data.error||('Speichern fehlgeschlagen (HTTP '+response.status+')'));}
+  if(!response.ok){conflict=response.status===409;if(response.status===401){groupCode='';member=null;forgetGroupCode();updateMemberUI();}throw new Error(data.error||('Speichern fehlgeschlagen (HTTP '+response.status+')'));}
   if(current?.gid===gid){
    const existing=show.votes.find(v=>v.name===person);
    if(existing)existing.value=choice;else show.votes.push({name:person,value:choice});
@@ -534,7 +534,7 @@ pv('previewAccessForm').addEventListener('submit',async event=>{
   await checkGroupAccess(code);
   groupCode=code;
   member={account:'Gruppe'};
-  try{sessionStorage.setItem('previewGroupCode',code);}catch{}
+  rememberGroupCode(code);
   pv('previewGroupCode').value='';
   state('Gruppenabstimmung freigeschaltet.');
  }catch(error){memberError=error.message;state('Nicht freigeschaltet: '+error.message);}
@@ -543,7 +543,7 @@ pv('previewAccessForm').addEventListener('submit',async event=>{
 pv('previewLock').addEventListener('click',()=>{
  if(saving.size)return;
  groupCode='';member=null;voteFeedback.clear();
- try{sessionStorage.removeItem('previewGroupCode');}catch{}
+ forgetGroupCode();
  updateMemberUI();if(current)render();
  state('Gruppenzugang für diese Browser-Sitzung geschlossen.');
 });
