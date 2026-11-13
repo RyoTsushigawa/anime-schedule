@@ -1428,6 +1428,13 @@ button.header-nav-link { font-family: inherit; cursor: pointer; }
 .misc-menu.site-tools > a, .header-primary .misc-menu.site-tools > .misc-action { min-height: 46px; padding: 6px 8px; gap: 10px; font-size: inherit; }
 .misc-menu.site-tools .misc-icon { width: 30px; height: 30px; }
 .misc-menu.site-tools > a { color: var(--text); }
+.misc-feature-count {
+  margin: 6px 0 0;
+  padding: 8px 6px 2px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
 .misc-menu.site-tools .misc-text small { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- Cleaner lists ---- */
