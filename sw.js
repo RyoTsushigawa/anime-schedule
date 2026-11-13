@@ -3,7 +3,7 @@
 // is fetched as a whole and offers "Reload" (app.js). Data files still come fresh, with the saved copy
 // standing in when the network is slow or down. AniList, Google and LiveChart requests aren't touched:
 // the page keeps its own copies.
-const CACHE = 'schedule-v482';
+const CACHE = 'schedule-v483';
 const FILES = ['./', 'index.html', 'season-preview.html', 'season-preview.css', 'season-preview.js', 'season-trailers.json', 'services/crunchyroll.svg', 'services/netflix.svg', 'services/prime-video.svg', 'services/disney.svg', 'services/adn.svg', 'services/youtube.svg', 'services/akiba.svg', 'services/hidive.svg', 'services/aniworld.png', 'services/subsplease.png', 'services/nyaa.png', 'services/0neko.ico', 'style.css', 'frame-guard.js', 'early.js', 'tool-theme.js', 'common.js', 'mal.js', 'app.js', 'app-local.js', 'app-accounts.js', 'app-progress.js', 'app-catchup.js', 'app-moves.js', 'app-discord.js', 'app-absence.js', 'app-dayedit.js', 'app-start.js', 'local-export.mjs', 'drag-moves.js', 'streams-de.json', 'fallback-links.json', 'config.json', 'nicknames.json', 'manifest.webmanifest', 'icon-72.png'];
 
 self.addEventListener('install', event => {
@@ -31,16 +31,18 @@ self.addEventListener('fetch', event => {
   // Saved without the query, so "?v=2" can't leave an older copy behind and nothing from a login link is kept
   const key = url.origin + url.pathname;
   const pageFile = isPageFile(request, url);
-  const fresh = () => fetch(request, { cache: pageFile ? 'default' : 'no-cache' }).then(async response => {
+  // Season Preview changes frequently; prefer the network for the page and its
+  // dedicated UI assets. Offline users still get the saved version. The games too: their pages import
+  // modules, and an older saved copy next to a newer one (or a stale module after a slow answer) stops
+  // the game from starting at all, so they always come fresh together.
+  const previewAsset = /\/(?:season-preview\.(?:html|css|js)|(?:games|cover-game|synopsis|trivia)\.(?:html|css|js)|game-guard\.js|[\w-]+\.mjs)$/.test(url.pathname);
+  const fresh = () => fetch(request, { cache: pageFile && !previewAsset ? 'default' : 'no-cache' }).then(async response => {
     if (response.ok && !response.redirected) await (await caches.open(CACHE)).put(key, response.clone());
     return response;
   });
   const saved = caches.open(CACHE).then(cache => cache.match(key)); // asked first, so this visit gets the older copy
   const network = fresh();
   event.waitUntil(network.catch(() => {})); // finishes saving even after the page has its answer
-  // Season Preview changes frequently; prefer the network for the page and its
-  // dedicated UI assets. Offline users still get the saved version.
-  const previewAsset = /\/(?:season-preview\.html|season-preview\.css|season-preview\.js)$/.test(url.pathname);
   if (previewAsset) {
     event.respondWith(network.catch(async () => (await saved) || Response.error()));
     return;
