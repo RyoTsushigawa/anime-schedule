@@ -1141,54 +1141,65 @@ text-align: center;
 }
 
 
-/* Absence calendar: clearer hierarchy, touch targets and repeated entries. */
+/* Absence dialog: two tabs (Kalender, Wiederkehrend), a compact calendar and short lists. */
 .away-dlg form { gap: 12px; }
-.away-dlg .away-intro { margin: 0; font-size: 12px; line-height: 1.5; }
 .away-head { gap: 12px; }
-#awayTitle { font-size: 17px; letter-spacing: -.01em; }
+#awayTitle { font-size: 17px; letter-spacing: -.01em; cursor: help; }
+.away-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 99px; background: var(--card); border: 1px solid var(--line); }
+.away-tabs [role="tab"] { min-height: 32px; padding: 4px 10px; border: 0; background: transparent; color: var(--muted); border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.away-tabs [role="tab"][aria-selected="true"] { background: color-mix(in srgb, var(--accent) 20%, transparent); color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
+.away-tabs [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.away-panel { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.away-panel[hidden], #awayEditor[hidden], .away-time[hidden], #awayMore[hidden], #repCancel[hidden] { display: none !important; }
 .away-nav { justify-content: center; gap: 9px; }
 #awayMonth { flex: 1 1 auto; text-align: center; font-size: 15px; font-variant-numeric: tabular-nums; }
 #awayPrev, #awayNext { width: 34px; height: 34px; padding: 0; flex: none; }
 #awayToday { font-size: 12px; padding: 5px 10px; }
-.away-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 3px 1px 1px; color: var(--muted); font-size: 11px; }
+.away-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; color: var(--muted); font-size: 11px; }
 .away-legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.away-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
-.away-legend-today { border: 2px solid var(--accent); }
-.away-legend-selected { background: var(--accent); }
-.away-legend-dot { background: var(--muted); border-radius: 50% !important; }
-.away-legend-part { border: 2px solid var(--muted); border-radius: 50% !important; }
-.away-legend-maybe { border: 1.5px dashed var(--muted); border-radius: 50% !important; }
-.away-day { min-width: 0; min-height: 51px; padding: 5px 1px; border-radius: 11px; gap: 5px; }
+.away-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; box-sizing: border-box; }
+.away-legend-dot { background: var(--muted); }
+.away-legend-part { border: 1.5px solid var(--muted); }
+.away-legend-maybe { border: 1.5px dashed var(--muted); }
+.away-day { min-width: 0; min-height: 48px; padding: 5px 1px; border-radius: 11px; gap: 5px; }
 .away-day:disabled { opacity: .4; }
 .away-day.today { border: 2px solid var(--accent); }
 .away-day.today.sel { outline: 2px solid var(--accent-text); outline-offset: -4px; }
-.away-day.has-entries:not(.sel) { background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
 .away-dots { min-height: 8px; align-items: center; }
 .away-dots i { width: 8px; height: 8px; }
-.away-hint { min-height: 25px; padding: 5px 8px; border-radius: 9px; background: var(--bg); color: var(--muted); font-size: 11px; line-height: 1.5; }
-.away-editor { padding: 13px; border-radius: 12px; gap: 10px; }
-#awayRange { font-size: 13px; }
+.away-hint { margin: 0; padding: 4px 8px; border-radius: 9px; background: var(--bg); color: var(--muted); font-size: 11px; line-height: 1.5; text-align: center; }
+.away-editor { padding: 12px; border-radius: 12px; gap: 10px; }
+#awayRange, #repFormTitle { font-size: 13px; }
+.away-mode { width: 100%; }
 .away-mode button { flex: 1 1 0; min-width: 0; }
-.away-repeat-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.away-repeat-setting > span { color: var(--muted); font-size: 12px; }
-.away-repeat-setting .segmented { margin: 0; }
-.away-repeat-setting .segmented button { font-size: 12px; }
-.away-repeat-hint { margin: 0 !important; font-size: 11px !important; line-height: 1.4; }
 .away-time input { min-width: 110px; max-width: 155px; }
 .away-editor .day-absent { gap: 7px; }
 .away-editor .day-absent .pill { min-height: 34px; }
+.away-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; }
+.away-list-heading .away-sub { margin: 0; }
+#awayListCount { font-size: 11px; }
 .away-list { gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.away-list li { min-width: 0; padding: 8px 10px; gap: 9px; line-height: 1.35; }
+.away-list li { min-width: 0; padding: 7px 10px; gap: 9px; line-height: 1.35; }
 .away-list li + li { border-top: 1px solid var(--line); }
-.away-list li .pill { min-height: 30px; min-width: 30px; padding: 3px; }
-.away-list li > span:nth-child(2) { overflow-wrap: anywhere; font-size: 12px; flex: 1 1 auto; min-width: 0; }
+.away-list li .pill { min-height: 30px; min-width: 30px; padding: 3px 8px; }
+.away-whos { display: flex; flex-wrap: wrap; gap: 4px; flex: none; max-width: 45%; }
+.away-entry-actions .pill { display: inline-grid; place-items: center; width: 32px; height: 32px; min-height: 0 !important; padding: 0 !important; border-radius: 50%; }
+.away-list .away-what { overflow-wrap: anywhere; font-size: 12px; flex: 1 1 auto; min-width: 0; }
+.away-more { justify-self: center; font-size: 12px; }
+.rep-field { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; }
+.rep-field > span { color: var(--muted); font-size: 12px; }
+.rep-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.rep-weekdays button { min-height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.rep-weekdays button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.rep-dates { grid-template-columns: 1fr 1fr; }
+.rep-dates label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); min-width: 0; }
+.rep-dates input { flex: 1; min-width: 0; }
 @media (max-width: 420px) {
- .away-day { min-height: 45px; padding: 4px 1px; }
+ .away-day { min-height: 42px; padding: 4px 1px; }
  .away-grid { gap: 3px; }
- .away-legend { gap: 5px 9px; }
- .away-repeat-setting { align-items: stretch; }
- .away-repeat-setting .segmented { width: 100%; }
- .away-repeat-setting .segmented button { flex: 1; }
+ .away-mode button { padding-inline: 4px; font-size: 12px; }
+ .rep-field { grid-template-columns: 1fr; gap: 5px; }
+ .rep-dates { grid-template-columns: 1fr 1fr; }
 }
 
 /* Clarity pass: keep action labels readable on narrow screens. */
@@ -1211,9 +1222,6 @@ text-align: center;
 .away-entry-actions { display: inline-flex; align-items: center; gap: 5px; flex: none; margin-left: auto; }
 .away-entry-actions .pill { white-space: nowrap; }
 @media (max-width: 420px) {
-  .away-list li { flex-wrap: wrap; }
-  .away-entry-actions { margin-left: auto; }
-  .away-entry-actions .pill { min-height: 36px; }
   .away-nav { gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) { .away-dlg { scroll-behavior: auto; } }
