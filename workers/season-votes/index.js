@@ -218,6 +218,52 @@ async function awardsReveal(body,env){
  await awardsStore(env).put('meta:'+season,JSON.stringify({revealed:true,revealedAt:new Date().toISOString()}));
  return {ok:true,season,revealed:true};
 }
+// Anime-Börse (boerse.html): play money for the season's real anime. Everyone gets 1000 Taler and buys shares at
+// 100 each, only while trading is open: from 14 days before to 14 days after the season starts (Winter 1 Jan,
+// Frühling 1 Apr, Sommer 1 Jul, Herbst 1 Oct). A share's value later comes from the group's own ratings (the page
+// works it out from AniList). "stock:<season>:<person>" = { person, holdings: { title: shares }, at }. While
+// trading is open only the names of who has a portfolio are given out; after that everyone's holdings.
+const STOCK_CASH=1000,STOCK_PRICE=100,STOCK_DAYS=14*86400000;
+const SEASON_MONTH={Winter:0,'Frühling':3,Sommer:6,Herbst:9};
+function stockWindow(season,now=Date.now()){
+ const [name,year]=season.split(' ');
+ const start=Date.UTC(Number(year),SEASON_MONTH[name],1)-3600000; // midnight German time
+ const from=start-STOCK_DAYS,to=start+STOCK_DAYS;
+ return {from:new Date(from).toISOString(),to:new Date(to).toISOString(),open:now>=from&&now<to};
+}
+async function stocksState(env,season){
+ const store=awardsStore(env),list=[];let cursor;
+ do{const page=await store.list({prefix:'stock:'+season+':',cursor});
+  for(const key of page.keys){try{const p=JSON.parse(await store.get(key.name)||'null');if(p?.person)list.push(p);}catch{}}
+  cursor=page.list_complete?undefined:page.cursor;}while(cursor);
+ return list.sort((a,b)=>a.person.localeCompare(b.person,'de'));
+}
+async function stocksGet(url,env,now){
+ const season=awardSeason(url.searchParams.get('season')),window=stockWindow(season,now);
+ const list=await stocksState(env,season);
+ const person=str(url.searchParams.get('person'));
+ return {season,...window,cash:STOCK_CASH,price:STOCK_PRICE,traders:list.map(p=>p.person),
+  // your own portfolio is always yours to see; everyone's once trading has closed
+  ...(person&&AWARD_NAME.test(person)&&{mine:list.find(p=>p.person===person)?.holdings||null}),
+  ...(!window.open&&{portfolios:list.map(p=>({person:p.person,holdings:p.holdings}))})};
+}
+async function stocksSave(body,env,now){
+ const season=awardSeason(body.season),person=str(body.person);
+ if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
+ if(!stockWindow(season,now).open)fail(409,'Handel ist nur zum Start der Season offen.');
+ if(!body.holdings||typeof body.holdings!=='object'||Array.isArray(body.holdings))fail(400,'Ungültiges Depot.');
+ const holdings={};let spent=0;
+ const entries=Object.entries(body.holdings);
+ if(entries.length>60)fail(400,'Zu viele Anime.');
+ for(const [title,count] of entries){
+  const t=awardTitle(title);
+  if(!t||!Number.isInteger(count)||count<0||count>STOCK_CASH/STOCK_PRICE)fail(400,'Ungültige Anzahl Aktien.');
+  if(count){holdings[t]=count;spent+=count*STOCK_PRICE;}
+ }
+ if(spent>STOCK_CASH)fail(400,'Nicht genug Taler.');
+ await awardsStore(env).put('stock:'+season+':'+person,JSON.stringify({person,holdings,at:new Date(now).toISOString()}));
+ return {ok:true,season,person,holdings,cash:STOCK_CASH-spent};
+}
 // Wrong streaming links (U45, reported from the weekly plan; the repair queue N55 reads them), in KV (binding
 // AWARDS, prefix "report:"): { id, at, status: 'pending' | 'fixed' | 'rejected', anilistId, title, service, url,
 // suggestion?, note?, resolvedAt?, resolution? }. POST /reports adds one, GET /reports[?status=] lists them
@@ -297,6 +343,17 @@ export default {
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
     return json(path==='/awards/ballot'?await awardsBallot(body,env):await awardsReveal(body,env),200,cors);
+   }
+   if(request.method==='GET'&&path==='/stocks'){
+    await authorized(request,env);
+    return json(await stocksGet(new URL(request.url),env,Number(env.TEST_NOW)||Date.now()),200,cors);
+   }
+   if(request.method==='POST'&&path==='/stocks/portfolio'){
+    if(Number(request.headers.get('Content-Length')||0)>8192)fail(413,'Anfrage zu groß.');
+    await authorized(request,env);
+    const body=await request.json();
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    return json(await stocksSave(body,env,Number(env.TEST_NOW)||Date.now()),200,cors);
    }
    if(request.method==='GET'&&path==='/reports'){
     await authorized(request,env);

@@ -1,0 +1,34 @@
+.boerse-page { width: min(100% - 2rem, 46rem); margin: 2rem auto; }
+.boerse-page [hidden] { display: none !important; }
+.boerse-toolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; margin-bottom: .8rem; }
+.boerse-page label { display: grid; gap: .4rem; min-width: 0; }
+.boerse-page select { width: 100%; min-width: 0; }
+.boerse-window { font-weight: 650; margin: .2rem 0 .6rem; }
+.boerse-rules { margin: 0 0 1rem; font-size: 13px; color: var(--muted); }
+.boerse-rules summary { cursor: pointer; color: var(--text); }
+.boerse-rules ul { margin: .5rem 0 0; padding-left: 1.2rem; display: grid; gap: .3rem; }
+.boerse-wallet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: 0 0 1rem; }
+.boerse-wallet div { padding: .7rem .8rem; border: 1px solid var(--line); border-radius: 12px; background: var(--card); display: grid; gap: .2rem; }
+.boerse-wallet small { color: var(--muted); font-size: 11px; }
+.boerse-wallet b { font-size: 1.25rem; }
+.boerse-page .up { color: #4fbf7f; }
+.boerse-page .down { color: #e5737a; }
+.boerse-traders { list-style: none; padding: 0; margin: 0 0 .8rem; display: flex; flex-wrap: wrap; gap: .4rem; font-size: 12px; color: var(--muted); }
+.boerse-traders li { padding: .15rem .55rem; border: 1px solid var(--line); border-radius: 99px; }
+.boerse-traders li.label { border: 0; padding-left: 0; }
+.boerse-traders li.done { color: var(--text); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.boerse-list { display: grid; gap: .35rem; }
+.boerse-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .8rem; padding: .5rem .7rem; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.boerse-row.owned { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.boerse-title { display: grid; gap: .1rem; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.boerse-title small, .boerse-price small, .boerse-hint { color: var(--muted); font-size: 11px; }
+.boerse-price { display: grid; justify-items: end; font-weight: 700; font-variant-numeric: tabular-nums; }
+.boerse-have { display: inline-flex; align-items: center; gap: .35rem; font-variant-numeric: tabular-nums; }
+.boerse-have b { min-width: 1.4em; text-align: center; }
+.boerse-have button { min-width: 2rem; padding: .1rem .5rem; }
+.boerse-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 1rem 0; }
+.boerse-board { margin: 1.5rem 0; }
+.boerse-board ol { margin: 0; padding-left: 1.4rem; display: grid; gap: .5rem; }
+.boerse-board li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .1rem .8rem; }
+.boerse-board li .boerse-holdings { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+@media (max-width: 560px) { .boerse-row { grid-template-columns: minmax(0, 1fr) auto; } .boerse-have { grid-column: 1 / -1; justify-content: flex-end; } }
