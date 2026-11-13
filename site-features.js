@@ -46,6 +46,7 @@ const SITE_FEATURES = [
   ['Tier-Liste & Awards', ['Tier-Liste mit „Für Discord kopieren“', 'Awards mit 22 Kategorien wie bei den Crunchyroll Awards', 'Eurovision-Punkte: 12, 10 und 8 pro Kategorie',
     'Nominierte durchsuchen (auch Figuren von AniList)', 'Ceddl of the Year: Kandidaten über die Season sammeln', 'Geheime Gruppenabstimmung mit „Auflösen“',
     'Punktevergabe-Show: Wertung für Wertung, „… und unsere 12 Punkte gehen an …“', 'Ruhmeshalle']],
+  ['Anime-Börse', ['Aktien auf die Season-Anime mit Spielgeld, gehandelt zum Season-Start', 'Kurse aus den eigenen AniList-Bewertungen der Gruppe', 'Geheime Depots bis Handelsschluss, danach Rangliste']],
   ['Spiele', ['Spieleseite mit dem heutigen Stand', 'Titel-Rätsel (täglich / endlos, normal / schwer, Hinweise)', 'Anime Cover Quiz',
     'Inhalts-Rätsel mit Archiv und Statistik', 'Anime-Quiz']],
   ['Sonstiges', ['Masterset Tracker', 'McRib bestellen']],

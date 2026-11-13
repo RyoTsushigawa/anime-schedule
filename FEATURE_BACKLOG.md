@@ -68,7 +68,7 @@ Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED
 ## Owner requests outside the challenge (13 Nov)
 
 - **Awards rebuild:** Eurovision points (12 / 10 / 8 per category, voter-by-voter reveal show), 22 categories like the Crunchyroll Anime Awards (Hauptpreise, Genres, Figuren, Handwerk) and **Ceddl of the Year** from candidates the group collects over the season. Done.
-- **Anime-Börse:** a stock market with play money for the season's real anime; trading only at the start of the season; a share's value comes from the group's own ratings. Next.
+- **Anime-Börse:** a stock market with play money for the season's real anime; trading only at the start of the season (14 days before to 14 days after); 1000 Taler, shares at 100; a share's value is the group's average AniList score × 2 (dropped without a score = 30). Portfolios secret while trading is open, then a ranking. Done: Mehr › Anime-Börse.
 
 ## Curation decisions
 
