@@ -1446,12 +1446,18 @@ button.header-nav-link { font-family: inherit; cursor: pointer; }
 .misc-menu.site-tools .misc-icon { width: 30px; height: 30px; }
 .misc-menu.site-tools > a { color: var(--text); }
 .misc-feature-count {
+  display: block; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); cursor: pointer; font: inherit;
   margin: 6px 0 0;
   padding: 8px 6px 2px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
 }
+.misc-feature-count:hover { color: var(--text); }
+.features-list section { margin: 0 0 14px; }
+.features-list h3 { margin: 0 0 4px; font-size: 14px; display: flex; justify-content: space-between; }
+.features-list h3 span { color: var(--muted); font-weight: 400; font-size: 12px; }
+.features-list ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
 .misc-menu.site-tools .misc-text small { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- Cleaner lists ---- */

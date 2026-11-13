@@ -226,13 +226,17 @@ $(menu).hidden = !open;
 $(button).setAttribute('aria-expanded', open);
 }
 const showSettings = open => showMenu('settingsMenu', 'settingsButton', open);
+// "N Funktionen" in the "Mehr" menu: counted from site-features.js, a click shows the whole list
 const featureCount = $('siteFeatureCount');
-const featureEntries = document.querySelectorAll(
-  '#viewWeek, #viewCatchup, #viewPace, #awayButton, .header-games, #miscMenu .misc-action, #miscMenu > a'
-);
-const siteFeatures = [...featureEntries].filter(entry => !entry.matches('a') || entry.origin === location.origin);
-featureCount.textContent = siteFeatures.length + ' Funktionen · Ansichten, Tools und Spielebereich';
+const featureTotal = SITE_FEATURES.reduce((n, [, items]) => n + items.length, 0);
+featureCount.textContent = featureTotal + ' Funktionen · alle ansehen';
 featureCount.hidden = false;
+featureCount.onclick = () => {
+  $('featuresIntro').textContent = `${featureTotal} Funktionen in ${SITE_FEATURES.length} Bereichen.`;
+  $('featuresList').innerHTML = SITE_FEATURES.map(([area, items]) => `<section><h3>${esc(area)} <span>${items.length}</span></h3><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
+  $('featuresDlg').showModal();
+  $('featuresDlg').scrollTop = 0;
+};
 
 $('miscButton').onclick = () => showMenu('miscMenu','miscButton',$('miscMenu').hidden);
 $('miscMenu').addEventListener('click',e=>{ if(e.target.closest('a,button')) showMenu('miscMenu','miscButton',false); });
