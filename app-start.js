@@ -115,6 +115,81 @@ if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
 // N39 Datenstand: when each source was last updated, and whether a saved copy is in use
 const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
+// One baseline per person and week. Keep it until the user acknowledges the changes.
+function scheduleInboxEntries(days) {
+  return Object.fromEntries(days.flatMap(day => day.rows.flatMap(row => {
+    const title = row.show?.english || row.show?.romaji;
+    if (!title || row.extra || row.fallback) return [];
+    const key = norm(row.show.romaji || title);
+    const at = row.watchAt ?? row.plannedAt;
+    const time = !row.pause && Number.isFinite(at)
+      ? new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
+    return [[key, { title, day: isoDay(day.date), time, paused: !!row.pause }]];
+  })));
+}
+let scheduleInboxRun = 0;
+$('list').addEventListener('click', async event => {
+  if (!event.target.closest('#scheduleInboxButton')) return;
+  const run = ++scheduleInboxRun, person = soloPerson, start = weekStart(weekOffset);
+  const dialog = $('scheduleInboxDlg'), status = $('scheduleInboxStatus');
+  const list = $('scheduleInboxList'), read = $('scheduleInboxRead');
+  const current = () => dialog.open && run === scheduleInboxRun;
+  list.replaceChildren();
+  read.hidden = true;
+  status.textContent = 'Aktueller Guckplan wird geprüft …';
+  dialog.showModal();
+  try {
+    await ready;
+    const previous = new Date(start);
+    previous.setDate(start.getDate() - 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const needed = new Map([previous, start, end].flatMap(day =>
+      activeTabs(tabs, day).map(tab => [tab.gid, tab])));
+    const [airings, plans] = await Promise.all([
+      Promise.all([downloadAirings(previous), downloadAirings(start)]),
+      Promise.all([...needed.values()].map(async tab => [tab.gid, await loadPlan(tab, true)])),
+    ]);
+    if (!current()) return;
+    if (!plans.some(([, plan]) => plan.people.includes(person))) {
+      status.textContent = 'Für ' + person + ' gibt es keinen Plan in dieser Woche.';
+      return;
+    }
+    const entries = scheduleInboxEntries(render(airings.flat(), start, new Map(plans), true, false, null, person));
+    const key = 'scheduleInbox:v1:' + JSON.stringify([SHEET, person, isoDay(start)]);
+    const prior = JSON.parse(localStorage.getItem(key) || 'null');
+    const save = () => localStorage.setItem(key, JSON.stringify({ ...prior, ...entries }));
+    if (!prior) {
+      save();
+      status.textContent = person + ' · Erster Vergleichspunkt gespeichert.';
+      return;
+    }
+    for (const [id, row] of Object.entries(entries)) {
+      const old = Object.hasOwn(prior, id) ? prior[id] : null;
+      const change = !old ? 'Neu im Plan' : row.paused && !old.paused ? 'Pausiert'
+        : !row.paused && old.paused ? 'Wieder im Plan'
+        : row.day !== old.day || row.time !== old.time ? 'Verschoben' : '';
+      if (!change) continue;
+      const item = document.createElement('li');
+      item.textContent = row.title + ' · ' + change + ' · ' + shortDate(row.day) + (row.time ? ' · ' + row.time : '');
+      list.append(item);
+    }
+    status.textContent = person + ' · ' + (list.children.length ? list.children.length + ' Änderungen' : 'Keine Änderungen');
+    read.hidden = !list.children.length;
+    read.onclick = () => {
+      try {
+        save();
+        list.replaceChildren();
+        read.hidden = true;
+        status.textContent = 'Änderungen als gelesen markiert.';
+      } catch {
+        status.textContent = 'Lesestand konnte nicht gespeichert werden.';
+      }
+    };
+  } catch {
+    if (current()) status.textContent = 'Planänderungen konnten gerade nicht geprüft werden. Der letzte Vergleichspunkt bleibt erhalten.';
+  }
+});
 async function drawDataStatus() {
 const notes = [...dataNotes.keys()];
 const saved = prefix => notes.some(k => k.startsWith(prefix));

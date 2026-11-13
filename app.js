@@ -1054,12 +1054,12 @@ cursor = next;
 }
 // shifted: the group's final times from a first pass (delays, Lang/Doppelt), so "ab 21:00" absences
 // are checked at the time a show is really watched
-function render(items, start, plans, everyone = false, keepDays = false, shifted = null) {
+function render(items, start, plans, everyone = false, keepDays = false, shifted = null, snapshotPerson = null) {
 if (!everyone) lastWeekRender = [items, start, plans];
 const restore = everyone ? null : preserveListPosition();
 if (!everyone) updateFallbackControls();
 const fallback = fallbackWeeks.has(start.getTime());
-const people = everyone ? [...new Set([...plans.values()].flatMap(s => s.people))] : activePeople();
+const people = snapshotPerson ? [snapshotPerson] : everyone ? [...new Set([...plans.values()].flatMap(s => s.people))] : activePeople();
 if (!people.length) {
 $('list').innerHTML = '<div class="status">Keine Person ausgewählt.<button class="pill empty-action" data-pick-people>Personen auswählen</button></div>';
 return;
@@ -1160,7 +1160,7 @@ slot: { tag: DAY_TAGS[(day.date.getDay() + 6) % 7], time: x.time || '' },
 show: { romaji: `${m.title.romaji || name} · Nachholen`, english: `${name} · Nachholen` } });
 }
 const heads = p => p === 'MaRyo' ? 2 : 1;
-const fullDays = !everyone && (delays.length || absentDays.length || absentRules.length || moves.some(m => m.skip || m.double || m.long)
+const fullDays = (!everyone || snapshotPerson) && (delays.length || absentDays.length || absentRules.length || moves.some(m => m.skip || m.double || m.long)
   || Object.values(streamsDe?.status || {}).some(s => s.long?.length)) ? render(items, start, plans, true) : null;
 const showKey = (day, r) => isoDay(day.date) + '|' + norm(r.show?.romaji || r.show?.english || '');
 const finalAt = shifted || (fullDays && new Map(fullDays.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
@@ -1271,7 +1271,7 @@ assignWatchTimes(d);
 applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d);
 for (const r of d.rows) if (r.extra) r.when = new Date(r.watchAt);
 }
-if (everyone && !shifted && [...absentDays, ...absentRules].some(x => x.from || x.until) && days.some(d => d.rows.some(r => r.plannedAt != null && r.plannedAt !== r.watchAt)))
+if (everyone && !snapshotPerson && !shifted && [...absentDays, ...absentRules].some(x => x.from || x.until) && days.some(d => d.rows.some(r => r.plannedAt != null && r.plannedAt !== r.watchAt)))
   return render(items, start, plans, true, keepDays, new Map(days.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);
@@ -1402,8 +1402,9 @@ const lines = [
 ];
 // The chip stays where it is (right of the day strip); what it lists opens underneath, across the full width.
 const alerts = !lines.length ? '' : `<button type="button" id="airingWarnings" class="alerts-chip" aria-expanded="${alertsOpen}" aria-controls="airingBody"><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></button>`;
+const inboxButton = '<button type="button" class="pill schedule-inbox-button" id="scheduleInboxButton" aria-haspopup="dialog">Planänderungen</button>';
 const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts alerts-body"${alertsOpen ? '' : ' hidden'}>${lines.join('')}</div>`;
-html = `${staleNotice}<div class="weekline">${strip}${alerts}${alertsBody}</div>` + html;
+html = `${staleNotice}<div class="weekline">${strip}${alerts}${inboxButton}${alertsBody}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
