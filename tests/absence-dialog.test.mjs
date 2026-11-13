@@ -141,12 +141,21 @@ test('without the GitHub key, rules go to the save service, which must give them
       p.window.Element.prototype.scrollIntoView = () => {};
       await p.click(p.$('awayButton'));
       await p.click(p.$('awayTabRecurring'));
-      await fill(p, { people: ['Belly'], days: [4] });
+      await fill(p, { people: ['Belly'], days: [0], mode: 'until', clock: '23:00', from: '2026-11-16' });
       await p.click(p.$('repSave'), 300);
       const post = p.state.delayPosts.at(-1);
       assert.deepEqual(post.days, []);
+      assert.deepEqual(post.absent, []);
       assert.equal(post.rules.length, 1);
-      if (helper === 'v19') assert.match(p.$('awayMsg').textContent, /Belly: jeden Fr, ganztägig, bis auf Weiteres/);
+      const { id, ...rule } = post.rules[0];
+      assert.ok(id);
+      assert.deepEqual(rule, { person: 'Belly', weekdays: [0], start: '2026-11-16', until: '23:00' });
+      if (helper === 'v19') {
+        assert.match(p.$('awayMsg').textContent, /Belly: jeden Mo, bis 23:00, bis auf Weiteres/);
+        assert.equal(p.run("awayAt('2030-11-18', 'Belly', 22 * 60)"), true);
+        assert.equal(p.run("awayAt('2030-11-18', 'Belly', 23 * 60)"), false);
+        assert.equal(p.run("awayAt('2030-11-19', 'Belly', 22 * 60)"), false);
+      }
       else assert.match(p.$('awayMsg').textContent, /Nicht gespeichert: .*v19/);
     } finally { p.close(); }
   }
