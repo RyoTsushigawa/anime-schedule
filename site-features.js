@@ -59,7 +59,7 @@ const SITE_PLANNED = [
     'Verschieben: Warnung, wenn der Slot vor der Ausstrahlung liegt', 'Verschieben: einmalige Verschiebung bis zu einer gewählten Woche',
     'Abwesenheiten: versehentlich gelöschte rückgängig machen', 'Abwesenheiten: überlappende Einträge anzeigen',
     'Abwesenheiten: vorher zeigen, welche Serien betroffen sind', 'Catch-up: eine einzelne „Später“-Serie zurückholen',
-    'Suche: letzte Suchen löschen', 'Season Preview: Länge des Trailers', 'Awards: Nominierte durchsuchen',
+    'Suche: letzte Suchen löschen', 'Season Preview: Länge des Trailers',
     'Awards: Abstimmungsschluss zum Start der nächsten Season', 'Awards: eine Kategorie bewusst auslassen',
   ]],
 ];
