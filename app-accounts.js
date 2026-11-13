@@ -231,12 +231,22 @@ const featureCount = $('siteFeatureCount');
 const featureTotal = SITE_FEATURES.reduce((n, [, items]) => n + items.length, 0);
 featureCount.textContent = featureTotal + ' Funktionen · alle ansehen';
 featureCount.hidden = false;
-featureCount.onclick = () => {
-  $('featuresIntro').textContent = `${featureTotal} Funktionen in ${SITE_FEATURES.length} Bereichen.`;
-  $('featuresList').innerHTML = SITE_FEATURES.map(([area, items]) => `<section><h3>${esc(area)} <span>${items.length}</span></h3><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
-  $('featuresDlg').showModal();
+const plannedTotal = SITE_PLANNED.reduce((n, [, items]) => n + items.length, 0);
+$('featuresTabNow').textContent = `Vorhanden · ${featureTotal}`;
+$('featuresTabPlanned').textContent = `Geplant · ${plannedTotal}`;
+// "Vorhanden": everything live; "Geplant": approved features and updates still to come
+function drawFeatures(planned) {
+  const list = planned ? SITE_PLANNED : SITE_FEATURES;
+  $('featuresTabNow').setAttribute('aria-selected', !planned);
+  $('featuresTabPlanned').setAttribute('aria-selected', planned);
+  $('featuresIntro').textContent = planned ? `${plannedTotal} Funktionen und Updates sind beschlossen und kommen als Nächstes.`
+    : `${featureTotal} Funktionen in ${SITE_FEATURES.length} Bereichen.`;
+  $('featuresList').innerHTML = list.map(([area, items]) => `<section><h3>${esc(area)} <span>${items.length}</span></h3><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
   $('featuresDlg').scrollTop = 0;
-};
+}
+$('featuresTabNow').onclick = () => drawFeatures(false);
+$('featuresTabPlanned').onclick = () => drawFeatures(true);
+featureCount.onclick = () => { drawFeatures(false); $('featuresDlg').showModal(); $('featuresDlg').scrollTop = 0; };
 
 $('miscButton').onclick = () => showMenu('miscMenu','miscButton',$('miscMenu').hidden);
 $('miscMenu').addEventListener('click',e=>{ if(e.target.closest('a,button')) showMenu('miscMenu','miscButton',false); });

@@ -48,3 +48,19 @@ const SITE_FEATURES = [
     'Inhalts-Rätsel mit Archiv und Statistik', 'Anime-Quiz']],
   ['Sonstiges', ['Masterset Tracker', 'McRib bestellen']],
 ];
+// What's coming: approved in the feature challenge (FEATURE_BACKLOG.md) but not built yet. Move a line up to
+// SITE_FEATURES when it's live.
+const SITE_PLANNED = [
+  ['Neue Funktionen', [
+    'Bearbeiter-Zugang: vertrauten Leuten erlauben, Serien zu verschieben, ohne den GitHub-Schlüssel zu teilen',
+  ]],
+  ['Verbesserungen', [
+    'Wochenplan: gesehene Folgen in der eigenen Ansicht ausblenden', 'Wochenplan: leere Tage ausblenden',
+    'Wochenplan: Stream-Link kopieren', 'Verschieben: Warnung, wenn der neue Slot mit einer anderen Serie derselben Leute kollidiert',
+    'Verschieben: Warnung, wenn der Slot vor der Ausstrahlung liegt', 'Verschieben: einmalige Verschiebung bis zu einer gewählten Woche',
+    'Abwesenheiten: versehentlich gelöschte rückgängig machen', 'Abwesenheiten: überlappende Einträge anzeigen',
+    'Abwesenheiten: vorher zeigen, welche Serien betroffen sind', 'Catch-up: eine einzelne „Später“-Serie zurückholen',
+    'Suche: letzte Suchen löschen', 'Season Preview: Länge des Trailers', 'Awards: Nominierte durchsuchen',
+    'Awards: Abstimmungsschluss zum Start der nächsten Season', 'Awards: eine Kategorie bewusst auslassen',
+  ]],
+];
