@@ -2,6 +2,8 @@
 # Discord button on a day heading gives (tools/discord-daily.mjs). Needs the repository secret
 # DISCORD_WEBHOOK_SCHEDULE (Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL).
 name: Daily Discord schedule
+# The run's name says what it was, for the delivery list on the site (N63 Discord-Zustellung)
+run-name: ${{ github.event_name == 'push' && 'Aktualisierung' || (inputs.dry_run || inputs.test_edit || inputs.test_warning || github.event.client_payload.dry_run) && 'Probe' || github.event.client_payload.retry && 'Tagespost (erneut)' || 'Tagespost' }}
 
 on:
   # GitHub's own timer starts runs hours late or not at all, so the Cloudflare helper starts this

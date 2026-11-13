@@ -1641,6 +1641,7 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .sync-list li.failed b { color: #e5737a; }
 .sync-list small { color: var(--muted); font-size: 11px; }
 .repair-list a { color: var(--text); overflow-wrap: anywhere; }
+.delivery-alert { margin-left: auto; padding-left: 8px; color: #e5b45c; font-size: 12px; }
 .repair-list small.ok { color: #6cc28a; }
 .repair-list small.warn { color: #e5b45c; }
 .repair-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
