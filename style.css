@@ -1454,6 +1454,8 @@ button.header-nav-link { font-family: inherit; cursor: pointer; }
   font-size: 12px;
 }
 .misc-feature-count:hover { color: var(--text); }
+.features-tabs { margin: 10px 0 2px; }
+.features-tabs [aria-selected="true"] { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text); }
 .features-list section { margin: 0 0 14px; }
 .features-list h3 { margin: 0 0 4px; font-size: 14px; display: flex; justify-content: space-between; }
 .features-list h3 span { color: var(--muted); font-weight: 400; font-size: 12px; }

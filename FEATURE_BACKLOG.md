@@ -2,6 +2,8 @@
 
 The feature challenge has **24 of 50 approved standalone features**. This file joins the approvals from the ChatGPT rounds (#159) and the Claude rounds (#176/#178) into one list. Claude's items got new IDs where an ID was already taken (N83–N85, U74). On 13 Nov the owner decided to start building the approved items now instead of waiting for 50.
 
+Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED` in `site-features.js`).
+
 ## Approved standalone features
 
 | ID | Feature | Status |
@@ -12,15 +14,15 @@ The feature challenge has **24 of 50 approved standalone features**. This file j
 | N38 | Group Availability Grid | Merged in [PR #168](https://github.com/RyoTsushigawa/anime-schedule/pull/168). Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
 | N39 | Schedule Data Status | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
 | N44 | Watch Progress Sync History | Merged in [PR #169](https://github.com/RyoTsushigawa/anime-schedule/pull/169). Show recent AniList and MyAnimeList episode updates from this browser, with successes and failures. |
-| N48 | Personal Schedule Change Inbox | Approved. Show moves, pauses, and additions since the last visit for shows on the selected person's plan. |
-| N50 | Episode Number Crosswalk | Approved. Match streaming season and episode numbering to the Guckplan, AniList, and MyAnimeList where mappings are known. |
+| N48 | Personal Schedule Change Inbox | Done: Planänderungen in the weekly plan (integrated from ChatGPT's PRs). Show moves, pauses, and additions since the last visit for shows on the selected person's plan. |
+| N50 | Episode Number Crosswalk | Done: Einstellungen › Folgennummern vergleichen (integrated from ChatGPT's PRs). |
 | N55 | Maintainer Repair Queue | Done: Einstellungen › Link-Meldungen (only with the plan's GitHub key). Lists open U45 reports, checks a proposed link against the service's own site, Übernehmen saves it to link-fixes.json (applied on top of the generated links) and closes every report about that link; Erledigt / Ablehnen close one. |
 | N59 | AniList ↔ MyAnimeList Transfer Assistant | Preview done: Settings › AniList ↔ MAL vergleichen (differences, one side only, no MAL ID; nothing is written). Copying selected entries is the follow-up. Preview a provider transfer, resolve title or progress mismatches, and select entries to copy. |
 | N61 | Guckplan Editor Access | Approved. Let the plan owner grant trusted members permission to move shows without sharing the owner's GitHub key. Keep management owner-only. |
 | N63 | Discord Delivery Queue | Done: Einstellungen › Discord-Zustellung (only with the plan's GitHub key). The daily posts and post edits of the last days from the workflow runs, failed ones marked (⚠ on the menu entry). A failed run from today can be re-run once; if no post went out at all, „Tagespost jetzt senden“ starts it once. The script still refuses a second post for the same day (daily-post.json). |
 | N66 | Plan Issue Diagnostic Report | Merged with the integration of ChatGPT's PRs ([#179](https://github.com/RyoTsushigawa/anime-schedule/pull/179)): day menu › Seriendaten prüfen. Generate a shareable report for a show with missing or inconsistent data, including title IDs, source, and last refresh. Exclude credentials and personal watch progress. |
 | N74 | Linked Account Troubleshooter | Merged with the integration of ChatGPT's PRs ([#175](https://github.com/RyoTsushigawa/anime-schedule/pull/175)): Settings › Kontoverbindung prüfen. |
-| N75 | Upcoming Plan Readiness | Approved. Surface upcoming sessions that need a decision and link to the existing editor. |
+| N75 | Upcoming Plan Readiness | Done: Plan-Check in the weekly plan (integrated from ChatGPT's PRs). |
 | N80 | Personal Catch-up Planner | Done: Catch-up › Automatisch einplanen. Each evening gets a time budget (Zeit offen, 30–180 Min., remembered per weekday); episodes are counted with their real length from AniList, and the preview shows when the evening's plan ends and until when the catch-up runs. |
 | N83 | Startet bald | Done: a „Startet bald“ box in the weekly plan. In the last weeks of a season, the weekly plan shows the next season's premieres that got „Ja“ votes, with their dates. |
 | N84 | Awards Hall of Fame | Done: Awards page › Ruhmeshalle. All revealed Seasonal Anime Awards at a glance: winners per season and category, and who most often voted for the winner. |

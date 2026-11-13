@@ -14,4 +14,12 @@ test('More shows how many features the site has, and the list behind it', async 
   assert.equal(p.$('featuresDlg').open, true);
   assert.equal(p.$('featuresList').querySelectorAll('li').length, total);
   assert.ok(p.$('featuresList').querySelectorAll('h3').length >= 10);
+  // "Geplant": what's approved but not live yet
+  await p.click(p.$('featuresTabPlanned'));
+  assert.equal(p.$('featuresTabPlanned').getAttribute('aria-selected'), 'true');
+  const planned = Number(p.$('featuresTabPlanned').textContent.match(/(\d+)/)[1]);
+  assert.equal(p.$('featuresList').querySelectorAll('li').length, planned);
+  assert.ok(planned > 0);
+  await p.click(p.$('featuresTabNow'));
+  assert.equal(p.$('featuresList').querySelectorAll('li').length, total);
 });
