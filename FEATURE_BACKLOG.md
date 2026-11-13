@@ -11,7 +11,7 @@ The feature challenge has **13 of 50 approved standalone features** and **30 app
 | N24 | Anime List Health Check | Approved. |
 | N35 | Anime Title Lookup | Approved. Search by English, romaji, Japanese title, or group nickname and show matching Guckplan, AniList, and MyAnimeList entries. |
 | N38 | Group Availability Grid | Approved. Show the whole group's weekly availability, including all-day, partial, and recurring absences. |
-| N39 | Schedule Data Status | Approved. Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
+| N39 | Schedule Data Status | Done (backlog batch 2). Show when the Guckplan, airing data, and trailer lists last updated and flag saved copies. |
 | N44 | Watch Progress Sync History | Approved. Show recent AniList and MyAnimeList episode updates from this browser, with successes and failures. |
 
 ## Approved updates
@@ -26,11 +26,11 @@ The feature challenge has **13 of 50 approved standalone features** and **30 app
 | U25 | Catch-up Pinned Anime | Approved. |
 | U27 | Season Preview · Next Unvoted Show | Done (backlog batch 1). After a vote saves, offer to jump to the next unvoted show for the selected voter and show how many are left. |
 | U29 | Absences · Filter by Person | Done (backlog batch 1). Filter entries in Kalender and Wiederkehrend by person, with an All option. |
-| U32 | Weekly Plan · Hide Covers | Approved. Add a text-only view that keeps times, episode numbers, and watch controls visible. |
-| U34 | Discord Schedule · Compact Copy | Approved. Offer a shorter copy format with start times, titles, and episode numbers. |
+| U32 | Weekly Plan · Hide Covers | Done (backlog batch 2). Add a text-only view that keeps times, episode numbers, and watch controls visible. |
+| U34 | Discord Schedule · Compact Copy | Done (backlog batch 2). Offer a shorter copy format with start times, titles, and episode numbers. |
 | U37 | Season Preview · Remember My Filters | Done (backlog batch 1). Restore the last selected voter and filters. |
 | U38 | Weekly Plan · Time Zone Override | Approved. Show the same schedule in Berlin time, device-local time, or a chosen time zone through the existing time settings. |
-| U39 | Weekly Plan · Explain Absence Pauses | Approved. Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
+| U39 | Weekly Plan · Explain Absence Pauses | Done (backlog batch 2). Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
 | U41 | Weekly Plan · Remind Me Before a Show | Approved. Offer an optional reminder from the existing watch-slot menu. |
 | U42 | Season Preview · Save an Unsent Vote | Done (backlog batch 1). Keep a failed vote as a draft on its show so the voter can retry later. |
 

@@ -213,7 +213,7 @@ const CHOICE_OK = {
 time: v => ['release', 'watch', 'both'].includes(v),
 sort: v => ['oldest', 'behind', 'quick', 'next', 'az'].includes(v),
 accent: v => v === 'person' || /^#[0-9a-f]{6}$/i.test(v),
-density: v => ['comfortable', 'compact'].includes(v),
+density: v => ['comfortable', 'compact', 'text'].includes(v),
 };
 for (const name of Object.keys(choices))
 try { const v = localStorage.getItem(name); if (CHOICE_OK[name](v)) choices[name] = v; } catch {}
@@ -223,7 +223,7 @@ for (const b of document.querySelectorAll(`[data-set="${name}"]`))
 b.setAttribute('aria-pressed', b.dataset.value === value);
 try { localStorage.setItem(name, value); } catch {}
 if (name === 'accent') applyAccent();
-if (name === 'density') document.body.classList.toggle('dense', value === 'compact');
+if (name === 'density') { document.body.classList.toggle('dense', value === 'compact' || value === 'text'); document.body.classList.toggle('text-only', value === 'text'); }
 }
 function applyAccent() {
 const root = document.documentElement.style;
