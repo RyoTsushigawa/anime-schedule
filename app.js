@@ -1119,7 +1119,7 @@ slot: { tag: DAY_TAGS[(day.date.getDay() + 6) % 7], time: x.time || '' },
 show: { romaji: `${m.title.romaji || name} · Nachholen`, english: `${name} · Nachholen` } });
 }
 const heads = p => p === 'MaRyo' ? 2 : 1;
-const fullDays = !everyone && (delays.length || absent.length || moves.some(m => m.skip || m.double || m.long)
+const fullDays = !everyone && (delays.length || absentDays.length || absentRules.length || moves.some(m => m.skip || m.double || m.long)
   || Object.values(streamsDe?.status || {}).some(s => s.long?.length)) ? render(items, start, plans, true) : null;
 const showKey = (day, r) => isoDay(day.date) + '|' + norm(r.show?.romaji || r.show?.english || '');
 const finalAt = shifted || (fullDays && new Map(fullDays.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
@@ -1136,7 +1136,7 @@ const isAway = p => awayAt(isoDay(day.date), p, minute);
 const missing = (r.who || []).filter(isAway);
 const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p), 0);
 if (!missing.length) return r;
-const maybe = missing.filter(p => absent.some(x => x.day === isoDay(day.date) && x.maybe && x.people?.includes(p)));
+const maybe = missing.filter(p => absencesForDay(isoDay(day.date)).some(x => x.maybe && x.people?.includes(p)));
 if (left > 1) return { ...r, away: missing, maybe };
 return { pause: true, skipped: true, show: r.show, slot: r.slot, when: r.when, episode: Math.min(...r.episodes), missing, maybe, alId: r.m?.id, links: r.links, who: r.who };
 });
@@ -1230,7 +1230,7 @@ assignWatchTimes(d);
 applyDelays(d, fullDays?.find(full => isoDay(full.date) === isoDay(d.date)) || d);
 for (const r of d.rows) if (r.extra) r.when = new Date(r.watchAt);
 }
-if (everyone && !shifted && absent.some(x => x.from || x.until) && days.some(d => d.rows.some(r => r.plannedAt != null && r.plannedAt !== r.watchAt)))
+if (everyone && !shifted && [...absentDays, ...absentRules].some(x => x.from || x.until) && days.some(d => d.rows.some(r => r.plannedAt != null && r.plannedAt !== r.watchAt)))
   return render(items, start, plans, true, keepDays, new Map(days.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
 if (everyone) return days;
 const todayIndex = days.findIndex(d => d.date.toDateString() === today);

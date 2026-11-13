@@ -101,13 +101,13 @@ from that time on), "Bis …" (there only from that time) or "Spontan da" (`mayb
 them like an absence, but they might turn up; dashed dot and name, "(spontan da)" in the posts). A show is set out when at most one person is
 left at the time it is really watched (after delays and long episodes); the schedule, the Discord message
 and the 9:00 post all follow it. On a show that still runs, absent watchers' names are struck through.
-The **Wiederkehrend** tab sets up weekly absences: who, which weekdays, the kind, from when and an end date or
-"Ohne Ende". They are saved as rules in `moves.json` (`absentRules`: `{ id, person, weekdays: [0 = Mo … 6 = So],
-start, end?, from? | until? | maybe?, skip? }`); the site turns them into single days (`mergeAbsent()` in
-`app-moves.js`) for everything that reads absences, the Discord message and the 9:00 post included. Changing one
+The **Wiederkehrend** tab groups recurring absences. Choose weekdays or **Täglich**, then set the start date and
+an end date or **Ohne Ende**. They are saved as rules in `moves.json` (`absentRules`: `{ id, person, weekdays: [0 = Mo … 6 = So],
+start, end?, from? | until? | maybe?, skip? }`); the site checks the rules for each requested date, including for the
+Discord message and the 9:00 post. Changing one
 day of a rule in the calendar saves it as an exception (`skip`). Single days are saved in `absent`; series from
 before rules (12 single weeks) still show and become a rule when edited. Everyone can enter absences, without the
-GitHub key through the Cloudflare helper (v9 or later; "Spontan da" needs v17; weekly rules need **v19**, older
+GitHub key through the Cloudflare helper (v9 or later; "Spontan da" needs v17; recurring rules need **v19**, older
 helpers refuse them and the site says so). The bot's `/abwesend` only knows single days: it can't end a rule.
 
 **Verspätung:** the clock on today's heading adds a delay from one show on; it and every later show move,
