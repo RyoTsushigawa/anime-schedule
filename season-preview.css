@@ -181,3 +181,8 @@
 .preview-order.has-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .preview-order.has-cover span { position: absolute; left: 3px; bottom: 3px; min-width: 18px; padding: 1px 4px; border-radius: 6px; background: color-mix(in srgb, var(--bg) 82%, transparent); color: var(--text); font-size: 10.5px; line-height: 1.4; text-align: center; }
 @media (max-width: 560px) { .preview-item:has(> .has-cover) { grid-template-columns: 36px minmax(0,1fr) auto; } .preview-order.has-cover { width: 36px; height: 52px; } }
+
+/* A vote suggestion from the person's AniList (completed or dropped direct prequel); tap saves it */
+.preview-side .preview-auto{flex:none;border:1px dashed color-mix(in srgb,var(--accent) 60%,var(--line));border-radius:99px;background:transparent;color:var(--text);min-height:28px;padding:3px 10px;font:inherit;font-size:12px;line-height:1.2;cursor:pointer}
+.preview-side .preview-auto:hover{border-style:solid;border-color:var(--accent)}
+@media(max-width:800px){.preview-side{flex-wrap:wrap;justify-content:flex-end}}
