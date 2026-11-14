@@ -201,10 +201,12 @@ function drawToday() {
   const q = quiz?.day !== today || !quiz.answers?.length ? ['open', 'Noch offen']
     : !quiz.done ? ['open', `${quiz.answers.length} von ${quiz.total || 5} Fragen`] : ['won', `${quiz.score} / ${quiz.total || 5} richtig`];
   const played = [t, c, y, q].filter(([, text]) => text !== 'Noch offen').length;
-  const card = (href, name, [state, text], extra = '') => `<a class="games-card ${state}" href="${href}"><b>${name}</b><span>${text}</span>${extra}</a>`;
+  // each card says in a few words what the game is, then today's state
+  const card = (href, name, about, [state, text], extra = '') => `<a class="games-card ${state}" href="${href}"><b>${name}</b><em>${about}</em><span>${text}</span>${extra}</a>`;
   $('gamesToday').innerHTML = `<div class="games-today-head"><b>Heute</b><span>${played} von 4 gespielt</span></div><div class="games-cards">`
-    + card('#board', 'Titel-Rätsel', t, stats.streak ? `<small>Serie: ${stats.streak}</small>` : '')
-    + card('cover-game.html', 'Anime Cover Quiz', c) + card('synopsis.html', 'Inhalts-Rätsel', y) + card('trivia.html', 'Anime-Quiz', q) + '</div>';
+    + card('#board', 'Titel-Rätsel', 'Ein Wort aus einem Anime-Titel', t, stats.streak ? `<small>Serie: ${stats.streak}</small>` : '')
+    + card('cover-game.html', 'Anime Cover Quiz', 'Den Anime am Cover erkennen', c) + card('synopsis.html', 'Inhalts-Rätsel', 'Den Anime an der Handlung erkennen', y)
+    + card('trivia.html', 'Anime-Quiz', 'Fünf Fragen zu eurem Guckplan', q) + '</div>';
 }
 async function start() {
   const turn=++generation;

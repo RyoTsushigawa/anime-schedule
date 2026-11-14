@@ -412,7 +412,7 @@ const shownFor = people => !awayCal.who || people.includes(awayCal.who);
 function drawAwayWho() {
 const names = [...new Set([...allPeople(), ...absentDays.flatMap(x => x.people || []), ...absentRules.map(r => r.person)])].sort((a, b) => a.localeCompare(b, 'de'));
 if (awayCal.who && !names.includes(awayCal.who)) awayCal.who = '';
-$('awayWho').replaceChildren(new Option('Alle', ''), ...names.map(n => new Option(n, n)));
+$('awayWho').replaceChildren(new Option('Alle Personen', ''), ...names.map(n => new Option(n, n)));
 $('awayWho').value = awayCal.who;
 }
 function drawAwayList() {
