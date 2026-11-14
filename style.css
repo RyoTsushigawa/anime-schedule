@@ -1672,3 +1672,11 @@ body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { dis
   .away-tabbar > select { flex: 1 1 100%; }
   .away-tabs [role="tab"] { padding-inline: 6px; }
 }
+/* the evening at a glance next to the day's name; an episode that isn't out yet at our watch time */
+.day h2 .day-span { color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.ep-tag.not-out { color: var(--late); border-color: color-mix(in srgb, var(--late) 45%, transparent); }
+@media (max-width: 560px) { .day h2 .day-span { order: 9; flex-basis: 100%; margin-top: -4px; } }
+/* "Drop-Button immer sichtbar": the drop button looks like a button all the time, not only on hover;
+   the switch itself only shows while the drop button is on */
+body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; border-color: var(--line); color: var(--text); }
+#settingsMenu .settings-options:has(#dropButtons:not(:checked)) .drop-always-toggle { display: none; }
