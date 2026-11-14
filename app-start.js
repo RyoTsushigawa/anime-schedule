@@ -69,6 +69,14 @@ reloadPage();
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
 const LAST_FEATURE = { at: '2026-11-14T14:50:00Z', name: 'Willkommen für neue Leute' };
 const PATCH_NOTES = [
+{ id: '2026-11-14', title: 'Easier to find your way: tidy menus, help next to the name, automatic double episodes', items: [
+'New here? A short welcome on the first visit: pick your name, how a row works, and that connecting a list is optional. The help (the ? next to the name, on phones next to the logo) can show it again under „Erste Schritte“.',
+'Settings are tidy: only real settings, the on/off options as switches right away, Streaming, Lesbarkeit and saving settings folded below. List tools moved to the account menu, plan and Discord tools to Mehr › Plan & Discord.',
+'The plan notices on its own when a show has ended (no more „unbestätigt“ after a finale), and when two episodes air together or an episode runs long: it gets two slots and a tag like „Doppel-Premiere“.',
+'Anime-Börse: limit orders (buy or sell automatically when a closing price reaches your limit). The daily Discord post adds yesterday\'s biggest Börse winner and loser, and before a new season who still has open Season Preview votes.',
+'Wrapped shows your Börse result and how many of your 12-point Awards picks won. Awards: a voting deadline at the start of the next season, and categories can be skipped.',
+'Moving a show „Bis …“ several weeks, with warnings for clashes and for slots before the episode is out; absences show which shows they affect and can be undone.',
+] },
 { id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
 'Seasonal Anime Awards, rebuilt: 22 categories like the Crunchyroll Awards (genres, characters, music, a Ceddl of the Year from candidates collected over the season), 12, 10 and 8 points per category, and after „Auflösen“ a Eurovision-style show, vote by vote. Voting is together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
 'New: the Anime-Börse (Mehr › Anime-Börse). Trade shares of the season\'s anime with play money all season long. Prices move daily with AniList and your own ratings (drops hurt, the earlier the more), with graphs, and Wall Street rules: a fee per order, sale money the next day, short selling and circuit breakers.',
