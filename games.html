@@ -25,9 +25,9 @@ img-src 'self'; connect-src 'self' https://graphql.anilist.co https://sheets.goo
 <nav class="game-hub-links" aria-label="Weitere Spiele"><a class="pill" href="ranker/">Higher / Lower ↗</a></nav>
 <div class="game-options" aria-label="Rätsel-Modus">
 <label>Spielmodus <select id="gameMode" aria-label="Spielmodus"><option value="daily">Täglich</option><option value="endless">Endlos</option></select></label>
-<label>Schwierigkeit <select id="gameDifficulty" aria-label="Schwierigkeit"><option value="normal">Normal · Guckplan</option><option value="hard">Schwer · Gruppen-AniLists</option></select></label>
+<label>Schwierigkeit <select id="gameDifficulty" aria-label="Schwierigkeit"><option value="normal">Normal · Guckplan</option><option value="hard">Schwer · Gruppen-AniLists</option><option value="extreme">Extrem · alle Anime auf AniList</option></select></label>
 </div>
-<div class="game-head"><b id="gameNumber">Titel-Rätsel</b><span id="gameHint" class="game-hint"></span><button type="button" id="gameHelp" class="game-help" aria-label="So geht's" title="6 Versuche. Gesucht wird ein englisches Wort aus einem Anime-Titel: im Normalmodus aus dem Guckplan, im schweren Modus aus einer Gruppen-AniList. Raten darfst du mit jedem gängigen englischen Wort. Schwer: nutze alle gelben/grünen Hinweise. Endlos: nach jedem Rätsel weiterspielen.">?</button></div>
+<div class="game-head"><b id="gameNumber">Titel-Rätsel</b><span id="gameHint" class="game-hint"></span><button type="button" id="gameHelp" class="game-help" aria-label="So geht's" title="6 Versuche. Gesucht wird ein englisches Wort aus einem Anime-Titel: im Normalmodus aus dem Guckplan, im schweren Modus aus einer Gruppen-AniList oder den Top 500, im extremen aus allen Anime auf AniList. Raten darfst du mit jedem gängigen englischen Wort. Schwer und Extrem: nutze alle gelben/grünen Hinweise. Endlos: nach jedem Rätsel weiterspielen.">?</button></div>
 <div id="board" class="board" role="grid" aria-label="Spielfeld"></div>
 <div id="gameHardHints" class="game-hard-hints" hidden>
 <button type="button" class="pill" id="gameHintButton">Hinweis anzeigen</button>

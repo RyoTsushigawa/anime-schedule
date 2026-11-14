@@ -235,3 +235,19 @@ test('Hard mode also draws from the AniList Top 500, with its own first hint', a
     assert.fail('no Top 500 word in 12 rounds: ' + [...seen].join());
   } finally { page.close(); }
 });
+
+test('Extrem: words from all anime (unchecked names left out), its own hints, the strict rules', async () => {
+  const extreme = [['DRAGON', 'Dragon Ball Super'], ['CASTLE', 'Howl\'s Moving Castle'], ['KNIGHT', 'Knight\'s & Magic'], ['NARUTO', 'Naruto', 0]];
+  const page = await openGame({ difficulty: 'extreme', endless: { words: [], popular: [], extreme } });
+  try {
+    assert.equal(page.run('puzzle.level'), 'extreme');
+    assert.ok(['DRAGON', 'CASTLE', 'KNIGHT'].includes(page.run('puzzle.word')), page.run('puzzle.word'));
+    assert.equal(page.run("extremePool.some(e=>e.word==='NARUTO')"), false, 'a name AniList has not confirmed yet stays out');
+    assert.match(page.run("document.getElementById('gameNumber').textContent"), /^Extrem · Titel-Rätsel #/);
+    page.run('state.hints=1');
+    assert.match(page.run('hardHintText()'), /^Der Titel hat \d Wörter? und beginnt mit „[A-Z]“\.$/);
+    page.run('state.hints=2');
+    assert.match(page.run('hardHintText()'), /Buchstabe \d ist [A-Z]\./);
+    assert.equal(page.run('strict(puzzle.level)'), true);
+  } finally { page.close(); }
+});
