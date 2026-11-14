@@ -1696,3 +1696,11 @@ body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { dis
 .later-list { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
 .later-item { display: inline-flex; align-items: center; gap: 6px; }
 .later-item .pill, .later-list > .pill { font-size: 12px; padding: 2px 8px; }
+
+/* U61 / U63: warnings in the move dialog (the move still works) */
+.move-warn { color: #e5b45c; font-size: 13px; }
+.move-warn:empty { display: none; }
+#moveUntilWeek { font-size: 13px; }
+/* U62: shows an absence affects, before saving */
+.away-affected { font-size: 13px; color: #e5b45c; margin: 6px 0 0; }
+.away-affected:empty { display: none; }

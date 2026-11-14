@@ -49,18 +49,18 @@ Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED
 | U46 | Seasonal Anime Awards · Ballot Progress | Done with the shared voting ([PR #163](https://github.com/RyoTsushigawa/anime-schedule/pull/163)): ✓ chips show who has voted, choices stay secret. |
 | U48 | Search · Clear Recent Searches | Done: Einstellungen › Anzeige & Listen › Letzte Suchen löschen (shown when there are any). |
 | U50 | Catch-up · Restore One Snoozed Show | Done: „N später“ in Catch-up opens the list; each show has „Zurückholen“, plus „Alle zurückholen“. |
-| U51 | Absences · Undo Accidental Removal | Approved. Restore the removed absence from the existing save notice, including its dates and time rules. |
+| U51 | Absences · Undo Accidental Removal | Done: after removing an absence or a series, „Rückgängig“ in the dialog saves the state before again. |
 | U52 | Season Preview · Trailer Length | Approved. Show the runtime in the existing trailer link when known. |
 | U53 | Weekly Plan · Hide Empty Days | Done: Einstellungen › Anzeige & Listen › Leere Tage ausblenden (today and days with absences stay). |
 | U54 | Seasonal Anime Awards · Voting Deadline | Approved. Show the deadline and automatically close voting at the start of the following anime season. Keep the reveal manual. |
-| U56 | Absences · Flag Overlapping Entries | Approved. Show overlapping recurring rules for the same person in the existing editor. |
+| U56 | Absences · Flag Overlapping Entries | Done: Wiederkehrend marks series of the same person on the same weekday at overlapping dates. |
 | U57 | Weekly Plan · Copy Streaming Link | Done: day menu › copy icon copies the day's stream links as „Title: link“ lines. |
 | U59 | Seasonal Anime Awards · Skip a Category | Approved. Let voters explicitly skip a category and distinguish it from an unanswered category during ballot review. |
-| U61 | Weekly Plan · Flag a Scheduling Conflict | Approved. Warn in the existing move dialog when the new slot overlaps another show for any of the same viewers. Leave the decision to the editor. |
-| U62 | Absences · Preview Affected Shows | Approved in a ChatGPT round. (The same idea was not picked in Claude round 7, as U43 there; the ChatGPT approval stands unless the owner says otherwise.) In the existing editor, preview which already-scheduled shows would pause under the group’s attendance rules before saving. |
-| U63 | Weekly Plan · Warn When Moving Before Airing | Approved. Flag a proposed slot before the episode’s confirmed release time and show that time in the existing move dialog. |
+| U61 | Weekly Plan · Flag a Scheduling Conflict | Done: the move dialog warns when the new slot is taken by another show of the same people (with their names). |
+| U62 | Absences · Preview Affected Shows | Done: both absence forms show „Betroffen: …“, the shows the chosen people watch on the chosen weekdays. |
+| U63 | Weekly Plan · Warn When Moving Before Airing | Done: the move dialog warns when the slot is before this week's episode is out (with the release time). |
 | U72 | Allein · Catch-up on Release | Merged with the integration of ChatGPT's PRs ([#173](https://github.com/RyoTsushigawa/anime-schedule/pull/173)). Use the existing Sheet choice to send aired, unwatched episodes to personal Catch-up without waiting for the group slot. |
-| U66 | Weekly Plan · End Date for a Temporary Move | Approved. Let the temporary slot run through a chosen week and then restore the regular slot automatically. |
+| U66 | Weekly Plan · End Date for a Temporary Move | Done: move dialog › „Bis …“ (2 to 8 weeks) saves one move per week; afterwards the Guckplan slot counts again. |
 | U74 | Watch-Planer · Take Over Absences | Done: Watch-Planer › Feste Termine › Aus Abwesenheiten. Recurring absences (e.g. „Sophie jeden Sa“) are taken over as busy times in the Watch planner instead of being entered by hand. |
 
 | U73 (N80) | Personal Catch-up Planner | Done as N80. |

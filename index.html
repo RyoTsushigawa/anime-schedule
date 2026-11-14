@@ -209,11 +209,13 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 <div class="dlg-row">
 <div class="segmented" role="group" aria-label="Für">
-<button type="button" id="moveWeek" aria-pressed="true" title="Nur diese Woche">Diese Woche</button><button type="button" id="moveAlways" aria-pressed="false" title="Ab jetzt jede Woche">Dauerhaft</button>
+<button type="button" id="moveWeek" aria-pressed="true" title="Nur diese Woche">Diese Woche</button><button type="button" id="moveUntil" aria-pressed="false" title="Ein paar Wochen lang, danach wieder im Guckplan-Slot">Bis …</button><button type="button" id="moveAlways" aria-pressed="false" title="Ab jetzt jede Woche">Dauerhaft</button>
 </div>
+<select id="moveUntilWeek" class="pill" aria-label="Bis zu welcher Woche" hidden></select>
 <span class="episode-kind"><button type="button" id="moveDouble" class="pill" aria-pressed="false" title="Diese Woche zwei Folgen (die vorige kommt dazu)">Doppelt</button>
 <button type="button" id="moveLong" class="pill" aria-pressed="false" title="Diese Woche eine lange Folge: sie braucht zwei Slots, die späteren rücken 30 Min. nach">Lang</button></span>
 </div>
+<div class="move-warn" id="moveWarn" role="status"></div>
 <div class="muted" id="moveMsg"></div>
 <div class="dlg-row move-actions">
 <button type="button" id="moveSave" class="pill primary">Verschieben</button>
@@ -331,6 +333,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="awayMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button><button type="button" data-mode="maybe" title="Nicht mit einplanen, kommt aber vielleicht dazu">Spontan da</button></div>
 <label id="awayTime" class="away-time" hidden>Uhrzeit <input id="awayClock" type="time" value="21:00" step="900"></label>
 <div id="awayPeople" class="day-absent"></div>
+<div id="awayAffected" class="away-affected" role="status"></div>
 <div class="dlg-row"><button type="button" id="awaySave" class="pill primary">Speichern</button></div>
 </div>
 <div class="away-list-heading"><b class="away-sub">Eingetragen</b><span class="muted" id="awayListCount"></span></div>
@@ -352,6 +355,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <label id="repTime" class="away-time" hidden>Uhrzeit <input id="repClock" type="time" value="21:00" step="900"></label>
 <div class="rep-dates"><label>Ab <input id="repFrom" type="date"></label><label class="rep-open"><input type="checkbox" id="repOpen" checked> Ohne Ende</label><label id="repUntilBox" hidden>Bis <input id="repUntil" type="date"></label></div>
 <div id="repSummary" class="away-hint" role="status" aria-live="polite"></div>
+<div id="repAffected" class="away-affected" role="status"></div>
 <div class="dlg-row"><button type="button" id="repSave" class="pill primary">Speichern</button></div>
 </div>
 </div>
