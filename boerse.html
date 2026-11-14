@@ -30,6 +30,7 @@
 <li>Die Kurse bewegen sich einmal am Tag: AniList (Community-Wertung, neue Mitglieder, Trending) und eure eigenen Bewertungen, die umso stärker zählen, je mehr von euch bewertet haben. Dazu ein kleines Rauschen von ±1,5 %.</li>
 <li>Drops drücken den Kurs stark, je früher desto mehr; ein neuer Drop lässt die Aktie am selben Tag fallen.</li>
 <li>Regeln wie an der Wall Street: jede Order kostet 1 Taler Gebühr. Geld aus Verkäufen ist erst am nächsten Tag verfügbar (T+1). Leerverkäufe (mehr verkaufen, als du hast) sind bis 1.000 Taler erlaubt. Fällt ein Kurs zum Schluss um 7 % oder mehr, ist die Aktie am nächsten Handelstag ausgesetzt (Circuit Breaker).</li>
+<li>Limit-Orders: „kaufe, wenn der Kurs auf X fällt“ oder „verkaufe, wenn er auf X steigt“. Aufgeben geht auch nachts; ausgeführt wird beim ersten neuen Schlusskurs, der das Limit erreicht, zu diesem Kurs (mit Gebühr, wie jede Order). Höchstens 10 offene Orders.</li>
 <li>Die Rangliste nach Depotwert sieht jede Person; wer was hält, wird erst nach der Season gezeigt.</li>
 </ul>
 </details>
@@ -44,6 +45,7 @@
 <div class="boerse-list-head"><h2>Kurse</h2><label class="boerse-qty">Stück <input id="stockQty" class="pill" type="number" min="1" max="50" value="1" inputmode="numeric"></label></div>
 <div id="stockList" class="boerse-list"></div>
 <p id="stockMsg" class="boerse-hint" role="status"></p>
+<section id="stockOrdersBox" class="boerse-orders" hidden><h2>Limit-Orders</h2><ol id="stockOrders"></ol></section>
 <details id="stockTradesBox" class="boerse-trades" hidden><summary>Deine Orders</summary><ol id="stockTrades"></ol></details>
 <section id="stockBoard" class="boerse-board" hidden>
 <h2>Rangliste</h2>
@@ -55,6 +57,19 @@
 <div id="stockDlgChart" class="boerse-chart"></div>
 <ul id="stockDlgFacts" class="boerse-facts"></ul>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
+</form>
+</dialog>
+<dialog id="stockOrderDlg" class="dlg boerse-dlg" aria-labelledby="stockOrderTitle">
+<form method="dialog" id="stockOrderForm">
+<b id="stockOrderTitle"></b>
+<p id="stockOrderNow" class="boerse-hint"></p>
+<div class="boerse-order-fields">
+<label>Order <select id="stockOrderSide" class="pill"><option value="buy">Kaufen, wenn der Kurs fällt auf</option><option value="sell">Verkaufen, wenn der Kurs steigt auf</option></select></label>
+<label>Limit <input id="stockOrderLimit" class="pill" type="number" min="1" step="0.01" inputmode="decimal" required></label>
+<label>Stück <input id="stockOrderQty" class="pill" type="number" min="1" max="50" value="1" inputmode="numeric" required></label>
+</div>
+<p id="stockOrderHint" class="boerse-hint"></p>
+<div class="dlg-row dlg-foot"><button value="cancel" class="pill" formnovalidate>Abbrechen</button><button type="submit" value="place" id="stockOrderPlace" class="pill primary">Order aufgeben</button></div>
 </form>
 </dialog>
 </main>

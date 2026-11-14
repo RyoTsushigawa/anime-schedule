@@ -325,10 +325,11 @@ const cents=n=>Math.round(n*100)/100;
 let pricesCache=null;
 async function stockPrices(env,season){
  const url=(env.SITE_URL||'https://ryotsushigawa.github.io/anime-schedule/')+'boerse-prices.json';
- if(!pricesCache||pricesCache.url!==url||Date.now()-pricesCache.at>120000){
+ // (tests move the clock with TEST_NOW: a new time reads the file again)
+ if(!pricesCache||pricesCache.url!==url||pricesCache.testNow!==env.TEST_NOW||Date.now()-pricesCache.at>120000){
   const res=await fetch(url+'?'+Date.now());
   if(!res.ok)fail(503,'Die Kurse sind gerade nicht erreichbar.');
-  pricesCache={url,at:Date.now(),file:await res.json()};
+  pricesCache={url,testNow:env.TEST_NOW,at:Date.now(),file:await res.json()};
  }
  return pricesCache.file.seasons?.[season]||{days:[],shows:{}};
 }
@@ -347,15 +348,52 @@ async function stockAccounts(env,season){
 }
 async function stocksGet(url,env,now,request){
  const season=awardSeason(url.searchParams.get('season')),window=stockWindow(season,now),today=berlinDay(now);
- const [accounts,priced]=await Promise.all([stockAccounts(env,season),stockPrices(env,season)]);
+ const [stored,priced]=await Promise.all([stockAccounts(env,season),stockPrices(env,season)]);
+ // limit orders reached by a new close are filled now, for everyone (so the ranking is right too)
+ const accounts=await Promise.all(stored.map(async a=>{const r=fillOrders(a,priced);
+  if(r.changed)await awardsStore(env).put('stock:'+season+':'+a.person,JSON.stringify(r.account));return r.account;}));
  const prices=latest(priced),person=str(url.searchParams.get('person'));
  const ranking=accounts.map(a=>({person:a.person,value:accountValue(a,prices)})).sort((x,y)=>y.value-x.value||x.person.localeCompare(y.person,'de'));
  // your own account only with your AniList login or PIN
  const me=person?await verifiedPerson(request,env,person):null;
- const mine=me?accounts.find(a=>a.person===me)||{person:me,cash:STOCK_CASH,pending:[],holdings:{},trades:[]}:null;
+ const mine=me?accounts.find(a=>a.person===me)||newAccount(me):null;
  return {season,...window,today,market:marketOpen(now),cash:STOCK_CASH,fee:STOCK_FEE,shortLimit:STOCK_SHORT,ranking,
   account:mine?settled(mine,today):null,
   ...(window.over&&{portfolios:accounts.map(a=>({person:a.person,holdings:a.holdings||{},trades:a.trades||[]}))})};
+}
+// one trade on an account (settled for that day): buy from cash plus the fee, a sale's money the next day,
+// shorts up to 1000 Taler; extra goes into the trade record (a filled limit order: { limit })
+function applyTrade(account,{title,qty,price,day,prices,extra={}}){
+ const a=settled(account,day);
+ const holdings={...(a.holdings||{})},after=(holdings[title]||0)+qty;
+ if(qty>0){
+  const cost=cents(qty*price+STOCK_FEE);
+  if(cost>a.cash+1e-9)fail(400,'Nicht genug verfügbare Taler (Verkäufe werden erst am nächsten Tag gutgeschrieben).');
+  a.cash=cents(a.cash-cost);
+ }else a.pending=[...a.pending,{amount:cents(-qty*price-STOCK_FEE),on:dayAfter(day)}];
+ if(after)holdings[title]=after;else delete holdings[title];
+ const shorts=Object.entries(holdings).reduce((n,[t,c])=>n+(c<0?-c*((t===title?price:prices.get(t))??100):0),0);
+ if(shorts>STOCK_SHORT+1e-9)fail(400,'Leerverkäufe höchstens bis 1000 Taler.');
+ return {...a,holdings,trades:[...(a.trades||[]),{day,title,qty,price,fee:STOCK_FEE,...extra}].slice(-200)};
+}
+const newAccount=person=>({person,cash:STOCK_CASH,pending:[],holdings:{},trades:[]});
+// Limit orders: "buy when the close is at or below", "sell when at or above". Checked against every close from
+// the day the order was placed on (a day's close is set after 22:00); the first close that reaches the limit
+// fills it at that close. Filled or failed orders go to orderLog (the last 20). Runs whenever the Börse is read.
+const STOCK_ORDERS=10;
+function fillOrders(account,priced){
+ if(!account.orders?.length)return {account,changed:false};
+ const days=priced.days||[],prices=latest(priced);
+ let a=account;const open=[],log=[...(account.orderLog||[])];
+ for(const o of account.orders){
+  const show=priced.shows?.[o.title];
+  const i=show?days.findIndex((d,k)=>d>=o.placed&&show.closes?.[k]!=null&&(o.qty>0?show.closes[k]<=o.limit:show.closes[k]>=o.limit)):-1;
+  if(i<0){open.push(o);continue;}
+  const day=days[i],price=show.closes[i];
+  try{a=applyTrade(a,{title:o.title,qty:o.qty,price,day,prices,extra:{limit:o.limit}});log.push({...o,status:'filled',day,price});}
+  catch(e){log.push({...o,status:'failed',day,price,reason:e.message});}
+ }
+ return {account:{...a,orders:open,orderLog:log.slice(-20)},changed:true};
 }
 async function stocksTrade(body,env,now,request){
  const season=awardSeason(body.season),title=awardTitle(body.title),qty=body.qty;
@@ -368,20 +406,36 @@ async function stocksTrade(body,env,now,request){
  const today=berlinDay(now),price=show.closes[show.closes.length-1];
  if(show.halted===today)fail(409,'Handel ausgesetzt: Kurs heute um 7 % oder mehr gefallen (Circuit Breaker).');
  const store=awardsStore(env),key='stock:'+season+':'+person;
- const a=settled(JSON.parse(await store.get(key)||'null')||{person,cash:STOCK_CASH,pending:[],holdings:{},trades:[]},today);
- const holdings={...(a.holdings||{})},after=(holdings[title]||0)+qty;
- if(qty>0){
-  const cost=cents(qty*price+STOCK_FEE);
-  if(cost>a.cash+1e-9)fail(400,'Nicht genug verfügbare Taler (Verkäufe werden erst am nächsten Tag gutgeschrieben).');
-  a.cash=cents(a.cash-cost);
- }else a.pending=[...a.pending,{amount:cents(-qty*price-STOCK_FEE),on:dayAfter(today)}];
- if(after)holdings[title]=after;else delete holdings[title];
- const prices=latest(priced);
- const shorts=Object.entries(holdings).reduce((n,[t,c])=>n+(c<0?-c*(prices.get(t)??100):0),0);
- if(shorts>STOCK_SHORT+1e-9)fail(400,'Leerverkäufe höchstens bis 1000 Taler.');
- const next={...a,person,holdings,trades:[...(a.trades||[]),{day:today,title,qty,price,fee:STOCK_FEE}].slice(-200)};
+ const {account:a}=fillOrders(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
+ const next={...applyTrade(a,{title,qty,price,day:today,prices:latest(priced)}),person};
  await store.put(key,JSON.stringify(next));
- return {ok:true,account:next,price};
+ return {ok:true,account:settled(next,today),price};
+}
+// a limit order: placed any time while the season is traded (also outside opening hours), at most 10 open
+async function stocksOrder(body,env,now,request,cancel){
+ const season=awardSeason(body.season),person=await verifiedPerson(request,env,body.person);
+ const store=awardsStore(env),key='stock:'+season+':'+person,today=berlinDay(now);
+ const priced=await stockPrices(env,season);
+ let {account:a}=fillOrders(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
+ if(cancel){
+  const id=str(body.id);
+  if(!(a.orders||[]).some(o=>o.id===id))fail(404,'Diese Order gibt es nicht (mehr). Vielleicht wurde sie schon ausgeführt.');
+  a={...a,orders:a.orders.filter(o=>o.id!==id)};
+ }else{
+  if(!stockWindow(season,now).open)fail(409,'Für diese Season wird gerade nicht gehandelt.');
+  const title=awardTitle(body.title),qty=body.qty,limit=Number(body.limit);
+  if(!Number.isInteger(qty)||qty===0||Math.abs(qty)>50)fail(400,'Ungültige Anzahl.');
+  if(!Number.isFinite(limit)||limit<1||limit>100000)fail(400,'Ungültiges Limit.');
+  const show=priced.shows?.[title];
+  if(!show?.closes?.length)fail(400,'Diese Serie wird nicht gehandelt.');
+  const price=show.closes[show.closes.length-1];
+  if(qty>0?price<=limit:price>=limit)fail(409,'Der Kurs erreicht dein Limit schon: '+(qty>0?'kauf':'verkauf')+' einfach direkt.');
+  if((a.orders||[]).length>=STOCK_ORDERS)fail(429,'Höchstens 10 offene Orders.');
+  a={...a,orders:[...(a.orders||[]),{id:crypto.randomUUID().slice(0,8),title,qty,limit:cents(limit),placed:today}]};
+ }
+ const next={...a,person};
+ await store.put(key,JSON.stringify(next));
+ return {ok:true,account:settled(next,today)};
 }
 // Wrong streaming links (U45, reported from the weekly plan; the repair queue N55 reads them), in KV (binding
 // AWARDS, prefix "report:"): { id, at, status: 'pending' | 'fixed' | 'rejected', anilistId, title, service, url,
@@ -479,12 +533,13 @@ export default {
     await authorized(request,env);
     return json(await stocksGet(new URL(request.url),env,Number(env.TEST_NOW)||Date.now(),request),200,cors);
    }
-   if(request.method==='POST'&&path==='/stocks/trade'){
+   if(request.method==='POST'&&(path==='/stocks/trade'||path==='/stocks/order'||path==='/stocks/order/cancel')){
     if(Number(request.headers.get('Content-Length')||0)>2048)fail(413,'Anfrage zu groß.');
     await authorized(request,env);
     const body=await request.json();
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
-    return json(await stocksTrade(body,env,Number(env.TEST_NOW)||Date.now(),request),200,cors);
+    const now=Number(env.TEST_NOW)||Date.now();
+    return json(path==='/stocks/trade'?await stocksTrade(body,env,now,request):await stocksOrder(body,env,now,request,path==='/stocks/order/cancel'),200,cors);
    }
    if(request.method==='GET'&&path==='/reports'){
     await authorized(request,env);

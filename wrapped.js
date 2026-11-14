@@ -188,6 +188,55 @@ function wrappedDraw(cards) {
   $('stories').hidden=$('actions').hidden=false;
   wrappedShow(0);
 }
+// Börse and Awards from the votes helper (only what everyone may see: the ranking, and the ballots after "Auflösen").
+// MaRyo is one plan for two people, who trade and vote each on their own.
+const WRAPPED_SPLIT={MaRyo:['Marvin','Ryo']};
+const WRAPPED_POINTS=[12,10,8];
+async function wrappedHelper(path){
+  const settings=await config();
+  const base=typeof settings.previewVotesUrl==='string'&&/^https:\/\//.test(settings.previewVotesUrl)?settings.previewVotesUrl.replace(/\/$/,''):'';
+  if(!base)return null;
+  const code=savedGroupCode();
+  const res=await fetch(base+path,{cache:'no-store',headers:code?{'X-Group-Code':code}:{}});
+  return res.ok?res.json():null;
+}
+// the winner per category: most points (12/10/8), ties by more 12s, then 10s, as on the Awards page
+function wrappedAwardWinners(ballots){
+  const won=new Map(),cats=new Set(ballots.flatMap(b=>Object.keys(b.picks||{})));
+  for(const id of cats){
+    const score=new Map();
+    for(const b of ballots)(Array.isArray(b.picks[id])?b.picks[id]:[b.picks[id]]).forEach((t,i)=>{if(!t||i>2)return;const s=score.get(t)||{p:0,c:[0,0,0]};s.p+=WRAPPED_POINTS[i];s.c[i]++;score.set(t,s);});
+    const best=[...score].sort((a,b)=>b[1].p-a[1].p||b[1].c[0]-a[1].c[0]||b[1].c[1]-a[1].c[1]||a[0].localeCompare(b[0],'de'))[0];
+    if(best)won.set(id,{title:best[0],points:best[1].p});
+  }
+  return won;
+}
+async function wrappedGroupCards(season,person,shared){
+  const who=person?(WRAPPED_SPLIT[person]||[person]):null,cards=[];
+  const [stocks,awards]=await Promise.all([wrappedHelper('/stocks?season='+encodeURIComponent(season)).catch(()=>null),wrappedHelper('/awards?season='+encodeURIComponent(season)).catch(()=>null)]);
+  const board=stocks?.ranking||[];
+  if(board.length){
+    const gain=v=>(v>=1000?'+':'−')+Math.abs(Math.round((v/1000-1)*1000)/10).toLocaleString('de-DE')+' %';
+    const mine=who?board.map((r,i)=>({...r,place:i+1})).filter(r=>who.includes(r.person)):[];
+    if(!who)cards.push({kicker:season+' · Anime-Börse',title:board[0].person+' hatte das beste Depot.',color:'#94dce0',html:wrappedRank(board.slice(0,5).map(r=>[r.person,Math.round(r.value).toLocaleString('de-DE')+' Taler'])),note:(stocks.over?'Endstand':'Stand heute')+' der Rangliste nach Depotwert. Gestartet sind alle mit 1.000 Taler Spielgeld.'});
+    else if(mine.length)cards.push({kicker:season+' · Anime-Börse',title:mine.length>1?'Zwei Depots, ein Plan.':mine[0].place===1?'Platz 1 an der Börse.':'Platz '+mine[0].place+' von '+board.length+' an der Börse.',color:'#94dce0',
+      html:mine.length>1?wrappedRank(mine.map(r=>[r.person+' · Platz '+r.place,Math.round(r.value).toLocaleString('de-DE')+' Taler'])):'<div class="big">'+Math.round(mine[0].value).toLocaleString('de-DE')+'</div><p>Taler im Depot, '+gain(mine[0].value)+' gegenüber dem Start.</p>',
+      note:(stocks.over?'Endstand':'Stand heute')+' der Anime-Börse. Spielgeld, echte Anime; gestartet sind alle mit 1.000 Taler.'});
+  }
+  if(awards?.revealed&&awards.ballots?.length){
+    const won=wrappedAwardWinners(awards.ballots),best=won.get('best');
+    if(!who)cards.push({kicker:season+' · Seasonal Anime Awards',title:best?best.title:'Die Awards sind entschieden.',color:'#ffc764',
+      html:(best?'<p>ist euer Anime der Season, mit '+best.points+' Punkten.</p>':'')+wrappedMetrics([[won.size,'Kategorien entschieden'],[awards.ballots.length,'Stimmzettel']]),note:'Aus den aufgelösten Awards: 12, 10 und 8 Punkte pro Kategorie, wie beim Eurovision Song Contest.'});
+    else{
+      const mine=awards.ballots.filter(b=>who.includes(b.person));
+      const tops=mine.flatMap(b=>Object.entries(b.picks||{}).map(([id,v])=>[id,(Array.isArray(v)?v:[v])[0]])).filter(([,t])=>t);
+      const hits=tops.filter(([id,t])=>won.get(id)?.title===t).length;
+      if(tops.length)cards.push({kicker:season+' · Seasonal Anime Awards',title:hits?(hits===1?'Eine 12 lag richtig.':hits+' Mal lag die 12 richtig.'):'Ein eigener Geschmack.',color:'#ffc764',
+        html:'<div class="big">'+hits+'</div><p>von '+tops.length+' '+(shared?'euren':'deinen')+' 12-Punkte-Tipps '+(hits===1?'hat':'haben')+' die Kategorie gewonnen.'+(best?' Anime der Season wurde '+wrappedSafe(best.title)+'.':'')+'</p>',note:'Aus den aufgelösten Awards. Gezählt wird, ob die Serie mit '+(shared?'euren':'deinen')+' 12 Punkten die Kategorie gewonnen hat.'});
+    }
+  }
+  return cards;
+}
 async function wrappedRender(fresh=false) {
   if(!wrappedPlan)return;
   const generation=++wrappedGeneration, person=$('person').value, tab=wrappedTab($('season').value);
@@ -239,6 +288,8 @@ async function wrappedRender(fresh=false) {
   $('status').textContent='Plan geladen · Listen-Statistiken werden gelesen…';
   if(!allowLists){
     cards.push({kicker:season+' · zum Schluss',title:person?(shared?'Das war eure gemeinsame Season.':'Das war deine Season.'):'So unterschiedlich. Trotzdem eine Runde.',color:'#d6ff79',html:'<p>'+(person?'Ob gemeinsame Serien oder die eigene Auswahl: Schön, dass '+(shared?'ihr':'du')+' dabei '+(shared?'seid.':'bist.'):'Zehn verschiedene Geschmäcker müssen nicht denselben Anime mögen, um einen schönen gemeinsamen Abend zu haben.').replace('Zehn verschiedene',WrappedStats.peopleCount(wrappedPlan.people)+' verschiedene')+'</p><p>Für '+wrappedSafe(season)+' bleiben wir bewusst beim Guckplan. Listen-Statistiken kommen erst ab Winter 2027 dazu.</p>',note:'Keine AniList- oder MAL-Daten für diesen Rückblick. Der Plan ist eine Momentaufnahme der Season.'});
+    cards.push(...await wrappedGroupCards(season,person,shared).catch(()=>[]));
+    if(generation!==wrappedGeneration)return;
     cards.push(...wrappedFoodCards(season,name,person,wrappedPlan.people));
     const index=wrappedIndex;wrappedDraw(cards);wrappedShow(index);
     $('status').textContent=wrappedTabNote||wrappedPlanNote?'Gespeicherter Guckplan · Neu laden versucht es erneut.':season+' · nur aus eurem Guckplan.';
@@ -294,6 +345,8 @@ async function wrappedRender(fresh=false) {
     }
     undated=summary.undated;
   } else cards.push({kicker:'Noch mehr Wrapped?',title:'Dein Plan kennt nur die halbe Story.',color:'#f4a9d1',html:'<p>Ordne unter <button class="inline-action" data-open-profiles>Profile</button> einer Person ihre AniList- oder MAL-Konten zu. Dann kommen Abschlüsse, Favoriten und Genres dazu.</p>',note:'Persönliche Plan-Statistiken funktionieren auch ohne Konto. Gruppen-Listenstatistiken sind nur so vollständig wie die zugeordneten Konten.'});
+  cards.push(...await wrappedGroupCards(season,person,shared).catch(()=>[]));
+  if(generation!==wrappedGeneration)return;
   cards.push(...wrappedFoodCards(season,name,person,wrappedPlan.people));
   const index=wrappedIndex;
   wrappedDraw(cards);wrappedShow(index);

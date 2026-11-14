@@ -105,3 +105,11 @@ test('season borders are midnight German time, in summer time too', () => {
   assert.equal(new Date(tradingWindow('Herbst 2026', 0).to).toISOString(), '2026-12-31T23:00:00.000Z');
   assert.equal(new Date(tradingWindow('Winter 2027', 0).to).toISOString(), '2027-03-31T22:00:00.000Z');
 });
+
+test('the Sheet counts below the list ("Amount", services) are not shows; old number entries are removed', async () => {
+  const csv = [',,,,', ',Sort,Slot,Anime Titel,Eng Anime Titel,Startdatum', ',,,Alpha,Alpha EN,01.10.2026', ',,,Beta,,02.10.2026', ',,,,', ',,Trailer Liste,,',
+    ',,Crunchyroll (C),,42,"64,62%"', ',,,Amount,65,'].join('\n');
+  assert.deepEqual(seasonShows(csv).map(s => s.title), ['Alpha EN', 'Beta']);
+  const s = await updateSeason({ days: ['2026-11-13'], shows: { 65: { closes: [100], pops: [0], droppedBy: {} } } }, seasonShows(csv), '2026-11-13', { media: new Map(), ratings: new Map() });
+  assert.deepEqual(Object.keys(s.shows).sort(), ['Alpha EN', 'Beta']);
+});

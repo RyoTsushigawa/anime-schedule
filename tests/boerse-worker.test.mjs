@@ -85,3 +85,45 @@ test('after the season everyone sees everyone\'s holdings',async()=>{
  const state=(await get(env(url,'2027-04-02T12:00:00Z',store))).body;
  assert.deepEqual(state.portfolios.map(p=>[p.person,p.holdings]),[['Rei',{Frieren:2}]]);
 });
+
+test('limit orders: placed any time, filled at the first new close that reaches the limit, cancelled, or failed',async()=>{
+ const {url,file}=site({Frieren:{closes:[100]},Dandadan:{closes:[100]}});
+ file.seasons[season].days=['2027-01-03'];
+ const store=kv(),evening=env(url,'2027-01-04T22:30:00Z',store);
+ // outside opening hours an order can still be placed
+ let r=await call(evening,'/stocks/order',{season,person:'Rei',title:'Frieren',qty:3,limit:90});
+ assert.equal(r.status,200);
+ assert.equal(r.body.account.orders.length,1);
+ assert.equal(r.body.account.orders[0].placed,'2027-01-04');
+ // a limit the price already meets: just trade
+ assert.equal((await call(evening,'/stocks/order',{season,person:'Rei',title:'Frieren',qty:1,limit:120})).status,409);
+ assert.equal((await call(evening,'/stocks/order',{season,person:'Rei',title:'Frieren',qty:1,limit:0})).status,400);
+ assert.equal((await call(evening,'/stocks/order',{season,person:'Rei',title:'Nope',qty:1,limit:50})).status,400);
+ // a sell order for Dandadan at 130 (a short sale), then cancelled
+ r=await call(evening,'/stocks/order',{season,person:'Rei',title:'Dandadan',qty:-2,limit:130});
+ const id=r.body.account.orders.find(o=>o.title==='Dandadan').id;
+ assert.equal((await call(evening,'/stocks/order/cancel',{season,person:'Rei',id})).body.account.orders.length,1);
+ assert.equal((await call(evening,'/stocks/order/cancel',{season,person:'Rei',id})).status,404);
+ // the 4 Jan close: 95, not low enough; the 5 Jan close: 88, filled at 88
+ file.seasons[season].days.push('2027-01-04');file.seasons[season].shows.Frieren.closes.push(95);file.seasons[season].shows.Dandadan.closes.push(100);
+ let state=(await get(env(url,'2027-01-05T09:00:00Z',store),'Rei')).body;
+ assert.equal(state.account.orders.length,1);
+ file.seasons[season].days.push('2027-01-05');file.seasons[season].shows.Frieren.closes.push(88);file.seasons[season].shows.Dandadan.closes.push(100);
+ // anyone reading the Börse fills it (the ranking is right for all)
+ state=(await get(env(url,'2027-01-06T09:00:00Z',store))).body;
+ assert.equal(state.ranking.find(x=>x.person==='Rei').value,1000-1+3*0);
+ state=(await get(env(url,'2027-01-06T09:00:00Z',store),'Rei')).body;
+ assert.deepEqual(state.account.orders,[]);
+ assert.deepEqual(state.account.holdings,{Frieren:3});
+ assert.equal(state.account.cash,1000-3*88-1);
+ assert.deepEqual(state.account.trades.at(-1),{day:'2027-01-05',title:'Frieren',qty:3,price:88,fee:1,limit:90});
+ assert.equal(state.account.orderLog[0].status,'filled');
+ // an order that can't be paid fails and says why
+ await call(env(url,'2027-01-06T10:00:00Z',store),'/stocks/order',{season,person:'Rei',title:'Dandadan',qty:50,limit:90});
+ file.seasons[season].days.push('2027-01-06');file.seasons[season].shows.Frieren.closes.push(88);file.seasons[season].shows.Dandadan.closes.push(80);
+ state=(await get(env(url,'2027-01-07T09:00:00Z',store),'Rei')).body;
+ assert.equal(state.account.orders.length,0);
+ assert.equal(state.account.orderLog.at(-1).status,'failed');
+ assert.match(state.account.orderLog.at(-1).reason,/Nicht genug/);
+ assert.deepEqual(state.account.holdings,{Frieren:3});
+});
