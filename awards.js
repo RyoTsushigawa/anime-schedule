@@ -32,6 +32,7 @@ const copyButton = $('awardsCopy');
 const awardsStatus = $('awardsStatus');
 let nominees = new Map();
 let ballot = {};
+let skipped = new Set(); // U59: categories this voter leaves out on purpose (kept in the draft as _skipped)
 let seasonRequest = 0;
 let people = [];
 // A Guckplan column shared by two people still gives each of them a ballot of their own
@@ -76,6 +77,7 @@ const valid = (kind, value) => {
 
 function ballotSummary() {
   return awardCategories.flatMap(([id, label]) => {
+    if (skipped.has(id)) return [label + ': ausgelassen'];
     const list = (ballot[id] || []).map((v, i) => v && `${POINTS[i]} ${v}`).filter(Boolean);
     return list.length ? [label + ': ' + list.join(' · ')] : [];
   });
@@ -107,13 +109,14 @@ function updateAwardsCopy() {
   copyButton.textContent = revealed() ? 'Ergebnis für Discord kopieren' : 'Für Discord kopieren';
   $('awardsManual').hidden = true;
   const submit = $('awardsSubmit');
-  if (submit) submit.disabled = !ballotSummary().length || (!!ID && !ID.canAct(personSelect.value));
-  const filled = awardCategories.filter(([id]) => (ballot[id] || []).some(Boolean)).length;
-  $('awardsProgress').textContent = `${filled} von ${awardCategories.length} Kategorien ausgefüllt`;
+  if (submit) submit.disabled = !ballotSummary().length || (!!ID && !ID.canAct(personSelect.value)) || !!shared?.closed;
+  const filled = awardCategories.filter(([id]) => !skipped.has(id) && (ballot[id] || []).some(Boolean)).length;
+  const open = awardCategories.length - filled - skipped.size;
+  $('awardsProgress').textContent = `${filled} von ${awardCategories.length} Kategorien ausgefüllt` + (skipped.size ? ` · ${skipped.size} ausgelassen` : '') + (open ? ` · ${open} offen` : '');
 }
 function saveDraft() {
   try {
-    localStorage.setItem(ballotKey(), JSON.stringify(ballot));
+    localStorage.setItem(ballotKey(), JSON.stringify({ ...ballot, ...(skipped.size && { _skipped: [...skipped] }) }));
     awardsStatus.textContent = voteApi ? 'Entwurf gespeichert · mit „Stimme abgeben“ zählt er.' : 'Stimmzettel gespeichert.';
   } catch {
     awardsStatus.textContent = 'Speichern ist in diesem Browser gerade nicht möglich.';
@@ -135,6 +138,7 @@ function renderBallot() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(ballotKey())); } catch {}
   ballot = {};
+  skipped = new Set((Array.isArray(saved?._skipped) ? saved._skipped : []).filter(id => awardCategories.some(([c]) => c === id)));
   for (const [id, , kind] of awardCategories) {
     const list = picksOf(saved?.[id]).slice(0, 3).map(v => nominees.has(v) ? nominees.get(v) : v);
     if (list.some(Boolean)) ballot[id] = list;
@@ -147,7 +151,14 @@ function renderBallot() {
     const grid = document.createElement('div'); grid.className = 'awards-cats';
     for (const [id, name, kind] of list) {
       const box = document.createElement('fieldset'); box.className = 'awards-cat'; box.dataset.category = id;
-      const legend = document.createElement('legend'); legend.textContent = name; box.append(legend);
+      const legend = document.createElement('legend'); legend.textContent = name;
+      // U59: "Auslassen" marks a category as left out on purpose; the typed picks stay but don't count
+      const skip = document.createElement('label'); skip.className = 'awards-skip';
+      const skipBox = document.createElement('input'); skipBox.type = 'checkbox'; skipBox.checked = skipped.has(id);
+      skipBox.setAttribute('aria-label', name + ' auslassen');
+      skip.append(skipBox, ' Auslassen'); legend.append(skip); box.append(legend);
+      const markSkipped = () => { box.classList.toggle('skipped', skipBox.checked); box.querySelectorAll('.awards-place input').forEach(i => { i.disabled = skipBox.checked; }); };
+      skipBox.onchange = () => { if (skipBox.checked) skipped.add(id); else skipped.delete(id); markSkipped(); saveDraft(); };
       if (kind === 'ceddl' && !ceddl.length) { const p = document.createElement('p'); p.className = 'awards-hint'; p.textContent = 'Noch keine Kandidaten: unten welche sammeln.'; box.append(p); }
       else if (kind && kind !== 'couple' && showInfo.size && !optionsFor(kind).length) { const p = document.createElement('p'); p.className = 'awards-hint'; p.textContent = 'Diese Season passt laut AniList keine Serie: einfach leer lassen.'; box.append(p); }
       POINTS.forEach((points, place) => {
@@ -179,6 +190,7 @@ function renderBallot() {
         else row.append(inputs[0]);
         box.append(row);
       });
+      markSkipped();
       grid.append(box);
     }
     block.append(grid); ballotElement.append(block);
@@ -271,6 +283,13 @@ async function loadShared() {
   catch (e) { if (request === seasonRequest) shared = { error: e.message }; }
   if (request === seasonRequest) drawShared();
 }
+// "Abstimmen bis Do., 31. Dez." (the last day before the next season), or that it is closed
+function deadlineText(state) {
+  const at = Date.parse(state?.closesAt || '');
+  if (!at) return '';
+  const day = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', weekday: 'short', day: 'numeric', month: 'short' });
+  return state.closed ? 'Abstimmung geschlossen seit ' + day.format(at) + ' · Auflösen geht weiter' : 'Abstimmen bis ' + day.format(at - 1);
+}
 const chip = (text, cls) => { const s = document.createElement('span'); s.className = 'awards-chip' + (cls ? ' ' + cls : ''); s.textContent = text; return s; };
 function drawShared() {
   const box = $('awardsGroup'), results = $('awardsResults');
@@ -289,13 +308,17 @@ function drawShared() {
   for (const name of [...voted]) row.append(chip('✓ ' + name, 'done'));
   if (!revealed()) for (const name of people.filter(p => !voted.has(p))) row.append(chip(name, 'open'));
   box.append(row);
+  // U54: voting closes by itself when the next season starts; "Auflösen" stays a button
+  const deadline = deadlineText(shared);
+  if (deadline && !revealed()) box.append(chip(deadline, shared.closed ? 'closed' : 'muted'));
   if (!revealed()) {
     const actions = document.createElement('div'); actions.className = 'awards-actions';
     const submit = document.createElement('button'); submit.type = 'button'; submit.id = 'awardsSubmit'; submit.className = 'pill primary';
     submit.textContent = voted.has(personSelect.value) ? 'Stimme ändern' : 'Stimme abgeben';
     const confirmed = !ID || ID.canAct(personSelect.value);
-    submit.disabled = !ballotSummary().length || !confirmed;
-    if (!confirmed) submit.title = 'Erst oben bestätigen, dass du ' + personSelect.value + ' bist';
+    submit.disabled = !ballotSummary().length || !confirmed || !!shared.closed;
+    if (shared.closed) submit.title = 'Die Abstimmung ist geschlossen';
+    else if (!confirmed) submit.title = 'Erst oben bestätigen, dass du ' + personSelect.value + ' bist';
     submit.onclick = submitBallot;
     const reveal = document.createElement('button'); reveal.type = 'button'; reveal.id = 'awardsReveal'; reveal.className = 'pill';
     reveal.textContent = 'Auflösen'; reveal.disabled = !voted.size;
@@ -382,7 +405,8 @@ function drawResults() {
     const p = document.createElement('p');
     const who = document.createElement('b'); who.textContent = b.person + ': ';
     p.append(who, awardCategories.filter(([id]) => picksOf(b.picks?.[id]).some(Boolean)).map(([id, label]) =>
-      label + ' ' + picksOf(b.picks[id]).map((v, i) => v && `${POINTS[i]} ${v}`).filter(Boolean).join(', ')).join(' · '));
+      label + ' ' + picksOf(b.picks[id]).map((v, i) => v && `${POINTS[i]} ${v}`).filter(Boolean).join(', ')).join(' · ')
+      + (b.skipped?.length ? ' · ausgelassen: ' + awardCategories.filter(([id]) => b.skipped.includes(id)).map(([, label]) => label).join(', ') : ''));
     ballots.append(p);
   }
   box.hidden = false;
@@ -398,11 +422,11 @@ $('awardsShowPick').onchange = () => { show.cat = Number($('awardsShowPick').val
 $('awardsShowPick').replaceChildren(...REVEAL_ORDER.map(([, label], i) => new Option(label, i)));
 
 async function submitBallot() {
-  const picks = Object.fromEntries(awardCategories.flatMap(([id]) => (ballot[id] || []).some(Boolean) ? [[id, ballot[id]]] : []));
+  const picks = Object.fromEntries(awardCategories.flatMap(([id]) => !skipped.has(id) && (ballot[id] || []).some(Boolean) ? [[id, ballot[id]]] : []));
   const button = $('awardsSubmit'); button.disabled = true;
   awardsStatus.textContent = 'Wird abgegeben…';
   try {
-    await awardsCall('/awards/ballot', { season: seasonName(), person: personSelect.value, picks }, personSelect.value);
+    await awardsCall('/awards/ballot', { season: seasonName(), person: personSelect.value, picks, skipped: [...skipped] }, personSelect.value);
     awardsStatus.textContent = 'Stimme von ' + personSelect.value + ' abgegeben. Bis zum Auflösen sieht sie niemand.';
     shared = { ...shared, voters: [...new Set([...(shared?.voters || []), personSelect.value])] };
     drawShared();

@@ -239,7 +239,7 @@ function drawFeatures(planned) {
   const list = planned ? SITE_PLANNED : SITE_FEATURES;
   $('featuresTabNow').setAttribute('aria-selected', !planned);
   $('featuresTabPlanned').setAttribute('aria-selected', planned);
-  $('featuresIntro').textContent = planned ? `${plannedTotal} Funktionen und Updates sind beschlossen und kommen als Nächstes.`
+  $('featuresIntro').textContent = planned ? (plannedTotal ? `${plannedTotal} Funktionen und Updates sind beschlossen und kommen als Nächstes.` : 'Gerade ist alles Beschlossene gebaut. Neue Ideen gern über den Feedback-Link.')
     : `${featureTotal} Funktionen in ${SITE_FEATURES.length} Bereichen.`;
   $('featuresList').innerHTML = list.map(([area, items]) => `<section><h3>${esc(area)} <span>${items.length}</span></h3><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
   $('featuresDlg').scrollTop = 0;

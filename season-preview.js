@@ -77,7 +77,8 @@ function verifiedTrailer(entry) {
  const id=clean(entry.youtubeId);
  return /^[a-zA-Z0-9_-]{11}$/.test(id)?{
   id,type:entry.type, subtitles:entry.subtitles==='de'?'DE':entry.subtitles==='en'?'EN':null,
-  title:clean(entry.title)||(teaser?'Offizieller Teaser':'Offizieller Trailer')
+  title:clean(entry.title)||(teaser?'Offizieller Teaser':'Offizieller Trailer'),
+  seconds:Number.isInteger(entry.seconds)&&entry.seconds>0&&entry.seconds<3600?entry.seconds:0
  }:null;
 }
 // Covers (idea 87): from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
@@ -239,6 +240,7 @@ function pickedTrailer(show){
  try{saved=localStorage.getItem('seasonTrailerChoice:'+seasonKey(current)+':'+show.key)||'';}catch{}
  return list.find(v=>v.id===saved)||list[0]||null;
 }
+const trailerLength=t=>(t>=3600?Math.floor(t/3600)+':'+String(Math.floor(t/60)%60).padStart(2,'0'):Math.floor(t/60))+':'+String(t%60).padStart(2,'0');
 function trailerFor(show){return trailerCandidates(show)[0]||null;}
 // Personal alternative video links do not change the shared catalog or YouTube playlist.
 function externalKey(show){return 'seasonExternalTrailer:'+seasonKey(current)+':'+show.key;}
@@ -571,6 +573,10 @@ function render(){
  const playlistId=clean(data.youtubePlaylistId),playlist=pv('previewPlaylist');
  playlist.hidden=!/^[\w-]{10,}$/.test(playlistId);
  if(!playlist.hidden)playlist.href='https://www.youtube.com/playlist?list='+encodeURIComponent(playlistId);
+ // U52: the playlist's length, from the trailers whose runtime is known
+ const lengths=shows.map(s=>trailerFor(s)?.seconds||0).filter(Boolean),total=lengths.reduce((a,b)=>a+b,0);
+ playlist.querySelector('span').textContent='YouTube Playlist'+(total?' · '+Math.max(1,Math.round(total/60))+' Min.':'');
+ playlist.title=total?(lengths.length<trailers?'Länge von '+lengths.length+' der '+trailers+' Trailer: ':'Alle Trailer zusammen: ')+trailerLength(total):'';
  let ghKey='';try{ghKey=localStorage.getItem('movesKey')||'';}catch{}
  pv('previewTrailerRefresh').hidden=playlist.hidden||!ghKey;
  drawStarts();

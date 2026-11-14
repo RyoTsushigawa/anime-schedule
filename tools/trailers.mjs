@@ -195,7 +195,7 @@ async function pick(show, start) {
     const t = v?.snippet.title || '';
     if (v && !show.notSequel && SEQUEL_VIDEO.test(t)) return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: t, searched: new Date().toISOString() };
     if (v && score(v, titles, true, start) >= 9 && !/teaser|ティザー|特報|announcement/i.test(t))
-      return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, channel: v.snippet.channelTitle, caption: v.contentDetails.caption === 'true', via: 'anilist', searched: new Date().toISOString() };
+      return { anilist: al?.id || null, skip: null, video: v.id, videoTitle: t, seconds: seconds(v.contentDetails.duration), channel: v.snippet.channelTitle, caption: v.contentDetails.caption === 'true', via: 'anilist', searched: new Date().toISOString() };
   }
   const found = await yt('search', { part: 'snippet', type: 'video', maxResults: 10, q: `${name} ${show.channelPref || 'anime'} trailer`, relevanceLanguage: 'en' }, 100);
   const ids = [...new Set([alTrailer, ...(found.items || []).map(i => i.id.videoId)].filter(Boolean))];
@@ -212,7 +212,7 @@ async function pick(show, start) {
   if (!best && show.channelPref) for (const v of all) log(`    candidate: ${v.snippet.title} · ${v.snippet.channelTitle} (${score(v, titles, v.id === alTrailer, start, show.channelPref)})`);
   if (best && !show.notSequel && SEQUEL_VIDEO.test(best.v.snippet.title))
     return { anilist: al?.id || null, video: null, skip: 'sequel', videoTitle: best.v.snippet.title, searched: new Date().toISOString() };
-  return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', channel: best?.v.snippet.channelTitle || '', caption: best?.v.contentDetails.caption === 'true',
+  return { anilist: al?.id || null, skip: null, video: best?.v.id || null, videoTitle: best?.v.snippet.title || '', ...(best && { seconds: seconds(best.v.contentDetails.duration) }), channel: best?.v.snippet.channelTitle || '', caption: best?.v.contentDetails.caption === 'true',
     ...(best?.subs && { subs: best.subs }), searched: new Date().toISOString() };
 }
 
@@ -283,6 +283,12 @@ const save = async () => {
   if (dry) return;
   // seasons gone from the sheet's "ahead" lists are dropped four months after their last update
   for (const name of Object.keys(state.seasons)) if (!lists.some(t => t.name === name) && Date.now() - Date.parse(state.seasons[name].synced || 0) > 120 * DAY) delete state.seasons[name];
+  // U52: the trailer length, for picks saved before it was kept (one video lookup per 50, 1 unit each)
+  const noLength = Object.values(state.seasons).flatMap(x => x.shows).filter(s => s.video && !s.skip && !s.seconds);
+  if (noLength.length) try {
+    const lengths = new Map((await videos([...new Set(noLength.map(s => s.video))])).map(v => [v.id, seconds(v.contentDetails.duration)]));
+    for (const s of noLength) if (lengths.get(s.video)) s.seconds = lengths.get(s.video);
+  } catch (e) { log(`  (trailer lengths not read: ${e.message})`); }
   state.updated = new Date().toISOString();
   await writeFile(STATE, JSON.stringify(state, null, 1) + '\n');
   // the Season Preview page's file: one automatic trailer per new show, sequels marked
@@ -296,7 +302,7 @@ const save = async () => {
       const key = String(s.romaji || '').trim().toLocaleLowerCase();
       if (!key || s.skip === 'carryover') continue;
       if (s.skip === 'sequel') trailers[key] = { sequelStatus: 'sequel' };
-      else if (s.video) trailers[key] = { auto: true, type: 'full_trailer', sequelStatus: 'not_sequel', youtubeId: s.video, title: s.videoTitle || '',
+      else if (s.video) trailers[key] = { auto: true, type: 'full_trailer', sequelStatus: 'not_sequel', youtubeId: s.video, title: s.videoTitle || '', ...(s.seconds && { seconds: s.seconds }),
         ...(s.subs?.includes('de') ? { subtitles: 'de' } : s.subs?.includes('en') ? { subtitles: 'en' } : {}) };
       else if (s.searched || s.fixed) trailers[key] = { sequelStatus: 'not_sequel', youtubeStatus: 'not_found' };
     }
@@ -328,7 +334,7 @@ try { for (const tab of lists) {
         // counted as new by hand: forget an earlier "sequel" (or another preferred channel) and pick normally
         if (!s.notSequel || s.channelPref !== channel) { delete s.skip; delete s.searched; delete s.fixed; s.notSequel = true; s.channelPref = channel; }
       } else if (s.notSequel) { delete s.notSequel; delete s.channelPref; delete s.searched; }
-      if (key in own && !auto) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; continue; }
+      if (key in own && !auto) { Object.assign(s, { video: own[key] || null, videoTitle: own[key] ? 'by hand' : '', channel: '', fixed: true, skip: null }); delete s.subs; delete s.seconds; continue; }
       if (s.fixed) { delete s.fixed; delete s.searched; }
       // picked from a re-upload channel before official channels ranked first: search once more
       if (s.video && !s.fixed && !s.channelPref && s.searched && !s.officialCheck && !official(s.channel || '')) { delete s.searched; s.officialCheck = true; }

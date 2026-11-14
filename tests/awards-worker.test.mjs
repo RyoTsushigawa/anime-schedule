@@ -16,14 +16,14 @@ const call=async (env,path,body,method=body?'POST':'GET')=>{
  const res=await worker.fetch(new Request('https://votes.test'+path,{method,headers:{Origin:origin,'X-Person-Pin':'1234',...(body&&{'Content-Type':'application/json'})},...(body&&{body:JSON.stringify(body)})}),env);
  return {status:res.status,body:await res.json()};
 };
-const season='Herbst 2026';
+const season='Herbst 2040';
 
 test('before Auflösen only the names of who voted are given out',async()=>{
  const env={SITE_ORIGIN:origin,AWARDS:kv()};
  assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{best:'Frieren',opening:'Gachiakuta'}})).status,200);
  assert.equal((await call(env,'/awards/ballot',{season,person:'Belly',picks:{best:'Frieren'}})).status,200);
  const state=(await call(env,'/awards?season='+encodeURIComponent(season))).body;
- assert.deepEqual(state,{season,revealed:false,voters:['Belly','Rei']});
+ assert.deepEqual(state,{season,revealed:false,voters:['Belly','Rei'],closesAt:'2040-12-31T23:00:00.000Z',closed:false});
  assert.doesNotMatch(JSON.stringify(state),/Frieren/);
 });
 
@@ -89,4 +89,31 @@ test('Ceddl of the Year: candidates are collected, without doubles, and closed a
  assert.equal((await call(env,'/awards/ceddl',{season,name:'Late',anime:'X'})).status,409);
  list=(await call(env,'/awards/ceddl?season='+encodeURIComponent(season))).body.candidates;
  assert.deepEqual(list.map(c=>c.name),['Anya Forger']);
+});
+
+test('U54: voting closes by itself when the next season starts; Auflösen still works',async t=>{
+ const env={SITE_ORIGIN:origin,AWARDS:kv()};
+ t.mock.timers.enable({apis:['Date'],now:Date.parse('2040-12-31T22:59:00Z')});
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{best:'Frieren'}})).status,200);
+ assert.equal((await call(env,'/awards?season='+encodeURIComponent(season))).body.closed,false);
+ t.mock.timers.setTime(Date.parse('2040-12-31T23:00:00Z'));
+ const late=await call(env,'/awards/ballot',{season,person:'Belly',picks:{best:'Frieren'}});
+ assert.equal(late.status,409);
+ assert.match(late.body.error,/geschlossen/);
+ const state=(await call(env,'/awards?season='+encodeURIComponent(season))).body;
+ assert.equal(state.closed,true);
+ assert.deepEqual(state.voters,['Rei']);
+ assert.equal((await call(env,'/awards/reveal',{season})).status,200);
+});
+
+test('U59: skipped categories are kept apart from picks and shown after Auflösen',async()=>{
+ const env={SITE_ORIGIN:origin,AWARDS:kv()};
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{best:'Frieren'},skipped:['villain','ceddl']})).status,200);
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Belly',picks:{},skipped:['best']})).status,200,'a ballot of only skips counts');
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{best:'Frieren'},skipped:['best']})).status,400,'skipped and picked at once');
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{},skipped:['worst']})).status,400);
+ assert.equal((await call(env,'/awards/ballot',{season,person:'Rei',picks:{}})).status,400);
+ await call(env,'/awards/reveal',{season});
+ const {ballots}=(await call(env,'/awards?season='+encodeURIComponent(season))).body;
+ assert.deepEqual(ballots,[{person:'Belly',picks:{},skipped:['best']},{person:'Rei',picks:{best:['Frieren']},skipped:['villain','ceddl']}]);
 });

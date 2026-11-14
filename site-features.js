@@ -36,7 +36,7 @@ const SITE_FEATURES = [
   ['Season Preview', [
     'Trailer zu jeder Serie', 'Gemeinsam abstimmen (Ja / Vielleicht / Nein)', 'Stimmen mit Namen', 'Filter, die gemerkt werden',
     'Start-Leiste nach Startwoche', 'Cover (AniList, sonst MyAnimeList)', 'Entwürfe, wenn eine Stimme nicht ankam', '„Nächste offene Serie“',
-    'Vorschläge für Fortsetzungen', 'Gruppencode', 'Automatische YouTube-Trailer-Playlist', 'Eigene alternative Videos',
+    'Vorschläge für Fortsetzungen', 'Gruppencode', 'Automatische YouTube-Trailer-Playlist', 'Gesamtlänge der Trailer an der Playlist', 'Eigene alternative Videos',
   ]],
   ['Watch Planner', [
     'Abendplan aus den Stimmen', 'Ziehen oder Tippen zum Umstellen', 'Gespeicherte Varianten', 'Als Link teilen', 'Testmodus', 'Startwochen',
@@ -45,6 +45,7 @@ const SITE_FEATURES = [
   ['Anime Wrapped', ['Season-Wrapped', 'Jahres-Wrapped', 'Ganze Gruppe', '„Wer ist wer?“', 'Karte als Bild speichern', 'Essen zur Season']],
   ['Tier-Liste & Awards', ['Tier-Liste mit „Für Discord kopieren“', 'Awards mit 22 Kategorien wie bei den Crunchyroll Awards', 'Eurovision-Punkte: 12, 10 und 8 pro Kategorie',
     'Nominierte durchsuchen (auch Figuren von AniList)', 'Ceddl of the Year: Kandidaten über die Season sammeln', 'Geheime Gruppenabstimmung mit „Auflösen“',
+    'Abstimmungsschluss zum Start der nächsten Season', 'Kategorien bewusst auslassen',
     'Punktevergabe-Show: Wertung für Wertung, „… und unsere 12 Punkte gehen an …“', 'Ruhmeshalle']],
   ['Anime-Börse', ['Aktien auf die Season-Anime mit Spielgeld, die ganze Season täglich von 8 bis 22 Uhr handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
     'Kurs-Graphen pro Serie und für dein Depot', 'Wall-Street-Regeln: Ordergebühr, T+1, Leerverkäufe, Circuit Breaker', 'Rangliste nach Depotwert', 'Nur für dich: Bestätigung über AniList oder PIN (auch bei den Awards)']],
@@ -54,9 +55,4 @@ const SITE_FEATURES = [
 ];
 // What's coming: approved in the feature challenge (FEATURE_BACKLOG.md) but not built yet. Move a line up to
 // SITE_FEATURES when it's live.
-const SITE_PLANNED = [
-  ['Verbesserungen', [
-    'Season Preview: Länge des Trailers',
-    'Awards: Abstimmungsschluss zum Start der nächsten Season', 'Awards: eine Kategorie bewusst auslassen',
-  ]],
-];
+const SITE_PLANNED = [];

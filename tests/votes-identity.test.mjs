@@ -13,7 +13,7 @@ const call=async (env,path,body,headers={})=>{
  const res=await worker.fetch(new Request('https://votes.test'+path,{method:body?'POST':'GET',headers:{Origin:origin,...headers,...(body&&{'Content-Type':'application/json'})},...(body&&{body:JSON.stringify(body)})}),env);
  return {status:res.status,body:await res.json()};
 };
-const season='Herbst 2026';
+const season='Herbst 2040', stockSeason='Herbst 2026';
 const ballot=(person,headers,env)=>call(env,'/awards/ballot',{season,person,picks:{best:['Frieren']}},headers);
 
 test('AniList: the login decides the person; MaRyo\'s two accounts are Ryo and Marvin', async()=>{
@@ -53,16 +53,16 @@ test('PIN: set the first time, then needed; 5 wrong tries lock it; the owner res
 test('Börse: your own account only with your login; orders only for yourself', async()=>{
  const env={SITE_ORIGIN:origin,AWARDS:kv(),TEST_NOW:String(Date.parse('2026-11-14T12:00:00Z'))};
  const real=globalThis.fetch;
- globalThis.fetch=async (u,init)=>/boerse-prices\.json/.test(String(u))?new Response(JSON.stringify({seasons:{[season]:{days:['2026-11-14'],shows:{Frieren:{closes:[100]}}}}})):real(u,init);
+ globalThis.fetch=async (u,init)=>/boerse-prices\.json/.test(String(u))?new Response(JSON.stringify({seasons:{[stockSeason]:{days:['2026-11-14'],shows:{Frieren:{closes:[100]}}}}})):real(u,init);
  try{
-  const order=(person,headers)=>call(env,'/stocks/trade',{season,person,title:'Frieren',qty:1},headers);
+  const order=(person,headers)=>call(env,'/stocks/trade',{season:stockSeason,person,title:'Frieren',qty:1},headers);
   assert.equal((await order('Ryo',{'X-AniList-Token':'tok-MilkyWay95'})).status,403,'Marvin can\'t buy for Ryo');
   assert.equal((await order('Ryo',{'X-AniList-Token':'tok-RyoTsushigawa'})).status,200);
-  const peek=await call(env,'/stocks?season='+encodeURIComponent(season)+'&person=Ryo',null,{'X-AniList-Token':'tok-MilkyWay95'});
+  const peek=await call(env,'/stocks?season='+encodeURIComponent(stockSeason)+'&person=Ryo',null,{'X-AniList-Token':'tok-MilkyWay95'});
   assert.equal(peek.status,403,'nobody looks into someone else\'s account');
-  const mine=await call(env,'/stocks?season='+encodeURIComponent(season)+'&person=Ryo',null,{'X-AniList-Token':'tok-RyoTsushigawa'});
+  const mine=await call(env,'/stocks?season='+encodeURIComponent(stockSeason)+'&person=Ryo',null,{'X-AniList-Token':'tok-RyoTsushigawa'});
   assert.deepEqual(mine.body.account.holdings,{Frieren:1});
-  const open=await call(env,'/stocks?season='+encodeURIComponent(season));
+  const open=await call(env,'/stocks?season='+encodeURIComponent(stockSeason));
   assert.equal(open.body.account,null);
   assert.equal(open.body.ranking[0].person,'Ryo');
  }finally{globalThis.fetch=real;}
