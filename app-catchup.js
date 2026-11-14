@@ -244,7 +244,7 @@ if (current()) setPaceNav(ownPace.length);
 const openEpisodes = showCatchupCount(rows);
 // shows put on "Später" stay counted but out of the list, own list only
 const later = !friend ? catchupLater() : {};
-const laterCount = rows.filter(r => later[r.m.id]).length;
+const laterRows = rows.filter(r => later[r.m.id]), laterCount = laterRows.length;
 for (let i = rows.length - 1; i >= 0; i--) if (later[rows[i].m.id]) rows.splice(i, 1);
 const byTitle = (a, b) => (a.m.title.english || a.m.title.romaji).localeCompare(b.m.title.english || b.m.title.romaji);
 rows.sort(choices.sort === 'az' ? byTitle
@@ -384,7 +384,8 @@ const fromPlan = rows.filter(row => row.missing).length;
 const onList = rows.length - fromPlan;
 $('list').insertAdjacentHTML('afterbegin', `<div class="catchup-summary${friend ? ' friend-summary' : ''}">
       <div class="friend-view"><strong>${esc(listName)}</strong>${readOnly}</div>
-      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}${onList ? ` · ${onList} ${onList === 1 ? 'Serie' : 'Serien'}` : ''}${fromPlan ? ` · ${fromPlan} aus dem Guckplan` : ''}${laterCount ? ` · <button type="button" class="inline-later" data-later-show title="Wieder in Catch-up zeigen">${laterCount} später</button>` : ''}</span>
+      <span>${openEpisodes} ${openEpisodes === 1 ? 'Folge' : 'Folgen'} offen${catchupTime()}${onList ? ` · ${onList} ${onList === 1 ? 'Serie' : 'Serien'}` : ''}${fromPlan ? ` · ${fromPlan} aus dem Guckplan` : ''}${laterCount ? ` · <button type="button" class="inline-later" data-later-open aria-expanded="${catchupLaterOpen}" title="Zeigen, welche Serien auf „Später“ stehen">${laterCount} später</button>` : ''}</span>
+      ${laterCount && catchupLaterOpen ? `<div class="later-list"><span class="muted">Auf „Später“:</span>${laterRows.map(r => `<span class="later-item">${esc(r.m.title.english || r.m.title.romaji)} <button type="button" class="pill" data-later-back="${r.m.id}">Zurückholen</button></span>`).join('')}${laterCount > 1 ? '<button type="button" class="pill" data-later-show>Alle zurückholen</button>' : ''}</div>` : ''}
       ${friend ? '<button type="button" class="pill" data-own-list>Eigene Liste</button>' : canMove() && !local && rows.some(r => !r.missing) ? '<button type="button" class="pill" id="autoPlanOpen" title="Offene Folgen auf die restlichen Abende dieser Woche verteilen">Automatisch einplanen</button>' : ''}
     </div>`);
 } else if (friend) {
@@ -467,11 +468,14 @@ try { localStorage.setItem('catchupPinned', JSON.stringify([...all])); } catch {
 notice(all.has(id) ? 'Oben angeheftet' : 'Nicht mehr angeheftet');
 loadCatchupContent();
 });
-// "Später" on a sleeping show, and showing them again
+// "Später" on a sleeping show, and showing them again: all at once, or one (U50) from the list behind "N später"
+let catchupLaterOpen = false;
 $('list').addEventListener('click', e => {
-const later = e.target.closest('[data-later]'), back = e.target.closest('[data-later-show]');
-if (!later && !back) return;
-if (later) { const all = catchupLater(); all[later.dataset.later] = Date.now() + LATER_MS; saveCatchupLater(all); notice('Für zwei Wochen aus Catch-up ausgeblendet'); }
-else saveCatchupLater({});
+const later = e.target.closest('[data-later]'), back = e.target.closest('[data-later-show]'), one = e.target.closest('[data-later-back]'), open = e.target.closest('[data-later-open]');
+if (!later && !back && !one && !open) return;
+if (open) catchupLaterOpen = !catchupLaterOpen;
+else if (later) { const all = catchupLater(); all[later.dataset.later] = Date.now() + LATER_MS; saveCatchupLater(all); notice('Für zwei Wochen aus Catch-up ausgeblendet'); }
+else if (one) { const all = catchupLater(); delete all[one.dataset.laterBack]; saveCatchupLater(all); notice('Wieder in Catch-up'); }
+else { saveCatchupLater({}); catchupLaterOpen = false; }
 loadCatchupContent();
 });

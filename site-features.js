@@ -6,9 +6,9 @@ const SITE_FEATURES = [
     'Guckplan live aus dem Google Sheet der Gruppe', 'Sendezeiten von AniList', 'Release-Zeit, Guck-Zeit oder beide',
     'Deutsche Stream-Links pro Serie', 'Alternative Quellen (AniWorld, SubsPlease, Nyaa, 0neko)', 'Bevorzugter Dienst und Prime-Link-Auswahl',
     'Wochen blättern und „Heute“', 'Angezeigte Tage wählen', 'Eigene Ansicht („Für“: nur die Serien einer Person)',
-    'Wer schaut mit (Zuschauer)', 'Offene Folgen', 'Folge abhaken (AniList)', 'MyAnimeList-Verbindung', 'Auto-Abhaken beim Öffnen',
+    'Wer schaut mit (Zuschauer)', 'Offene Folgen', 'Gesehene ausblenden (eigene Ansicht)', 'Leere Tage ausblenden', 'Stream-Links eines Tages kopieren', 'Folge abhaken (AniList)', 'MyAnimeList-Verbindung', 'Auto-Abhaken beim Öffnen',
     'Drop-Button', 'Bewerten', 'Hinweise zu Pausen und unbestätigten Zeiten', 'Ersatz bei AniList-Ausfall (letzte gespeicherte Woche)',
-    'Als App auf dem Startbildschirm, mit Offline-Kopie und „Neu laden“ bei Updates', 'Nachschlagen (auch mit Spitznamen)',
+    'Als App auf dem Startbildschirm, mit Offline-Kopie und „Neu laden“ bei Updates', 'Nachschlagen (auch mit Spitznamen), letzte Suchen löschbar',
     'Wochenübersicht pro Person', 'Startet bald (Premieren der nächsten Season)', 'Finale- und „Fortsetzung angekündigt“-Hinweise',
     'Lange und doppelte Folgen', 'Pausen und Recaps im Plan', 'Plan-Check', 'Planänderungen', 'Seriendaten prüfen',
     'Folgennummern vergleichen', 'Falschen Link melden', 'Discord-Nachricht für jeden Tag (Formate, Kopieren)',
@@ -25,7 +25,7 @@ const SITE_FEATURES = [
     'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt',
   ]],
   ['Catch-up & Non-seasonal', [
-    'Catch-up-Ansicht', 'Catch-up sortieren', 'Anpinnen', 'Mehrere auf einmal ändern und Folgen-Stepper', 'Non-seasonal (eigenes Tempo)',
+    'Catch-up-Ansicht', 'Catch-up sortieren', 'Anpinnen', '„Später“ für einzelne Serien, einzeln zurückholen', 'Mehrere auf einmal ändern und Folgen-Stepper', 'Non-seasonal (eigenes Tempo)',
     'Allein schauen', 'Lokale Liste mit Backup (Export und Import)',
   ]],
   ['Einstellungen & Werkzeuge', [
@@ -56,12 +56,10 @@ const SITE_FEATURES = [
 // SITE_FEATURES when it's live.
 const SITE_PLANNED = [
   ['Verbesserungen', [
-    'Wochenplan: gesehene Folgen in der eigenen Ansicht ausblenden', 'Wochenplan: leere Tage ausblenden',
-    'Wochenplan: Stream-Link kopieren', 'Verschieben: Warnung, wenn der neue Slot mit einer anderen Serie derselben Leute kollidiert',
+    'Verschieben: Warnung, wenn der neue Slot mit einer anderen Serie derselben Leute kollidiert',
     'Verschieben: Warnung, wenn der Slot vor der Ausstrahlung liegt', 'Verschieben: einmalige Verschiebung bis zu einer gewählten Woche',
     'Abwesenheiten: versehentlich gelöschte rückgängig machen', 'Abwesenheiten: überlappende Einträge anzeigen',
-    'Abwesenheiten: vorher zeigen, welche Serien betroffen sind', 'Catch-up: eine einzelne „Später“-Serie zurückholen',
-    'Suche: letzte Suchen löschen', 'Season Preview: Länge des Trailers',
+    'Abwesenheiten: vorher zeigen, welche Serien betroffen sind', 'Season Preview: Länge des Trailers',
     'Awards: Abstimmungsschluss zum Start der nächsten Season', 'Awards: eine Kategorie bewusst auslassen',
   ]],
 ];

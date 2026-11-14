@@ -331,7 +331,7 @@ if (id === 'moveButtons') syncMoveEditor();
 }
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
 const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'textsize', 'contrast', 'servicePriority', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
-  'who', 'behind', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
+  'who', 'behind', 'hideWatched', 'hideEmptyDays', 'markOnOpen', 'dropButtons', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
   'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
 {
   const select = $('servicePriority');
@@ -385,6 +385,12 @@ $('editSchedule').onclick = () => {
 $('moveButtons').checked = !$('moveButtons').checked;
 $('moveButtons').dispatchEvent(new Event('change'));
 };
+// U43 Gesehene ausblenden (own Solo view) and U53 Leere Tage ausblenden: body classes, the CSS hides the rows / days
+for (const [id, cls] of [['hideWatched', 'hide-watched'], ['hideEmptyDays', 'hide-empty-days']]) {
+  try { $(id).checked = localStorage.getItem(id) === '1'; } catch {}
+  document.body.classList.toggle(cls, $(id).checked);
+  $(id).onchange = () => { try { localStorage.setItem(id, $(id).checked ? '1' : '0'); } catch {} document.body.classList.toggle(cls, $(id).checked); };
+}
 try { $('behind').checked = localStorage.getItem('behind') === '1'; } catch {}
 $('behind').onchange = () => {
 try { localStorage.setItem('behind', $('behind').checked ? '1' : '0'); } catch {}

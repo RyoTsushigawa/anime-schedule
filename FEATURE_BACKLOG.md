@@ -43,18 +43,18 @@ Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED
 | U37 | Season Preview · Remember My Filters | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Restore the last selected voter and filters. |
 | U39 | Weekly Plan · Explain Absence Pauses | Merged in [PR #167](https://github.com/RyoTsushigawa/anime-schedule/pull/167). Open the existing Abwesend badge to see who was unavailable at the scheduled time and why the show was paused. |
 | U42 | Season Preview · Save an Unsent Vote | Merged in [PR #166](https://github.com/RyoTsushigawa/anime-schedule/pull/166). Keep a failed vote as a draft on its show so the voter can retry later. |
-| U43 | Weekly Plan · Hide Watched Episodes | Approved. Add an on/off toggle in the existing Solo view controls. On hides watched episodes. Off restores the full plan in one click. |
+| U43 | Weekly Plan · Hide Watched Episodes | Done: Einstellungen › Anzeige & Listen › Gesehene ausblenden (only in your own Solo view). |
 | U44 | Seasonal Anime Awards · Search Nominees | Done with the Awards rebuild (13 Nov): every place is a search field over the category's choices. |
 | U45 | Weekly Plan · Report a Wrong Streaming Link | Done: day menu › Falschen Link melden; reports stored by the votes helper (see workers/season-votes/README.md) for the repair queue N55. Flag incorrect links from the show menu, with an optional replacement URL for the maintainer. |
 | U46 | Seasonal Anime Awards · Ballot Progress | Done with the shared voting ([PR #163](https://github.com/RyoTsushigawa/anime-schedule/pull/163)): ✓ chips show who has voted, choices stay secret. |
-| U48 | Search · Clear Recent Searches | Approved. Clear this browser's recent title suggestions from the existing settings menu. |
-| U50 | Catch-up · Restore One Snoozed Show | Approved. Open the existing Später count to restore one show while keeping the others snoozed. |
+| U48 | Search · Clear Recent Searches | Done: Einstellungen › Anzeige & Listen › Letzte Suchen löschen (shown when there are any). |
+| U50 | Catch-up · Restore One Snoozed Show | Done: „N später“ in Catch-up opens the list; each show has „Zurückholen“, plus „Alle zurückholen“. |
 | U51 | Absences · Undo Accidental Removal | Approved. Restore the removed absence from the existing save notice, including its dates and time rules. |
 | U52 | Season Preview · Trailer Length | Approved. Show the runtime in the existing trailer link when known. |
-| U53 | Weekly Plan · Hide Empty Days | Approved. Add a toggle in the existing view controls. Keep days with pauses or absences visible. |
+| U53 | Weekly Plan · Hide Empty Days | Done: Einstellungen › Anzeige & Listen › Leere Tage ausblenden (today and days with absences stay). |
 | U54 | Seasonal Anime Awards · Voting Deadline | Approved. Show the deadline and automatically close voting at the start of the following anime season. Keep the reveal manual. |
 | U56 | Absences · Flag Overlapping Entries | Approved. Show overlapping recurring rules for the same person in the existing editor. |
-| U57 | Weekly Plan · Copy Streaming Link | Approved. Copy the stream link already shown on the row from the existing show menu. |
+| U57 | Weekly Plan · Copy Streaming Link | Done: day menu › copy icon copies the day's stream links as „Title: link“ lines. |
 | U59 | Seasonal Anime Awards · Skip a Category | Approved. Let voters explicitly skip a category and distinguish it from an unanswered category during ballot review. |
 | U61 | Weekly Plan · Flag a Scheduling Conflict | Approved. Warn in the existing move dialog when the new slot overlaps another show for any of the same viewers. Leave the decision to the editor. |
 | U62 | Absences · Preview Affected Shows | Approved in a ChatGPT round. (The same idea was not picked in Claude round 7, as U43 there; the ChatGPT approval stands unless the owner says otherwise.) In the existing editor, preview which already-scheduled shows would pause under the group’s attendance rules before saving. |
