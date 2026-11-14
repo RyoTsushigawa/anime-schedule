@@ -674,7 +674,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 13,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "159042": {
@@ -714,7 +715,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "160803": {
@@ -754,7 +756,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "169581": {
@@ -764,8 +766,8 @@
    ],
    "url": "https://www.livechart.me/anime/12344",
    "next": {
-    "episode": 8,
-    "at": 1794673800
+    "episode": 9,
+    "at": 1795278600
    },
    "airings": [
     {
@@ -779,6 +781,10 @@
     {
      "episode": 8,
      "at": 1794673800
+    },
+    {
+     "episode": 9,
+     "at": 1795278600
     }
    ],
    "news": [],
@@ -794,7 +800,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 13,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "172192": {
@@ -834,7 +841,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "176314": {
@@ -879,7 +886,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "178083": {
@@ -923,7 +931,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 13,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "178868": {
@@ -963,7 +972,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "179876": {
@@ -1003,7 +1012,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 11,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "180136": {
@@ -1047,7 +1057,8 @@
      "month": 12,
      "day": 25
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 26,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "180894": {
@@ -1057,8 +1068,8 @@
    ],
    "url": "https://www.livechart.me/anime/13383",
    "next": {
-    "episode": 7,
-    "at": 1794661200
+    "episode": 8,
+    "at": 1795266000
    },
    "airings": [
     {
@@ -1072,6 +1083,10 @@
     {
      "episode": 7,
      "at": 1794661200
+    },
+    {
+     "episode": 8,
+     "at": 1795266000
     }
    ],
    "news": [],
@@ -1087,7 +1102,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "185756": {
@@ -1127,7 +1143,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "186541": {
@@ -1167,7 +1183,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 13,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "186742": {
@@ -1211,7 +1228,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "187316": {
@@ -1256,7 +1273,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 23,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "187402": {
@@ -1266,8 +1284,8 @@
    ],
    "url": "https://www.livechart.me/anime/13073",
    "next": {
-    "episode": 8,
-    "at": 1794661200
+    "episode": 9,
+    "at": 1795266000
    },
    "airings": [
     {
@@ -1281,6 +1299,10 @@
     {
      "episode": 8,
      "at": 1794661200
+    },
+    {
+     "episode": 9,
+     "at": 1795266000
     }
    ],
    "news": [],
@@ -1296,7 +1318,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "187990": {
@@ -1336,7 +1358,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "189123": {
@@ -1372,7 +1394,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "191656": {
@@ -1382,8 +1405,8 @@
    ],
    "url": "https://www.livechart.me/anime/13150",
    "next": {
-    "episode": 7,
-    "at": 1794670200
+    "episode": 8,
+    "at": 1795275000
    },
    "airings": [
     {
@@ -1397,6 +1420,10 @@
     {
      "episode": 7,
      "at": 1794670200
+    },
+    {
+     "episode": 8,
+     "at": 1795275000
     }
    ],
    "news": [],
@@ -1412,7 +1439,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "191788": {
@@ -1452,7 +1480,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 24,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "195516": {
@@ -1496,7 +1525,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "195571": {
@@ -1506,8 +1536,8 @@
    ],
    "url": "https://www.livechart.me/anime/13231",
    "next": {
-    "episode": 6,
-    "at": 1794652200
+    "episode": 7,
+    "at": 1795257000
    },
    "airings": [
     {
@@ -1521,6 +1551,10 @@
     {
      "episode": 6,
      "at": 1794652200
+    },
+    {
+     "episode": 7,
+     "at": 1795257000
     }
    ],
    "news": [],
@@ -1536,7 +1570,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "195604": {
@@ -1546,8 +1580,8 @@
    ],
    "url": "https://www.livechart.me/anime/13232",
    "next": {
-    "episode": 7,
-    "at": 1794668400
+    "episode": 8,
+    "at": 1795273200
    },
    "airings": [
     {
@@ -1561,6 +1595,10 @@
     {
      "episode": 7,
      "at": 1794668400
+    },
+    {
+     "episode": 8,
+     "at": 1795273200
     }
    ],
    "news": [],
@@ -1576,7 +1614,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "198727": {
@@ -1616,7 +1654,8 @@
      "month": 12,
      "day": 22
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 11,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "199007": {
@@ -1626,8 +1665,8 @@
    ],
    "url": "https://www.livechart.me/anime/13327",
    "next": {
-    "episode": 6,
-    "at": 1794668400
+    "episode": 7,
+    "at": 1795273200
    },
    "airings": [
     {
@@ -1637,6 +1676,10 @@
     {
      "episode": 6,
      "at": 1794668400
+    },
+    {
+     "episode": 7,
+     "at": 1795273200
     }
    ],
    "news": [],
@@ -1652,7 +1695,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "199426": {
@@ -1692,7 +1736,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 13,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "199594": {
@@ -1736,7 +1781,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "200294": {
@@ -1776,7 +1822,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "200455": {
@@ -1816,7 +1863,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "202079": {
@@ -1856,7 +1904,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "202250": {
@@ -1866,8 +1915,8 @@
    ],
    "url": "https://www.livechart.me/anime/13386",
    "next": {
-    "episode": 7,
-    "at": 1794679200
+    "episode": 8,
+    "at": 1795284000
    },
    "airings": [
     {
@@ -1881,6 +1930,10 @@
     {
      "episode": 7,
      "at": 1794679200
+    },
+    {
+     "episode": 8,
+     "at": 1795284000
     }
    ],
    "news": [],
@@ -1896,7 +1949,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "203473": {
@@ -1906,8 +1959,8 @@
    ],
    "url": "https://www.livechart.me/anime/13416",
    "next": {
-    "episode": 6,
-    "at": 1794676500
+    "episode": 7,
+    "at": 1795281300
    },
    "airings": [
     {
@@ -1921,6 +1974,10 @@
     {
      "episode": 6,
      "at": 1794676500
+    },
+    {
+     "episode": 7,
+     "at": 1795281300
     }
    ],
    "news": [],
@@ -1936,7 +1993,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "203490": {
@@ -1980,7 +2038,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 24,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "204011": {
@@ -2016,7 +2075,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "204389": {
@@ -2026,8 +2085,8 @@
    ],
    "url": "https://www.livechart.me/anime/13442",
    "next": {
-    "episode": 8,
-    "at": 1794663000
+    "episode": 9,
+    "at": 1795267800
    },
    "airings": [
     {
@@ -2041,6 +2100,10 @@
     {
      "episode": 8,
      "at": 1794663000
+    },
+    {
+     "episode": 9,
+     "at": 1795267800
     }
    ],
    "news": [],
@@ -2056,7 +2119,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "204650": {
@@ -2105,7 +2168,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "205896": {
@@ -2145,7 +2209,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "205909": {
@@ -2189,7 +2253,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "206401": {
@@ -2233,7 +2298,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "206814": {
@@ -2273,7 +2339,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "206949": {
@@ -2313,7 +2379,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 25,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "207191": {
@@ -2353,7 +2420,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "207329": {
@@ -2393,7 +2461,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "207809": {
@@ -2433,7 +2501,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 24,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "208025": {
@@ -2473,7 +2542,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "209032": {
@@ -2498,9 +2568,9 @@
    ],
    "news": [],
    "video": {
-    "episode": 17,
-    "title": "【Magical Sisters LuluttoLilly】Episode 17｜Subtitled in 20+ languages",
-    "url": "https://www.youtube.com/watch?v=ZwRPdDKBcwg&list=PLKPsuBIKuejMR6v7XCBOMy7Xesql1re66"
+    "episode": 18,
+    "title": "【Magical Sisters LuluttoLilly】Episode 18｜Subtitled in 20+ languages",
+    "url": "https://www.youtube.com/watch?v=9yNcOAYIw8o&list=PLKPsuBIKuejMR6v7XCBOMy7Xesql1re66"
    },
    "airingStatus": {
     "status": "RELEASING",
@@ -2514,7 +2584,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "209219": {
@@ -2556,7 +2626,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "209463": {
@@ -2596,7 +2666,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "209499": {
@@ -2636,7 +2706,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "209502": {
@@ -2676,7 +2746,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:07.931Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.444Z"
    }
   },
   "209562": {
@@ -2686,8 +2757,8 @@
    ],
    "url": "https://www.livechart.me/anime/13562",
    "next": {
-    "episode": 7,
-    "at": 1794672000
+    "episode": 8,
+    "at": 1795276800
    },
    "airings": [
     {
@@ -2701,6 +2772,10 @@
     {
      "episode": 7,
      "at": 1794672000
+    },
+    {
+     "episode": 8,
+     "at": 1795276800
     }
    ],
    "news": [],
@@ -2716,7 +2791,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "209709": {
@@ -2726,8 +2801,8 @@
    ],
    "url": "https://www.livechart.me/anime/13566",
    "next": {
-    "episode": 7,
-    "at": 1794641400
+    "episode": 8,
+    "at": 1795246200
    },
    "airings": [
     {
@@ -2741,6 +2816,10 @@
     {
      "episode": 7,
      "at": 1794641400
+    },
+    {
+     "episode": 8,
+     "at": 1795246200
     }
    ],
    "news": [],
@@ -2756,7 +2835,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "209872": {
@@ -2766,8 +2845,8 @@
    ],
    "url": "https://www.livechart.me/anime/13571",
    "next": {
-    "episode": 7,
-    "at": 1794675600
+    "episode": 8,
+    "at": 1795280400
    },
    "airings": [
     {
@@ -2781,6 +2860,10 @@
     {
      "episode": 7,
      "at": 1794675600
+    },
+    {
+     "episode": 8,
+     "at": 1795280400
     }
    ],
    "news": [],
@@ -2796,7 +2879,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "211778": {
@@ -2836,7 +2919,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "212503": {
@@ -2880,7 +2963,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "212799": {
@@ -2890,8 +2973,8 @@
    ],
    "url": "https://www.livechart.me/anime/13653",
    "next": {
-    "episode": 7,
-    "at": 1794668400
+    "episode": 8,
+    "at": 1795273200
    },
    "airings": [
     {
@@ -2905,6 +2988,10 @@
     {
      "episode": 7,
      "at": 1794668400
+    },
+    {
+     "episode": 8,
+     "at": 1795273200
     }
    ],
    "news": [],
@@ -2920,7 +3007,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "episodes": 20,
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "212888": {
@@ -2960,7 +3048,8 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "213068": {
@@ -3000,7 +3089,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "213657": {
@@ -3040,7 +3129,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "213658": {
@@ -3080,7 +3169,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "213805": {
@@ -3124,7 +3213,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "216557": {
@@ -3134,8 +3223,8 @@
    ],
    "url": "https://www.livechart.me/anime/13448",
    "next": {
-    "episode": 7,
-    "at": 1794618000
+    "episode": 8,
+    "at": 1795222800
    },
    "airings": [
     {
@@ -3149,6 +3238,10 @@
     {
      "episode": 7,
      "at": 1794618000
+    },
+    {
+     "episode": 8,
+     "at": 1795222800
     }
    ],
    "news": [],
@@ -3164,7 +3257,7 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   },
   "216895": {
@@ -3213,9 +3306,10 @@
      "month": null,
      "day": null
     },
-    "checked": "2026-11-13T21:40:08.000Z"
+    "episodes": 12,
+    "checked": "2026-11-14T20:10:51.549Z"
    }
   }
  },
- "statusUpdated": "2026-11-13T21:40:08.000Z"
+ "statusUpdated": "2026-11-14T20:10:51.549Z"
 }
