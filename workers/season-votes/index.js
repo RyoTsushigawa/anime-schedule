@@ -144,6 +144,31 @@ async function accountPeople(env){
  return profilesCache.map;
 }
 const pinHash=async (salt,pin)=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+':'+pin)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+// Who an AniList login belongs to. A confirmed login is remembered for 12 hours (only a hash of it is kept, never
+// the login), so a short AniList outage doesn't block trading or voting. Only AniList's own "invalid token" answer
+// means the login has expired; when AniList is slow or down that is said instead (after one more try).
+async function aniListViewer(env,token){
+ const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('anilist-login:'+token)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+ const store=env.AWARDS,key='login:'+hash;
+ const known=store&&await store.get(key).catch(()=>null);
+ if(known)return known;
+ let res=null;
+ for(let attempt=0;attempt<2;attempt++){
+  if(attempt)await new Promise(r=>setTimeout(r,1500));
+  try{res=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:'Bearer '+token},body:JSON.stringify({query:'{ Viewer { name } }'})});}
+  catch{res=null;continue;}
+  if(res.ok||res.status===400||res.status===401)break;
+ }
+ const body=res?await res.json().catch(()=>({})):{};
+ const name=res?.ok?body?.data?.Viewer?.name:null;
+ const invalid=res&&(res.status===400||res.status===401||(res.ok&&!name)||(body?.errors||[]).some(e=>/invalid token|unauthorized/i.test(e?.message||'')));
+ if(!name){
+  if(invalid)fail(401,'Die AniList-Anmeldung ist abgelaufen: auf der Hauptseite neu verbinden.');
+  fail(503,'AniList antwortet gerade nicht, deshalb kann die Anmeldung nicht geprüft werden. Bitte gleich nochmal versuchen.');
+ }
+ if(store)await store.put(key,name,{expirationTtl:43200}).catch(()=>{});
+ return name;
+}
 async function verifiedPerson(request,env,claimed){
  const person=str(claimed);
  if(!AWARD_NAME.test(person))fail(400,'Ungültiger Name.');
@@ -152,9 +177,7 @@ async function verifiedPerson(request,env,claimed){
  const hasAniList=[...people.values()].includes(person);
  if(token){
   if(token.length>4000)fail(400,'Ungültige Anmeldung.');
-  const res=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:'Bearer '+token},body:JSON.stringify({query:'{ Viewer { name } }'})});
-  const name=res.ok?(await res.json().catch(()=>({})))?.data?.Viewer?.name:null;
-  if(!name)fail(401,'Die AniList-Anmeldung ist abgelaufen: auf der Hauptseite neu verbinden.');
+  const name=await aniListViewer(env,token);
   const who=people.get(name.toLowerCase());
   if(!who)fail(403,'Das AniList-Konto '+name+' steht nicht in „Wer ist wer“.');
   if(who!==person)fail(403,'Mit dem AniList-Konto '+name+' kannst du nur als '+who+' handeln.');

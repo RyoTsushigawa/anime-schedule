@@ -67,3 +67,24 @@ test('Börse: your own account only with your login; orders only for yourself', 
   assert.equal(open.body.ranking[0].person,'Ryo');
  }finally{globalThis.fetch=real;}
 });
+
+test('an AniList outage is not called an expired login; a login confirmed earlier still works during it', async t=>{
+ const env={SITE_ORIGIN:origin,AWARDS:kv()};
+ const before=globalThis.fetch;
+ t.after(()=>{ globalThis.fetch=before; });
+ // confirmed once while AniList answers
+ assert.equal((await ballot('Ryo',{'X-AniList-Token':'tok-RyoTsushigawa'},env)).status,200);
+ assert.ok([...env.AWARDS.data.keys()].some(k=>k.startsWith('login:')),'the confirmation is remembered (as a hash)');
+ assert.ok(![...env.AWARDS.data.values()].some(v=>String(v).includes('tok-')),'never the login itself');
+ // AniList down (503) or rate-limited (429): a new login gets a clear "AniList antwortet nicht", not "abgelaufen"
+ let calls=0;
+ globalThis.fetch=async (url,init)=>String(url)==='https://graphql.anilist.co'?(calls++,new Response('busy',{status:calls%2?503:429})):before(url,init);
+ const r=await ballot('Marvin',{'X-AniList-Token':'tok-MilkyWay95'},env);
+ assert.equal(r.status,503);
+ assert.match(r.body.error,/AniList antwortet gerade nicht/);
+ assert.equal(calls,2,'one more try before giving up');
+ // the login confirmed before still works without AniList
+ calls=0;
+ assert.equal((await ballot('Ryo',{'X-AniList-Token':'tok-RyoTsushigawa'},env)).status,200);
+ assert.equal(calls,0);
+});
