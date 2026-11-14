@@ -144,14 +144,13 @@ img.avatar { object-fit: cover; }
 .field select { width: 100%; min-width: 0; font-size: 13px; padding: 6px 8px; }
 .sync-row { display: flex; gap: 8px; align-items: center; padding: 4px 10px 10px; }
 .sync-row select { flex: 1; min-width: 0; border-radius: 8px; font-size: 12px; padding: 6px 8px; }
-#settingsMenu, #accountMenu {
+#accountMenu {
 width: min(256px, calc(100vw - 24px));
 padding: 8px;
 border-radius: 16px;
 }
-#settingsMenu .settings-options { display: grid; padding-block: 2px 4px; }
 .menu .menu-label { padding: 8px 8px 5px; }
-#settingsMenu .toggle, #accountSection .account-choice { border-radius: 10px; }
+#accountSection .account-choice { border-radius: 10px; }
 #accountSection { gap: 6px; }
 #accountSection .account-choice { display: flex; justify-content: flex-start; gap: 8px; padding: 8px 10px; min-width: 0; min-height: 38px; }
 #accountSection .account-choice.current {
@@ -657,7 +656,7 @@ text-decoration: line-through; }
 .misc-menu[hidden] { display: none !important; }
 .misc-menu a, .misc-menu button { display: flex; align-items: center; gap: 11px; min-height: 58px; width: 100%; padding: 10px; border-radius: 11px; text-align: left; box-sizing: border-box; cursor: pointer; }
 .misc-menu a:hover, .misc-menu button:hover { background: var(--today); color: var(--text); text-decoration: none; }.misc-menu a:focus-visible, .misc-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.misc-icon { flex: none; display: grid; place-items: center; width: 32px; height: 34px; background: var(--today); color: var(--accent); border-radius: 8px; font-size: 21px; }.misc-text { flex: 1; min-width: 0; }.misc-text b { display: block; font-size: 13px; font-weight: 600; }.misc-text small { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }.misc-menu a > span:last-child:not(.misc-text) { font-size: 12px; color: var(--muted); }.misc-menu #movesSetup { min-height: 36px; font-size: 11px; border-top: 1px solid var(--line); border-radius: 0; margin-top: 6px; color: var(--muted); }
+.misc-icon { flex: none; display: grid; place-items: center; width: 32px; height: 34px; background: var(--today); color: var(--accent); border-radius: 8px; font-size: 21px; }.misc-text { flex: 1; min-width: 0; }.misc-text b { display: block; font-size: 13px; font-weight: 600; }.misc-text small { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }.misc-menu a > span:last-child:not(.misc-text) { font-size: 12px; color: var(--muted); }
 @media (max-width: 560px) {.misc-tools { position: static; }.round.misc-trigger { width: 34px; padding: 0; }.misc-trigger > span { display: none; }.misc-menu.site-tools { top: calc(100% + 8px); right: 0; }}
 .row.pause .title { font-size: 14px; }
 .fallback-prime [data-prime-choice="prime"] { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
@@ -798,37 +797,6 @@ box-shadow: 0 8px 24px rgba(0,0,0,.3); font-size: 14px; max-width: calc(100vw - 
 .crash-note .crash-close { background: none; border: 0; color: var(--muted); padding: 4px 8px; }
 .help-topics [aria-pressed="true"] { background: var(--today); border-color: var(--accent); }
 .help-steps { flex-wrap: wrap; align-items: center; } .help-steps span { color: var(--muted); font-size: 12px; }
-#settingsMenu section + section {
-  margin-top: 9px;
-  padding-top: 10px; }
-#settingsMenu .menu-label { padding-block: 5px 3px;
-  padding: 2px 6px 8px;
-  line-height: 1.3;
-  font-size: 10.5px; }
-#settingsMenu .segmented { margin-block: 3px 5px;
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  margin: 0;
-  padding: 3px;
-  border-radius: 999px; }
-#settingsMenu .settings-options .toggle {
-padding-inline: 6px;
-border-color: transparent; overflow-wrap: anywhere;
-}
-#settingsMenu .settings-options .toggle::after {
-content: '';
-flex: none;
-width: 22px;
-height: 14px;
-border: 1px solid var(--muted);
-border-radius: 99px;
-background: radial-gradient(circle at 6px 50%, var(--muted) 3.5px, transparent 4px); display: none;
-}
-#settingsMenu .settings-options .toggle:has(input:checked)::after {
-border-color: var(--accent);
-background: radial-gradient(circle at calc(100% - 6px) 50%, var(--accent-text) 3.5px, transparent 4px), var(--accent);
-}
 .settings-caption { padding: 2px 8px 0; color: var(--muted); font-size: 11px; }
 #accountSection > .pill-row > button { border-radius: 8px; }
 #accountSection .account-choice.current .avatar { outline: 1px solid var(--accent); outline-offset: 2px; }
@@ -981,100 +949,6 @@ text-align: center;
   #discordDlg.nickname-setup .discord-nicks { padding: 12px 14px; }
 }
 
-/* Unified Settings: aligned pill controls, one rhythm and one corner language. */
-#settingsMenu {
-  box-sizing: border-box;
-  width: min(290px, calc(100vw - 24px));
-  padding: 10px;
-  border-radius: 16px;
-}
-#settingsMenu section { min-width: 0; }
-#settingsMenu .settings-options {
-  padding: 0;
-  gap: 7px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-#settingsMenu .settings-options .toggle {
-  box-sizing: border-box;
-  min-width: 0;
-  min-height: 38px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--text);
-  justify-content: center;
-  text-align: center;
-  padding: 6px 9px;
-  font-size: 12px;
-  line-height: 1.3;
-  gap: 5px;
-}
-#settingsMenu .settings-options .toggle:has(input:checked) {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
-}
-#settingsMenu .settings-options .toggle:hover { border-color: var(--accent); }
-#settingsMenu .segmented button {
-  min-width: 0;
-  min-height: 35px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  line-height: 1.2;
-}
-#settingsMenu .settings-caption {
-  padding: 0 6px 6px;
-  font-size: 11px;
-  line-height: 1.3;
-}
-#settingsMenu .segmented + .settings-caption { margin-top: 10px; }
-#settingsMenu .settings-caption + .segmented { margin-top: 0; }
-#settingsMenu .settings-action { display: flex; }
-#settingsMenu #settingsNicknames {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 39px;
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  text-align: center;
-  cursor: pointer;
-}
-#settingsMenu #settingsNicknames:hover, #settingsMenu #settingsNicknames:focus-visible {
-  border-color: var(--accent);
-  background: var(--today);
-}
-#settingsMenu .swatches {
-  display: flex;
-  align-items: center;
-  justify-content: space-evenly;
-  gap: 7px;
-  padding: 6px 2px 8px;
-}
-#settingsMenu .swatches button { flex: none; width: 24px; height: 24px; }
-#settingsMenu .menu-item {
-  box-sizing: border-box;
-  min-height: 36px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding-inline: 12px;
-}
-#settingsMenu .menu-item:hover, #settingsMenu .menu-item:focus-visible {
-  border-color: var(--line);
-  background: var(--today);
-}
-@media (pointer: coarse) {
-  #settingsMenu .settings-options .toggle,
-  #settingsMenu .segmented button,
-  #settingsMenu #settingsNicknames { min-height: 44px; }
-}
 
 /* Shared visual rhythm across the schedule, planner, popovers and editors.
    Keep specialized tools (Wrapped, Ranker, Masterset) visually distinct. */
@@ -1228,7 +1102,6 @@ text-align: center;
   #editScope button { padding-inline: 9px; font-size: 11px; }
   #editSchedule { padding-inline: 11px; }
   #settingsMenu { max-height: min(78dvh, 680px); overflow-y: auto; overscroll-behavior: contain; }
-  #settingsMenu .segmented button { font-size: 11px; }
 }
 
 /* Compact return-to-today action, including small screens. */
@@ -1487,21 +1360,6 @@ button.header-nav-link { font-family: inherit; cursor: pointer; }
 
 /* Settings: three immediately useful controls; less-used options are discoverable
    in native, keyboard-accessible disclosure groups. */
-#settingsMenu .settings-primary { display: flex; flex-direction: column; gap: 0; }
-#settingsMenu .settings-primary > section+section { margin-top: 9px; padding-top: 10px; border-top: 1px solid var(--line); }
-#settingsMenu .settings-secondary { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-#settingsMenu .settings-fold { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; }
-#settingsMenu .settings-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 10px 12px; list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text); user-select: none; }
-#settingsMenu .settings-fold > summary::-webkit-details-marker { display: none; }
-#settingsMenu .settings-fold > summary:hover { background: var(--today); }
-#settingsMenu .settings-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
-#settingsMenu .settings-fold-arrow { width: 8px; height: 8px; flex: none; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .15s ease; }
-#settingsMenu .settings-fold[open] .settings-fold-arrow { transform: rotate(225deg); }
-#settingsMenu .settings-fold-content { padding: 9px 10px 12px; border-top: 1px solid var(--line); }
-#settingsMenu .settings-fold-content > section+section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-#settingsMenu .settings-fold-content .menu-label { padding: 0 4px 8px; }
-#settingsMenu .settings-fold-content > section:last-child .menu-item:last-of-type { margin-bottom: 0; }
-@media (prefers-reduced-motion: reduce) {#settingsMenu .settings-fold-arrow { transition: none; }}
 
 /* A group can have different preferences for different people.
    Never mark opposite options as selected at the same time. */
@@ -1708,3 +1566,67 @@ body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { dis
 /* U62: shows an absence affects, before saving */
 .away-affected { font-size: 13px; color: #e5b45c; margin: 6px 0 0; }
 .away-affected:empty { display: none; }
+
+/* Settings menu: one block. Quick choices on top; below, folds as plain rows (no boxes, no gaps), switches
+   for on/off options, tools grouped by topic, and help, patch notes and feedback always at the bottom. */
+#settingsMenu { box-sizing: border-box; width: min(300px, calc(100vw - 24px)); padding: 6px 8px 8px; border-radius: 16px; }
+#settingsMenu section { min-width: 0; }
+#settingsMenu details { margin: 0; color: var(--text); font-size: inherit; }
+#settingsMenu .menu-label { padding: 10px 6px 6px; font-size: 10.5px; line-height: 1.2; }
+#settingsMenu .segmented { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; padding: 3px; border-radius: 999px; }
+#settingsMenu .segmented button { min-width: 0; min-height: 32px; padding: 5px 8px; border-radius: 999px; font-size: 12px; line-height: 1.2; }
+#settingsMenu .segmented + .segmented { margin-top: 6px; }
+#settingsMenu .settings-caption { padding: 8px 6px 5px; font-size: 11px; line-height: 1.3; }
+#settingsMenu .swatches { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 6px 4px; }
+#settingsMenu .swatches button { flex: none; width: 24px; height: 24px; }
+#settingsMenu .settings-primary { display: flex; flex-direction: column; padding-bottom: 8px; }
+/* the folds: rows with a chevron, separated by a hairline */
+#settingsMenu .settings-secondary { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+#settingsMenu .settings-fold { min-width: 0; border-bottom: 1px solid var(--line); }
+#settingsMenu .settings-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 0 8px; list-style: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); user-select: none; border-radius: 8px; }
+#settingsMenu .settings-fold > summary::-webkit-details-marker { display: none; }
+#settingsMenu .settings-fold > summary:hover { background: var(--today); }
+#settingsMenu .settings-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#settingsMenu .settings-fold > summary small { margin-left: auto; color: var(--muted); font-weight: 400; font-size: 11px; }
+#settingsMenu .settings-fold-arrow { width: 7px; height: 7px; flex: none; margin-right: 3px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .15s ease; }
+#settingsMenu .settings-fold[open] .settings-fold-arrow { transform: rotate(225deg) translateY(-2px); }
+#settingsMenu .settings-fold-content { padding: 0 0 10px; }
+#settingsMenu .settings-fold-content > section + section { margin-top: 2px; }
+/* a fold whose tools are all hidden (no key in this browser) isn't shown */
+#settingsMenu .settings-fold:not(:has(.settings-fold-content :is(.menu-item, label, select, .segmented):not([hidden]))) { display: none; }
+/* on/off options: a row each, with a switch */
+#settingsMenu .settings-options { display: grid; gap: 0; padding: 0; }
+#settingsMenu .settings-options .toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 13px; text-align: left; cursor: pointer; }
+#settingsMenu .settings-options .toggle:hover { background: var(--today); }
+#settingsMenu .settings-options .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+#settingsMenu .settings-options .toggle::after { content: ''; flex: none; width: 32px; height: 18px; border-radius: 99px; background: radial-gradient(circle at 9px 50%, var(--card) 6px, transparent 6.5px), color-mix(in srgb, var(--muted) 45%, transparent); transition: background .15s ease; }
+#settingsMenu .settings-options .toggle:has(input:checked)::after { background: radial-gradient(circle at calc(100% - 9px) 50%, #fff 6px, transparent 6.5px), var(--accent); }
+#settingsMenu .settings-options .toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+#settingsMenu .settings-options .toggle[hidden] { display: none; }
+#settingsMenu .settings-options .pill { justify-self: start; margin: 4px 8px 0; font-size: 12px; }
+/* tools: plain rows */
+#settingsMenu .menu-item { box-sizing: border-box; min-height: 36px; padding: 0 8px; border: 0; border-radius: 8px; font-size: 13px; }
+#settingsMenu .menu-item:hover, #settingsMenu .menu-item:focus-visible { background: var(--today); }
+#settingsMenu .menu-item small { color: var(--muted); font-size: 11px; }
+#settingsMenu .settings-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 8px 0; }
+#settingsMenu .settings-pair .pill { min-height: 32px; font-size: 12px; justify-content: center; }
+/* always at the bottom: help, patch notes, feedback */
+#settingsMenu .settings-footer { display: flex; gap: 4px; padding-top: 6px; }
+#settingsMenu .settings-footer .menu-item { flex: 1; justify-content: center; gap: 6px; min-height: 34px; padding: 0 6px; font-size: 12px; color: var(--muted); }
+#settingsMenu .settings-footer .menu-item:hover { color: var(--text); }
+#settingsMenu .settings-footer .menu-item[hidden] { display: none; }
+@media (pointer: coarse) { #settingsMenu .segmented button, #settingsMenu .settings-options .toggle, #settingsMenu .menu-item { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { #settingsMenu .settings-fold-arrow, #settingsMenu .settings-options .toggle::after { transition: none; } }
+/* the on/off options are shown right away, under the quick settings */
+#settingsMenu .settings-shown, #settingsMenu .settings-primary + .catchup-only, #settingsMenu .settings-shown + .catchup-only { border-top: 1px solid var(--line); padding-bottom: 6px; }
+#settingsMenu .settings-shown + .catchup-only { border-top: 0; }
+/* the list tools in the account menu */
+#accountMenu .list-tools { border-top: 1px solid var(--line); margin-top: 4px; }
+#accountMenu .list-tools .menu-item { font-size: 13px; }
+/* "Mehr": a Discord post that failed shows as a dot on the button and a sign on its row */
+.misc-tools:has(.delivery-alert:not(:empty)) .misc-trigger { position: relative; }
+.misc-tools:has(.delivery-alert:not(:empty)) .misc-trigger::after { content: ''; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: #e5a23b; }
+.misc-text .delivery-alert { margin-left: 6px; padding: 0; }
+#settingsMenu .settings-options .toggle, #settingsMenu .settings-options .toggle:has(input:checked) { font-weight: 400; color: var(--text); }
+#settingsMenu .settings-footer .menu-item { white-space: nowrap; }
+#settingsMenu .settings-footer kbd, #settingsMenu .settings-footer .notes-age { display: none; }
