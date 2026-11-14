@@ -184,7 +184,12 @@ const awayAt = (date, person, minute) => absencesForDay(date).some(x => x.people
 && (!x.from || (minute != null && minute >= clockMinutes(x.from)))
 && (!x.until || (minute != null && minute < clockMinutes(x.until))));
 const awayLabel = x => x.maybe ? 'spontan da' : x.from ? `ab ${x.from}` : x.until ? `bis ${x.until}` : 'ganztägig';
-const awayText = date => absencesForDay(date).flatMap(x => (x.people || []).map(p => x.from || x.until || x.maybe ? `${p} (${awayLabel(x)})` : p));
+// an absence's kind and its optional reason, e.g. "ganztägig · Urlaub": entries only group and match with the same
+const awayCond = x => [awayLabel(x), x.reason].filter(Boolean).join(' · ');
+const awayText = date => absencesForDay(date).flatMap(x => (x.people || []).map(p => {
+  const note = [x.from || x.until || x.maybe ? awayLabel(x) : '', x.reason].filter(Boolean).join(', ');
+  return note ? `${p} (${note})` : p;
+}));
 let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); refreshEditor(); } });

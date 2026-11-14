@@ -1396,7 +1396,7 @@ const backLine = (when, note, news) => [when && Number.isFinite(new Date(when).g
 // U39: why a show is set out: who is away (and how), who is left, and that one person isn't enough
 const awayWhy = (day, missing, who, watchAt) => {
 const time = new Date(watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-const why = missing.map(p => { const x = absencesForDay(day).find(e => e.people?.includes(p)); return `${p} (${x ? awayLabel(x) + (x.rule ? ', wiederkehrend' : '') : 'abwesend'})`; });
+const why = missing.map(p => { const x = absencesForDay(day).find(e => e.people?.includes(p)); return `${p} (${x ? [awayLabel(x), x.reason, x.rule ? 'wiederkehrend' : ''].filter(Boolean).join(', ') : 'abwesend'})`; });
 const left = (who || []).filter(p => !missing.includes(p));
 return `Um ${time} fehlen: ${why.join(', ')}. ${left.length ? `Übrig: ${left.join(', ')}` : 'Niemand bleibt übrig'}. Eine Serie läuft nur, wenn mindestens zwei Personen dabei sind, also setzt sie an diesem Tag aus.`;
 };

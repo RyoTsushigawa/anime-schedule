@@ -227,14 +227,14 @@ const rulesFromToday = list => JSON.stringify(goodRules(list).map(canonRule).fil
 const newRuleId = () => Math.random().toString(36).slice(2, 10).padEnd(8, '0');
 // The absences (single days, including occurrences of rules) with the people in `on` set on `days`, the rest left as
 // they are. Whole day: replaces their "ab"/"bis"/"spontan da" there; people in `off` lose their whole day.
-function withAway(list, days, on, mode, time, off = []) {
+function withAway(list, days, on, mode, time, off = [], reason = '') {
 const kept = list.flatMap(x => {
   if (!days.includes(x.day)) return [x];
   const timed = x.from || x.until || x.maybe;
   const people = (x.people || []).filter(p => !on.includes(p) && (mode !== 'day' || timed || !off.includes(p)));
   return people.length ? [{ ...x, people }] : [];
 });
-const added = !on.length ? [] : days.map(day => mode === 'day' ? { day, people: on } : { day, people: on, [mode]: time });
+const added = !on.length ? [] : days.map(day => ({ ...(mode === 'day' ? { day, people: on } : { day, people: on, [mode]: time }), ...(reason && { reason }) }));
 return kept.concat(added).sort((a, b) => a.day.localeCompare(b.day));
 }
 // What `days` should look like (wanted, single days) → saved single days and rules: a day a rule still gives
@@ -253,9 +253,11 @@ return {
   rules: rules.map(canonRule),
 };
 }
+// optional reasons, picked from a list like the delay reasons (never typed): the same as ABSENCE_REASONS in the helper
+const ABSENCE_REASONS = ['Arbeit', 'Schule/Uni', 'Urlaub', 'Krank', 'Familie', 'Termin', 'Unterwegs'];
 function withoutRun(list, run, days) {
 return list.flatMap(x => {
-  if (!days.includes(x.day) || awayLabel(x) !== run.cond) return [x];
+  if (!days.includes(x.day) || awayCond(x) !== run.cond) return [x];
   const who = run.people || [run.p];
   const people = (x.people || []).filter(p => !who.includes(p));
   return people.length ? [{ ...x, people }] : [];
@@ -266,7 +268,7 @@ return list.flatMap(x => {
 function awayRuns() {
 const groups = new Map();
 for (const x of absentDays) for (const p of x.people || []) {
-  const key = JSON.stringify([p, awayLabel(x)]);
+  const key = JSON.stringify([p, awayCond(x)]);
   if (!groups.has(key)) groups.set(key, new Set());
   groups.get(key).add(x.day);
 }
@@ -351,6 +353,7 @@ const today = isoDay(new Date());
 const pick = date && date >= today ? date : null;
 awayCal.month = (pick || today).slice(0, 7);
 awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.allOnce = false; awayCal.extra = [];
+$('awayReason').value = '';
 // in Solo view the dialog starts with that person chosen, until someone picks by hand
 awayCal.me = mode === 'solo' && soloPerson ? soloPerson : null;
 resetRepeat();
@@ -563,7 +566,7 @@ const iso = e.target.closest('[data-away-day]')?.dataset.awayDay;
 if (!iso) return;
 // first tap: one day; second tap on a later day: the range up to it; one more tap starts over
 if (awayCal.start && !awayCal.end && iso > awayCal.start) awayCal.end = iso;
-else { awayCal.start = iso; awayCal.end = null; }
+else { awayCal.start = iso; awayCal.end = null; $('awayReason').value = ''; }
 $('awayMsg').textContent = '';
 drawAway();
 });
@@ -588,7 +591,8 @@ const time = awayCal.mode === 'maybe' ? true : awayCal.mode === 'day' ? null : c
 if (awayCal.mode !== 'day' && !time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (awayCal.mode !== 'day' && !on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
 const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${time}.`;
-storeAway(splitAway(withAway(days.flatMap(absencesForDay), days, on, awayCal.mode, time, off), days), days, label);
+const reason = ABSENCE_REASONS.includes($('awayReason').value) ? $('awayReason').value : '';
+storeAway(splitAway(withAway(days.flatMap(absencesForDay), days, on, awayCal.mode, time, off, reason), days), days, label + (reason ? ` (${reason})` : ''));
 };
 $('repPeople').addEventListener('click', e => {
 const p = e.target.closest('[data-rep-person]')?.dataset.repPerson;
@@ -677,7 +681,7 @@ const edit = e.target.closest('[data-away-edit]')?.dataset.awayEdit;
 if (edit) {
   const run = JSON.parse(edit);
   const p0 = (run.people || [run.p])[0];
-  const existing = absentDays.find(x => x.day === run.from && (x.people || []).includes(p0) && awayLabel(x) === run.cond);
+  const existing = absentDays.find(x => x.day === run.from && (x.people || []).includes(p0) && awayCond(x) === run.cond);
   const kind = existing?.maybe ? 'maybe' : existing?.from ? 'from' : existing?.until ? 'until' : 'day';
   if (run.weekly) {
     // an old series of single days: edited, it becomes a rule
@@ -695,6 +699,7 @@ if (edit) {
   awayCal.mode = kind;
   awayCal.extra = run.people || [run.p];
   if (existing?.from || existing?.until) $('awayClock').value = existing.from || existing.until;
+  $('awayReason').value = existing?.reason || '';
   drawAway();
   for (const b of $('awayPeople').querySelectorAll('[data-away]'))
     b.setAttribute('aria-pressed', String((run.people || [run.p]).includes(b.dataset.away)));
@@ -710,3 +715,4 @@ if (run.weekly && !confirm(`Alle ${run.days.length} kommenden Termine (jeden ${A
 const before = { next: { days: absentDays, rules: absentRules.map(canonRule) }, days: run.days };
 storeAway({ days: withoutRun(absentDays, run, run.days), rules: absentRules.map(canonRule) }, run.days, `${who}: entfernt.`).then(ok => { if (ok) offerAwayUndo(before); });
 });
+$('awayReason').replaceChildren(new Option('Kein Grund', ''), ...ABSENCE_REASONS.map(r => new Option(r, r)));
