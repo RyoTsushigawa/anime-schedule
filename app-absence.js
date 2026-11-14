@@ -491,32 +491,48 @@ try {
 catch (e) { throw /nichts zu tun|unbekannt|unknown|not allowed|ungültige Tage/i.test(e.message) ? new Error('der Speicherdienst kann das noch nicht speichern (Helfer-Update v19 nötig). Bis dahin geht es mit dem Bearbeitungszugang') : e; }
 }
 // U62: which shows the chosen people watch on the chosen weekdays (this season's Guckplan), before saving
-function affectedShows(people, weekdays) {
-  if (!people.length || !weekdays.length || !lastWeekRender) return [];
-  const tags = weekdays.map(i => ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'][i]);
-  const out = new Map();
-  for (const sheet of new Set([...lastWeekRender[2].values()].filter(Boolean))) for (const person of people) {
-    if (!sheet.people?.includes(person)) continue;
-    for (const [show, slot] of picks(sheet, person)) if (!show.hidden && tags.includes(slot?.tag || show.tag)) {
-      const name = show.english || show.romaji;
-      out.set(name, [...new Set([...(out.get(name) || []), person])]);
+// U62, narrowed (owner: only what is really cancelled): the shows this absence cancels, by the plan's own rule:
+// a show runs only while at least two are left (MaRyo counts two); "ab"/"bis" only count when the show's time
+// falls in them. days: { tag, away: people already away all day } per day; for weekly forms just the weekday tags.
+function cancelledShows(people, days, mode = 'day', time = '') {
+  if (!people.length || !days.length || !lastWeekRender) return [];
+  const heads = p => p === 'MaRyo' ? 2 : 1;
+  const limit = time && clockMinutes(time);
+  const hits = (slot) => {
+    if (mode === 'from' || mode === 'until') { const at = slot?.time && clockMinutes(slot.time); if (at == null || limit == null) return false; return mode === 'from' ? at >= limit : at < limit; }
+    return true;
+  };
+  const out = new Set();
+  for (const sheet of new Set([...lastWeekRender[2].values()].filter(Boolean))) {
+    const viewers = new Map((sheet.people || []).map(p => [p, picks(sheet, p)]));
+    for (const show of sheet.shows || []) {
+      if (show.hidden) continue;
+      const who = [...viewers].filter(([, m]) => m.has(show)).map(([p]) => p);
+      if (!who.some(p => people.includes(p)) || who.reduce((n, p) => n + heads(p), 0) < 2) continue;
+      const slot = viewers.get(who[0]).get(show);
+      for (const day of days) {
+        if ((slot?.tag || show.tag) !== day.tag || !hits(slot)) continue;
+        const left = who.filter(p => !people.includes(p) && !(day.away || []).includes(p)).reduce((n, p) => n + heads(p), 0);
+        if (left < 2) { out.add(show.english || show.romaji); break; }
+      }
     }
   }
-  return [...out].sort((a, b) => a[0].localeCompare(b[0], 'de'));
+  return [...out].sort((a, b) => a.localeCompare(b, 'de'));
 }
-function drawAffected(box, people, weekdays) {
-  const list = affectedShows(people, weekdays);
-  box.textContent = list.length ? 'Betroffen: ' + list.map(([name, who]) => people.length > 1 ? `${name} (${who.join(', ')})` : name).join(' · ') : '';
+function drawAffected(box, list) {
+  box.textContent = list.length ? 'Fällt aus: ' + list.join(' · ') : '';
 }
-const weekdaysOf = days => [...new Set(days.map(d => (new Date(d + 'T12:00').getDay() + 6) % 7))];
 function refreshAffected() {
   try {
     const on = [...$('awayPeople').querySelectorAll('[data-away][aria-pressed="true"]')].map(b => b.dataset.away);
-    drawAffected($('awayAffected'), on, weekdaysOf(selectedDays()));
-    drawAffected($('repAffected'), awayRep.people, awayRep.weekdays);
+    const clock = awayCal.mode === 'from' || awayCal.mode === 'until' ? $('awayClock').value : '';
+    drawAffected($('awayAffected'), cancelledShows(on, selectedDays().map(d => ({ tag: DAY_TAGS[weekdayOf(d)], away: absentOn(d).filter(p => !on.includes(p)) })), awayCal.mode, clock));
+    const repClock = awayRep.mode === 'from' || awayRep.mode === 'until' ? $('repClock').value : '';
+    drawAffected($('repAffected'), cancelledShows(awayRep.people, awayRep.weekdays.map(i => ({ tag: DAY_TAGS[i] })), awayRep.mode, repClock));
   } catch { $('awayAffected').textContent = $('repAffected').textContent = ''; }
 }
 $('awayDlg').addEventListener('click', () => setTimeout(refreshAffected));
+for (const id of ['awayClock', 'repClock']) $(id).addEventListener('input', () => setTimeout(refreshAffected));
 // U51: a removed absence can come back (the state before the removal, saved again)
 let awayUndo = null;
 function offerAwayUndo(before) {

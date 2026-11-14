@@ -11,18 +11,39 @@ const open = async file => {
   return p;
 };
 
-test('U62: the recurring form names the shows the chosen people watch on the chosen weekdays', async () => {
+test('U62: the forms name only the shows the absence really cancels (fewer than two left; MaRyo counts two)', async () => {
   const p = await open({});
   try {
     await p.click(p.$('awayTabRecurring'));
     for (const b of p.$('repPeople').querySelectorAll('[aria-pressed="true"]')) b.click();
+    // Belly away on Wednesday: MaRyo (two people) still watch Alpha, nothing is cancelled
     await p.click(p.$('repPeople').querySelector('[data-rep-person="Belly"]'));
-    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="2"]')); // Wednesday
+    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="2"]'));
     await tick();
-    assert.match(p.$('repAffected').textContent, /Betroffen: Alpha EN/);
-    await p.click(p.$('repWeekdays').querySelector('[data-rep-day="5"]')); // + Saturday: Beta isn't Belly's
+    assert.equal(p.$('repAffected').textContent, '');
+    // MaRyo away instead: only Belly is left, so Alpha is cancelled
+    await p.click(p.$('repPeople').querySelector('[data-rep-person="Belly"]'));
+    await p.click(p.$('repPeople').querySelector('[data-rep-person="MaRyo"]'));
     await tick();
-    assert.doesNotMatch(p.$('repAffected').textContent, /Beta/);
+    assert.equal(p.$('repAffected').textContent, 'Fällt aus: Alpha EN');
+  } finally { p.close(); }
+});
+
+test('U62: in the calendar, people already away that day count too; "ab" only cancels shows from that time on', async () => {
+  const p = await open({ absent: [{ day: '2026-10-29', people: ['MaRyo'] }] });
+  try {
+    // Thursday 29 Oct: MaRyo is already away; Belly too would leave nobody for Gamma (Thu 21:00)
+    await p.click(p.$('awayGrid').querySelector('[data-away-day="2026-10-29"]'));
+    for (const b of p.$('awayPeople').querySelectorAll('[aria-pressed="true"]')) b.click();
+    await p.click(p.$('awayPeople').querySelector('[data-away="Belly"]'));
+    await tick();
+    assert.equal(p.$('awayAffected').textContent, 'Fällt aus: Gamma EN');
+    // "ab 22:00": Gamma at 21:00 isn't touched
+    await p.click(p.$('awayMode').querySelector('[data-mode="from"]'));
+    p.$('awayClock').value = '22:00';
+    await p.click(p.$('awayPeople'));
+    await tick();
+    assert.equal(p.$('awayAffected').textContent, '');
   } finally { p.close(); }
 });
 
