@@ -308,11 +308,12 @@ async function awardsReveal(body,env){
 // ranking by value is open to all.
 const STOCK_CASH=1000,STOCK_FEE=1,STOCK_SHORT=1000,STOCK_DAYS=14*86400000;
 const SEASON_MONTH={Winter:0,'Frühling':3,Sommer:6,Herbst:9};
+// midnight German time on the 1st of a month (summer time from April to October), as in boerse-core.mjs
+const berlinMonthStart=(year,month)=>{const y=year+Math.floor(month/12),m=month%12;return Date.UTC(y,m,1)-(m>=3&&m<=9?7200000:3600000);};
 function stockWindow(season,now=Date.now()){
  const [name,year]=season.split(' ');
- const start=Date.UTC(Number(year),SEASON_MONTH[name],1)-3600000;
- const end=new Date(start+3600000);end.setUTCMonth(end.getUTCMonth()+3);
- const from=start-STOCK_DAYS,to=end.getTime()-3600000;
+ const start=berlinMonthStart(Number(year),SEASON_MONTH[name]);
+ const from=start-STOCK_DAYS,to=berlinMonthStart(Number(year),SEASON_MONTH[name]+3);
  return {from:new Date(from).toISOString(),to:new Date(to).toISOString(),open:now>=from&&now<to,over:now>=to};
 }
 const berlinDay=t=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin'}).format(new Date(t));

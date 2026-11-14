@@ -1672,6 +1672,10 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .health-list { display: grid; gap: 14px; margin-top: 10px; max-height: min(62dvh, 520px); overflow-y: auto; }
 .health-list h3 { margin: 0 0 2px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); display: flex; gap: 8px; align-items: baseline; }
 .health-list h3 span { color: var(--muted); font-weight: 500; }
+/* N59: tick entries to copy them to MyAnimeList */
+.data-list li:has(> .transfer-pick) { grid-template-columns: auto 1fr; column-gap: 8px; }
+.data-list li > .transfer-pick { grid-row: span 2; margin: 2px 0 0; align-self: start; }
+.health-list h3 .transfer-all { margin: 0; align-self: center; }
 .health-list p { margin: 2px 0 0; font-size: 12px; }
 .health-list a { color: var(--text); text-decoration: none; }
 .health-list a:hover b { text-decoration: underline; }

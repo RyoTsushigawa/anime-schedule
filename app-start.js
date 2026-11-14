@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-14T09:15:00Z', name: 'Awards: Kategorien auslassen' };
+const LAST_FEATURE = { at: '2026-11-14T11:00:00Z', name: 'AniList-Einträge auf MyAnimeList übernehmen' };
 const PATCH_NOTES = [
 { id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
 'Seasonal Anime Awards, rebuilt: 22 categories like the Crunchyroll Awards (genres, characters, music, a Ceddl of the Year from candidates collected over the season), 12, 10 and 8 points per category, and after „Auflösen“ a Eurovision-style show, vote by vote. Voting is together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
@@ -582,17 +582,20 @@ for (const e of aniEntries) {
   if (!e.media?.idMal) { noMalId.push({ title: title(e.media), url: e.media.siteUrl, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}` }); continue; }
   const other = mal.get(e.media.idMal);
   seen.add(e.media.idMal);
-  if (!other) { onlyAni.push({ title: title(e.media), url: e.media.siteUrl, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}` }); continue; }
+  // copy: what "Auf MyAnimeList übernehmen" writes (AniList's status and episode)
+  const copy = { idMal: e.media.idMal, status: e.status, progress: e.progress || 0 };
+  if (!other) { onlyAni.push({ title: title(e.media), url: e.media.siteUrl, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}`, copy }); continue; }
   if (other.status !== e.status || (other.progress || 0) !== (e.progress || 0))
-    differ.push({ title: title(e.media), url: e.media.siteUrl, text: `AniList: ${STATUS_DE[e.status] || e.status}, Folge ${e.progress || 0} · MAL: ${STATUS_DE[other.status] || other.status}, Folge ${other.progress || 0}` });
+    differ.push({ title: title(e.media), url: e.media.siteUrl, text: `AniList: ${STATUS_DE[e.status] || e.status}, Folge ${e.progress || 0} · MAL: ${STATUS_DE[other.status] || other.status}, Folge ${other.progress || 0}`, copy });
 }
 const onlyMal = malEntries.filter(e => e.media?.idMal && !seen.has(e.media.idMal)).map(e => ({ title: title(e.media), url: 'https://myanimelist.net/anime/' + e.media.idMal, text: `${STATUS_DE[e.status] || e.status} · Folge ${e.progress || 0}` }));
 const by = (a, b) => a.title.localeCompare(b.title);
 return [['Unterschiedlich', differ], ['Nur auf AniList', onlyAni], ['Nur auf MyAnimeList', onlyMal], ['Auf AniList ohne MyAnimeList-ID', noMalId]].map(([name, items]) => ({ name, items: items.sort(by) }));
 }
-async function drawTransfer() {
+let transferItems = [], transferMal = null;
+async function drawTransfer(note = '') {
 const ani = accounts.find(a => (a.provider || 'anilist') === 'anilist'), mal = accounts.find(a => a.provider === 'mal');
-$('transferList').innerHTML = '';
+$('transferList').innerHTML = ''; transferItems = []; transferMal = mal; drawTransferCopy();
 if (!ani || !mal) { $('transferIntro').textContent = 'Dafür braucht dieser Browser ein AniList- und ein MyAnimeList-Konto (Kontomenü).'; return; }
 $('transferIntro').textContent = `Vergleiche ${ani.name} (AniList) mit ${mal.name} (MyAnimeList) …`;
 try {
@@ -600,10 +603,45 @@ try {
     anilist(TRANSFER_QUERY, { user: ani.name }, ani.token).then(d => d.MediaListCollection.lists.flatMap(l => l.entries)),
     MAL.list(mal, true)]);
   const groups = transferPreview(aniEntries, malResult.entries), found = groups.reduce((n, g) => n + g.items.length, 0);
-  $('transferIntro').textContent = found ? `${aniEntries.length} Einträge auf AniList, ${malResult.entries.length} auf MyAnimeList. Nur eine Vorschau, es wird nichts geändert.` : 'Beide Listen stimmen überein ✓';
-  $('transferList').innerHTML = groups.filter(g => g.items.length).map(g => `<section><h3>${esc(g.name)} <span>${g.items.length}</span></h3><ul class="data-list">${g.items.slice(0, 60).map(i => `<li><a href="${safeUrl(i.url)}" target="_blank" rel="noopener"><b>${esc(i.title)}</b></a><span>${esc(i.text)}</span></li>`).join('')}${g.items.length > 60 ? `<li class="muted">… und ${g.items.length - 60} weitere</li>` : ''}</ul></section>`).join('');
+  $('transferIntro').textContent = (note ? note + ' ' : '') + (found ? `${aniEntries.length} Einträge auf AniList, ${malResult.entries.length} auf MyAnimeList. Angehakte Einträge kannst du unten auf MyAnimeList übernehmen; sonst wird nichts geändert.` : 'Beide Listen stimmen überein ✓');
+  // N59: a tick per entry that can be copied (AniList's status and episode go to MyAnimeList), and one per section for all
+  const row = i => { const n = i.copy ? transferItems.push(i) - 1 : -1;
+    return `<li>${n >= 0 ? `<input type="checkbox" class="transfer-pick" data-copy="${n}" aria-label="${esc(i.title)} übernehmen">` : ''}<a href="${safeUrl(i.url)}" target="_blank" rel="noopener"><b>${esc(i.title)}</b></a><span>${esc(i.text)}</span></li>`; };
+  $('transferList').innerHTML = groups.filter(g => g.items.length).map(g => { const rows = g.items.slice(0, 60).map(row).join(''), copyable = g.items.some(i => i.copy);
+    return `<section><h3>${copyable ? '<input type="checkbox" class="transfer-all" aria-label="Alle in diesem Abschnitt auswählen">' : ''}${esc(g.name)} <span>${g.items.length}</span></h3><ul class="data-list">${rows}${g.items.length > 60 ? `<li class="muted">… und ${g.items.length - 60} weitere</li>` : ''}</ul></section>`; }).join('');
+  drawTransferCopy();
 } catch (e) { $('transferIntro').textContent = `Die Listen konnten nicht verglichen werden: ${e.message}`; }
 }
+function drawTransferCopy() {
+  const n = $('transferList').querySelectorAll('.transfer-pick:checked').length;
+  $('transferCopy').hidden = !transferItems.length;
+  $('transferCopy').disabled = !n;
+  $('transferCopy').textContent = n ? `${n} auf MyAnimeList übernehmen` : 'Auf MyAnimeList übernehmen';
+}
+$('transferList').addEventListener('change', e => {
+  if (e.target.classList.contains('transfer-all')) e.target.closest('section').querySelectorAll('.transfer-pick').forEach(c => { c.checked = e.target.checked; });
+  drawTransferCopy();
+});
+// writes AniList's status and episode to MyAnimeList, one entry at a time; the result goes to the Sync-Verlauf too
+$('transferCopy').onclick = async () => {
+  const picks = [...$('transferList').querySelectorAll('.transfer-pick:checked')].map(c => transferItems[+c.dataset.copy]).filter(Boolean);
+  if (!picks.length || !transferMal) return;
+  if (!confirm(`${picks.length} ${picks.length === 1 ? 'Eintrag' : 'Einträge'} auf MyAnimeList (${transferMal.name}) mit Status und Folge von AniList überschreiben?`)) return;
+  const button = $('transferCopy'); button.disabled = true;
+  let done = 0; const failed = [];
+  for (const item of picks) {
+    $('transferIntro').textContent = `Übernehme ${done + failed.length + 1} von ${picks.length}: ${item.title} …`;
+    try {
+      await MAL.save(transferMal, -item.copy.idMal, { status: item.copy.status, progress: item.copy.progress });
+      done++;
+      logSync({ title: item.title, account: 'MyAnimeList ' + transferMal.name, ok: true, to: item.copy.progress, status: item.copy.status, note: 'Von AniList übernommen' });
+    } catch (e) {
+      failed.push(item.title + ' (' + e.message + ')');
+      logSync({ title: item.title, account: 'MyAnimeList ' + transferMal.name, ok: false, error: e.message, note: 'Von AniList übernehmen' });
+    }
+  }
+  await drawTransfer(`${done} übernommen${failed.length ? ', nicht geklappt: ' + failed.join(', ') : ''}.`);
+};
 $('transferButton').onclick = () => { showSettings(false); $('transferDlg').showModal(); drawTransfer(); };
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };

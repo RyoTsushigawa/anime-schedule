@@ -117,3 +117,9 @@ test('U59: skipped categories are kept apart from picks and shown after Auflöse
  const {ballots}=(await call(env,'/awards?season='+encodeURIComponent(season))).body;
  assert.deepEqual(ballots,[{person:'Belly',picks:{},skipped:['best']},{person:'Rei',picks:{best:['Frieren']},skipped:['villain','ceddl']}]);
 });
+
+test('the Awards deadline is midnight German time in summer time too', async () => {
+  const env={SITE_ORIGIN:origin,AWARDS:kv()};
+  assert.equal((await call(env,'/awards?season=Sommer%202040')).body.closesAt,'2040-09-30T22:00:00.000Z');
+  assert.equal((await call(env,'/awards?season=Winter%202040')).body.closesAt,'2040-03-31T22:00:00.000Z');
+});
