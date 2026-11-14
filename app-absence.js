@@ -253,8 +253,9 @@ return {
   rules: rules.map(canonRule),
 };
 }
-// optional reasons, picked from a list like the delay reasons (never typed): the same as ABSENCE_REASONS in the helper
-const ABSENCE_REASONS = ['Arbeit', 'Schule/Uni', 'Urlaub', 'Krank', 'Familie', 'Termin', 'Unterwegs'];
+// an optional reason, typed freely: one short line, no links (the helper checks the same: v21)
+const cleanReason = v => String(v || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+const hasLink = v => /https?:|www\.|discord\.gg|\]\(|[a-z0-9-]+\.(com|net|org|de|gg|io|ly|me|xyz|ru|co)\b|@(everyone|here)/i.test(v);
 function withoutRun(list, run, days) {
 return list.flatMap(x => {
   if (!days.includes(x.day) || awayCond(x) !== run.cond) return [x];
@@ -591,7 +592,8 @@ const time = awayCal.mode === 'maybe' ? true : awayCal.mode === 'day' ? null : c
 if (awayCal.mode !== 'day' && !time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (awayCal.mode !== 'day' && !on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
 const label = awayCal.mode === 'day' ? (on.length ? `Abwesend: ${on.join(', ')}.` : 'Gespeichert.') : awayCal.mode === 'maybe' ? `${on.join(', ')}: spontan da.` : `${on.join(', ')} ${awayCal.mode === 'from' ? 'ab' : 'bis'} ${time}.`;
-const reason = ABSENCE_REASONS.includes($('awayReason').value) ? $('awayReason').value : '';
+const reason = cleanReason($('awayReason').value);
+if (hasLink(reason)) { $('awayMsg').textContent = 'Bitte keine Links im Grund.'; return; }
 storeAway(splitAway(withAway(days.flatMap(absencesForDay), days, on, awayCal.mode, time, off, reason), days), days, label + (reason ? ` (${reason})` : ''));
 };
 $('repPeople').addEventListener('click', e => {
@@ -715,4 +717,3 @@ if (run.weekly && !confirm(`Alle ${run.days.length} kommenden Termine (jeden ${A
 const before = { next: { days: absentDays, rules: absentRules.map(canonRule) }, days: run.days };
 storeAway({ days: withoutRun(absentDays, run, run.days), rules: absentRules.map(canonRule) }, run.days, `${who}: entfernt.`).then(ok => { if (ok) offerAwayUndo(before); });
 });
-$('awayReason').replaceChildren(new Option('Kein Grund', ''), ...ABSENCE_REASONS.map(r => new Option(r, r)));

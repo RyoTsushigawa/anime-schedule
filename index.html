@@ -325,7 +325,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div id="awayMode" class="segmented soft away-mode"><button type="button" data-mode="day">Ganzer Tag</button><button type="button" data-mode="from">Ab …</button><button type="button" data-mode="until">Bis …</button><button type="button" data-mode="maybe" title="Nicht mit einplanen, kommt aber vielleicht dazu">Spontan da</button></div>
 <label id="awayTime" class="away-time" hidden>Uhrzeit <input id="awayClock" type="time" value="21:00" step="900"></label>
 <div id="awayPeople" class="day-absent"></div>
-<label class="away-reason"><span>Grund <small>(optional)</small></span><select id="awayReason" class="pill"><option value="">Kein Grund</option></select></label>
+<label class="away-reason"><span>Grund <small>(optional)</small></span><input id="awayReason" class="pill" type="text" maxlength="60" placeholder="z. B. Urlaub" autocomplete="off" spellcheck="true"></label>
 <div id="awayAffected" class="away-affected" role="status"></div>
 <div class="dlg-row"><button type="button" id="awaySave" class="pill primary">Speichern</button></div>
 </div>
