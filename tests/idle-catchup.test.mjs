@@ -19,10 +19,16 @@ test('sleeping show: marked, "Später" hides it, the summary brings it back', as
   await p.click(alpha.querySelector('[data-later]'));
   await settle();
   assert.equal(row(p, 'Alpha EN'), undefined, 'hidden after "Später"');
-  const back = p.$('list').querySelector('[data-later-show]');
-  assert.match(back?.textContent || '', /1 später/);
-  await p.click(back);
+  const laterButton = p.$('list').querySelector('[data-later-open]');
+  assert.match(laterButton?.textContent || '', /1 später/);
+  // U50: "1 später" opens the list; each show comes back on its own
+  await p.click(laterButton);
+  await settle();
+  const one = p.$('list').querySelector('.later-list [data-later-back]');
+  assert.match(one.closest('.later-item').textContent, /Alpha EN/);
+  await p.click(one);
   await settle();
   assert.ok(row(p, 'Alpha EN'), 'shown again');
+  assert.equal(p.$('list').querySelector('[data-later-open]'), null, 'nothing left on "Später"');
   p.close();
 });

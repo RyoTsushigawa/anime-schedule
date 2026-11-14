@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-13T20:18:00Z', name: 'Anime-Börse mit täglichen Kursen' };
+const LAST_FEATURE = { at: '2026-11-14T08:55:00Z', name: 'Gesehene und leere Tage ausblenden' };
 const PATCH_NOTES = [
 { id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
 'Seasonal Anime Awards, rebuilt: 22 categories like the Crunchyroll Awards (genres, characters, music, a Ceddl of the Year from candidates collected over the season), 12, 10 and 8 points per category, and after „Auflösen“ a Eurovision-style show, vote by vote. Voting is together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
@@ -435,6 +435,17 @@ $('accountCheckButton').onclick = () => {
   checkListConnection();
 };
 $('accountCheckRetry').onclick = checkListConnection;
+// U57 Stream-Links kopieren: the day's links as text, e.g. for Discord
+$('list').addEventListener('click', async event => {
+  const button = event.target.closest('[data-copy-links]');
+  if (!button) return;
+  let rows = [];
+  try { rows = JSON.parse(button.dataset.copyLinks); } catch {}
+  const text = rows.map(([title, url]) => `${title}: ${url}`).join('\n');
+  if (!text) return;
+  try { await navigator.clipboard.writeText(text); notice(rows.length === 1 ? 'Stream-Link kopiert' : `${rows.length} Stream-Links kopiert`); }
+  catch { prompt('Zum Kopieren markieren:', text); }
+});
 // U45 Falschen Link melden: to the votes helper (workers/season-votes, POST /reports), for the repair queue
 $('list').addEventListener('click', event => {
   const button = event.target.closest('[data-link-report]');

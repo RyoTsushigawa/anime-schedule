@@ -1688,3 +1688,11 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 .identity-box.ok { color: #4fbf7f; }
 .identity-box.need a { color: var(--text); }
 .identity-box input { width: 9rem; }
+
+/* U43 Gesehene ausblenden: only in your own Solo view; U53 Leere Tage ausblenden: today and days with absences stay */
+body.solo.hide-watched #list .day .row:has(.watch.done) { display: none; }
+body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { display: none; }
+/* U50: the shows on "Später", each can come back on its own */
+.later-list { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
+.later-item { display: inline-flex; align-items: center; gap: 6px; }
+.later-item .pill, .later-list > .pill { font-size: 12px; padding: 2px 8px; }
