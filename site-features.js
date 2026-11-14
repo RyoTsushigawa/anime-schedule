@@ -16,13 +16,13 @@ const SITE_FEATURES = [
     'Warnung im Bot-Kanal, wenn der Tagespost fehlschlägt',
   ]],
   ['Plan bearbeiten', [
-    'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig oder dauerhaft), auch per Ziehen', 'Tag bearbeiten',
+    'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig, bis zu einer Woche oder dauerhaft), auch per Ziehen', 'Warnungen beim Verschieben: Überschneidung, vor der Ausstrahlung', 'Tag bearbeiten',
     'Serie überspringen, mit „Zeiten beibehalten“', 'Verspätungen für alle, mit Gründe-Liste', 'Nachholen: Folgen in den Plan legen',
     'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Bearbeiter-Zugang für vertraute Leute (ohne den GitHub-Schlüssel)', 'Discord-Zustellung',
   ]],
   ['Abwesenheiten', [
     'Abwesenheits-Kalender (Tage, Zeiträume, ab/bis Uhrzeit)', 'Wiederkehrende Abwesenheiten', 'Wochenübersicht der Abwesenheiten',
-    'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt',
+    'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt', 'Vor dem Speichern: welche Serien betroffen sind', 'Überlappende Wiederholungen markiert', 'Gelöschte Abwesenheit rückgängig machen',
   ]],
   ['Catch-up & Non-seasonal', [
     'Catch-up-Ansicht', 'Catch-up sortieren', 'Anpinnen', '„Später“ für einzelne Serien, einzeln zurückholen', 'Mehrere auf einmal ändern und Folgen-Stepper', 'Non-seasonal (eigenes Tempo)',
@@ -56,10 +56,7 @@ const SITE_FEATURES = [
 // SITE_FEATURES when it's live.
 const SITE_PLANNED = [
   ['Verbesserungen', [
-    'Verschieben: Warnung, wenn der neue Slot mit einer anderen Serie derselben Leute kollidiert',
-    'Verschieben: Warnung, wenn der Slot vor der Ausstrahlung liegt', 'Verschieben: einmalige Verschiebung bis zu einer gewählten Woche',
-    'Abwesenheiten: versehentlich gelöschte rückgängig machen', 'Abwesenheiten: überlappende Einträge anzeigen',
-    'Abwesenheiten: vorher zeigen, welche Serien betroffen sind', 'Season Preview: Länge des Trailers',
+    'Season Preview: Länge des Trailers',
     'Awards: Abstimmungsschluss zum Start der nächsten Season', 'Awards: eine Kategorie bewusst auslassen',
   ]],
 ];

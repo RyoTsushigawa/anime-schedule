@@ -359,6 +359,7 @@ showAwayTab('calendar');
 $('awayDlg').showModal();
 }
 function drawAway() {
+setTimeout(refreshAffected);
 const today = isoDay(new Date());
 const [y, m] = awayCal.month.split('-').map(Number);
 const length = new Date(y, m, 0).getDate();
@@ -440,8 +441,12 @@ $('repOpen').checked = true;
 }
 const repEnd = () => $('repOpen').checked ? '' : $('repUntil').value;
 function drawRepeat() {
+setTimeout(refreshAffected);
 const groups = ruleGroups().filter(g => shownFor(g.people)), legacy = mergedRuns(true).filter(r => shownFor(r.people || [r.p]));
-$('repList').innerHTML = groups.map(g => awayRow(g.people, ruleLabel(g), `data-rule-edit="${esc(g.key)}"`, `data-rule-remove="${esc(g.key)}"`, 'Wiederholung entfernen')).join('')
+// U56: two series of the same person on the same weekday at overlapping dates
+const overlaps = g => ruleGroups().filter(o => o.key !== g.key && o.people.some(p => g.people.includes(p)) && o.weekdays.some(w => g.weekdays.includes(w))
+  && (!o.end || o.end >= g.start) && (!g.end || g.end >= o.start));
+$('repList').innerHTML = groups.map(g => { const o = overlaps(g); return awayRow(g.people, ruleLabel(g) + (o.length ? ` · ⚠ überschneidet sich mit: ${o.map(x => repeatLabel(x.weekdays) + (x.cond ? ' ' + x.cond : '')).join('; ')}` : ''), `data-rule-edit="${esc(g.key)}"`, `data-rule-remove="${esc(g.key)}"`, 'Wiederholung entfernen'); }).join('')
   + legacy.map(r => runRow(r, `jeden ${AWAY_WEEKDAYS[r.weekday]} · ${r.cond} · bis ${shortDate(r.to)}`)).join('')
   || '<li class="muted">Noch keine Wiederholung.</li>';
 $('repFormTitle').textContent = awayRep.edit ? 'Wiederholung ändern' : 'Neue Wiederholung';
@@ -480,6 +485,41 @@ try {
   }
 }
 catch (e) { throw /nichts zu tun|unbekannt|unknown|not allowed|ungültige Tage/i.test(e.message) ? new Error('der Speicherdienst kann das noch nicht speichern (Helfer-Update v19 nötig). Bis dahin geht es mit dem Bearbeitungszugang') : e; }
+}
+// U62: which shows the chosen people watch on the chosen weekdays (this season's Guckplan), before saving
+function affectedShows(people, weekdays) {
+  if (!people.length || !weekdays.length || !lastWeekRender) return [];
+  const tags = weekdays.map(i => ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'][i]);
+  const out = new Map();
+  for (const sheet of new Set([...lastWeekRender[2].values()].filter(Boolean))) for (const person of people) {
+    if (!sheet.people?.includes(person)) continue;
+    for (const [show, slot] of picks(sheet, person)) if (!show.hidden && tags.includes(slot?.tag || show.tag)) {
+      const name = show.english || show.romaji;
+      out.set(name, [...new Set([...(out.get(name) || []), person])]);
+    }
+  }
+  return [...out].sort((a, b) => a[0].localeCompare(b[0], 'de'));
+}
+function drawAffected(box, people, weekdays) {
+  const list = affectedShows(people, weekdays);
+  box.textContent = list.length ? 'Betroffen: ' + list.map(([name, who]) => people.length > 1 ? `${name} (${who.join(', ')})` : name).join(' · ') : '';
+}
+const weekdaysOf = days => [...new Set(days.map(d => (new Date(d + 'T12:00').getDay() + 6) % 7))];
+function refreshAffected() {
+  try {
+    const on = [...$('awayPeople').querySelectorAll('[data-away][aria-pressed="true"]')].map(b => b.dataset.away);
+    drawAffected($('awayAffected'), on, weekdaysOf(selectedDays()));
+    drawAffected($('repAffected'), awayRep.people, awayRep.weekdays);
+  } catch { $('awayAffected').textContent = $('repAffected').textContent = ''; }
+}
+$('awayDlg').addEventListener('click', () => setTimeout(refreshAffected));
+// U51: a removed absence can come back (the state before the removal, saved again)
+let awayUndo = null;
+function offerAwayUndo(before) {
+  awayUndo = before;
+  const b = Object.assign(document.createElement('button'), { type: 'button', className: 'pill', textContent: 'Rückgängig' });
+  b.onclick = () => { const back = awayUndo; awayUndo = null; if (back) storeAway(back.next, back.days, 'Wiederhergestellt.'); };
+  $('awayMsg').append(' ', b);
 }
 async function storeAway(next, days, done) {
 $('awayMsg').textContent = 'Speichert…';
@@ -619,7 +659,8 @@ if (ruleEdit || ruleRemove) {
   if (!g) return;
   if (ruleRemove) {
     if (!confirm(`Wiederholung für ${g.people.join(', ')} (${repeatLabel(g.weekdays)}) beenden?`)) return;
-    storeAway({ days: absentDays, rules: absentRules.filter(r => !g.ids.includes(r.id)).map(canonRule) }, [], `${g.people.join(', ')}: Wiederholung beendet.`);
+    const before = { next: { days: absentDays, rules: absentRules.map(canonRule) }, days: [] };
+    storeAway({ days: absentDays, rules: absentRules.filter(r => !g.ids.includes(r.id)).map(canonRule) }, [], `${g.people.join(', ')}: Wiederholung beendet.`).then(ok => { if (ok) offerAwayUndo(before); });
     return;
   }
   const r = absentRules.find(x => x.id === g.ids[0]);
@@ -666,5 +707,6 @@ if (!raw) return;
 const run = JSON.parse(raw);
 const who = (run.people || [run.p]).join(', ');
 if (run.weekly && !confirm(`Alle ${run.days.length} kommenden Termine (jeden ${AWAY_WEEKDAYS[run.weekday]}) für ${who} entfernen?`)) return;
-storeAway({ days: withoutRun(absentDays, run, run.days), rules: absentRules.map(canonRule) }, run.days, `${who}: entfernt.`);
+const before = { next: { days: absentDays, rules: absentRules.map(canonRule) }, days: run.days };
+storeAway({ days: withoutRun(absentDays, run, run.days), rules: absentRules.map(canonRule) }, run.days, `${who}: entfernt.`).then(ok => { if (ok) offerAwayUndo(before); });
 });

@@ -433,15 +433,55 @@ let moving = null, moveScope = 'week';
 const syncMoveDialog = () => {
 const double = ['moveDouble', 'moveLong'].some(id => $(id).getAttribute('aria-pressed') === 'true');
 if (double) setMoveScope('week');
-$('moveAlways').disabled = double;
+$('moveAlways').disabled = $('moveUntil').disabled = double;
 };
 const setMoveScope = scope => {
 moveScope = scope;
 $('moveWeek').setAttribute('aria-pressed', scope === 'week');
 $('moveAlways').setAttribute('aria-pressed', scope === 'always');
+$('moveUntil').setAttribute('aria-pressed', scope === 'until');
+// U66: "Bis …": until which week (2 to 8 weeks), then the show is back in its Guckplan slot
+$('moveUntilWeek').hidden = scope !== 'until';
+if (scope === 'until' && !$('moveUntilWeek').options.length) $('moveUntilWeek').replaceChildren(...[1, 2, 3, 4, 5, 6, 7].map(n => {
+  const monday = weekStart(weekOffset + n), sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  return new Option(`bis ${sunday.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })} (${n + 1} Wochen)`, String(n));
+}));
 };
 $('moveWeek').onclick = () => setMoveScope('week');
 $('moveAlways').onclick = () => setMoveScope('always');
+$('moveUntil').onclick = () => setMoveScope('until');
+// U61 / U63: warnings while choosing the new slot, without stopping the move: another show with the same people
+// at that time, or a slot before this week's episode is out
+function weekRows() {
+  const out = [];
+  for (let i = 0; i < 7; i++) { const d = weekStart(weekOffset); d.setDate(d.getDate() + i); const day = typeof discordDay === 'function' ? discordDay(isoDay(d)) : null; if (day) out.push(...day.groups.flat().map(r => ({ ...r, date: day.date }))); }
+  return out;
+}
+function moveWarnings() {
+  if (!moving || !lastWeekRender) return '';
+  const rows = weekRows(), key = moving.key;
+  const mine = rows.find(r => r.show && norm(r.show.romaji || r.show.english) === key);
+  const day = weekStart(weekOffset); day.setDate(day.getDate() + DAY_TAGS.indexOf($('moveTag').value));
+  const hm = parseTime($('moveTime').value.trim());
+  const out = [];
+  if (hm) {
+    const at = new Date(day); at.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
+    const people = new Set(mine?.who || []);
+    const clash = rows.filter(r => r.show && norm(r.show.romaji || r.show.english) !== key && r.watchAt === at.getTime() && (!people.size || (r.who || []).some(p => people.has(p))));
+    for (const r of clash) {
+      const shared = (r.who || []).filter(p => people.has(p));
+      out.push(`⚠ Um ${$('moveTime').value.trim()} läuft schon ${r.show.english || r.show.romaji}${shared.length ? ' (mit ' + shared.join(', ') + ')' : ''}.`);
+    }
+    if (mine?.when && at < new Date(mine.when)) out.push(`⚠ Die Folge kommt erst ${new Date(mine.when).toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} raus.`);
+  } else if (mine?.when) {
+    const end = new Date(day); end.setHours(23, 59, 0, 0);
+    if (end < new Date(mine.when)) out.push(`⚠ Die Folge kommt erst ${new Date(mine.when).toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} raus.`);
+  }
+  return out.join(' ');
+}
+const drawMoveWarnings = () => { try { $('moveWarn').textContent = moveWarnings(); } catch { $('moveWarn').textContent = ''; } };
+$('moveTag').addEventListener('change', drawMoveWarnings);
+$('moveTime').addEventListener('input', drawMoveWarnings);
 $('list').addEventListener('click', e => {
 const b = e.target.closest('.move');
 if (!b || document.body.dataset.suppressMoveClick) return;
@@ -475,12 +515,14 @@ $('skipBoth').title = `Zusammen skippen: ${all}`;
 $('moveDouble').setAttribute('aria-pressed', String(!!thisWeek?.double));
 $('moveLong').setAttribute('aria-pressed', String(!!thisWeek?.long));
 syncMoveDialog();
+$('moveUntilWeek').replaceChildren();
 if (destination) {
 $('moveTag').value = destination.tag;
 $('moveTime').value = destination.time;
 setMoveScope('week');
 $('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot mit der Zielserie.' : '';
 }
+drawMoveWarnings();
 $('moveDlg').showModal();
 }
 let movesUndo = null, delayUndo = null;
@@ -562,8 +604,18 @@ const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
 const long = $('moveLong').getAttribute('aria-pressed') === 'true';
 const time = $('moveTime').value.trim();
 if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
-const week = moveScope === 'week' || double || long ? isoDay(weekStart(weekOffset)) : '';
 const keys = shows.map(s => s.key);
+// "Bis …": one move per week up to the chosen one; afterwards the Guckplan slot counts again by itself
+if (moveScope === 'until' && !double && !long) {
+const n = Number($('moveUntilWeek').value) || 1;
+const weeks = Array.from({ length: n + 1 }, (_, i) => isoDay(weekStart(weekOffset + i)));
+const next = moves.filter(m => !(keys.includes(m.show) && weeks.includes(m.week)))
+.concat(weeks.flatMap(week => shows.map(s => ({ show: s.key, title: s.name, tag: $('moveTag').value, time, week }))));
+const last = weekStart(weekOffset + n); last.setDate(last.getDate() + 6);
+storeMoves(next, `${namesOf(shows)} auf ${slotLabel({ tag: $('moveTag').value, time })} bis ${last.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}.`);
+return;
+}
+const week = moveScope === 'week' || double || long ? isoDay(weekStart(weekOffset)) : '';
 const next = moves.filter(m => !(keys.includes(m.show) && m.week === week))
 .concat(shows.map(s => ({ show: s.key, title: s.name, tag: $('moveTag').value, time, week, ...(double && { double: true }), ...(long && { long: true }) })));
 storeMoves(next, `${namesOf(shows)}${double ? ' mit Doppelfolge' : long ? ' mit langer Folge' : ''} auf ${slotLabel({ tag: $('moveTag').value, time })}${week ? ' (diese Woche)' : ''}.`);
