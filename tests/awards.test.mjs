@@ -43,7 +43,7 @@ test('seasonal ballots isolate voters and seasons, persist choices, and share th
   `);
   const tick = () => new Promise(resolve => setImmediate(resolve));
   await tick();
-  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] input`)[i];
+  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] .awards-place input`)[i];
   const change = (field, value) => {
     field.value = value;
     field.dispatchEvent(new window.Event('change'));
@@ -131,7 +131,7 @@ test('shared voting: who voted shows before Auflösen; then the Eurovision show 
   `);
   const tick = async () => { for (let i = 0; i < 8; i++) await new Promise(r => setImmediate(r)); };
   await tick();
-  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] input`)[i];
+  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] .awards-place input`)[i];
   const vote = async (person, picks) => {
     byId('awardsPerson').value = person; byId('awardsPerson').dispatchEvent(new window.Event('change'));
     picks.forEach((value, i) => { place('best', i).value = value; place('best', i).dispatchEvent(new window.Event('change')); });
@@ -247,7 +247,7 @@ test('only for yourself: your AniList login picks and confirms you; without AniL
   await tick();
   assert.equal(byId('awardsPerson').value, 'Ryo', 'your own name first');
   assert.match(byId('awardsIdentity').textContent, /Ryo, bestätigt über AniList \(RyoTsushigawa\)/);
-  const best = byId('awardsBallot').querySelector('[data-category="best"] input');
+  const best = byId('awardsBallot').querySelector('[data-category="best"] .awards-place input');
   best.value = 'The Alpha'; best.dispatchEvent(new window.Event('change'));
   byId('awardsSubmit').click(); await tick();
   assert.deepEqual(sent.map(s => [s.person, s.headers['X-AniList-Token']]), [['Ryo', 'ryo-token']]);
@@ -259,7 +259,7 @@ test('only for yourself: your AniList login picks and confirms you; without AniL
   byId('awardsPerson').value = 'Rei'; byId('awardsPerson').dispatchEvent(new window.Event('change')); await tick();
   const pin = byId('awardsIdentity').querySelector('input[type="password"]');
   assert.ok(pin);
-  const b2 = byId('awardsBallot').querySelector('[data-category="best"] input');
+  const b2 = byId('awardsBallot').querySelector('[data-category="best"] .awards-place input');
   b2.value = 'The Alpha'; b2.dispatchEvent(new window.Event('change'));
   assert.equal(byId('awardsSubmit').disabled, true, 'not before the PIN');
   pin.value = 'rei-pin'; byId('awardsIdentity').querySelector('button').click(); await tick();
@@ -310,4 +310,58 @@ test('group code missing on this device: a field right on the page, remembered, 
   assert.equal(window.localStorage.getItem('previewGroupCode'), 'the-group-code-1234', 'remembered on this device');
   assert.match(byId('awardsGroup').textContent, /✓ Rei/);
   assert.equal(codes.at(-1), 'the-group-code-1234');
+});
+
+test('U59 Auslassen and U54 deadline: skipped categories are sent apart; a closed vote disables Abgeben', async t => {
+  const dom = new JSDOM(read('awards.html'), { url: 'https://schedule.example/awards.html', runScripts: 'outside-only' });
+  const { window } = dom;
+  t.after(() => window.close());
+  const { document } = window;
+  const byId = id => document.getElementById(id);
+  let sent = null, closed = false;
+  window.fetch = async (url, options = {}) => {
+    const u = new URL(url, 'https://schedule.example/');
+    const reply = data => ({ ok: true, status: 200, json: async () => data });
+    if (u.host !== 'votes.test') return { ok: false, status: 404, json: async () => ({}) };
+    if (u.pathname === '/awards') return reply({ season: u.searchParams.get('season'), revealed: false, voters: sent ? ['Rei'] : [], closesAt: '2026-12-31T23:00:00.000Z', closed });
+    if (u.pathname === '/awards/ceddl') return reply({ candidates: [] });
+    if (u.pathname === '/awards/ballot') { sent = JSON.parse(options.body); return reply({ ok: true }); }
+    throw Error('unexpected ' + url);
+  };
+  window.eval(`
+    const $ = id => document.getElementById(id);
+    const SHEET_ID = 'test-sheet';
+    const norm = value => value.toLowerCase();
+    const config = async () => ({ previewVotesUrl: 'https://votes.test/' });
+    const guckplanTabs = async () => [{ gid: '2', name: 'Guckplan Herbst 2026' }];
+    const tabFor = tabs => tabs[0];
+    const loadPlan = async () => ({ people: ['Rei'], shows: [{ romaji: 'Alpha', english: 'The Alpha' }] });
+    ${read('awards.js')}
+  `);
+  const tick = async () => { for (let i = 0; i < 8; i++) await new Promise(r => setImmediate(r)); };
+  await tick();
+  assert.match(byId('awardsGroup').textContent, /Abstimmen bis Do\., 31\. Dez\./);
+  const cat = id => byId('awardsBallot').querySelector(`[data-category="${id}"]`);
+  const best = cat('best').querySelector('.awards-place input');
+  best.value = 'The Alpha'; best.dispatchEvent(new window.Event('change'));
+  // skipping keeps typed picks but they don't count
+  const villain = cat('villain'), skip = villain.querySelector('.awards-skip input');
+  villain.querySelector('.awards-place input').value = 'The Alpha';
+  villain.querySelector('.awards-place input').dispatchEvent(new window.Event('change'));
+  skip.checked = true; skip.dispatchEvent(new window.Event('change'));
+  assert.ok(villain.classList.contains('skipped'));
+  assert.equal(villain.querySelector('.awards-place input').disabled, true);
+  assert.match(byId('awardsProgress').textContent, /1 von \d+ Kategorien ausgefüllt · 1 ausgelassen · \d+ offen/);
+  byId('awardsSubmit').click(); await tick();
+  assert.deepEqual(sent.picks, { best: ['The Alpha'] });
+  assert.deepEqual(sent.skipped, ['villain']);
+  // the draft remembers the skip
+  const draft = JSON.parse(window.localStorage.getItem(Object.keys(window.localStorage).find(k => k.startsWith('seasonal-awards:'))));
+  assert.deepEqual(draft._skipped, ['villain']);
+  // after the next season started: closed, Abgeben off, Auflösen still there
+  closed = true;
+  byId('awardsSeason').dispatchEvent(new window.Event('change')); await tick();
+  assert.match(byId('awardsGroup').textContent, /Abstimmung geschlossen seit Fr\., 1\. Jan\./);
+  assert.equal(byId('awardsSubmit').disabled, true);
+  assert.equal(byId('awardsReveal').disabled, false);
 });

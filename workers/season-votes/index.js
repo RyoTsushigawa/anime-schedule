@@ -236,8 +236,10 @@ async function awardsGet(url,env){
  const season=awardSeason(url.searchParams.get('season'));
  const {meta,ballots}=await awardsState(env,season);
  const revealed=meta.revealed===true;
- return {season,revealed,...(revealed&&{revealedAt:meta.revealedAt}),voters:ballots.map(b=>b.person),
-  ...(revealed&&{ballots:ballots.map(b=>({person:b.person,picks:b.picks}))})};
+ // U54: voting closes by itself when the next season starts; the reveal stays a button
+ const closesAt=stockWindow(season).to;
+ return {season,revealed,...(revealed&&{revealedAt:meta.revealedAt}),voters:ballots.map(b=>b.person),closesAt,closed:Date.now()>=Date.parse(closesAt),
+  ...(revealed&&{ballots:ballots.map(b=>({person:b.person,picks:b.picks,...(b.skipped?.length&&{skipped:b.skipped})}))})};
 }
 const awardTitle=v=>{const t=str(v);if(t.length>200||/[<>]/.test(t))fail(400,'Ungültiger Anime-Titel.');return t;};
 async function awardsBallot(body,env,request){
@@ -253,11 +255,16 @@ async function awardsBallot(body,env,request){
   if(new Set(set).size!==set.length)fail(400,'Ein Anime kann pro Kategorie nur einmal Punkte bekommen.');
   if(set.length)picks[category]=list.slice(0,list.findLastIndex(Boolean)+1);
  }
- if(!Object.keys(picks).length)fail(400,'Mindestens eine Kategorie wählen.');
+ // U59: categories this voter skips on purpose (not the same as not answered yet)
+ const skipped=[...new Set(Array.isArray(body.skipped)?body.skipped.map(str):[])];
+ if(skipped.some(c=>!AWARD_CATEGORIES.includes(c)))fail(400,'Unbekannte Kategorie.');
+ if(skipped.some(c=>picks[c]))fail(400,'Eine ausgelassene Kategorie hat keine Plätze.');
+ if(!Object.keys(picks).length&&!skipped.length)fail(400,'Mindestens eine Kategorie wählen.');
+ if(Date.now()>=Date.parse(stockWindow(season).to))fail(409,'Die Abstimmung für diese Season ist geschlossen: die nächste Season hat angefangen.');
  const store=awardsStore(env);
  const meta=JSON.parse(await store.get('meta:'+season)||'{}');
  if(meta.revealed)fail(409,'Die Awards dieser Season sind schon aufgelöst.');
- await store.put('ballot:'+season+':'+person,JSON.stringify({person,picks,at:new Date().toISOString()}));
+ await store.put('ballot:'+season+':'+person,JSON.stringify({person,picks,...(skipped.length&&{skipped}),at:new Date().toISOString()}));
  return {ok:true,season,person};
 }
 // Ceddl of the Year: the group collects candidates over the season; the ballot's Ceddl category offers only these

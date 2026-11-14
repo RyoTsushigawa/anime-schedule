@@ -19,7 +19,8 @@ test('More shows how many features the site has, and the list behind it', async 
   assert.equal(p.$('featuresTabPlanned').getAttribute('aria-selected'), 'true');
   const planned = Number(p.$('featuresTabPlanned').textContent.match(/(\d+)/)[1]);
   assert.equal(p.$('featuresList').querySelectorAll('li').length, planned);
-  assert.ok(planned > 0);
+  // with nothing approved left, the tab says so instead of an empty list
+  if (!planned) assert.match(p.$('featuresIntro').textContent, /alles Beschlossene gebaut/);
   await p.click(p.$('featuresTabNow'));
   assert.equal(p.$('featuresList').querySelectorAll('li').length, total);
 });

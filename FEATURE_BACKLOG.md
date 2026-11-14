@@ -50,12 +50,12 @@ Open items also show on the site: Mehr › Funktionen › Geplant (`SITE_PLANNED
 | U48 | Search · Clear Recent Searches | Done: Einstellungen › Anzeige & Listen › Letzte Suchen löschen (shown when there are any). |
 | U50 | Catch-up · Restore One Snoozed Show | Done: „N später“ in Catch-up opens the list; each show has „Zurückholen“, plus „Alle zurückholen“. |
 | U51 | Absences · Undo Accidental Removal | Done: after removing an absence or a series, „Rückgängig“ in the dialog saves the state before again. |
-| U52 | Season Preview · Trailer Length | Approved. Show the runtime in the existing trailer link when known. |
+| U52 | Season Preview · Trailer Length | Done: the trailer tool keeps each trailer's runtime, and the YouTube Playlist button shows the total (e.g. „YouTube Playlist · 24 Min.“). |
 | U53 | Weekly Plan · Hide Empty Days | Done: Einstellungen › Anzeige & Listen › Leere Tage ausblenden (today and days with absences stay). |
-| U54 | Seasonal Anime Awards · Voting Deadline | Approved. Show the deadline and automatically close voting at the start of the following anime season. Keep the reveal manual. |
+| U54 | Seasonal Anime Awards · Voting Deadline | Done: „Abstimmen bis …“ under the voters; the helper refuses ballots once the next season has started. „Auflösen“ stays manual. |
 | U56 | Absences · Flag Overlapping Entries | Done: Wiederkehrend marks series of the same person on the same weekday at overlapping dates. |
 | U57 | Weekly Plan · Copy Streaming Link | Done: day menu › copy icon copies the day's stream links as „Title: link“ lines. |
-| U59 | Seasonal Anime Awards · Skip a Category | Approved. Let voters explicitly skip a category and distinguish it from an unanswered category during ballot review. |
+| U59 | Seasonal Anime Awards · Skip a Category | Done: „Auslassen“ per category; progress reads „… ausgefüllt · … ausgelassen · … offen“, and the results list what each voter skipped. |
 | U61 | Weekly Plan · Flag a Scheduling Conflict | Done: the move dialog warns when the new slot is taken by another show of the same people (with their names). |
 | U62 | Absences · Preview Affected Shows | Done: both absence forms show „Betroffen: …“, the shows the chosen people watch on the chosen weekdays. |
 | U63 | Weekly Plan · Warn When Moving Before Airing | Done: the move dialog warns when the slot is before this week's episode is out (with the release time). |
