@@ -1,5 +1,6 @@
-// The answers for endless Titel-Rätsel (games-endless.json): every 5-8 letter word from an English anime title that
-// is a real English word (SCOWL, games-guesses.json, the same list that checks guesses). Titles from the Guckplan
+// The answers for endless Titel-Rätsel (games-endless.json): every 5-8 letter word from an English anime title,
+// names included (Ranma, Chitose …). From romaji titles only real English words count (SCOWL, games-guesses.json,
+// the same list that checks guesses), so words like "Shoujo" stay out. Titles from the Guckplan
 // tabs in the Sheet backup (English title column, plus the "Anime Top 100" and "Rewatches" lists), the season
 // catalog (seasons.json), the stream data (streams-de.json) and, when AniList can be reached, the English titles on
 // the group's AniList lists (wrapped-profiles.json). Run daily after the Sheet backup.
@@ -13,13 +14,16 @@ const root = new URL('../', import.meta.url);
 const path = file => fileURLToPath(new URL(file, root));
 const json = async file => JSON.parse(await readFile(path(file), 'utf8'));
 
+// titles marked english: any word (names too); the others: dictionary words only
 export function endlessWords(titles, dictionary) {
   const words = new Map();
-  for (const { title, from } of titles) for (const raw of String(title).normalize('NFKD').match(/[A-Za-z]+/g) || []) {
+  for (const { title, from, english } of titles) for (const raw of String(title).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^A-Za-z']+/)) {
+    // whole words only: "Kaguya-sama" gives KAGUYA, "Ranma½" gives RANMA, an apostrophe word ("Isn't") is left out
+    if (!/^[A-Za-z]+$/.test(raw)) continue;
     const word = raw.toUpperCase();
-    if (word.length < 5 || word.length > 8 || !dictionary.has(word)) continue;
-    // a word that is only ever the start of a sentence in a romaji title isn't English enough: keep the first English title
-    if (!words.has(word)) words.set(word, { word, title: title.trim(), from });
+    if (word.length < 5 || word.length > 8) continue;
+    if (!dictionary.has(word) && !english) continue;
+    if (!words.has(word)) words.set(word, { word, title: title.trim(), from, ...(!dictionary.has(word) && { name: true }) });
   }
   return [...words.values()].sort((a, b) => a.word.localeCompare(b.word));
 }
@@ -32,7 +36,7 @@ async function sheetTitles() {
     const head = rows.findIndex(r => r.some(c => c.trim() === 'Eng Anime Titel'));
     if (head >= 0) {
       const col = rows[head].findIndex(c => c.trim() === 'Eng Anime Titel');
-      for (const r of rows.slice(head + 1)) if ((r[col] || '').trim()) out.push({ title: r[col], from: file.replace(/\.csv$/, '') });
+      for (const r of rows.slice(head + 1)) if ((r[col] || '').trim()) out.push({ title: r[col], from: file.replace(/\.csv$/, ''), english: true });
     } else if (/^(Anime Top 100|Rewatches)/i.test(file)) {
       for (const r of rows.slice(2)) for (const c of r) if (/[A-Za-z]{5}/.test(c) && c.length < 120) out.push({ title: c.replace(/\s+/g, ' '), from: file.replace(/\.csv$/, '') });
     }
@@ -48,7 +52,7 @@ async function anilistTitles() {
       const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ query: 'query ($u: String) { MediaListCollection(userName: $u, type: ANIME) { lists { entries { media { title { english } } } } } }', variables: { u: user } }) });
       if (!res.ok) throw new Error('AniList ' + res.status);
-      for (const l of (await res.json()).data?.MediaListCollection?.lists || []) for (const e of l.entries || []) if (e.media?.title?.english) out.push({ title: e.media.title.english, from: 'AniList' });
+      for (const l of (await res.json()).data?.MediaListCollection?.lists || []) for (const e of l.entries || []) if (e.media?.title?.english) out.push({ title: e.media.title.english, from: 'AniList', english: true });
       await new Promise(r => setTimeout(r, 1500));
     } catch (e) { console.log(`${user}: ${e.message}`); }
   }
@@ -61,7 +65,7 @@ async function main() {
   const catalog = await json('seasons.json'), streams = await json('streams-de.json');
   const titles = [
     ...await sheetTitles(),
-    ...Object.entries(catalog.seasons || {}).flatMap(([season, shows]) => (shows || []).filter(s => s.english).map(s => ({ title: s.english, from: 'Season ' + season }))),
+    ...Object.entries(catalog.seasons || {}).flatMap(([season, shows]) => (shows || []).filter(s => s.english).map(s => ({ title: s.english, from: 'Season ' + season, english: true }))),
     ...Object.values(streams.status || {}).flatMap(s => (s.titles || []).map(title => ({ title, from: 'Streams' }))),
     ...(process.argv.includes('--offline') ? [] : await anilistTitles()),
   ];
