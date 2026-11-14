@@ -22,7 +22,7 @@ const SITE_FEATURES = [
   ]],
   ['Abwesenheiten', [
     'Abwesenheits-Kalender (Tage, Zeiträume, ab/bis Uhrzeit)', 'Optionaler Grund für eine Abwesenheit', 'Wiederkehrende Abwesenheiten', 'Wochenübersicht der Abwesenheiten',
-    'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt', 'Vor dem Speichern: welche Serien betroffen sind', 'Überlappende Wiederholungen markiert', 'Gelöschte Abwesenheit rückgängig machen',
+    'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt', 'Vor dem Speichern: welche Serien dadurch ausfallen', 'Überlappende Wiederholungen markiert', 'Gelöschte Abwesenheit rückgängig machen',
   ]],
   ['Catch-up & Non-seasonal', [
     'Catch-up-Ansicht', 'Catch-up sortieren', 'Anpinnen', '„Später“ für einzelne Serien, einzeln zurückholen', 'Mehrere auf einmal ändern und Folgen-Stepper', 'Non-seasonal (eigenes Tempo)',
