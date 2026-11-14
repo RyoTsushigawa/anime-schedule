@@ -28,14 +28,16 @@ export function parseCsv(text) {
   rows[rows.length - 1].push(field);
   return rows;
 }
-// the season's shows: rows under the header with an anime title, not hidden (dropped from the plan)
+// the season's shows: rows under the header with an anime title, not hidden (dropped from the plan), up to the
+// first empty row (below it the Sheet has its counts: "Trailer Liste", the services and ",,,Amount,65")
 export function seasonShows(csv, hiddenRows = []) {
   const rows = parseCsv(csv);
   const head = rows.findIndex(r => r.some(c => c.trim() === 'Anime Titel'));
   if (head < 0) return [];
   const col = name => rows[head].findIndex(c => c.trim() === name);
   const ro = col('Anime Titel'), en = col('Eng Anime Titel'), hidden = new Set(hiddenRows);
-  return rows.slice(head + 1).flatMap((r, i) => {
+  const end = rows.findIndex((r, i) => i > head && !(r[ro] || '').trim());
+  return rows.slice(head + 1, end < 0 ? undefined : end).flatMap((r, i) => {
     const romaji = (r[ro] || '').trim(), english = en >= 0 ? (r[en] || '').trim() : '';
     return romaji && !hidden.has(head + 2 + i) ? [{ romaji, english, title: english || romaji }] : [];
   }).filter((s, i, all) => all.findIndex(x => x.title === s.title) === i);
@@ -75,6 +77,8 @@ async function anilistIds(shows) {
 
 export async function updateSeason(entry, shows, today, { media, ratings }) {
   const season = { days: [], shows: {}, ...entry };
+  // the Sheet's "Amount" count was once read as a show ("60", "65"): such entries go
+  for (const title of Object.keys(season.shows)) if (/^\d+$/.test(title)) delete season.shows[title];
   const at = season.days.indexOf(today);
   const index = at >= 0 ? at : season.days.length;
   if (at < 0) season.days.push(today);

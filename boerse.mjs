@@ -51,7 +51,7 @@ const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 function draw() {
   // the season's dates and the opening hours (8–22) decide, also when the helper can't be reached
   const win = tradingWindow(seasonName()), running = win && (state ? state.open : win.open), hours = marketOpen();
-  const open = !!state?.open && !!state?.account && hours;
+  const open = !!state?.open && !!state?.account && hours, ordering = !!state?.open && !!state?.account;
   const close = priced.days.length ? ' · Schlusskurs vom ' + day(priced.days[priced.days.length - 1]) : '';
   $('stockWindow').textContent = !win ? '' : !running ? (Date.now() < win.from ? `Handel öffnet am ${day(win.from)}` : 'Die Season ist vorbei · Endstand')
     : hours ? `Börse geöffnet bis ${CLOSE_HOUR}:00${close}` : `Börse geschlossen · öffnet um ${OPEN_HOUR}:00${close}`;
@@ -75,13 +75,19 @@ function draw() {
       <button type="button" class="boerse-title" data-chart>${esc(title)}<small>${meta}${halt ? ' · <b class="down">ausgesetzt</b>' : ''}</small></button>
       <span class="boerse-spark" data-chart>${chart(s.closes || [PRICE], { width: 90, height: 28, spark: true })}</span>
       <span class="boerse-price">${taler(price)}<small class="${cls(ch)}">${pct(Math.round(ch * 10) / 10)}</small></span>
-      <span class="boerse-have"><b title="${have < 0 ? 'Leerverkauf' : 'Deine Aktien'}">${have}</b>${open ? `<button type="button" class="pill" data-trade="buy"${halt ? ' disabled' : ''}>Kaufen</button><button type="button" class="pill" data-trade="sell"${halt ? ' disabled' : ''} title="${have > 0 ? 'Verkaufen' : 'Leerverkauf: auf fallenden Kurs setzen'}">Verkaufen</button>` : ''}</span>
+      <span class="boerse-have"><b title="${have < 0 ? 'Leerverkauf' : 'Deine Aktien'}">${have}</b>${open ? `<button type="button" class="pill" data-trade="buy"${halt ? ' disabled' : ''}>Kaufen</button><button type="button" class="pill" data-trade="sell"${halt ? ' disabled' : ''} title="${have > 0 ? 'Verkaufen' : 'Leerverkauf: auf fallenden Kurs setzen'}">Verkaufen</button>` : ''}${ordering ? `<button type="button" class="pill" data-trade="limit" title="Kaufen oder verkaufen, sobald ein Schlusskurs dein Limit erreicht">Limit</button>` : ''}</span>
     </div>`;
   }).join('') || '<p class="boerse-hint">Für diese Season gibt es noch keine Kurse.</p>';
   $('stockQty').closest('label').hidden = !open;
   const trades = state?.account?.trades || [];
   $('stockTradesBox').hidden = !trades.length;
-  $('stockTrades').innerHTML = [...trades].reverse().map(t => `<li><span>${day(t.day)}</span> ${t.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(t.qty)}× ${esc(t.title)} zu ${taler(t.price)} <small>(+${t.fee} Gebühr)</small></li>`).join('');
+  $('stockTrades').innerHTML = [...trades].reverse().map(t => `<li><span>${day(t.day)}</span> ${t.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(t.qty)}× ${esc(t.title)} zu ${taler(t.price)} <small>(+${t.fee} Gebühr${t.limit ? ` · Limit ${taler(t.limit)}` : ''})</small></li>`).join('');
+  // open limit orders (with "Streichen") and the ones that couldn't be carried out
+  const orders = state?.account?.orders || [], failed = (state?.account?.orderLog || []).filter(o => o.status === 'failed').slice(-3).reverse();
+  $('stockOrdersBox').hidden = !orders.length && !failed.length;
+  $('stockOrders').innerHTML = orders.map(o => `<li><span>${o.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(o.qty)}× <b>${esc(o.title)}</b> bei ${o.qty > 0 ? '≤' : '≥'} ${taler(o.limit)}</span>
+      <small>seit ${day(o.placed)} · jetzt ${taler(prices.get(o.title) ?? PRICE)}</small><button type="button" class="pill" data-cancel="${esc(o.id)}">Streichen</button></li>`).join('')
+    + failed.map(o => `<li class="failed"><span>${o.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(o.qty)}× <b>${esc(o.title)}</b> zu ${taler(o.price)}</span><small>${day(o.day)} nicht ausgeführt: ${esc(o.reason || '')}</small></li>`).join('');
   const board = state?.ranking || [];
   $('stockBoard').hidden = !board.length;
   const held = new Map((state?.portfolios || []).map(p => [p.person, p.holdings]));
@@ -109,6 +115,7 @@ $('stockList').addEventListener('click', async e => {
   if (e.target.closest('[data-chart]')) { openChart(title); return; }
   const b = e.target.closest('[data-trade]');
   if (!b || !state?.open) return;
+  if (b.dataset.trade === 'limit') { openOrder(title); return; }
   const qty = Math.max(1, Math.min(50, Math.round(Number($('stockQty').value) || 1))) * (b.dataset.trade === 'sell' ? -1 : 1);
   const price = prices.get(title) ?? PRICE;
   const short = qty < 0 && (state.account?.holdings?.[title] || 0) + qty < 0;
@@ -121,6 +128,59 @@ $('stockList').addEventListener('click', async e => {
     $('stockMsg').textContent = `${qty > 0 ? 'Gekauft' : 'Verkauft'}: ${Math.abs(qty)}× ${title} zu ${taler(r.price ?? price)} (+${FEE} Taler Gebühr)${qty < 0 ? '. Das Geld ist ab morgen verfügbar.' : '.'}`;
     loadPerson(false);
   } catch (err) { $('stockMsg').textContent = 'Nicht ausgeführt: ' + err.message; draw(); }
+});
+
+// Limit-Order dialog: buy when the close falls to the limit, sell when it rises to it
+let orderTitle = '';
+function drawOrderHint() {
+  const price = prices.get(orderTitle) ?? PRICE, buy = $('stockOrderSide').value === 'buy', limit = Number($('stockOrderLimit').value);
+  const qty = Math.max(1, Math.min(50, Math.round(Number($('stockOrderQty').value) || 1)));
+  const reached = limit > 0 && (buy ? price <= limit : price >= limit);
+  $('stockOrderHint').textContent = !(limit > 0) ? '' : reached ? `Der Kurs (${taler(price)}) erreicht das Limit schon: ${buy ? 'kauf' : 'verkauf'} einfach direkt.`
+    : `Wird beim ersten Schlusskurs ${buy ? 'von höchstens' : 'von mindestens'} ${taler(limit)} ausgeführt: ${qty}× für etwa ${taler(qty * limit)} Taler (+${FEE} Gebühr).`;
+  $('stockOrderPlace').disabled = !(limit > 0) || reached;
+}
+function openOrder(title) {
+  orderTitle = title;
+  const price = prices.get(title) ?? PRICE;
+  $('stockOrderTitle').textContent = 'Limit-Order · ' + title;
+  $('stockOrderNow').textContent = `Aktueller Kurs: ${taler(price)} Taler. Ausgeführt wird zum Schlusskurs des Tages, an dem das Limit erreicht wird.`;
+  $('stockOrderSide').value = 'buy';
+  $('stockOrderLimit').value = String(Math.max(1, Math.floor(price * 0.95)));
+  $('stockOrderQty').value = $('stockQty').value || '1';
+  drawOrderHint();
+  $('stockOrderDlg').showModal();
+}
+$('stockOrderSide').onchange = () => {
+  const price = prices.get(orderTitle) ?? PRICE;
+  $('stockOrderLimit').value = String($('stockOrderSide').value === 'buy' ? Math.max(1, Math.floor(price * 0.95)) : Math.ceil(price * 1.05));
+  drawOrderHint();
+};
+$('stockOrderLimit').oninput = $('stockOrderQty').oninput = drawOrderHint;
+$('stockOrderForm').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'place') return;
+  e.preventDefault();
+  const qty = Math.max(1, Math.min(50, Math.round(Number($('stockOrderQty').value) || 1))) * ($('stockOrderSide').value === 'sell' ? -1 : 1);
+  const limit = Math.round(Number($('stockOrderLimit').value) * 100) / 100;
+  $('stockOrderPlace').disabled = true;
+  try {
+    const r = await call('/stocks/order', { season: seasonName(), person: $('stockPerson').value, title: orderTitle, qty, limit }, $('stockPerson').value);
+    state = { ...state, account: r.account };
+    $('stockOrderDlg').close();
+    $('stockMsg').textContent = `Limit-Order aufgegeben: ${qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(qty)}× ${orderTitle} bei ${qty > 0 ? '≤' : '≥'} ${taler(limit)}.`;
+    draw();
+  } catch (err) { $('stockOrderHint').textContent = 'Nicht aufgegeben: ' + err.message; $('stockOrderPlace').disabled = false; }
+});
+$('stockOrders').addEventListener('click', async e => {
+  const b = e.target.closest('[data-cancel]');
+  if (!b) return;
+  b.disabled = true;
+  try {
+    const r = await call('/stocks/order/cancel', { season: seasonName(), person: $('stockPerson').value, id: b.dataset.cancel }, $('stockPerson').value);
+    state = { ...state, account: r.account };
+    $('stockMsg').textContent = 'Limit-Order gestrichen.';
+    draw();
+  } catch (err) { $('stockMsg').textContent = 'Nicht gestrichen: ' + err.message; b.disabled = false; }
 });
 
 async function loadPerson(clear = true) {

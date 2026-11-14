@@ -63,3 +63,12 @@ button.boerse-title:hover, button.boerse-title:focus-visible { text-decoration: 
 .boerse-facts { list-style: none; padding: 0; margin: .8rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .5rem; }
 .boerse-facts li { display: grid; gap: .1rem; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: 10px; }
 .boerse-facts small { color: var(--muted); font-size: 11px; }
+/* Limit-Orders */
+.boerse-orders { margin: 1rem 0; }
+.boerse-orders ol { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .4rem; font-size: 13px; }
+.boerse-orders li { display: grid; grid-template-columns: 1fr auto; gap: 0 .6rem; align-items: center; }
+.boerse-orders li small { grid-column: 1; color: var(--muted); }
+.boerse-orders li button { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; padding: .15rem .6rem; }
+.boerse-orders li.failed span { color: var(--muted); }
+.boerse-order-fields { display: grid; gap: .6rem; margin: .6rem 0; }
+.boerse-order-fields label { display: grid; gap: .25rem; font-size: 12px; color: var(--muted); }

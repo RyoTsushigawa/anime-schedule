@@ -19,6 +19,8 @@
 // waits for 09:00. GitHub's own timer was too unreliable (hours late, or not at all).
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { boerseLine, previewLine } from './discord-extras.mjs';
+import { seasonStart } from '../boerse-core.mjs';
 
 const SITE = process.env.SITE_URL || 'https://ryotsushigawa.github.io/anime-schedule/';
 const TZ = 'Europe/Berlin';
@@ -155,6 +157,19 @@ try {
   });
   if (!today) throw new Error('Today is missing from the rendered week.');
   let message = today.message;
+  // extra lines: yesterday at the Börse; before a new season, who still has open Season Preview votes
+  const extras = [];
+  try { extras.push(boerseLine(JSON.parse(readFileSync('boerse-prices.json', 'utf8')))); } catch (e) { console.log('Börse line skipped: ' + e.message); }
+  try {
+    const tabs = await page.evaluate(async () => [...(await (await fetch(SHEET + '/htmlview')).text()).matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].map(([, name, gid]) => ({ name: name.trim(), gid })));
+    for (const tab of tabs.filter(t => /^(Winter|Frühling|Sommer|Herbst) \d{4}$/.test(t.name))) {
+      const days = (seasonStart(tab.name) - Date.now()) / 86400000;
+      if (days > 0 && days <= 14) extras.push(previewLine(tab.name, await page.evaluate(gid => sheetRows(gid), tab.gid), Date.now(), SITE));
+    }
+  } catch (e) { console.log('Season Preview line skipped: ' + e.message); }
+  const extra = extras.filter(Boolean).join('\n');
+  // Discord takes 2000 characters; the schedule always comes first
+  if (extra && message.length + extra.length < 1900) message += '\n\n' + extra;
   const weekday = new Intl.DateTimeFormat('de-DE', { timeZone: TZ, weekday: 'long' }).format(new Date());
   const role = DAY_ROLES[weekday];
   // nothing planned: the note goes out, but nobody is pinged for it
