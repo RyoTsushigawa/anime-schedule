@@ -132,7 +132,16 @@ async function anilistEntries(username) {
     throw e;
   }
 }
+// hard mode also draws from the 500 most popular anime on AniList (games-endless.json "popular")
+let popularPool=null;
+async function popularEntries(){
+  if(popularPool) return popularPool;
+  try{popularPool=((await json('games-endless.json')).popular||[]).filter(e=>e&&/^[A-Z]{5,8}$/.test(e.word)&&e.title).map(e=>({...e,from:'Top 500 auf AniList'}));}
+  catch{popularPool=[];}
+  return popularPool;
+}
 async function hardEntries(round) {
+  const popular=await popularEntries();
   const names=await users();
   const first=hashWord(round)%names.length;
   let error;
@@ -140,7 +149,7 @@ async function hardEntries(round) {
     const user=names[(first+i)%names.length];
     try {
       const pool=await anilistEntries(user);
-      if(pool.length) return {pool,user};
+      if(pool.length) return {pool:mergeEntries(pool,popular),user};
     }catch(e){error=e;}
   }
   throw new Error('Keine öffentliche Gruppen-AniList mit passenden englischen Titeln erreichbar.'+
@@ -250,7 +259,7 @@ async function start() {
 function hardHintText() {
   if(!puzzle || !state || puzzle.level!=='hard' || !state.hints)return '';
   const owner = (puzzle.from || '').replace(/^AniList\s*·\s*/, '');
-  const label = !/^AniList/.test(puzzle.from || '') ? 'Aus dem Guckplan.' : owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
+  const label = /^Top 500/.test(puzzle.from || '') ? 'Aus den 500 beliebtesten Anime auf AniList.' : !/^AniList/.test(puzzle.from || '') ? 'Aus dem Guckplan.' : owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
   if(state.hints===1)return label;
   const index=hashWord(puzzle.id+':hint')%puzzle.word.length;
   return label + ' Buchstabe ' + (index+1) + ' ist ' + puzzle.word[index] + '.';
