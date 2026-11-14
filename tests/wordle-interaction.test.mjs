@@ -251,3 +251,26 @@ test('Extrem: words from all anime (unchecked names left out), its own hints, th
     assert.equal(page.run('strict(puzzle.level)'), true);
   } finally { page.close(); }
 });
+
+test('Extrem: the word alone isn\'t solved; picking the right anime is; the wrong one loses', async () => {
+  const extreme = [['DRAGON', 'Dragon Ball Super'], ['CASTLE', 'Howl\'s Moving Castle'], ['KNIGHT', 'Knight\'s & Magic'], ['GHOST', 'Ghost in the Shell'], ['TITAN', 'Attack on Titan']];
+  for (const right of [true, false]) {
+    const page = await openGame({ difficulty: 'extreme', mode: 'endless', endless: { words: [], popular: [], extreme } });
+    try {
+      page.run("typing=puzzle.word; press('Enter')");
+      assert.equal(page.run('state.done'), false, 'not solved by the word alone');
+      assert.equal(page.run('state.wordFound'), true);
+      const choices = page.run("[...document.querySelectorAll('[data-title-pick]')].map(b=>b.dataset.titlePick)");
+      assert.equal(choices.length, 4);
+      assert.ok(choices.includes(page.run('puzzle.title')));
+      assert.ok(choices.filter(t => t !== page.run('puzzle.title')).every(t => !t.toUpperCase().split(/[^A-Z]+/).includes(page.run('puzzle.word'))), 'no other title has the word');
+      page.run("press('A')");
+      assert.equal(page.run('typing'), '', 'no more typing once the word is found');
+      const pick = right ? page.run('puzzle.title') : choices.find(t => t !== page.run('puzzle.title'));
+      page.run(`document.querySelectorAll('[data-title-pick]')[${choices.indexOf(pick)}].click()`);
+      assert.equal(page.run('state.done'), true);
+      assert.equal(page.run('state.won'), right);
+      assert.match(page.run("document.getElementById('gameAnswer').textContent"), right ? /^Richtig!/ : /^Das Wort stimmte, aber der Anime nicht/);
+    } finally { page.close(); }
+  }
+});

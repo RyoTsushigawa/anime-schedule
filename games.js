@@ -268,6 +268,7 @@ async function start() {
     $('gameHint').textContent=puzzle.word.length+' Buchstaben · '+allowed.size+' gültige Wörter';
     draw();
     refreshHardHints();
+    drawTitlePick();
     if(offline && !state.done) message('AniList ist von diesem Browser aus gerade nicht erreichbar (Werbeblocker oder Tracking-Schutz?). '+
       'Dieses Rätsel kommt deshalb aus dem Guckplan und ist nicht dasselbe wie bei den anderen.');
     if(state.done) finish(false);
@@ -295,7 +296,7 @@ function hardHintText() {
   return label + ' Buchstabe ' + (index+1) + ' ist ' + puzzle.word[index] + '.';
 }
 function refreshHardHints(){
-  const show=!!puzzle && !!state && strict(puzzle.level) && !state.done;
+  const show=!!puzzle && !!state && strict(puzzle.level) && !state.done && !state.wordFound;
   $('gameHardHints').hidden=!show;
   $('gameHintText').textContent=show?hardHintText():'';
   $('gameHintButton').textContent=state?.hints===1?'Zweiter Hinweis': 'Hinweis anzeigen';
@@ -333,8 +334,32 @@ function draw(){
     (i===2?'<button type="button" class="key wide" data-key="Backspace" aria-label="Löschen">⌫</button>':'')+
     '</div>').join('');
 }
+// Extrem: the word alone isn't enough, the anime it comes from has to be named too (4 titles to choose from;
+// the others are other titles from the list that don't contain the word, the same for everyone on the same puzzle)
+function titleChoices(){
+  const word=puzzle.word, own=String(puzzle.title||'');
+  const titles=[...new Set((extremePool||[]).map(e=>e.title))].filter(t=>t&&t!==own&&!t.toUpperCase().split(/[^A-Z]+/).includes(word));
+  const others=titles.sort((a,b)=>hashWord(puzzle.id+':'+a)-hashWord(puzzle.id+':'+b)||a.localeCompare(b)).slice(0,3);
+  return [own,...others].sort((a,b)=>hashWord(puzzle.id+':order:'+a)-hashWord(puzzle.id+':order:'+b)||a.localeCompare(b));
+}
+function drawTitlePick(){
+  const show=!!puzzle&&!!state&&puzzle.level==='extreme'&&state.wordFound&&!state.done;
+  $('gameTitlePick').hidden=!show;
+  if(!show)return;
+  $('gameTitleWord').textContent=puzzle.word;
+  $('gameTitleChoices').innerHTML=titleChoices().map(t=>'<button type="button" class="pill" data-title-pick="'+t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</button>').join('');
+}
+$('gameTitleChoices').addEventListener('click',e=>{
+  const b=e.target.closest('[data-title-pick]');
+  if(!b||!puzzle||!state||state.done||!state.wordFound)return;
+  state.titlePick=b.dataset.titlePick;
+  state.done=true;state.won=state.titlePick===puzzle.title;
+  save(currentKey()+':'+puzzle.id,state);draw();drawTitlePick();refreshHardHints();
+  if(puzzle.mode==='endless')rememberAnswer(puzzle.word);
+  finish(true);
+});
 function press(key){
-  if(!puzzle||!state||state.done)return;
+  if(!puzzle||!state||state.done||state.wordFound)return;
   const len=puzzle.word.length;
   if(key==='Enter'){
     if(typing.length<len)return message('Das Wort hat '+len+' Buchstaben.');
@@ -344,10 +369,13 @@ function press(key){
       if(hint)return message((puzzle.level==='extreme'?'Extrem: ':'Schwerer Modus: ')+hint);
     }
     state.guesses.push(typing);typing='';
-    if(state.guesses[state.guesses.length-1]===puzzle.word)state.done=state.won=true;
+    if(state.guesses[state.guesses.length-1]===puzzle.word){
+      if(puzzle.level==='extreme')state.wordFound=true; // now name the anime
+      else state.done=state.won=true;
+    }
     else if(state.guesses.length>=TRIES)state.done=true;
     message('');save(currentKey()+':'+puzzle.id,state);draw();
-    refreshHardHints();
+    refreshHardHints();drawTitlePick();
     if(state.done){if(puzzle.mode==='endless')rememberAnswer(puzzle.word);finish(true);}
     return;
   }
@@ -370,7 +398,7 @@ function finish(fresh){
   }
   $('gameEnd').hidden=false;
   const answer=$('gameAnswer');answer.replaceChildren();
-  answer.append(document.createTextNode(state.won?'Richtig! Gesucht war ':'Leider nicht. Gesucht war '));
+  answer.append(document.createTextNode(state.won?'Richtig! Gesucht war ':state.wordFound?'Das Wort stimmte, aber der Anime nicht. Gesucht war ':'Leider nicht. Gesucht war '));
   const bold=document.createElement('b');bold.textContent=puzzle.word;answer.append(bold);
   answer.append(document.createTextNode(' aus '));
   const title=document.createElement('i');title.textContent=puzzle.title;answer.append(title,document.createTextNode('.'));
@@ -394,7 +422,8 @@ $('gameShare').onclick=async()=>{
   })[mark]).join('')).join('\n');
   const label=puzzle.level==='hard'?'Schwer':puzzle.level==='extreme'?'Extrem':'Normal';
   const text='Titel-Rätsel '+label+' '+(puzzle.mode==='endless'?'Endlos ':'#')+
-    puzzle.number+' · '+(state.won?state.guesses.length:'X')+'/'+TRIES+'\n'+grid;
+    puzzle.number+' · '+(state.won||state.wordFound?state.guesses.length:'X')+'/'+TRIES+
+    (puzzle.level==='extreme'?' · Anime '+(state.won?'✓':state.wordFound?'✗':'–'):'')+'\n'+grid;
   try{await navigator.clipboard.writeText(text);message('Kopiert. Einfach in Discord einfügen.');}
   catch{message(text);}
 };
