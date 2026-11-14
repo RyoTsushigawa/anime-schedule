@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-14T14:31:25.764Z",
+ "updated": "2026-11-14T17:37:52.021Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -195,17 +195,6 @@
    "skip": true
   }
  ],
- "delays": [
-  {
-   "id": "1pc6zf3l",
-   "day": "2026-11-10",
-   "show": "shiotaiounosatousangaorenidakeamai",
-   "title": "The Cold Sato-san is Only Sweet to Me",
-   "minutes": 15,
-   "reason": "Solutions30 macht 30 Probleme",
-   "at": "19:00"
-  }
- ],
  "absent": [
   {
    "day": "2026-11-14",
@@ -260,7 +249,8 @@
    "people": [
     "MaRyo"
    ],
-   "maybe": true
+   "maybe": true,
+   "reason": "Madoka Movie"
   },
   {
    "day": "2026-11-25",
