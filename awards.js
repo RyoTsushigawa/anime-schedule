@@ -255,7 +255,7 @@ $('awardsCeddlList').addEventListener('click', e => {
 
 // The shared part: who has voted, the buttons, and after "Auflösen" the results
 async function awardsCall(path, body, person = '') {
-  const code = typeof groupCode === 'function' ? groupCode() : '';
+  const code = typeof savedGroupCode === 'function' ? savedGroupCode() : '';
   const response = await fetch(voteApi + path, { method: body ? 'POST' : 'GET', cache: 'no-store',
     headers: { ...(code && { 'X-Group-Code': code }), ...(person && ID && ID.headers(person)), ...(body && { 'Content-Type': 'application/json' }) },
     ...(body && { body: JSON.stringify(body) }) });

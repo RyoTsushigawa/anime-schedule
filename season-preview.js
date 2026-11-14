@@ -337,9 +337,9 @@ function validChoices(person){
 }
 function currentVoter(){return pv('previewPerson').value||member?.person||'';}
 // A shared code unlocks group voting, without pretending to identify individual voters.
-// Keep the code in this browser (common.js groupCode), not in public scripts or URLs.
+// Keep the code in this browser (common.js savedGroupCode), not in public scripts or URLs.
 function storedGroupCode(){
- return groupCode();
+ return savedGroupCode();
 }
 // the name chosen here before, else the person from the schedule's Solo view
 function selectedGroupPerson(){
