@@ -60,6 +60,35 @@ async function isCharacterName(word) {
   } catch { return null; }
   finally { await new Promise(r => setTimeout(r, 900)); }
 }
+// up to 10 words in one AniList request (aliases w0 … w9); a batch AniList refuses is checked word by word
+const NAME_BATCH = 10;
+const nameMatch = (list, word) => (list || []).some(c => [c.name?.first, c.name?.last].some(n => String(n || '').toUpperCase() === word));
+export async function checkNames(words) {
+  try {
+    const query = 'query (' + words.map((_, i) => `$w${i}: String`).join(', ') + ') { '
+      + words.map((_, i) => `w${i}: Page(perPage: 10) { characters(search: $w${i}) { name { first last } } }`).join(' ') + ' }';
+    const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query, variables: Object.fromEntries(words.map((w, i) => ['w' + i, w])) }) });
+    if (res.status === 429) { await new Promise(r => setTimeout(r, 60000)); return checkNames(words); }
+    const data = res.ok ? (await res.json()).data : null;
+    if (data && words.every((_, i) => data['w' + i])) {
+      await new Promise(r => setTimeout(r, 1500));
+      return new Map(words.map((w, i) => [w, nameMatch(data['w' + i].characters, w)]));
+    }
+  } catch {}
+  const out = new Map();
+  for (const w of words) out.set(w, await isCharacterName(w));
+  return out;
+}
+// checks the words in batches until the time is up; what is left waits for the next run (the answers so far are kept)
+export async function checkAllNames(words, names, until) {
+  let left = 0;
+  for (let i = 0; i < words.length; i += NAME_BATCH) {
+    if (Date.now() > until) { left = words.length - i; break; }
+    for (const [w, verdict] of await checkNames(words.slice(i, i + NAME_BATCH))) if (verdict !== null) names[w] = verdict;
+  }
+  if (left) console.log(`Namen: ${left} Wörter warten auf den nächsten Lauf (Zeitlimit)`);
+}
 // the 500 most popular anime on AniList (by members, no adult titles): extra answers for hard mode
 async function popularTitles() {
   const out = [];
@@ -74,11 +103,11 @@ async function popularTitles() {
   }
   return out;
 }
-// Extrem: every anime on AniList with an English title, most popular first (up to 300 pages = 15,000 anime).
+// Extrem: every anime on AniList with an English title, most popular first (AniList pages stop at 100 = 5,000 anime).
 // Slow (one page every 2 s), so only once a week; the list in the file is used in between.
 async function allTitles() {
   const out = [];
-  for (let page = 1; page <= 300; page++) {
+  for (let page = 1; page <= 100; page++) {
     try {
       const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ query: 'query ($p: Int) { Page(page: $p, perPage: 50) { pageInfo { hasNextPage } media(type: ANIME, sort: POPULARITY_DESC, isAdult: false) { title { english } } } }', variables: { p: page } }) });
@@ -109,6 +138,7 @@ async function anilistTitles() {
 }
 
 async function main() {
+  const started = Date.now();
   const guesses = await json('games-guesses.json');
   const dictionary = new Set(Object.values(guesses.words).flatMap(s => s.split(' ')).map(w => w.toUpperCase()));
   const catalog = await json('seasons.json'), streams = await json('streams-de.json');
@@ -135,16 +165,11 @@ async function main() {
   const merged = new Map([...before, ...endlessWords(titles, dictionary)].map(w => [w.word, w]));
   // a word that isn't English needs AniList's yes: a character with that name
   const offline = process.argv.includes('--offline');
-  for (const w of [...merged.values(), ...popularCandidates]) if (!dictionary.has(w.word) && !(w.word in names) && !offline) {
-    const verdict = await isCharacterName(w.word);
-    if (verdict !== null) names[w.word] = verdict;
-  }
-  // Extrem has thousands of names: at most 300 new checks a run, most popular anime first; the rest follow later
-  let budget = 300;
-  for (const w of extremeCandidates) if (!dictionary.has(w.word) && !(w.word in names) && !offline && budget-- > 0) {
-    const verdict = await isCharacterName(w.word);
-    if (verdict !== null) names[w.word] = verdict;
-  }
+  // at most 20 minutes of name checks a run (the job has 40), so the file is always written
+  const until = started + 20 * 60000, unchecked = list => [...new Set(list.filter(w => !dictionary.has(w.word) && !(w.word in names)).map(w => w.word))];
+  if (!offline) await checkAllNames(unchecked([...merged.values(), ...popularCandidates]), names, until);
+  // Extrem has thousands of names: at most 1000 new checks a run, most popular anime first; the rest follow later
+  if (!offline) await checkAllNames(unchecked(extremeCandidates).slice(0, 1000), names, until);
   const words = selectWords(merged.values(), dictionary, names);
   const popular = selectWords(popularCandidates, dictionary, names);
   // Extrem: [word, title] pairs, compact; candidates stay in the file so unchecked names get their turn later
