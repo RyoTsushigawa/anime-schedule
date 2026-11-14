@@ -1,0 +1,14 @@
+{
+ "about": "AniList user ID → account name for the accounts in wrapped-profiles.json (tools/anilist-ids.mjs)",
+ "ids": {
+  "223709": "Reidroc",
+  "481553": "charlyfox",
+  "5473790": "terramel",
+  "5830512": "Farawyn98",
+  "6259790": "BelmontGabriel",
+  "6275887": "Blurakki",
+  "6450808": "Queccks",
+  "6907450": "RyoTsushigawa",
+  "8347506": "MilkyWay95"
+ }
+}
