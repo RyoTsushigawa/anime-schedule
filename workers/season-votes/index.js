@@ -155,7 +155,7 @@ async function aniListViewer(env,token){
  let res=null;
  for(let attempt=0;attempt<2;attempt++){
   if(attempt)await new Promise(r=>setTimeout(r,1500));
-  try{res=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Authorization:'Bearer '+token},body:JSON.stringify({query:'{ Viewer { name } }'})});}
+  try{res=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json','User-Agent':'anime-season-preview-votes (Cloudflare Worker)',Authorization:'Bearer '+token},body:JSON.stringify({query:'{ Viewer { name } }'})});}
   catch{res=null;continue;}
   if(res.ok||res.status===400||res.status===401)break;
  }
@@ -164,7 +164,8 @@ async function aniListViewer(env,token){
  const invalid=res&&(res.status===400||res.status===401||(res.ok&&!name)||(body?.errors||[]).some(e=>/invalid token|unauthorized/i.test(e?.message||'')));
  if(!name){
   if(invalid)fail(401,'Die AniList-Anmeldung ist abgelaufen: auf der Hauptseite neu verbinden.');
-  fail(503,'AniList antwortet gerade nicht, deshalb kann die Anmeldung nicht geprüft werden. Bitte gleich nochmal versuchen.');
+  // the code (e.g. AniList 403, 429, 500 or "kein Netz") says where it's stuck
+  fail(503,'AniList antwortet gerade nicht ('+(res?'AniList '+res.status:'kein Netz')+'), deshalb kann die Anmeldung nicht geprüft werden. Bitte gleich nochmal versuchen.');
  }
  if(store)await store.put(key,name,{expirationTtl:43200}).catch(()=>{});
  return name;
