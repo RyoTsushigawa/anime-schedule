@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-11T22:24:47.773Z",
+ "updated": "2026-11-14T14:31:25.764Z",
  "moves": [
   {
    "show": "aonohakoseason2",
@@ -208,29 +208,6 @@
  ],
  "absent": [
   {
-   "day": "2026-11-10",
-   "people": [
-    "Marius",
-    "Blue",
-    "Ceddl"
-   ]
-  },
-  {
-   "day": "2026-11-11",
-   "people": [
-    "Rei",
-    "Terra",
-    "Quecks"
-   ]
-  },
-  {
-   "day": "2026-11-12",
-   "people": [
-    "Rei"
-   ],
-   "from": "20:00"
-  },
-  {
    "day": "2026-11-14",
    "people": [
     "Rei"
@@ -254,7 +231,8 @@
   {
    "day": "2026-11-18",
    "people": [
-    "Rei"
+    "Rei",
+    "Ceddl"
    ]
   },
   {
