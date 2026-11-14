@@ -14,7 +14,7 @@ const cls = n => n > 0 ? 'up' : n < 0 ? 'down' : '';
 
 // only for yourself: your AniList login or your PIN goes along (identity.js)
 async function call(path, body, person = '') {
-  const code = groupCode();
+  const code = savedGroupCode();
   const res = await fetch(voteApi + path, { method: body ? 'POST' : 'GET', cache: 'no-store',
     headers: { ...(code && { 'X-Group-Code': code }), ...(person && Identity.headers(person)), ...(body && { 'Content-Type': 'application/json' }) }, ...(body && { body: JSON.stringify(body) }) });
   const data = await res.json().catch(() => ({}));

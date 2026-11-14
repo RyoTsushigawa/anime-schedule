@@ -481,7 +481,7 @@ function checkSuggestion(report) {
   return site[1].test(host) ? { ok: true, text: 'Passt zu ' + report.service + ' (' + host + ')' } : { ok: false, text: 'Andere Seite als ' + report.service + ': ' + host };
 }
 const reportsApi = async () => { const api = (await config()).previewVotesUrl; return /^https:\/\//.test(api || '') ? api.replace(/\/$/, '') : ''; };
-const groupHeaders = () => { const code = groupCode(); return code ? { 'X-Group-Code': code } : {}; };
+const groupHeaders = () => { const code = savedGroupCode(); return code ? { 'X-Group-Code': code } : {}; };
 let repairReports = [];
 async function loadRepairQueue() {
   const list = $('repairList');
