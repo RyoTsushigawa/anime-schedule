@@ -31,7 +31,7 @@ const SITE_FEATURES = [
   ['Einstellungen & Werkzeuge', [
     'Hell / dunkel', 'Akzentfarben, auch die eigene Guckplan-Farbe', 'Dichte (bequem, kompakt, nur Text)', 'Schriftgröße', 'Hoher Kontrast',
     'Einstellungen exportieren und importieren', 'Datenstand', 'Sync-Verlauf', 'Listen-Check (auch Fremdeinträge aus dem Guckplan entfernen)', 'Kontoverbindung prüfen',
-    'AniList ↔ MAL vergleichen', 'Hilfe mit Themen und Tastenkürzeln', 'Patch-Notes mit „Letztes neues Feature“', 'Feedback-Link',
+    'AniList ↔ MAL vergleichen', 'Ausgewählte Einträge von AniList auf MyAnimeList übernehmen', 'Hilfe mit Themen und Tastenkürzeln', 'Patch-Notes mit „Letztes neues Feature“', 'Feedback-Link',
   ]],
   ['Season Preview', [
     'Trailer zu jeder Serie', 'Gemeinsam abstimmen (Ja / Vielleicht / Nein)', 'Stimmen mit Namen', 'Filter, die gemerkt werden',

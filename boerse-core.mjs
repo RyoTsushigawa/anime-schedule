@@ -3,17 +3,20 @@
 export const CASH = 1000, PRICE = 100, FEE = 1, SHORT_LIMIT = 1000, HALT = 0.07;
 const SEASON_MONTH = { Winter: 0, 'Frühling': 3, Sommer: 6, Herbst: 9 };
 const DAYS = 14 * 86400000;
+// midnight German time on the 1st of a month: summer time (UTC+2) from April to October, else UTC+1
+export const berlinMonthStart = (year, month) => { const y = year + Math.floor(month / 12), m = ((month % 12) + 12) % 12;
+  return Date.UTC(y, m, 1) - (m >= 3 && m <= 9 ? 7200000 : 3600000); };
 export function seasonStart(season) {
   const [name, year] = String(season).split(' ');
   if (!(name in SEASON_MONTH) || !/^\d{4}$/.test(year || '')) return null;
-  return Date.UTC(Number(year), SEASON_MONTH[name], 1) - 3600000; // midnight German time
+  return berlinMonthStart(Number(year), SEASON_MONTH[name]);
 }
 // trading: from 14 days before the season starts (the listing at 100) until the next season starts
 export function tradingWindow(season, now = Date.now()) {
   const start = seasonStart(season);
   if (start === null) return null;
-  const end = new Date(start + 3600000); end.setUTCMonth(end.getUTCMonth() + 3);
-  const from = start - DAYS, to = end.getTime() - 3600000;
+  const [name, year] = String(season).split(' ');
+  const from = start - DAYS, to = berlinMonthStart(Number(year), SEASON_MONTH[name] + 3);
   return { from, to, open: now >= from && now < to };
 }
 // opening hours: 8:00 to 22:00 German time, every day; the day's close is set after 22:00

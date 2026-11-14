@@ -95,3 +95,13 @@ test('opening hours: 8:00 to 22:00 German time, summer and winter time', () => {
   assert.equal(marketOpen(at('2027-07-01T06:00:00Z')), true); // 8:00 summer time
   assert.equal(marketOpen(at('2027-07-01T20:00:00Z')), false); // 22:00 summer time
 });
+
+test('season borders are midnight German time, in summer time too', () => {
+  // Sommer 2027 starts 1 Jul 00:00 CEST = 30 Jun 22:00 UTC and ends 1 Oct 00:00 CEST
+  const w = tradingWindow('Sommer 2027', 0);
+  assert.equal(new Date(w.to).toISOString(), '2027-09-30T22:00:00.000Z');
+  assert.equal(new Date(w.from + 14 * 86400000).toISOString(), '2027-06-30T22:00:00.000Z');
+  // Herbst ends at New Year in winter time; Winter ends 1 Apr in summer time
+  assert.equal(new Date(tradingWindow('Herbst 2026', 0).to).toISOString(), '2026-12-31T23:00:00.000Z');
+  assert.equal(new Date(tradingWindow('Winter 2027', 0).to).toISOString(), '2027-03-31T22:00:00.000Z');
+});
