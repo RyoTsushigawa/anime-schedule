@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-14T15:30:00Z', name: 'Der Abend auf einen Blick' };
+const LAST_FEATURE = { at: '2026-11-14T17:15:00Z', name: 'Grund für Abwesenheiten' };
 const PATCH_NOTES = [
 { id: '2026-11-14', title: 'Easier to find your way: tidy menus, help next to the name, automatic double episodes', items: [
 'New here? A short welcome on the first visit: pick your name, how a row works, and that connecting a list is optional. The help (the ? next to the name, on phones next to the logo) can show it again under „Erste Schritte“.',

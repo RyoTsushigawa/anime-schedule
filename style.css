@@ -1680,3 +1680,7 @@ body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { dis
    the switch itself only shows while the drop button is on */
 body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; border-color: var(--line); color: var(--text); }
 #settingsMenu .settings-options:has(#dropButtons:not(:checked)) .drop-always-toggle { display: none; }
+/* optional reason for an absence (picked from a short list) */
+.away-reason { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.away-reason small { color: var(--muted); font-size: 12px; }
+.away-reason select { min-width: 0; max-width: 60%; }

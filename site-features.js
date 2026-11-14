@@ -21,7 +21,7 @@ const SITE_FEATURES = [
     'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Bearbeiter-Zugang für vertraute Leute (ohne den GitHub-Schlüssel)', 'Discord-Zustellung',
   ]],
   ['Abwesenheiten', [
-    'Abwesenheits-Kalender (Tage, Zeiträume, ab/bis Uhrzeit)', 'Wiederkehrende Abwesenheiten', 'Wochenübersicht der Abwesenheiten',
+    'Abwesenheits-Kalender (Tage, Zeiträume, ab/bis Uhrzeit)', 'Optionaler Grund für eine Abwesenheit (aus einer kurzen Liste)', 'Wiederkehrende Abwesenheiten', 'Wochenübersicht der Abwesenheiten',
     'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt', 'Vor dem Speichern: welche Serien betroffen sind', 'Überlappende Wiederholungen markiert', 'Gelöschte Abwesenheit rückgängig machen',
   ]],
   ['Catch-up & Non-seasonal', [
