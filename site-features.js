@@ -10,7 +10,7 @@ const SITE_FEATURES = [
     'Drop-Button', 'Bewerten', 'Hinweise zu Pausen und unbestätigten Zeiten', 'Ersatz bei AniList-Ausfall (letzte gespeicherte Woche)',
     'Als App auf dem Startbildschirm, mit Offline-Kopie und „Neu laden“ bei Updates', 'Nachschlagen (auch mit Spitznamen), letzte Suchen löschbar',
     'Wochenübersicht pro Person', 'Startet bald (Premieren der nächsten Season)', 'Finale- und „Fortsetzung angekündigt“-Hinweise',
-    'Lange und doppelte Folgen', 'Pausen und Recaps im Plan', 'Plan-Check', 'Planänderungen', 'Seriendaten prüfen',
+    'Lange und doppelte Folgen', 'Doppelfolgen und lange Folgen automatisch erkannt (zwei Slots)', 'Beendete Serien verschwinden still aus dem Plan', 'Pausen und Recaps im Plan', 'Plan-Check', 'Planänderungen', 'Seriendaten prüfen',
     'Folgennummern vergleichen', 'Falschen Link melden', 'Discord-Nachricht für jeden Tag (Formate, Kopieren)',
     'Spitznamen und Emotes', 'Täglicher Discord-Post um 9 Uhr, bei Änderungen aktualisiert und angepinnt', 'Im Discord-Post: gestern an der Börse und offene Season-Preview-Stimmen',
     'Warnung im Bot-Kanal, wenn der Tagespost fehlschlägt',

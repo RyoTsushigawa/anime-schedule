@@ -44,3 +44,19 @@ test('U66: "Bis …" saves one move per week up to the chosen week, then the Guc
     assert.ok(saved.every(m => m.week), 'no permanent move');
   } finally { p.close(); }
 });
+
+test('U66: the dialog says "Verschoben bis …", and "Zurücksetzen" ends the whole series from this week on', async () => {
+  const weeks = ['2026-10-26', '2026-11-02', '2026-11-09'];
+  const p = await openPage({ storage: { movesKey: 'k' }, movesFile: { moves: [
+    ...weeks.map(week => ({ show: 'showalpha', title: 'Alpha EN', tag: 'Do.', time: '21:30', week })),
+    { show: 'showalpha', title: 'Alpha EN', tag: 'Fr.', time: '20:00', week: '2026-11-16' },
+    { show: 'showbeta', title: 'Beta EN', tag: 'So.', time: '', week: '2026-11-02' }] } });
+  try {
+    await p.click(moveButton(p, 'Alpha EN'));
+    assert.match(p.$('moveFrom').textContent, /Verschoben bis 15\. Nov\./);
+    await p.click(p.$('moveReset'), 300);
+    const left = p.state.movesSaved.moves.map(m => [m.title, m.week, m.tag]);
+    // the series is gone; a different move later and other shows stay
+    assert.deepEqual(left, [['Alpha EN', '2026-11-16', 'Fr.'], ['Beta EN', '2026-11-02', 'So.']]);
+  } finally { p.close(); }
+});
