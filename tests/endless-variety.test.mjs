@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pickEndlessEntry } from '../games-logic.mjs';
-import { endlessWords } from '../tools/games-endless.mjs';
+import { endlessWords, selectWords } from '../tools/games-endless.mjs';
 // Endless Titel-Rätsel: enough answers, a new order every pass and per player, no repeats for 60 rounds
 
 const pool = Array.from({ length: 200 }, (_, i) => ({ word: 'W' + String(i).padStart(4, '0'), title: 'T' + i }));
@@ -33,6 +33,15 @@ test('the word list: real English words of 5-8 letters from titles, each once', 
   const words = endlessWords([{ title: 'Made in Abyss', from: 'A' }, { title: 'Dragon Magic School', from: 'B' }, { title: 'Magic Kaito', from: 'C' }], dict);
   assert.deepEqual(words.map(w => w.word), ['ABYSS', 'DRAGON', 'MAGIC', 'SCHOOL']);
   assert.equal(words.find(w => w.word === 'MAGIC').title, 'Dragon Magic School', 'the first title it appears in');
+  // names: from English titles any word, from romaji titles only dictionary words
+  const named = endlessWords([{ title: 'Ranma½', from: 'S', english: true }, { title: 'Chitose Is in the Ramune Bottle', from: 'S', english: true },
+    { title: 'Kimetsu no Yaiba', from: 'Top 100' }, { title: "Isn't It Shoujo", from: 'S', english: true }], dict).map(w => w.word);
+  assert.ok(['RANMA', 'CHITOSE', 'RAMUNE', 'BOTTLE'].every(w => named.includes(w) || w === 'BOTTLE'), named.join());
+  assert.ok(!named.includes('KIMETSU') && !named.includes('YAIBA'), 'romaji lists stay dictionary-only');
+  assert.ok(named.includes('SHOUJO'), 'a candidate from an English title');
+  // only words AniList knows as a character's name get in; romaji words and unchecked ones stay out
+  const candidates = endlessWords([{ title: 'Ranma½', from: 'S', english: true }, { title: 'Mushoku Tensei', from: 'S', english: true }, { title: 'Chitose Magic', from: 'S', english: true }], dict);
+  assert.deepEqual(selectWords(candidates, dict, { RANMA: true, TENSEI: false, MUSHOKU: false }).map(w => [w.word, !!w.name]), [['MAGIC', false], ['RANMA', true]]);
   const shipped = JSON.parse(readFileSync(new URL('../games-endless.json', import.meta.url), 'utf8')).words;
   assert.ok(shipped.length >= 400, 'the shipped list has hundreds of answers');
   assert.ok(shipped.every(w => /^[A-Z]{5,8}$/.test(w.word) && w.title));

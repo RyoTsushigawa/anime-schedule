@@ -56,3 +56,9 @@
 .games-card.lost span { color: #c45a5a; }
 @media (max-width: 760px) { .games-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 380px) { .games-cards { grid-template-columns: 1fr; } }
+
+/* Extrem: name the anime after finding the word */
+.game-title-pick { width: 100%; text-align: center; }
+.game-title-pick p { margin: 0 0 .6rem; }
+.game-title-choices { display: grid; gap: .45rem; }
+.game-title-choices .pill { white-space: normal; text-align: center; line-height: 1.3; padding: .5rem .8rem; }

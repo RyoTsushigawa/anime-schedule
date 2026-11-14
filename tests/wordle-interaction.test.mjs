@@ -14,7 +14,7 @@ const html=readFileSync(new URL('../games.html',import.meta.url),'utf8');
 const daily=JSON.parse(readFileSync(new URL('../games-words.json',import.meta.url),'utf8'));
 const guesses=JSON.parse(readFileSync(new URL('../games-guesses.json',import.meta.url),'utf8'));
 
-async function openGame({mode='daily',difficulty='normal',accounts=['Belly'],anilistDown=false}={}){
+async function openGame({mode='daily',difficulty='normal',accounts=['Belly'],anilistDown=false,endless=null}={}){
   const dom=new JSDOM(html,{url:'https://example.test/games.html',runScripts:'outside-only'});
   const {window}=dom,ctx=dom.getInternalVMContext(),requests=[];
   window.localStorage.setItem('titleGameMode',JSON.stringify(mode));
@@ -26,6 +26,7 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly'],ani
     let data;
     if(url==='games-words.json')data=daily;
     else if(url==='games-guesses.json')data=guesses;
+    else if(url==='games-endless.json'&&endless)data=endless;
     else if(url==='seasons.json')data=JSON.parse(readFileSync(new URL('../seasons.json',import.meta.url),'utf8'));
     else if(url==='tabs.json')data=[];
     else if(url==='config.json')data={};
@@ -214,4 +215,62 @@ test('Endless Normal draws from the expanded seasonal catalog',async()=>{
     const pool=await page.run('normalEntries()');
     assert.ok(pool.pool.length>50,'seasonal catalog should contribute enough varied words');
   }finally{page.close();}
+});
+
+test('Hard mode also draws from the AniList Top 500, with its own first hint', async () => {
+  const popular = ['MAGIC', 'TITAN', 'DEMON', 'SLAYER', 'GHOST'].map(word => ({ word, title: word + ' Show', from: 'Top 500 auf AniList' }));
+  const page = await openGame({ difficulty: 'hard', mode: 'endless', endless: { words: [], popular } });
+  try {
+    const pool = new Set(['BLACK', 'CLOVER', 'DRAGON', 'QUEST', 'MAGIC', 'KNIGHT', 'TITAN', 'DEMON', 'SLAYER', 'GHOST']);
+    const seen = new Set();
+    for (let i = 0; i < 12; i++) {
+      seen.add(page.run('puzzle.word'));
+      if (popular.some(p => p.word === page.run('puzzle.word') && page.run('puzzle.from') === 'Top 500 auf AniList')) {
+        page.run('state.hints=1');
+        assert.equal(page.run('hardHintText()'), 'Aus den 500 beliebtesten Anime auf AniList.');
+        return;
+      }
+      page.run("save(currentKey()+':index',roundNumber()+1)"); await page.run('start()');
+    }
+    assert.fail('no Top 500 word in 12 rounds: ' + [...seen].join());
+  } finally { page.close(); }
+});
+
+test('Extrem: words from all anime (unchecked names left out), its own hints, the strict rules', async () => {
+  const extreme = [['DRAGON', 'Dragon Ball Super'], ['CASTLE', 'Howl\'s Moving Castle'], ['KNIGHT', 'Knight\'s & Magic'], ['NARUTO', 'Naruto', 0]];
+  const page = await openGame({ difficulty: 'extreme', endless: { words: [], popular: [], extreme } });
+  try {
+    assert.equal(page.run('puzzle.level'), 'extreme');
+    assert.ok(['DRAGON', 'CASTLE', 'KNIGHT'].includes(page.run('puzzle.word')), page.run('puzzle.word'));
+    assert.equal(page.run("extremePool.some(e=>e.word==='NARUTO')"), false, 'a name AniList has not confirmed yet stays out');
+    assert.match(page.run("document.getElementById('gameNumber').textContent"), /^Extrem · Titel-Rätsel #/);
+    page.run('state.hints=1');
+    assert.match(page.run('hardHintText()'), /^Der Titel hat \d Wörter? und beginnt mit „[A-Z]“\.$/);
+    page.run('state.hints=2');
+    assert.match(page.run('hardHintText()'), /Buchstabe \d ist [A-Z]\./);
+    assert.equal(page.run('strict(puzzle.level)'), true);
+  } finally { page.close(); }
+});
+
+test('Extrem: the word alone isn\'t solved; picking the right anime is; the wrong one loses', async () => {
+  const extreme = [['DRAGON', 'Dragon Ball Super'], ['CASTLE', 'Howl\'s Moving Castle'], ['KNIGHT', 'Knight\'s & Magic'], ['GHOST', 'Ghost in the Shell'], ['TITAN', 'Attack on Titan']];
+  for (const right of [true, false]) {
+    const page = await openGame({ difficulty: 'extreme', mode: 'endless', endless: { words: [], popular: [], extreme } });
+    try {
+      page.run("typing=puzzle.word; press('Enter')");
+      assert.equal(page.run('state.done'), false, 'not solved by the word alone');
+      assert.equal(page.run('state.wordFound'), true);
+      const choices = page.run("[...document.querySelectorAll('[data-title-pick]')].map(b=>b.dataset.titlePick)");
+      assert.equal(choices.length, 4);
+      assert.ok(choices.includes(page.run('puzzle.title')));
+      assert.ok(choices.filter(t => t !== page.run('puzzle.title')).every(t => !t.toUpperCase().split(/[^A-Z]+/).includes(page.run('puzzle.word'))), 'no other title has the word');
+      page.run("press('A')");
+      assert.equal(page.run('typing'), '', 'no more typing once the word is found');
+      const pick = right ? page.run('puzzle.title') : choices.find(t => t !== page.run('puzzle.title'));
+      page.run(`document.querySelectorAll('[data-title-pick]')[${choices.indexOf(pick)}].click()`);
+      assert.equal(page.run('state.done'), true);
+      assert.equal(page.run('state.won'), right);
+      assert.match(page.run("document.getElementById('gameAnswer').textContent"), right ? /^Richtig!/ : /^Das Wort stimmte, aber der Anime nicht/);
+    } finally { page.close(); }
+  }
 });

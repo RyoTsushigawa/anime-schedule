@@ -29,7 +29,9 @@ let dailyData=null, sheetPool=null, hardUsers=null;
 const hardCache=new Map();
 let puzzle=null,state=null,typing='',allowed=new Set(),generation=0;
 let gameMode=load('titleGameMode','daily')==='endless'?'endless':'daily';
-let difficulty=load('titleGameDifficulty','normal')==='hard'?'hard':'normal';
+let difficulty=['hard','extreme'].includes(load('titleGameDifficulty','normal'))?load('titleGameDifficulty','normal'):'normal';
+// Schwer and Extrem share the rules: use every hint, two optional hints
+const strict = level => level==='hard'||level==='extreme';
 
 async function fetchSheetPool() {
   if(sheetPool) return sheetPool;
@@ -132,7 +134,27 @@ async function anilistEntries(username) {
     throw e;
   }
 }
+// hard mode also draws from the 500 most popular anime on AniList (games-endless.json "popular")
+let popularPool=null;
+async function popularEntries(){
+  if(popularPool) return popularPool;
+  try{popularPool=((await json('games-endless.json')).popular||[]).filter(e=>e&&/^[A-Z]{5,8}$/.test(e.word)&&e.title).map(e=>({...e,from:'Top 500 auf AniList'}));}
+  catch{popularPool=[];}
+  return popularPool;
+}
+// Extrem: words from every anime on AniList (games-endless.json "extreme": [word, title], unchecked names left out),
+// plus the Top 500 and the endless words, so it works before the first weekly list is there
+let extremePool=null;
+async function extremeEntries(){
+  if(extremePool) return extremePool;
+  let file={};
+  try{file=await json('games-endless.json');}catch{}
+  const all=(file.extreme||[]).filter(e=>Array.isArray(e)&&e.length===2&&/^[A-Z]{5,8}$/.test(e[0])&&e[1]).map(([word,title])=>({word,title,from:'AniList'}));
+  extremePool=mergeEntries(all,(file.popular||[]).map(e=>({...e,from:'AniList'})),(file.words||[]).filter(e=>e&&/^[A-Z]{5,8}$/.test(e.word)&&e.title).map(e=>({...e,from:'AniList'})));
+  return extremePool;
+}
 async function hardEntries(round) {
+  const popular=await popularEntries();
   const names=await users();
   const first=hashWord(round)%names.length;
   let error;
@@ -140,7 +162,7 @@ async function hardEntries(round) {
     const user=names[(first+i)%names.length];
     try {
       const pool=await anilistEntries(user);
-      if(pool.length) return {pool,user};
+      if(pool.length) return {pool:mergeEntries(pool,popular),user};
     }catch(e){error=e;}
   }
   throw new Error('Keine öffentliche Gruppen-AniList mit passenden englischen Titeln erreichbar.'+
@@ -166,7 +188,7 @@ function playerSeed(){
 function drawToday() {
   const today = berlinDay();
   const daily = level => load('titleGame:v2:' + level + ':daily:' + level + ':daily:' + today, null);
-  const title = [daily('normal'), daily('hard')].find(x => x?.guesses?.length) || null;
+  const title = [daily('normal'), daily('hard'), daily('extreme')].find(x => x?.guesses?.length) || null;
   const stats = load('titleGameStats:v2:normal:daily', {});
   const cover = load('animeCoverQuizV2', null), syn = load('synopsisPuzzleV1', null), quiz = load('animeQuizV1', null);
   const t = !title ? ['open', 'Noch offen'] : !title.done ? ['open', `${title.guesses.length} von ${TRIES} Versuchen`]
@@ -198,13 +220,22 @@ async function start() {
     let entry,source=basic.pool;
     const id=level+':'+mode+':'+(mode==='daily'?day:round);
     const saved=load(currentKey()+':'+id,null);
-    let hard=null,offline='';
+    let hard=null,offline='',extreme=null;
+    if(level==='extreme'){
+      extreme=await extremeEntries();
+      if(turn!==generation)return;
+      if(!extreme.length)throw new Error('Die Extrem-Liste ist noch nicht da.');
+    }
     if(level==='hard'){
       try{hard=await hardEntries(mode==='daily'?day:round);}
       catch(e){offline=e.message;}
       if(turn!==generation)return;
     }
-    if(hard){
+    if(extreme){
+      source=mergeEntries(basic.pool,extreme);
+      entry=mode==='daily'?pickEntry(extreme,0,day+':extreme')
+        :pickEndlessEntry(extreme,round,'extreme:'+playerSeed(),recentAnswers());
+    } else if(hard){
       source=mergeEntries(basic.pool,hard.pool);
       entry=mode==='daily'?pickEntry(hard.pool,0,day+':hard:'+hard.user)
         :pickEndlessEntry(hard.pool,round,'endless:'+hard.user+':'+playerSeed(),recentAnswers());
@@ -232,11 +263,12 @@ async function start() {
     state=saved?.id===id && saved?.word===entry.word ? saved
       :{id,word:entry.word,guesses:[],done:false,won:false};
     state.hints = Math.max(0,Math.min(2,Number(state.hints)||0));
-    $('gameNumber').textContent=(level==='hard'?'Schwer · ':'')+
+    $('gameNumber').textContent=(level==='hard'?'Schwer · ':level==='extreme'?'Extrem · ':'')+
       (mode==='daily'?'Titel-Rätsel #':'Endlos #')+puzzle.number;
     $('gameHint').textContent=puzzle.word.length+' Buchstaben · '+allowed.size+' gültige Wörter';
     draw();
     refreshHardHints();
+    drawTitlePick();
     if(offline && !state.done) message('AniList ist von diesem Browser aus gerade nicht erreichbar (Werbeblocker oder Tracking-Schutz?). '+
       'Dieses Rätsel kommt deshalb aus dem Guckplan und ist nicht dasselbe wie bei den anderen.');
     if(state.done) finish(false);
@@ -248,22 +280,30 @@ async function start() {
 // second reveal one deterministic position. Never expose the whole title, since
 // the answer itself is a word in that title.
 function hardHintText() {
-  if(!puzzle || !state || puzzle.level!=='hard' || !state.hints)return '';
+  if(!puzzle || !state || !strict(puzzle.level) || !state.hints)return '';
+  if(puzzle.level==='extreme'){
+    // the title itself would give the answer away: only how long it is and how it starts
+    const words=String(puzzle.title||'').split(/\s+/).filter(Boolean);
+    const label='Der Titel hat '+words.length+' '+(words.length===1?'Wort':'Wörter')+' und beginnt mit „'+(words[0]||'?')[0].toUpperCase()+'“.';
+    if(state.hints===1)return label;
+    const index=hashWord(puzzle.id+':hint')%puzzle.word.length;
+    return label+' Buchstabe '+(index+1)+' ist '+puzzle.word[index]+'.';
+  }
   const owner = (puzzle.from || '').replace(/^AniList\s*·\s*/, '');
-  const label = !/^AniList/.test(puzzle.from || '') ? 'Aus dem Guckplan.' : owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
+  const label = /^Top 500/.test(puzzle.from || '') ? 'Aus den 500 beliebtesten Anime auf AniList.' : !/^AniList/.test(puzzle.from || '') ? 'Aus dem Guckplan.' : owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
   if(state.hints===1)return label;
   const index=hashWord(puzzle.id+':hint')%puzzle.word.length;
   return label + ' Buchstabe ' + (index+1) + ' ist ' + puzzle.word[index] + '.';
 }
 function refreshHardHints(){
-  const show=!!puzzle && !!state && puzzle.level==='hard' && !state.done;
+  const show=!!puzzle && !!state && strict(puzzle.level) && !state.done && !state.wordFound;
   $('gameHardHints').hidden=!show;
   $('gameHintText').textContent=show?hardHintText():'';
   $('gameHintButton').textContent=state?.hints===1?'Zweiter Hinweis': 'Hinweis anzeigen';
   $('gameHintButton').hidden=!show || (state?.hints||0)>=2;
 }
 $('gameHintButton').onclick=()=>{
-  if(!puzzle || !state || puzzle.level!=='hard' || state.done || state.hints>=2)return;
+  if(!puzzle || !state || !strict(puzzle.level) || state.done || state.hints>=2)return;
   state.hints++;
   save(currentKey()+':'+puzzle.id,state);
   refreshHardHints();
@@ -294,21 +334,48 @@ function draw(){
     (i===2?'<button type="button" class="key wide" data-key="Backspace" aria-label="Löschen">⌫</button>':'')+
     '</div>').join('');
 }
+// Extrem: the word alone isn't enough, the anime it comes from has to be named too (4 titles to choose from;
+// the others are other titles from the list that don't contain the word, the same for everyone on the same puzzle)
+function titleChoices(){
+  const word=puzzle.word, own=String(puzzle.title||'');
+  const titles=[...new Set((extremePool||[]).map(e=>e.title))].filter(t=>t&&t!==own&&!t.toUpperCase().split(/[^A-Z]+/).includes(word));
+  const others=titles.sort((a,b)=>hashWord(puzzle.id+':'+a)-hashWord(puzzle.id+':'+b)||a.localeCompare(b)).slice(0,3);
+  return [own,...others].sort((a,b)=>hashWord(puzzle.id+':order:'+a)-hashWord(puzzle.id+':order:'+b)||a.localeCompare(b));
+}
+function drawTitlePick(){
+  const show=!!puzzle&&!!state&&puzzle.level==='extreme'&&state.wordFound&&!state.done;
+  $('gameTitlePick').hidden=!show;
+  if(!show)return;
+  $('gameTitleWord').textContent=puzzle.word;
+  $('gameTitleChoices').innerHTML=titleChoices().map(t=>'<button type="button" class="pill" data-title-pick="'+t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</button>').join('');
+}
+$('gameTitleChoices').addEventListener('click',e=>{
+  const b=e.target.closest('[data-title-pick]');
+  if(!b||!puzzle||!state||state.done||!state.wordFound)return;
+  state.titlePick=b.dataset.titlePick;
+  state.done=true;state.won=state.titlePick===puzzle.title;
+  save(currentKey()+':'+puzzle.id,state);draw();drawTitlePick();refreshHardHints();
+  if(puzzle.mode==='endless')rememberAnswer(puzzle.word);
+  finish(true);
+});
 function press(key){
-  if(!puzzle||!state||state.done)return;
+  if(!puzzle||!state||state.done||state.wordFound)return;
   const len=puzzle.word.length;
   if(key==='Enter'){
     if(typing.length<len)return message('Das Wort hat '+len+' Buchstaben.');
     if(!allowed.has(typing))return message('Nur echte englische Wörter sind erlaubt.');
-    if(puzzle.level==='hard'){
+    if(strict(puzzle.level)){
       const hint=hardHintError(typing,state.guesses,puzzle.word);
-      if(hint)return message('Schwerer Modus: '+hint);
+      if(hint)return message((puzzle.level==='extreme'?'Extrem: ':'Schwerer Modus: ')+hint);
     }
     state.guesses.push(typing);typing='';
-    if(state.guesses[state.guesses.length-1]===puzzle.word)state.done=state.won=true;
+    if(state.guesses[state.guesses.length-1]===puzzle.word){
+      if(puzzle.level==='extreme')state.wordFound=true; // now name the anime
+      else state.done=state.won=true;
+    }
     else if(state.guesses.length>=TRIES)state.done=true;
     message('');save(currentKey()+':'+puzzle.id,state);draw();
-    refreshHardHints();
+    refreshHardHints();drawTitlePick();
     if(state.done){if(puzzle.mode==='endless')rememberAnswer(puzzle.word);finish(true);}
     return;
   }
@@ -331,7 +398,7 @@ function finish(fresh){
   }
   $('gameEnd').hidden=false;
   const answer=$('gameAnswer');answer.replaceChildren();
-  answer.append(document.createTextNode(state.won?'Richtig! Gesucht war ':'Leider nicht. Gesucht war '));
+  answer.append(document.createTextNode(state.won?'Richtig! Gesucht war ':state.wordFound?'Das Wort stimmte, aber der Anime nicht. Gesucht war ':'Leider nicht. Gesucht war '));
   const bold=document.createElement('b');bold.textContent=puzzle.word;answer.append(bold);
   answer.append(document.createTextNode(' aus '));
   const title=document.createElement('i');title.textContent=puzzle.title;answer.append(title,document.createTextNode('.'));
@@ -353,9 +420,10 @@ $('gameShare').onclick=async()=>{
   const grid=state.guesses.map(g=>scoreGuess(g,puzzle.word).map(mark=>({
     hit:'🟩',near:'🟨',miss:'⬛'
   })[mark]).join('')).join('\n');
-  const label=puzzle.level==='hard'?'Schwer':'Normal';
+  const label=puzzle.level==='hard'?'Schwer':puzzle.level==='extreme'?'Extrem':'Normal';
   const text='Titel-Rätsel '+label+' '+(puzzle.mode==='endless'?'Endlos ':'#')+
-    puzzle.number+' · '+(state.won?state.guesses.length:'X')+'/'+TRIES+'\n'+grid;
+    puzzle.number+' · '+(state.won||state.wordFound?state.guesses.length:'X')+'/'+TRIES+
+    (puzzle.level==='extreme'?' · Anime '+(state.won?'✓':state.wordFound?'✗':'–'):'')+'\n'+grid;
   try{await navigator.clipboard.writeText(text);message('Kopiert. Einfach in Discord einfügen.');}
   catch{message(text);}
 };
