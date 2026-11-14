@@ -80,6 +80,8 @@ export async function openPage(opts = {}) {
   // Web Crypto (SHA-256 for editor codes, N61) and TextEncoder from Node; jsdom has neither
   if (!window.crypto?.subtle) Object.defineProperty(window, 'crypto', { value: globalThis.crypto, configurable: true });
   if (!window.TextEncoder) window.TextEncoder = TextEncoder;
+  // the first-visit welcome only where a test asks for it (opts.welcome)
+  if (!opts.welcome) window.localStorage.setItem('welcomeSeen', '1');
   for (const [k, v] of Object.entries(opts.storage || {})) window.localStorage.setItem(k, v);
   for (const [k, v] of Object.entries(opts.session || {})) window.sessionStorage.setItem(k, v);
 

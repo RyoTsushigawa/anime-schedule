@@ -8,7 +8,7 @@ const QUERY = `query ($page: Int, $from: Int, $to: Int) {
     airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) {
       airingAt episode
       media {
-        id idMal isAdult siteUrl episodes
+        id idMal isAdult siteUrl episodes duration
         title { romaji english }
         synonyms
         coverImage { medium }
@@ -412,6 +412,15 @@ const airingFacts = new Map();
 const pendingNext = new Set();
 const dateOf = d => d?.year && d?.month && d?.day ? new Date(d.year, d.month - 1, d.day).getTime() : null;
 const finishedBy = (facts, end) => facts?.status === 'FINISHED' && (!dateOf(facts.endDate) || dateOf(facts.endDate) < end);
+// A show that has stopped airing, also before AniList says FINISHED (that takes a few days): its last episode
+// (AniList's episode count) aired before the week, or nothing more is announced anywhere and its latest
+// episode was before the week (end of a cour, no date for more). Such a show is left out quietly, no warning.
+function endedBefore(facts, status, weekStart, next) {
+const aired = Math.max(0, ...(status?.airings || []).filter(a => a.at * 1000 < weekStart).map(a => a.episode));
+if (facts?.episodes > 0 && aired >= facts.episodes) return true;
+const later = [...(status?.airings || []), ...(status?.next ? [status.next] : []), ...(next ? [next] : [])].some(a => a.at * 1000 >= weekStart);
+return aired > 0 && !later && facts?.status !== 'NOT_YET_RELEASED';
+}
 function finishedThisSeason(media, start) {
 const since = new Date(start); since.setMonth(since.getMonth() - 3);
 return (dateOf(media.endDate) || dateOf(media.startDate) || 0) >= since.getTime();
@@ -459,7 +468,7 @@ const ids = [...pendingNext];
 pendingNext.clear();
 let media = [];
 try {
-for (let i = 0; i < ids.length; i += 50) media.push(...(await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id status startDate { year month day } endDate { year month day } nextAiringEpisode { episode airingAt } } } }',
+for (let i = 0; i < ids.length; i += 50) media.push(...(await anilist('query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids) { id status episodes startDate { year month day } endDate { year month day } nextAiringEpisode { episode airingAt } } } }',
 { ids: ids.slice(i, i + 50).map(Number) }, undefined, { retries: 0, timeout: 8000 })).Page.media);
 } catch {
 for (const id of ids) aniNext.set(id, 'failed');
@@ -470,7 +479,7 @@ const m = media.find(m => String(m.id) === String(id));
 if (!m) { aniNext.set(id, 'failed'); continue; }
 const n = m.nextAiringEpisode;
 const next = n ? { episode: n.episode, at: n.airingAt } : null;
-const facts = { status: m.status, startDate: m.startDate, endDate: m.endDate };
+const facts = { status: m.status, startDate: m.startDate, endDate: m.endDate, episodes: m.episodes || null };
 airingFacts.set(id, facts);
 aniNext.set(id, next);
 try { localStorage.setItem('next:' + id, JSON.stringify({ time: Date.now(), next, facts })); } catch {}
@@ -965,7 +974,7 @@ const freed = [...slots].filter(([, rs]) => rs.every(r => r.pause && !r.slot?.ke
   && rs.some(r => r.skipped || autoMovePauses)).map(([at]) => at);
 const anchors = [...slots].filter(([, rs]) => rs.some(r => r.slot?.keepTime)).map(([at]) => at);
 // A double episode ("Doppelt") or an overlong one ("Lang", LiveChart) needs two slots: later shows move back.
-const twoEpisodes = r => r.slot?.double && r.episodes?.length > 1;
+const twoEpisodes = r => (r.slot?.double || r.double) && r.episodes?.length > 1;
 const extraSlots = r => !r.pause && !r.extra && (twoEpisodes(r) || r.long) ? 1 : 0;
 const longs = [...slots].map(([at, rs]) => [at, Math.max(0, ...rs.map(extraSlots))]).filter(([, n]) => n);
 for (const r of day.rows) {
@@ -996,13 +1005,14 @@ const LOADING_HTML = '<div class="status loading">Lädt…</div><div class="skel
 var enter = null;
 // whether the overview chip above the week is open (kept across redraws)
 var alertsOpen = false;
-function episodeTags(episodes, total, long = false) {
+function episodeTags(episodes, total, long = false, double = false) {
 const finale = total > 1 && Math.max(...episodes) === total;
 const premiere = total !== 1 && Math.min(...episodes) === 1;
-const label = finale ? (long ? 'Extended Finale' : 'Finale')
-  : premiere ? (long ? 'Extended Premiere' : 'Premiere')
-  : long ? 'Lang' : '';
-return label ? `<span class="ep-tag"${long ? ' title="Lange Folge: braucht zwei Slots"' : ''}>${label}</span>` : '';
+const label = finale ? (long ? 'Extended Finale' : double ? 'Doppel-Finale' : 'Finale')
+  : premiere ? (long ? 'Extended Premiere' : double ? 'Doppel-Premiere' : 'Premiere')
+  : long ? 'Lang' : double ? 'Doppelfolge' : '';
+const why = long ? 'Lange Folge: braucht zwei Slots' : double ? 'Zwei Folgen in einer Ausstrahlung: braucht zwei Slots' : '';
+return label ? `<span class="ep-tag"${why ? ` title="${why}"` : ''}>${label}</span>` : '';
 }
 // Airing progress, not the signed-in viewer's watch progress. AniList may not
 // provide a final episode count; in that case do not invent a denominator.
@@ -1214,8 +1224,10 @@ if (recap || broadcastBreak) {
   continue;
 }
 const existing = days.flatMap(d => d.rows).find(r => r.m?.id === m.id);
-if (existing) existing.episodes.push(episode);
-else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show), ...(long && { long }) });
+// two episodes in one broadcast (a double premiere, a double finale): one row, and it needs two slots
+if (existing) { existing.episodes.push(episode); if (existing.it && Math.abs(existing.it.airingAt - it.airingAt) < 6 * 3600) existing.double = true; }
+// episodes of 40 minutes or more (AniList's length) need two slots, like LiveChart's "Lang"
+else day.rows.push({ it, m, links, when, slot, show, episodes: [episode], who: whoBySheet.get(sheet).get(show), ...((long || m.duration >= 40) && { long: true }) });
 }
 for (const x of moves.filter(m => m.extra && m.week === isoDay(start) && m.media?.id)) {
 const day = days.find(d => isoDay(d.date) === x.day);
@@ -1285,6 +1297,7 @@ if (fresh === undefined) { unknown.push({ show, why: 'checking AniList…' }); c
 if (fresh === 'failed') { unknown.push({ show, why: busy() }); continue; }
 upcoming = fresh && { episode: fresh.episode, at: fresh.at + (streamsDe?.release?.[alId]?.offset || 0) };
 }
+if (status && endedBefore(airingFacts.get(alId) || status.airingStatus, status, days[0].date.getTime(), upcoming)) continue;
 if (status && !upcoming) {
 unknown.push({ show, why: airingFacts.get(alId)?.status === 'RELEASING'
 ? 'Läuft noch; nächster Folgentermin nicht angekündigt' : 'Ausstrahlung konnte nicht bestätigt werden' });
@@ -1435,13 +1448,13 @@ return choices.time === 'watch' ? watch
 : choices.time === 'both' ? `${watch}<small><span class="out">ab </span>${release}</small>` : releaseCell;
 };
 const timeHint = { watch: 'Unser Plan', release: 'Release', both: 'Unser Plan, darunter Release' }[choices.time] || 'Release';
-const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra, away, maybe, long }) => `
+const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, extra, away, maybe, long, double }) => `
       <div class="row${extra ? ' catchup-planned' : ''}" ${artStyle(m)} data-watch-time="${hm(new Date(watchAt))}" data-at="${when.getTime()}" data-fade-at="${Math.max(when.getTime(), watchAt)}" ${searchKey(...mediaTitles(m))}>
         <div class="time" title="${extra ? 'Unser Plan (Nachholen)' : timeHint}">${extra ? hm(new Date(watchAt)) : timeCell(when, watchAt)}</div>
         ${m.coverImage.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
         <div class="info">
           <div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener" title="${esc(m.title.english || m.title.romaji)}">${esc(m.title.english || m.title.romaji)}</a></div>
-          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes, long)}${extra ? '' : sequelTag(m, episodes)}${whoChips(who, away, maybe)}</div>
+          <div class="ep">${extra ? '<span class="catchup-tag">Nachholen</span> ' : ''}${episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`}${extra ? '' : behindTag(m, Math.min(...episodes))}${episodeTags(episodes, m.episodes, long, double && episodes.length > 1)}${extra ? '' : sequelTag(m, episodes)}${whoChips(who, away, maybe)}</div>
           ${extra ? '' : seasonProgress(episodes, m.episodes)}
         </div>
         <div class="links">${linkButtons(links, m.id, who)}</div>

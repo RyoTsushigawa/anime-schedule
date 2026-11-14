@@ -495,8 +495,10 @@ const week = isoDay(weekStart(weekOffset));
 const mv = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
 $('moveName').textContent = moving.name;
 const thisWeek = moves.find(m => m.show === moving.key && m.week === week);
+const series = mv?.week ? moveSeries(moving.key, week) : [];
+const until = series.length > 1 ? (() => { const d = new Date(series.at(-1).week + 'T12:00:00'); d.setDate(d.getDate() + 6); return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }); })() : '';
 $('moveFrom').textContent = thisWeek?.skip ? 'Diese Woche geskippt; „Zurücksetzen“ holt sie zurück.'
-: mv ? `Verschoben ${mv.week ? 'für diese Woche' : 'ab jetzt immer'}; „Zurücksetzen“ setzt sie in den Guckplan-Slot zurück.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
+: mv ? `Verschoben ${!mv.week ? 'ab jetzt immer' : until ? 'bis ' + until : 'für diese Woche'}; „Zurücksetzen“ setzt sie ${until ? 'ab dieser Woche ' : ''}in den Guckplan-Slot zurück.` : `Guckplan: ${slotLabel({ tag: b.dataset.tag, time: b.dataset.time })}`;
 $('moveTag').value = b.dataset.tag || 'Mo.';
 $('moveTime').value = b.dataset.time || '';
 setMoveScope(mv && !mv.week ? 'always' : 'week');
@@ -599,6 +601,18 @@ $(id).setAttribute('aria-pressed', String($(id).getAttribute('aria-pressed') !==
 syncMoveDialog();
 };
 const namesOf = shows => shows.map(s => s.name).join(' und ');
+// a "Bis …" series: this week's move and the following weeks with the same day and time, without a gap
+function moveSeries(key, week) {
+const first = moves.find(m => m.show === key && m.week === week && !m.skip && !m.extra);
+if (!first) return [];
+const out = [first];
+for (let d = new Date(week + 'T12:00:00'); ;) {
+d.setDate(d.getDate() + 7);
+const next = moves.find(m => m.show === key && m.week === isoDay(d) && !m.skip && !m.extra && m.tag === first.tag && (m.time || '') === (first.time || '') && !m.double && !m.long);
+if (!next) return out;
+out.push(next);
+}
+}
 const moveShows = shows => {
 const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
 const long = $('moveLong').getAttribute('aria-pressed') === 'true';
@@ -640,7 +654,9 @@ const own = m => m.week === week || !m.week;
 const mine = moves.find(m => m.show === moving.key && m.week === week) || moves.find(m => m.show === moving.key && !m.week);
 const same = m => mine && m.week === mine.week && m.tag === mine.tag && m.time === mine.time && !!m.skip === !!mine.skip && !!m.keepTime === !!mine.keepTime;
 const shows = [moving, ...moving.mates.filter(s => moves.some(m => m.show === s.key && same(m)))], keys = shows.map(s => s.key);
-storeMoves(moves.filter(m => !(keys.includes(m.show) && own(m))), `${namesOf(shows)}: zurück im Guckplan-Slot.`);
+// a "Bis …" move: the following weeks of the series go too
+const later = new Set(shows.flatMap(s => moveSeries(s.key, week).slice(1)));
+storeMoves(moves.filter(m => !(keys.includes(m.show) && own(m)) && !later.has(m)), `${namesOf(shows)}: zurück im Guckplan-Slot${later.size ? ' (auch in den folgenden Wochen)' : ''}.`);
 };
 let catchupById = new Map(), planning = null;
 function openPlan(source) {

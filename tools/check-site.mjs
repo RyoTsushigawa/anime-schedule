@@ -72,7 +72,7 @@ const click = async (page, selector, wait = 600) => { try { await page.click(sel
       else ok('the Discord message builds for all seven days');
     }
     for (const [name, steps] of [
-      ['settings', ['#settingsButton']], ['help', ['#settingsButton', '#settingsMenu .settings-secondary > details:last-child > summary', '#helpButton']], ['absences', ['#miscButton', '#awayButton']],
+      ['settings', ['#settingsButton']], ['help', ['#settingsButton', '#helpButton']], ['absences', ['#miscButton', '#awayButton']],
       ['tools', ['#miscButton']], ['edit mode', ['#editSchedule']], ['move dialog', ['#list .move:visible']],
     ]) {
       let done = true;

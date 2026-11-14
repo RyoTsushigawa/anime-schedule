@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-14T12:20:00Z', name: 'Limit-Orders an der Anime-Börse' };
+const LAST_FEATURE = { at: '2026-11-14T14:50:00Z', name: 'Willkommen für neue Leute' };
 const PATCH_NOTES = [
 { id: '2026-11-13', title: 'Awards, a daily quiz, recurring absences and many new tools', items: [
 'Seasonal Anime Awards, rebuilt: 22 categories like the Crunchyroll Awards (genres, characters, music, a Ceddl of the Year from candidates collected over the season), 12, 10 and 8 points per category, and after „Auflösen“ a Eurovision-style show, vote by vote. Voting is together: everyone fills in a ballot, it stays secret until „Auflösen“, then everyone sees who won. The new Ruhmeshalle lists the winners of all past seasons.',
@@ -125,6 +125,7 @@ return 'vor ' + (short ? parts[0] : parts.filter(Boolean).join(d ? ', ' : ' '));
 function drawFeatureTimer() {
 $('notesTimer').textContent = `Letztes neues Feature (${LAST_FEATURE.name}): ${sinceText(LAST_FEATURE.at)}`;
 $('notesAge').textContent = sinceText(LAST_FEATURE.at, true);
+$('notesButton').title = 'Was sich zuletzt geändert hat · letztes neues Feature ' + sinceText(LAST_FEATURE.at, true);
 }
 drawFeatureTimer();
 setInterval(drawFeatureTimer, 60000);
@@ -847,6 +848,31 @@ $('helpDialog').scrollTop = 0;
 if (atShortcuts) $('helpKeys').scrollIntoView?.({ block: 'start' });
 }
 $('helpButton').onclick = () => openHelp();
+$('headerHelp').onclick = () => openHelp();
+// First visit: three short steps instead of everything at once. Not for people who used the site before,
+// and not for the automatic runs (the daily Discord post, the site check). The help can show it again.
+function fillWelcomeNames() {
+  const names = [...$('soloPerson').options].map(o => o.value).filter(Boolean);
+  $('welcomePerson').replaceChildren(...names.map(n => new Option(n, n)));
+  $('welcomePerson').value = soloPerson;
+  $('welcomePerson').closest('li').hidden = !names.length;
+}
+// the names come with the Guckplan, which can arrive after the welcome opened
+new MutationObserver(() => { if ($('welcomeDlg').open) fillWelcomeNames(); }).observe($('soloPerson'), { childList: true });
+function openWelcome() {
+  fillWelcomeNames();
+  $('welcomeDlg').showModal();
+}
+$('welcomePerson').onchange = () => { $('soloPerson').value = $('welcomePerson').value; $('soloPerson').onchange(); if (mode !== 'solo') setMode('solo'); };
+$('welcomeDlg').addEventListener('close', () => { try { localStorage.setItem('welcomeSeen', '1'); } catch {} });
+$('helpWelcome').onclick = () => { $('helpDialog').close(); openWelcome(); };
+$('welcomeDone').onclick = e => { e.preventDefault(); $('welcomeDlg').close(); };
+ready.then(() => {
+  let seen = true;
+  try { seen = !!localStorage.getItem('welcomeSeen'); } catch {}
+  if (!seen && !returningVisitor && !navigator.webdriver && !document.querySelector('dialog[open]')) openWelcome();
+  else try { localStorage.setItem('welcomeSeen', '1'); } catch {}
+});
 $('helpClose').onclick = () => $('helpDialog').close();
 const helpTopics = [...$('helpDialog').querySelectorAll('[data-help-topic]')];
 let helpStep = -1;
