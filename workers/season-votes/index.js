@@ -147,7 +147,35 @@ const pinHash=async (salt,pin)=>[...new Uint8Array(await crypto.subtle.digest('S
 // Who an AniList login belongs to. A confirmed login is remembered for 12 hours (only a hash of it is kept, never
 // the login), so a short AniList outage doesn't block trading or voting. Only AniList's own "invalid token" answer
 // means the login has expired; when AniList is slow or down that is said instead (after one more try).
+// AniList blocks requests from Cloudflare (403), so asking AniList "who is this login?" doesn't work from here.
+// AniList logins are JWTs that carry the user ID ("sub") and the expiry ("exp"): the ID is looked up in
+// anilist-ids.json (written daily by tools/anilist-ids.mjs on GitHub). The signature can't be checked here (AniList
+// doesn't publish its key), which the owner accepted for the group. A login without an ID still tries AniList.
+let idsCache=null;
+async function aniListIds(env){
+ const url=(env.SITE_URL||'https://ryotsushigawa.github.io/anime-schedule/')+'anilist-ids.json';
+ if(!idsCache||idsCache.url!==url||Date.now()-idsCache.at>300000){
+  const res=await fetch(url+'?'+Date.now());
+  idsCache={url,at:Date.now(),ids:res.ok?((await res.json().catch(()=>({})))?.ids||{}):{}};
+ }
+ return idsCache.ids;
+}
+function loginClaims(token){
+ const part=token.split('.')[1];
+ if(token.split('.').length!==3||!part)return null;
+ try{
+  const json=JSON.parse(atob(part.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(part.length/4)*4,'=')));
+  return /^\d{1,12}$/.test(String(json?.sub))?{id:String(json.sub),exp:Number(json.exp)||0}:null;
+ }catch{return null;}
+}
 async function aniListViewer(env,token){
+ const claims=loginClaims(token);
+ if(claims){
+  if(claims.exp&&claims.exp*1000<Date.now())fail(401,'Die AniList-Anmeldung ist abgelaufen: auf der Hauptseite neu verbinden.');
+  const name=(await aniListIds(env))[claims.id];
+  if(!name)fail(403,'Dieses AniList-Konto steht nicht in „Wer ist wer“ (neue Konten kommen beim nächsten täglichen Abgleich dazu).');
+  return name;
+ }
  const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('anilist-login:'+token)))].map(b=>b.toString(16).padStart(2,'0')).join('');
  const store=env.AWARDS,key='login:'+hash;
  const known=store&&await store.get(key).catch(()=>null);

@@ -88,3 +88,25 @@ test('an AniList outage is not called an expired login; a login confirmed earlie
  assert.equal((await ballot('Ryo',{'X-AniList-Token':'tok-RyoTsushigawa'},env)).status,200);
  assert.equal(calls,0);
 });
+
+// AniList logins are JWTs with the user ID ("sub") and the expiry ("exp"); AniList blocks Cloudflare (403)
+const jwt=(sub,exp=Math.floor(Date.now()/1000)+86400)=>['e30',Buffer.from(JSON.stringify({sub:String(sub),exp})).toString('base64url'),'sig'].join('.');
+test('AniList blocks the helper: the user ID in the login decides, via anilist-ids.json', async t=>{
+ const env={SITE_ORIGIN:origin,AWARDS:kv()};
+ const before=globalThis.fetch;
+ t.after(()=>{ globalThis.fetch=before; });
+ let asked=0;
+ globalThis.fetch=async (url,init)=>String(url)==='https://graphql.anilist.co'?(asked++,new Response('Forbidden',{status:403})):before(url,init);
+ assert.equal((await ballot('Ryo',{'X-AniList-Token':jwt(101)},env)).status,200);
+ assert.equal((await ballot('Marvin',{'X-AniList-Token':jwt(102)},env)).status,200);
+ assert.equal(asked,0,'AniList isn\'t asked for a login with an ID');
+ let r=await ballot('Marvin',{'X-AniList-Token':jwt(101)},env);
+ assert.equal(r.status,403);
+ assert.match(r.body.error,/nur als Ryo/);
+ r=await ballot('Ryo',{'X-AniList-Token':jwt(999)},env);
+ assert.equal(r.status,403);
+ assert.match(r.body.error,/nicht in „Wer ist wer“/);
+ r=await ballot('Ryo',{'X-AniList-Token':jwt(101,Math.floor(Date.now()/1000)-60)},env);
+ assert.equal(r.status,401);
+ assert.match(r.body.error,/abgelaufen/);
+});
