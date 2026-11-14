@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Adventskalender · Simulcast-Plan</title>
+<link rel="icon" href="icon-72.png"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="advent.css">
+</head>
+<body class="advent-page">
+<header><div class="bar"><a class="pill tool-back" href="./">← Zum Plan</a><button id="adventSnow" class="pill" type="button" aria-pressed="true" hidden>Schnee an</button><span class="advent-wordmark">Ein Türchen. Eine kleine Anime-Pause.</span></div></header>
+<main class="advent-main">
+<section class="advent-hero" aria-labelledby="adventTitle">
+<div class="advent-spark" aria-hidden="true">✦</div><p class="advent-eyebrow">DEZEMBER 2026 · FÜR UNSERE RUNDE</p>
+<h1 id="adventTitle">24 kleine Gründe,<br><em>zusammen reinzuschauen.</em></h1>
+<p class="advent-intro">Anime-Wissen, kleine Challenges und Fragen für den nächsten gemeinsamen Abend. Ohne Punktedruck. Mit ziemlich viel Diskussionspotenzial.</p>
+<div class="advent-actions"><button id="adventToday" class="pill primary" type="button" hidden>Heutiges Türchen öffnen</button><button id="adventSample" class="pill" type="button">Probetürchen</button><span id="adventStatus" role="status"></span></div>
+</section>
+<section aria-label="Die 24 Türchen"><div class="advent-progress"><span id="adventCount">0 von 24 geöffnet</span><span>Ab 1. Dezember · Berliner Zeit</span></div><div id="adventDoors" class="advent-grid"></div></section>
+<p class="advent-footnote">Jeden Tag öffnet sich ein weiteres Türchen. Frühere bleiben offen. Dein Fortschritt wird nur in diesem Browser gespeichert; alle bekommen dieselben Überraschungen.</p>
+<noscript>Bitte aktiviere JavaScript, um die Türchen zu öffnen.</noscript>
+</main>
+<dialog id="adventDialog" class="advent-dialog" aria-labelledby="adventDoorTitle"><button id="adventClose" class="advent-close" type="button" aria-label="Türchen schließen">✕</button><p id="adventDoorType" class="advent-eyebrow"></p><h2 id="adventDoorTitle"></h2><div id="adventDoorBody"></div><button id="adventDone" class="pill primary" type="button">Zurück zum Kalender</button></dialog>
+<script type="module" src="advent.mjs"></script>
+</body></html>

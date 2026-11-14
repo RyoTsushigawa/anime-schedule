@@ -47,12 +47,13 @@ const SITE_FEATURES = [
     'Nominierte durchsuchen (auch Figuren von AniList)', 'Ceddl of the Year: Kandidaten über die Season sammeln', 'Geheime Gruppenabstimmung mit „Auflösen“',
     'Abstimmungsschluss zum Start der nächsten Season', 'Kategorien bewusst auslassen',
     'Punktevergabe-Show: Wertung für Wertung, „… und unsere 12 Punkte gehen an …“', 'Ruhmeshalle']],
-  ['Anime-Börse', ['Aktien auf die Season-Anime mit Spielgeld, die ganze Season täglich von 8 bis 22 Uhr handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
+  ['Anime-Börse', ['Aktien auf die Season-Anime mit Spielgeld, die ganze Season täglich von 8 bis 24 Uhr handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
     'Kurs-Graphen pro Serie und für dein Depot', 'Wall-Street-Regeln: Ordergebühr, T+1, Leerverkäufe, Circuit Breaker', 'Rangliste nach Depotwert', 'Limit-Orders (kaufen oder verkaufen, sobald ein Schlusskurs dein Limit erreicht)', 'Nur für dich: Bestätigung über AniList oder PIN (auch bei den Awards)']],
   ['Spiele', ['Spieleseite mit dem heutigen Stand und kurzer Erklärung je Spiel', 'Titel-Rätsel (täglich / endlos, normal / schwer / extrem, Hinweise)', 'Anime Cover Quiz',
     'Inhalts-Rätsel mit Archiv und Statistik', 'Anime-Quiz']],
-  ['Sonstiges', ['Masterset Tracker', 'McRib bestellen']],
+  ['Sonstiges', ['Adventskalender mit 24 Anime-Überraschungen', 'Masterset Tracker', 'McRib bestellen']],
 ];
 // What's coming: approved in the feature challenge (FEATURE_BACKLOG.md) but not built yet. Move a line up to
 // SITE_FEATURES when it's live.
 const SITE_PLANNED = [];
+
