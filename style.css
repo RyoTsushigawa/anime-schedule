@@ -1443,9 +1443,13 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
 }
 @media (max-width: 480px) {
   /* the header buttons need the room: only the logo, no title (the view and week show below anyway) */
-  header .logo + .brand { display: none; }
+  /* only the "?" stays, next to the logo, so help is always there */
+  header .logo + .brand { flex: none; }
+  header .logo + .brand h1, header .logo + .brand #tabName, header .logo + .brand #weekSub { display: none; }
   header .logo ~ .top-actions { margin-left: auto; }
 }
+/* very narrow phones: no room for it next to the icons; Hilfe stays in the settings */
+@media (max-width: 340px) { header .logo + .brand { display: none; } }
 
 /* Fortsetzung angekündigt (next to "Finale"): a quiet link to the sequel on AniList */
 .ep-tag.sequel-tag { background: transparent; border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent); color: var(--accent); text-decoration: none; }
@@ -1630,3 +1634,20 @@ body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { dis
 #settingsMenu .settings-options .toggle, #settingsMenu .settings-options .toggle:has(input:checked) { font-weight: 400; color: var(--text); }
 #settingsMenu .settings-footer .menu-item { white-space: nowrap; }
 #settingsMenu .settings-footer kbd, #settingsMenu .settings-footer .notes-age { display: none; }
+/* "?" next to the site name: help is always one click away */
+.brand-help { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer; }
+.brand-help:hover, .brand-help:focus-visible { color: var(--accent); border-color: var(--accent); }
+@media (pointer: coarse) { .brand-help { width: 28px; height: 28px; } }
+/* first visit: three short steps */
+.welcome-dlg { max-width: min(420px, calc(100vw - 32px)); }
+.welcome-dlg h2 { margin: 0 0 6px; font-size: 18px; }
+.welcome-dlg > form > p { margin: 0 0 12px; font-size: 13px; line-height: 1.45; }
+.welcome-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 12px; }
+.welcome-steps li { counter-increment: step; display: grid; grid-template-columns: 26px 1fr; column-gap: 10px; row-gap: 4px; align-items: start; }
+.welcome-steps li::before { content: counter(step); grid-row: span 3; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-text, #fff); font-size: 13px; font-weight: 700; }
+.welcome-steps b { font-size: 14px; }
+.welcome-steps small { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.welcome-steps li[hidden] { display: none; }
+.welcome-person { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.welcome-person select { max-width: 220px; }
+.welcome-dlg .welcome-help { margin-top: 14px !important; padding: 8px 10px; border-radius: 10px; background: var(--today); font-size: 12.5px; }

@@ -39,7 +39,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <header>
 <div class="bar">
 <img class="logo" src="icon-72.png" alt="" width="36" height="36"><div class="brand">
-<div class="brand-title"><h1><span class="title-long">Simulcast-</span>Plan</h1></div>
+<div class="brand-title"><h1><span class="title-long">Simulcast-</span>Plan</h1><button type="button" id="headerHelp" class="brand-help" aria-haspopup="dialog" aria-label="Hilfe" title="Hilfe und erste Schritte (?)">?</button></div>
 <div id="tabName">Guckplan</div>
 <div id="weekSub" class="week-sub"></div>
 </div>
@@ -572,7 +572,7 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <section><h3>Schauen, dann ✓ setzen</h3><p>Die Dienst-Buttons öffnen die Serie. Verbinde ein Konto, um ✓, Droppen und Bewertungen zu nutzen. Ein ✓ setzt deinen Fortschritt bis zu dieser Folge, auch für frühere Folgen. Bei Fehlern hilft <b>Rückgängig</b> oder Strg/⌘+Z.</p></section>
 <section id="helpCatchup" tabindex="-1"><h3>Catch-up, wie du willst</h3><p><b>Folgen</b> hält die Folgen jeder Serie der Reihe nach zusammen. Bei <b>Alle gesehen</b> kannst du zuerst Serien mit ihrem ✓ ausnehmen; ein zweiter Klick speichert.</p></section>
 <section id="helpAccounts" tabindex="-1"><h3>Listen verbinden</h3><p>Über das Konto-Symbol verbindest du AniList oder MyAnimeList. Sind beide verbunden, wähle unter <b>Listen-Sync</b> das andere Konto und schalte <b>An</b> ein, damit neue Änderungen von hier übernommen werden. Bestehende Listen werden nicht kopiert.</p></section>
-<section><h3>Nach deinem Geschmack</h3><p>In den Einstellungen legst du Links, Zuschauer, Zeit und Farbe fest. <b>Ersatz-Links</b> gelten, wenn kein Dienst angezeigt wird: AniWorld oder Torrents, und bei Prime-Serien Prime oder Torrents. Unter <b>Tools</b> findest du Watch planner, Higher / Lower, Anime Wrapped und den Masterset Tracker.</p></section>
+<section><h3>Nach deinem Geschmack</h3><p>Im <b>Zahnrad</b> legst du Zeit, Design, Farbe, Streaming-Links und was angezeigt wird fest. <b>Ersatz-Links</b> gelten, wenn kein Dienst angezeigt wird: AniWorld oder Torrents, und bei Prime-Serien Prime oder Torrents. Unter <b>Mehr</b> findest du Season Preview, Watch planner, Wrapped, Awards, die Anime-Börse und die Plan-Werkzeuge; im <b>Konto-Menü</b> die Listen-Werkzeuge.</p></section>
 <section id="helpDelays" tabindex="-1"><h3>Verspätung</h3><p>Die Uhr neben <b>Heute</b> trägt eine Verspätung ab einer Serie ein: sie und alle späteren rücken nach, mehrere Verspätungen zählen zusammen. <b>Edit</b> an der Zeile ändert oder entfernt sie. Alle sehen sie nach spätestens einer halben Minute.</p></section>
 <section id="helpMoves" tabindex="-1"><h3>Serie verschieben</h3><p>Mit Bearbeitungszugang ziehst du unter <b>Edit</b> eine Serie an ihren neuen Platz: auf die Mitte einer anderen, um daneben zu laufen, oder an ihren Rand, um davor oder danach zu kommen. Am Handy hältst du die Karte erst kurz gedrückt. <b>Diese Woche</b> oder <b>Dauerhaft</b> (ab jetzt jede Woche) sagt, wie lange es gilt. <b>Doppelt</b> holt die vorige Folge dazu, <b>Lang</b> gibt einer langen Folge zwei Slots; <b>Rückgängig</b> nimmt es zurück. Mit dem Pfeil-Symbol an der Serie gibst du das Ziel von Hand ein, der <b>Stift</b> an einem Tag schreibt den ganzen Tag als Liste, und das Discord-Symbol macht daraus die Nachricht für den Server.</p></section>
 <section id="helpIcons" tabindex="-1"><h3>Symbole am Tag</h3><p>Rechts an jedem Tag: die <b>Uhr</b> trägt eine Verspätung ein (nur heute), die <b>Person</b> öffnet die Abwesenheiten für diesen Tag, der <b>Pfeil</b> schaltet „Pause überspringen“. Mit Bearbeitungszugang kommen das <b>Discord-Symbol</b> und der <b>Stift</b> (Tag als Liste bearbeiten) dazu.</p></section>
@@ -601,7 +601,20 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <span id="helpProgress" aria-live="polite"></span>
 <button id="helpNext" class="pill">Weiter</button>
 </div>
-<div class="dlg-row"><button id="helpClose" class="pill">Schließen</button></div>
+<div class="dlg-row"><button type="button" id="helpWelcome" class="pill">Erste Schritte</button><button id="helpClose" class="pill">Schließen</button></div>
+</dialog>
+<dialog id="welcomeDlg" class="dlg welcome-dlg" aria-labelledby="welcomeTitle">
+<form method="dialog">
+<h2 id="welcomeTitle">Willkommen beim Simulcast-Plan</h2>
+<p class="muted">Hier steht, welche Anime die Gruppe an welchem Abend schaut. Mehr musst du erst mal nicht wissen.</p>
+<ol class="welcome-steps">
+<li><b>Wer bist du?</b><label class="welcome-person"><span>Dein Name im Guckplan</span><select id="welcomePerson" class="pill"></select></label><small>Dann siehst du nur deine Serien. „Gruppe“ zeigt mehrere Leute zusammen.</small></li>
+<li><b>Schauen</b><small>Jede Zeile ist eine Folge mit Uhrzeit. Der Button rechts (z. B. Crunchyroll) öffnet sie direkt.</small></li>
+<li><b>Optional: deine Liste</b><small>Mit AniList oder MyAnimeList (oben rechts, Konto-Symbol) kannst du Folgen mit ✓ abhaken. Geht auch später.</small></li>
+</ol>
+<p class="welcome-help">Alles andere ist optional. Wenn du etwas suchst: das <b>?</b> neben dem Namen oben.</p>
+<div class="dlg-row dlg-foot"><button value="done" class="pill primary" id="welcomeDone">Los geht's</button></div>
+</form>
 </dialog>
 <div id="dragHint" class="drag-hint" role="status" hidden></div>
 <dialog id="localExportDialog" class="local-export-dialog" aria-labelledby="localExportTitle">
