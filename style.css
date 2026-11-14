@@ -1446,7 +1446,9 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
   /* only the "?" stays, next to the logo, so help is always there */
   header .logo + .brand { flex: none; }
   header .logo + .brand h1, header .logo + .brand #tabName, header .logo + .brand #weekSub { display: none; }
-  header .logo ~ .top-actions { margin-left: auto; }
+  header .logo ~ .top-actions { margin-left: auto; gap: 4px; }
+  header .logo + .brand .brand-help { width: 26px; height: 26px; }
+  header > .bar:first-child { column-gap: 6px; }
 }
 /* very narrow phones: no room for it next to the icons; Hilfe stays in the settings */
 @media (max-width: 340px) { header .logo + .brand { display: none; } }
