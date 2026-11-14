@@ -5,6 +5,7 @@ const real = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   const u = String(url);
   if (/wrapped-profiles\.json/.test(u)) return new Response(JSON.stringify(PROFILES));
+  if (/anilist-ids\.json/.test(u)) return new Response(JSON.stringify({ ids: { 101: 'RyoTsushigawa', 102: 'MilkyWay95', 103: 'TerraAni' } }));
   if (u === 'https://graphql.anilist.co') {
     const auth = String(new Headers(init.headers).get('Authorization') || '');
     const name = auth.startsWith('Bearer tok-') ? auth.slice(11) : null;

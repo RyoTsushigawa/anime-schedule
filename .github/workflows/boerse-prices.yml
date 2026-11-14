@@ -33,9 +33,11 @@ jobs:
         run: node tools/sheet-backup.mjs || echo "Sheet not reachable; using the last backup"
       - name: Today's closes
         run: node tools/boerse-prices.mjs
+      - name: AniList IDs of the group's accounts (the votes helper reads them; AniList blocks Cloudflare)
+        run: node tools/anilist-ids.mjs || echo "AniList IDs not updated"
       - name: Save the prices
         run: |
-          git add boerse-prices.json
+          git add boerse-prices.json anilist-ids.json
           git diff --cached --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
