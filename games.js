@@ -1,6 +1,6 @@
 // Titel-Rätsel: English words from Guckplan titles, or public group AniLists
 // in Hard mode. Daily puzzles are independent of endlessly replayable rounds.
-import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry} from './games-logic.mjs';
+import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry} from './games-logic.mjs';
 
 const $ = id => document.getElementById(id);
 const TRIES = 6;
@@ -75,9 +75,11 @@ async function normalEntries() {
   dailyData ||= await json('games-words.json');
   const curated=approvedDailyEntries(dailyData.words);
   if(!curated.length) throw new Error('Keine geprüften englischen Wörter im Guckplan.');
-  let extra=[];
+  let extra=[], endless=[];
   try {extra=await fetchSheetPool();}catch{}
-  return {daily:curated,pool:mergeEntries(curated,extra)};
+  // endless answers: every English word from the group's anime titles (tools/games-endless.mjs, daily)
+  try {endless=((await json('games-endless.json')).words||[]).filter(e=>e&&/^[A-Z]{5,8}$/.test(e.word)&&e.title);}catch{}
+  return {daily:curated,pool:mergeEntries(curated,extra,endless)};
 }
 async function users() {
   if(hardUsers) return hardUsers;
@@ -147,11 +149,17 @@ async function hardEntries(round) {
 const currentKey = () => 'titleGame:v2:'+difficulty+':'+gameMode;
 const roundNumber = () => gameMode==='daily' ? 0 : Math.max(0,Number(load(currentKey()+':index',0))||0);
 const recentKey = () => currentKey()+':recent';
-const recentAnswers = () => (load(recentKey(),[])||[]).filter(w=>typeof w==='string').slice(-20);
+const recentAnswers = () => (load(recentKey(),[])||[]).filter(w=>typeof w==='string').slice(-60);
 function rememberAnswer(word){
   const recent=recentAnswers().filter(w=>w!==word);
   recent.push(word);
-  save(recentKey(),recent.slice(-20));
+  save(recentKey(),recent.slice(-60));
+}
+// this player's own order for endless rounds (kept in this browser)
+function playerSeed(){
+  let seed=load('titleGameSeed','');
+  if(typeof seed!=='string'||!seed){seed=Math.random().toString(36).slice(2,10);save('titleGameSeed',seed);}
+  return seed;
 }
 
 // Spiele-Übersicht (idea 139): today's state of the three daily games, from what each keeps in this browser
@@ -199,15 +207,14 @@ async function start() {
     if(hard){
       source=mergeEntries(basic.pool,hard.pool);
       entry=mode==='daily'?pickEntry(hard.pool,0,day+':hard:'+hard.user)
-        :pickFreshEntry(hard.pool,Math.floor(round/(await users()).length),
-          'endless:'+hard.user,recentAnswers());
+        :pickEndlessEntry(hard.pool,round,'endless:'+hard.user+':'+playerSeed(),recentAnswers());
     } else if(offline) {
       // AniList can't be reached from this browser: a hard puzzle from the Guckplan instead of no game.
       entry=mode==='daily'?pickEntry(basic.pool,0,day+':hard-guckplan')
-        :pickFreshEntry(basic.pool,round,'hard:guckplan',recentAnswers());
+        :pickEndlessEntry(basic.pool,round,'hard:guckplan:'+playerSeed(),recentAnswers());
     } else entry=mode==='daily'
       ?basic.daily[Math.max(0,dayNumber(day,dailyData.start))%basic.daily.length]
-      :pickFreshEntry(basic.pool,round,'normal:endless',recentAnswers());
+      :pickEndlessEntry(basic.pool,round,'normal:endless:'+playerSeed(),recentAnswers());
     // A new catalog release may reorder the answer pool. Never change a
     // started puzzle, otherwise its saved guesses may become impossible.
     if(saved?.id===id && typeof saved.word==='string'){

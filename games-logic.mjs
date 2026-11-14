@@ -108,11 +108,22 @@ export function pickEntry(pool,index,seed) {
  */
 export function pickFreshEntry(pool, index, seed, recent = []) {
   if(!pool.length) throw new Error('Keine passenden englischen Titelwörter gefunden.');
-  const avoided=new Set(recent.slice(-20));
+  const avoided=new Set(recent);
   const size=pool.length;
   for(let offset=0;offset<size;offset++){
     const entry=pickEntry(pool,index+offset,seed);
     if(!avoided.has(entry.word)) return entry;
   }
   return pickEntry(pool,index,seed); // Only repeat when no alternative exists.
+}
+
+/** Endless rounds: each player has their own order (seed), and the order changes with every pass through
+ * the pool, so no two passes (and no two players) run the same sequence. The last answers (up to 60, at most
+ * half the pool) stay out, also across the change from one pass to the next.
+ */
+export function pickEndlessEntry(pool, round, seed, recent = []) {
+  if(!pool.length) throw new Error('Keine passenden englischen Titelwörter gefunden.');
+  const size=pool.length, pass=Math.floor(round/size);
+  const keep=Math.min(60, Math.floor(size/2));
+  return pickFreshEntry(pool, round%size, seed+':'+pass, keep ? recent.slice(-keep) : []);
 }
