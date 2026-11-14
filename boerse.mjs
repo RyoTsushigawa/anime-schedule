@@ -121,13 +121,13 @@ $('stockList').addEventListener('click', async e => {
   const short = qty < 0 && (state.account?.holdings?.[title] || 0) + qty < 0;
   if (short && !confirm(`Leerverkauf: Du verkaufst ${-qty}× ${title}, die du nicht (alle) hast. Fällt der Kurs, gewinnst du; steigt er, verlierst du. Weiter?`)) return;
   row.querySelectorAll('button[data-trade]').forEach(x => { x.disabled = true; });
-  $('stockMsg').textContent = 'Order wird ausgeführt …';
+  say('Order wird ausgeführt …', true);
   try {
     const r = await call('/stocks/trade', { season: seasonName(), person: $('stockPerson').value, title, qty }, $('stockPerson').value);
     state = { ...state, account: r.account };
-    $('stockMsg').textContent = `${qty > 0 ? 'Gekauft' : 'Verkauft'}: ${Math.abs(qty)}× ${title} zu ${taler(r.price ?? price)} (+${FEE} Taler Gebühr)${qty < 0 ? '. Das Geld ist ab morgen verfügbar.' : '.'}`;
+    say(`${qty > 0 ? 'Gekauft' : 'Verkauft'}: ${Math.abs(qty)}× ${title} zu ${taler(r.price ?? price)} (+${FEE} Taler Gebühr)${qty < 0 ? '. Das Geld ist ab morgen verfügbar.' : '.'}`);
     loadPerson(false);
-  } catch (err) { $('stockMsg').textContent = 'Nicht ausgeführt: ' + err.message; draw(); }
+  } catch (err) { say('Nicht ausgeführt: ' + err.message); draw(); }
 });
 
 // Limit-Order dialog: buy when the close falls to the limit, sell when it rises to it
@@ -167,7 +167,7 @@ $('stockOrderForm').addEventListener('submit', async e => {
     const r = await call('/stocks/order', { season: seasonName(), person: $('stockPerson').value, title: orderTitle, qty, limit }, $('stockPerson').value);
     state = { ...state, account: r.account };
     $('stockOrderDlg').close();
-    $('stockMsg').textContent = `Limit-Order aufgegeben: ${qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(qty)}× ${orderTitle} bei ${qty > 0 ? '≤' : '≥'} ${taler(limit)}.`;
+    say(`Limit-Order aufgegeben: ${qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(qty)}× ${orderTitle} bei ${qty > 0 ? '≤' : '≥'} ${taler(limit)}.`);
     draw();
   } catch (err) { $('stockOrderHint').textContent = 'Nicht aufgegeben: ' + err.message; $('stockOrderPlace').disabled = false; }
 });
@@ -178,11 +178,21 @@ $('stockOrders').addEventListener('click', async e => {
   try {
     const r = await call('/stocks/order/cancel', { season: seasonName(), person: $('stockPerson').value, id: b.dataset.cancel }, $('stockPerson').value);
     state = { ...state, account: r.account };
-    $('stockMsg').textContent = 'Limit-Order gestrichen.';
+    say('Limit-Order gestrichen.');
     draw();
-  } catch (err) { $('stockMsg').textContent = 'Nicht gestrichen: ' + err.message; b.disabled = false; }
+  } catch (err) { say('Nicht gestrichen: ' + err.message); b.disabled = false; }
 });
 
+// what happened to an order shows at the bottom edge of the screen, wherever you are in the list (U: "nothing
+// happens" when it was far below), and goes away after a few seconds; a failure stays a little longer
+let sayTimer = 0;
+function say(text, keep = false) {
+  const box = $('stockMsg');
+  box.textContent = text;
+  box.classList.toggle('failed', /^Nicht /.test(text));
+  clearTimeout(sayTimer);
+  if (text && !keep) sayTimer = setTimeout(() => { box.textContent = ''; }, /^Nicht /.test(text) ? 9000 : 5000);
+}
 async function loadPerson(clear = true) {
   const turn = request, person = $('stockPerson').value;
   Identity.draw($('stockIdentity'), person, () => loadPerson());
@@ -198,7 +208,7 @@ async function loadPerson(clear = true) {
     else state = null;
     $('stockStatus').textContent = (mine ? 'Nicht bestätigt: ' : 'Die Börse ist gerade nicht erreichbar: ') + err.message;
   }
-  if (clear) $('stockMsg').textContent = '';
+  if (clear) say('');
   draw();
 }
 async function loadSeason() {
