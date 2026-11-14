@@ -19,8 +19,8 @@ export function tradingWindow(season, now = Date.now()) {
   const from = start - DAYS, to = berlinMonthStart(Number(year), SEASON_MONTH[name] + 3);
   return { from, to, open: now >= from && now < to };
 }
-// opening hours: 8:00 to 22:00 German time, every day; the day's close is set after 22:00
-export const OPEN_HOUR = 8, CLOSE_HOUR = 22;
+// opening hours: 8:00 to 24:00 German time, every day; the day's close is set after midnight
+export const OPEN_HOUR = 8, CLOSE_HOUR = 24;
 export const berlinHour = (time = Date.now()) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(new Date(time)));
 export const marketOpen = (time = Date.now()) => { const h = berlinHour(time); return h >= OPEN_HOUR && h < CLOSE_HOUR; };
 export const berlinDay = (time = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date(time));
@@ -105,3 +105,4 @@ export const ranking = (accounts, prices) => accounts.map(a => ({ person: a.pers
   .sort((a, b) => b.value - a.value || a.person.localeCompare(b.person, 'de'));
 // the latest close per show from boerse-prices.json for one season
 export const latestPrices = season => new Map(Object.entries(season?.shows || {}).map(([t, s]) => [t, s.closes?.[s.closes.length - 1] ?? PRICE]));
+

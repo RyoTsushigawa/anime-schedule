@@ -1,14 +1,14 @@
 // Anime-Börse: one closing price per show and day, for every season whose trading is open
 // (boerse-prices.json). Shows from the Guckplan (the Sheet backup in backup/sheet/, hidden rows left out);
 // AniList's community score, members and trending; the group's own ratings and drops from every AniList
-// account in wrapped-profiles.json. The close is set after the market closes (22:00 German time); a run earlier
+// account in wrapped-profiles.json. The close is set after the market closes (midnight German time); a run earlier
 // in the day only fills in yesterday if the evening run was missed, so prices never change during trading
 // hours. Running again for the same day recomputes it from the day before. Rules: boerse-core.mjs.
 //   node tools/boerse-prices.mjs            update boerse-prices.json
 //   node tools/boerse-prices.mjs --dry-run  only print today's closes
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { PRICE, CLOSE_HOUR, tradingWindow, berlinDay, berlinHour, prevDay, nextDay, groupScore, fairValue, nextClose, halted } from '../boerse-core.mjs';
+import { PRICE, tradingWindow, berlinDay, prevDay, nextDay, groupScore, fairValue, nextClose, halted } from '../boerse-core.mjs';
 
 const root = new URL('../', import.meta.url);
 const path = file => fileURLToPath(new URL(file, root));
@@ -104,20 +104,23 @@ export async function updateSeason(entry, shows, today, { media, ratings }) {
   return season;
 }
 
+// Midnight belongs to the new calendar day; the close always belongs to the previous day.
+export const closingDay = (now = Date.now()) => prevDay(berlinDay(now));
+
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
   const now = Date.now();
-  // after the close: today's close; earlier in the day: yesterday's, if it's still missing
-  const evening = berlinHour(now) >= CLOSE_HOUR, today = evening ? berlinDay(now) : prevDay(berlinDay(now));
+  // Publish the last completed trading day; never overwrite an already published close.
+  const today = closingDay(now);
   const index = JSON.parse(await readFile(path('backup/sheet/index.json'), 'utf8'));
   const tabs = index.tabs.filter(t => /^Guckplan\s+\S+\s+\d{4}$/i.test(t.name)).map(t => ({ ...t, season: t.name.replace(/^Guckplan\s+/i, '') }))
-    .filter(t => tradingWindow(t.season, now)?.open);
+    .filter(t => tradingWindow(t.season, Date.parse(today + 'T12:00:00Z'))?.open);
   let file = { seasons: {} };
   try { file = JSON.parse(await readFile(path('boerse-prices.json'), 'utf8')); } catch {}
   const profiles = JSON.parse(await readFile(path('wrapped-profiles.json'), 'utf8'));
   const accounts = [...new Set(Object.values(profiles).flat().filter(a => a?.provider === 'anilist' && /^[\w-]{2,40}$/.test(a.name)).map(a => a.name))];
   for (const tab of tabs) {
-    if (!evening && file.seasons[tab.season]?.days?.includes(today)) { console.log(`${tab.season}: ${today} already closed; prices stay during trading hours.`); continue; }
+    if (file.seasons[tab.season]?.days?.includes(today)) { console.log(`${tab.season}: ${today} already closed; prices stay during trading hours.`); continue; }
     const shows = seasonShows(await readFile(path('backup/sheet/' + tab.file), 'utf8'), tab.hiddenRows);
     const ids = await anilistIds(shows);
     const byId = new Map([...ids].map(([t, id]) => [id, t]));
@@ -139,3 +142,4 @@ async function main() {
   if (!dryRun) await writeFile(path('boerse-prices.json'), JSON.stringify(file) + '\n');
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) await main();
+

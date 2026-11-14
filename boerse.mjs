@@ -49,7 +49,7 @@ const change = title => { const c = priced.shows[title]?.closes || []; return c.
 const haltedToday = title => priced.shows[title]?.halted === berlinDay();
 
 function draw() {
-  // the season's dates and the opening hours (8–22) decide, also when the helper can't be reached
+  // the season's dates and the opening hours (8–24) decide, also when the helper can't be reached
   const win = tradingWindow(seasonName()), running = win && (state ? state.open : win.open), hours = marketOpen();
   const open = !!state?.open && !!state?.account && hours, ordering = !!state?.open && !!state?.account;
   const close = priced.days.length ? ' · Schlusskurs vom ' + day(priced.days[priced.days.length - 1]) : '';
@@ -223,7 +223,7 @@ async function loadSeason() {
   } catch { if (turn === request) $('stockStatus').textContent = 'Der Guckplan konnte nicht geladen werden.'; }
 }
 $('stockPerson').onchange = () => loadPerson();
-// opening and closing at 8 and 22 show without a reload
+// opening and closing at 8 and midnight show without a reload
 let wasOpen = marketOpen();
 setInterval(() => { if (marketOpen() !== wasOpen) { wasOpen = marketOpen(); draw(); } }, 30000);
 $('stockSeason').onchange = loadSeason;
@@ -244,3 +244,4 @@ $('stockSeason').onchange = loadSeason;
   $('stockSeason').disabled = false;
   loadSeason();
 })();
+

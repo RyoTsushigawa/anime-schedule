@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CASH, marketOpen, tradingWindow, priceOf, dropValue, fairValue, nextClose, noise, halted, trade, settle, accountValue, ranking } from '../boerse-core.mjs';
-import { seasonShows, updateSeason } from '../tools/boerse-prices.mjs';
+import { seasonShows, updateSeason, closingDay } from '../tools/boerse-prices.mjs';
 // Anime-Börse: the daily market (prices from AniList and the group), trading rules like Wall Street
 
 test('trading runs from 14 days before the season starts until the next season starts', () => {
@@ -86,14 +86,14 @@ test('the price job: shows from the Guckplan, one close per day, the same day re
   assert.equal(s.shows.Alpha.halted, undefined, 'only for that one day');
 });
 
-test('opening hours: 8:00 to 22:00 German time, summer and winter time', () => {
+test('opening hours: 8:00 to 24:00 German time, summer and winter time', () => {
   const at = iso => Date.parse(iso);
   assert.equal(marketOpen(at('2026-11-14T06:59:00Z')), false); // 7:59 winter time
   assert.equal(marketOpen(at('2026-11-14T07:00:00Z')), true); // 8:00
   assert.equal(marketOpen(at('2026-11-14T20:59:00Z')), true); // 21:59
-  assert.equal(marketOpen(at('2026-11-14T21:00:00Z')), false); // 22:00
+  assert.equal(marketOpen(at('2026-11-14T21:00:00Z')), true); // 22:00
   assert.equal(marketOpen(at('2027-07-01T06:00:00Z')), true); // 8:00 summer time
-  assert.equal(marketOpen(at('2027-07-01T20:00:00Z')), false); // 22:00 summer time
+  assert.equal(marketOpen(at('2027-07-01T20:00:00Z')), true); // 22:00 summer time
 });
 
 test('season borders are midnight German time, in summer time too', () => {
@@ -112,4 +112,13 @@ test('the Sheet counts below the list ("Amount", services) are not shows; old nu
   assert.deepEqual(seasonShows(csv).map(s => s.title), ['Alpha EN', 'Beta']);
   const s = await updateSeason({ days: ['2026-11-13'], shows: { 65: { closes: [100], pops: [0], droppedBy: {} } } }, seasonShows(csv), '2026-11-13', { media: new Map(), ratings: new Map() });
   assert.deepEqual(Object.keys(s.shows).sort(), ['Alpha EN', 'Beta']);
+});
+
+
+test('midnight boundary and close date in Berlin, including DST changes', () => {
+ for(const [before,after,date] of [['2026-11-14T22:59:59Z','2026-11-14T23:00:00Z','2026-11-14'],['2027-07-01T21:59:59Z','2027-07-01T22:00:00Z','2027-07-01']]) {
+ assert.equal(marketOpen(Date.parse(before)),true);assert.equal(marketOpen(Date.parse(after)),false);assert.equal(closingDay(Date.parse(after)),date);
+ }
+ assert.equal(closingDay(Date.parse('2027-03-28T06:00:00Z')),'2027-03-27');
+ assert.equal(closingDay(Date.parse('2026-10-25T07:00:00Z')),'2026-10-24');
 });

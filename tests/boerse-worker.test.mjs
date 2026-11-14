@@ -68,13 +68,15 @@ test('short sales up to 1000 Taler; circuit breaker halts a show for the day; ba
  assert.equal((await call(env(url,'2027-04-02T12:00:00Z'),'/stocks/trade',{season,person:'Mia',title:'Frieren',qty:1})).status,409,'season over');
 });
 
-test('opening hours: orders from 8 to 22 German time only',async()=>{
+test('opening hours: orders from 8 to 24 German time only',async()=>{
  const {url}=site({Frieren:{closes:[100]}});
  const store=kv();
- let r=await call(env(url,'2027-01-04T21:30:00Z',store),'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:1});
+ let r=await call(env(url,'2027-01-04T23:00:00Z',store),'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:1});
  assert.equal(r.status,409);
- assert.match(r.body.error,/8 bis 22/);
- assert.equal((await get(env(url,'2027-01-04T21:30:00Z',store))).body.market,false);
+ assert.match(r.body.error,/8 bis 24/);
+ assert.equal((await call(env(url,'2027-01-04T22:59:59Z',store),'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:1})).status,200);
+ assert.equal((await get(env(url,'2027-01-04T22:30:00Z',store))).body.market,true);
+ assert.equal((await get(env(url,'2027-01-04T23:00:00Z',store))).body.market,false);
  assert.equal((await call(env(url,'2027-01-04T07:05:00Z',store),'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:1})).status,200);
 });
 
@@ -90,7 +92,7 @@ test('limit orders: placed any time, filled at the first new close that reaches 
  const {url,file}=site({Frieren:{closes:[100]},Dandadan:{closes:[100]}});
  file.seasons[season].days=['2027-01-03'];
  const store=kv(),evening=env(url,'2027-01-04T22:30:00Z',store);
- // outside opening hours an order can still be placed
+ // a late-night limit order can still be placed
  let r=await call(evening,'/stocks/order',{season,person:'Rei',title:'Frieren',qty:3,limit:90});
  assert.equal(r.status,200);
  assert.equal(r.body.account.orders.length,1);
@@ -127,3 +129,4 @@ test('limit orders: placed any time, filled at the first new close that reaches 
  assert.match(state.account.orderLog.at(-1).reason,/Nicht genug/);
  assert.deepEqual(state.account.holdings,{Frieren:3});
 });
+
