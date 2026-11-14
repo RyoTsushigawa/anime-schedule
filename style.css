@@ -1659,3 +1659,16 @@ body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { dis
   .header-nav-link span, .header-primary .misc-trigger > span { display: inline; }
   .header-primary .round.misc-trigger { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 12px 0 10px; font-size: 12px; font-weight: 650; }
 }
+/* the day's buttons say what they do on wider screens; phones keep the icon (the title explains it) */
+.day h2 .day-btn-label { display: none; }
+@media (min-width: 700px) {
+  .day h2 :is(.day-delay, .pause-shift):has(.day-btn-label) { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 3px 11px 3px 9px; font-size: 12px; }
+  .day h2 .day-btn-label { display: inline; }
+}
+/* phones: the three tabs get the whole row, the person filter goes under them */
+@media (max-width: 560px) {
+  .away-tabbar { flex-wrap: wrap; }
+  .away-tabbar .away-tabs { flex: 1 1 100%; }
+  .away-tabbar > select { flex: 1 1 100%; }
+  .away-tabs [role="tab"] { padding-inline: 6px; }
+}
