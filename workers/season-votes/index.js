@@ -475,6 +475,31 @@ async function reportResolve(body,env){
  await store.put('report:'+id,JSON.stringify(next));
  return {ok:true,report:next};
 }
+// Advent answers: one independent key per door and verified person, so friends never overwrite each other.
+function adventDoor(year,door,now){
+ if(Number(year)!==2026||!/^([0-9]|1[0-9]|2[0-4])$/.test(String(door)))fail(400,'Ungültiges Türchen.');
+ const day=Number(door);
+ if(day&&berlinDay(now)<'2026-12-'+String(day).padStart(2,'0'))fail(403,'Dieses Türchen ist noch geschlossen.');
+ return {year:2026,door:day,prefix:'advent:2026:'+day+':'};
+}
+async function adventGet(url,env,now){
+ const {year,door,prefix}=adventDoor(url.searchParams.get('year'),url.searchParams.get('door'),now);
+ const store=awardsStore(env),answers=[];let cursor;
+ do {const page=await store.list({prefix,...(cursor&&{cursor})});
+  for(const key of page.keys){let a;try{a=JSON.parse(await store.get(key.name)||'null');}catch{}if(a&&typeof a.person==='string'&&typeof a.text==='string')answers.push({person:a.person,text:a.text,updatedAt:a.updatedAt});}
+  cursor=page.list_complete?undefined:page.cursor;
+ }while(cursor);
+ return {year,door,answers:answers.sort((a,b)=>a.person.localeCompare(b.person,'de'))};
+}
+async function adventSave(body,env,now,request){
+ const {year,door,prefix}=adventDoor(body.year,body.door,now);
+ if(typeof body.text!=='string'||!body.text.trim()||body.text.length>1000)fail(400,'Bitte schreib eine Antwort mit höchstens 1000 Zeichen.');
+ const person=await verifiedPerson(request,env,body.person);
+ const answer={person,text:body.text.trim(),updatedAt:new Date(now).toISOString()};
+ await awardsStore(env).put(prefix+person,JSON.stringify(answer));
+ return {ok:true,year,door,answer};
+}
+
 export default {
  async fetch(request,env){
   const origin=request.headers.get('Origin')||'';
@@ -529,6 +554,15 @@ export default {
     if(path==='/identity/pin-reset')return json(await pinReset(request,body,env),200,cors);
     return json({ok:true,person:await verifiedPerson(request,env,body.person)},200,cors);
    }
+   if(path==='/advent/answers'&&(request.method==='GET'||request.method==='POST')){
+    await authorized(request,env);
+    const now=Number(env.TEST_NOW)||Date.now();
+    if(request.method==='GET')return json(await adventGet(new URL(request.url),env,now),200,cors);
+    const raw=await request.text();if(raw.length>8192)fail(413,'Anfrage zu groß.');
+    let body;try{body=JSON.parse(raw);}catch{fail(400,'Ungültige Anfrage.');}
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    return json(await adventSave(body,env,now,request),200,cors);
+   }
    if(request.method==='GET'&&path==='/stocks'){
     await authorized(request,env);
     return json(await stocksGet(new URL(request.url),env,Number(env.TEST_NOW)||Date.now(),request),200,cors);
@@ -558,4 +592,5 @@ export default {
   }catch(error){return json({error:error?.status?error.message:'Die Abstimmung konnte nicht verarbeitet werden.'},error?.status||500,cors);}
  }
 };
+
 

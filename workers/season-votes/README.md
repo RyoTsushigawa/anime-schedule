@@ -68,3 +68,10 @@ and 5 wrong tries lock it for 15 minutes. A person with AniList can't be claimed
 `GET /identity?person=` says which applies; `POST /identity/check` tests it; the owner resets a PIN with
 `POST /identity/pin-reset` `{ person }` and the site's GitHub key in `X-Owner-Key` (checked with GitHub).
 Tests: `node --test tests/votes-identity.test.mjs`.
+
+
+## Advent calendar answers
+
+GET /advent/answers?year=2026&door=0 and POST /advent/answers ({year, door, person, text}) require the existing group code. Door 0 is the sample; 1–24 unlock at midnight Europe/Berlin in December 2026. POST also verifies the author through the existing AniList/PIN identity. Text is limited to 1000 characters. Each author has a separate KV key per door (advent:2026:<door>:<person>); resubmitting replaces only that author's answer. Responses are visible to the group immediately and remain available later. KV propagation can take a short time across locations; clients render a successful save from the response and expose manual refresh. No Google Sheet or bot changes.
+
+The static calendar's ?preview=1 view opens all doors for editorial review without writes or opened-door progress. It is a convenience preview, not an access-control boundary; normal API unlock dates still apply.

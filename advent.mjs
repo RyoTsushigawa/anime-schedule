@@ -1,6 +1,9 @@
 import {CALENDAR_YEAR,calendarState,readOpened,writeOpened} from './advent-core.mjs';
 import {doors,sample} from './advent-content.mjs';
+import {mountAnswers} from './advent-answers.mjs';
 const $=id=>document.getElementById(id);
+const preview=new URLSearchParams(location.search).get('preview')==='1';
+let currentDoor=0;
 let storage;try{storage=localStorage;}catch{}
 let opened=readOpened(storage),lastTrigger=null;
 const types={quiz:'Anime-Quiz',challenge:'Mini-Challenge',prompt:'Für die Runde'};
@@ -8,20 +11,21 @@ function el(tag,text,className){const node=document.createElement(tag);if(text)n
 function render(){
  const state=calendarState();
  $('adventDoors').replaceChildren(...doors.map((_,i)=>{
-  const n=i+1,available=n<=state.available,seen=opened.has(n)&&available,b=el('button',null,'advent-door');b.type='button';b.dataset.day=n;
+  const n=i+1,available=preview||n<=state.available,seen=!preview&&opened.has(n)&&available,b=el('button',null,'advent-door');b.type='button';b.dataset.day=n;
   b.setAttribute('aria-disabled',String(!available));b.setAttribute('aria-label',`${n}. Dezember · ${available?seen?'schon geöffnet':'Türchen öffnen':'noch geschlossen'}`);
   b.classList.toggle('is-open',seen);b.classList.toggle('is-today',state.today===n);
-  b.append(el('span',String(n).padStart(2,'0'),'door-number'),el('span',state.today===n?'Heute':seen?'Noch einmal':available?'Öffnen':`${n}. Dezember`,'door-note'));
+  b.append(el('span',String(n).padStart(2,'0'),'door-number'),el('span',preview?'Vorschau':state.today===n?'Heute':seen?'Noch einmal':available?'Öffnen':`${n}. Dezember`,'door-note'));
   b.addEventListener('click',()=>openDoor(n,b));return b;
  }));
  $('adventCount').textContent=`${[...opened].filter(n=>n<=state.available).length} von 24 geöffnet`;
- $('adventToday').hidden=!state.today;
+ $('adventToday').hidden=preview||!state.today;
+ $('adventReview').hidden=!preview;
  $('adventStatus').textContent=state.available===0?'Das erste Türchen öffnet am 1. Dezember.':state.available===24?'Alle Türchen sind offen. Viel Spaß beim Nachholen!':`${state.available} Türchen warten auf dich.`;
  updateSnow();
 }
 function openDoor(n,trigger){
- if(n&&n>calendarState().available){$('adventStatus').textContent=`Noch ein bisschen Geduld: Dieses Türchen öffnet am ${n}. Dezember ${CALENDAR_YEAR}.`;return;}
- lastTrigger=trigger;const item=n?doors[n-1]:sample;
+ if(!preview&&n&&n>calendarState().available){$('adventStatus').textContent=`Noch ein bisschen Geduld: Dieses Türchen öffnet am ${n}. Dezember ${CALENDAR_YEAR}.`;return;}
+ currentDoor=n||0;lastTrigger=trigger;const item=n?doors[n-1]:sample;
  $('adventDoorType').textContent=(n?`${n}. Dezember`:'Probetürchen')+' · '+types[item.type];
  $('adventDoorTitle').textContent=item.title;
  const body=$('adventDoorBody');body.replaceChildren(el('p',item.text));
@@ -32,10 +36,15 @@ function openDoor(n,trigger){
    answer.textContent=(i===item.answer?'Richtig! ':'Fast! ')+item.explanation;answer.hidden=false;
   });choices.append(b);});body.append(choices,answer);
  }else body.append(el('p',item.note,'advent-prompt-note'));
- if(n){opened.add(n);if(!writeOpened(storage,opened))body.append(el('p','Dein Browser kann den Fortschritt gerade nicht speichern. Die Türchen funktionieren trotzdem.','advent-prompt-note'));render();}
+ if(n&&!preview){opened.add(n);if(!writeOpened(storage,opened))body.append(el('p','Dein Browser kann den Fortschritt gerade nicht speichern. Die Türchen funktionieren trotzdem.','advent-prompt-note'));render();}
+ if(!preview){const answers=el('section',null,'advent-answers');body.append(answers);mountAnswers(answers,n||0);}
+ $('adventReviewNav').hidden=!preview||!n;
+ $('adventPrev').disabled=n<=1;$('adventNext').disabled=n>=24;
  $('adventDialog').showModal();$('adventClose').focus();
 }
 function close(){ $('adventDialog').close(); }
+$('adventPrev').addEventListener('click',()=>{const n=currentDoor-1;close();openDoor(n,document.querySelector(`[data-day="${n}"]`));});
+$('adventNext').addEventListener('click',()=>{const n=currentDoor+1;close();openDoor(n,document.querySelector(`[data-day="${n}"]`));});
 $('adventClose').addEventListener('click',close);$('adventDone').addEventListener('click',close);
 $('adventDialog').addEventListener('close',()=>{const n=lastTrigger?.dataset.day;(n?document.querySelector(`[data-day="${n}"]`):lastTrigger)?.focus();});
 $('adventDialog').addEventListener('click',e=>{if(e.target===$('adventDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});
@@ -55,3 +64,4 @@ window.addEventListener('storage',e=>{if(e.key==='advent-opened-'+CALENDAR_YEAR)
 let available=calendarState().available;
 setInterval(()=>{const next=calendarState().available;if(next!==available){available=next;render();}else updateSnow();},30000);
 render();
+
