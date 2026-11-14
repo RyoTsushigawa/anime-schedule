@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {
   englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
-  hardHintError,hashWord,pickEntry,pickFreshEntry
+  hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry
 } from '../games-logic.mjs';
 
 const game=readFileSync(new URL('../games.js',import.meta.url),'utf8')
@@ -20,7 +20,7 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly'],ani
   window.localStorage.setItem('titleGameMode',JSON.stringify(mode));
   window.localStorage.setItem('titleGameDifficulty',JSON.stringify(difficulty));
   Object.assign(window,{englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
-    hardHintError,hashWord,pickEntry,pickFreshEntry});
+    hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry});
   window.fetch=async(url,options)=>{
     requests.push({url,options});
     let data;

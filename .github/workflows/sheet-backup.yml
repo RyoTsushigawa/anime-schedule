@@ -31,9 +31,11 @@ jobs:
           node-version: 22
       - name: Copy the Sheet
         run: node tools/sheet-backup.mjs
+      - name: Endless Titel-Rätsel answers from all titles (tools/games-endless.mjs)
+        run: node tools/games-endless.mjs || echo "Word list not updated"
       - name: Save the copy
         run: |
-          git add backup/sheet
+          git add backup/sheet games-endless.json
           git diff --cached --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
