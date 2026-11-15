@@ -37,7 +37,8 @@ function base64url(data){
  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 function pemToBytes(pem){
- const raw=pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g,'');
+ // the key itself comes from the Worker's secret store (env); this only strips the PEM header and footer lines
+ const raw=pem.replace(/-----(BEGIN|END) [A-Z ]+-----|\s/g,'');
  const binary=atob(raw);
  return Uint8Array.from(binary,c=>c.charCodeAt(0));
 }
