@@ -39,14 +39,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <header>
 <div class="bar">
 <img class="logo" src="icon-72.png" alt="" width="36" height="36"><div class="brand">
-<div class="brand-title"><h1><span class="title-long">Simulcast-</span>Plan</h1></div>
+<div class="brand-title"><h1><span class="title-long">Simulcast-</span>Plan</h1><button type="button" id="headerHelp" class="brand-help" aria-haspopup="dialog" aria-label="Hilfe" title="Hilfe und erste Schritte (?)">?</button></div>
 <div id="tabName">Guckplan</div>
 <div id="weekSub" class="week-sub"></div>
 </div>
 <div class="top-actions">
-<button type="button" id="headerHelp" class="brand-help" aria-haspopup="dialog" aria-label="Hilfe" title="Hilfe und erste Schritte (?)">?</button>
-<button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" title="Plan bearbeiten" hidden>Bearbeiten</button>
-<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true" title="Nur diese Woche">Diese Woche</button><button type="button" data-edit-scope="always" aria-pressed="false" title="Ab jetzt jede Woche">Dauerhaft</button></div>
 <div id="searchBox" class="search">
 <input id="search" class="pill" type="search" placeholder="Serien suchen" aria-label="Serien suchen" spellcheck="false" list="recentSearches" autocomplete="off"><datalist id="recentSearches"></datalist>
 <button id="searchButton" class="round" aria-label="Serien suchen" aria-expanded="false" aria-controls="search">
@@ -99,6 +96,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Drop-Button</label>
 <label class="toggle drop-always-toggle" title="Der Drop-Button ist immer zu sehen, nicht erst beim Drüberfahren mit der Maus"><input type="checkbox" id="dropAlways">Drop-Button immer sichtbar</label>
 <label class="toggle week-only" title="In deiner eigenen Ansicht (Solo) Folgen ausblenden, die du schon abgehakt hast"><input type="checkbox" id="hideWatched">Gesehene ausblenden</label>
+<label class="toggle" title="Die Personen-Auswahl (Solo) in der Leiste statt im Konto-Menü: praktisch, wenn du oft die Pläne anderer ansiehst"><input type="checkbox" id="personInBar">Person in der Leiste</label>
 <label class="toggle week-only" title="Tage ohne Folgen ausblenden. Heute und Tage mit Abwesenheiten bleiben sichtbar."><input type="checkbox" id="hideEmptyDays">Leere Tage ausblenden</label>
 <button type="button" id="clearSearches" class="pill" title="Die zuletzt gesuchten Begriffe in diesem Browser löschen" hidden>Letzte Suchen löschen</button>
 </div>
@@ -133,6 +131,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="settings">
 <button id="accountButton" class="round" aria-label="AniList" aria-haspopup="true" aria-expanded="false"></button>
 <div id="accountMenu" class="popover menu" hidden>
+<section class="person-home"><div class="menu-label">Person</div><div id="personSlot" title="Wessen Plan und Liste du siehst"></div></section>
 <section>
 <div class="menu-label">Listen-Konten</div>
 <div id="accountSection" class="pills"></div>
@@ -177,6 +176,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <button id="groupButton" class="pill" aria-haspopup="true" aria-expanded="false"></button>
 <div id="people" class="popover" role="group" aria-label="Leute" hidden></div>
 </div>
+<button id="editSchedule" class="pill week-only edit-schedule" aria-pressed="false" title="Plan bearbeiten" hidden>Bearbeiten</button>
+<div id="editScope" class="segmented week-only edit-scope" role="group" aria-label="Verschieben für" hidden><button type="button" data-edit-scope="week" aria-pressed="true" title="Nur diese Woche">Diese Woche</button><button type="button" data-edit-scope="always" aria-pressed="false" title="Ab jetzt jede Woche">Dauerhaft</button></div>
 </div>
 <div class="weeknav">
 <button id="prev" class="icon" aria-label="Vorherige Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
