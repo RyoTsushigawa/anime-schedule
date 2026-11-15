@@ -105,4 +105,13 @@ export const ranking = (accounts, prices) => accounts.map(a => ({ person: a.pers
   .sort((a, b) => b.value - a.value || a.person.localeCompare(b.person, 'de'));
 // the latest close per show from boerse-prices.json for one season
 export const latestPrices = season => new Map(Object.entries(season?.shows || {}).map(([t, s]) => [t, s.closes?.[s.closes.length - 1] ?? PRICE]));
+// Dividends: every Sunday's close pays a share of the price, by how much the group likes the show (its own
+// ratings, 0–100): 80+ 2 %, 70+ 1.5 %, 60+ 1 %, 50+ 0.5 %, else nothing. Short sellers pay it.
+export function dividendRate(group, count = 1) {
+  if (!count || group == null) return 0;
+  return group >= 80 ? 0.02 : group >= 70 ? 0.015 : group >= 60 ? 0.01 : group >= 50 ? 0.005 : 0;
+}
+export const isSunday = day => new Date(day + 'T12:00:00Z').getUTCDay() === 0;
+// the Awards bonus: Taler per category whose winner got your 12 points (paid at "Auflösen")
+export const AWARD_BONUS = 10;
 

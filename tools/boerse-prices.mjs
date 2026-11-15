@@ -8,7 +8,7 @@
 //   node tools/boerse-prices.mjs --dry-run  only print today's closes
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { PRICE, tradingWindow, berlinDay, prevDay, nextDay, groupScore, fairValue, nextClose, halted } from '../boerse-core.mjs';
+import { PRICE, tradingWindow, berlinDay, prevDay, nextDay, groupScore, fairValue, nextClose, halted, dividendRate, isSunday } from '../boerse-core.mjs';
 
 const root = new URL('../', import.meta.url);
 const path = file => fileURLToPath(new URL(file, root));
@@ -97,9 +97,14 @@ export async function updateSeason(entry, shows, today, { media, ratings }) {
     s.closes[index] = close; s.pops[index] = m.popularity || 0;
     s.closes.length = s.pops.length = index + 1;
     // a big fall at the close halts the show for the next trading day
-    Object.assign(s, { id: m.id || s.id, score: m.averageScore ?? null, members: m.popularity ?? null, ratings: g.count,
+    Object.assign(s, { id: m.id || s.id, score: m.averageScore ?? null, members: m.popularity ?? null, ratings: g.count, group: g.count ? Math.round(g.score) : null,
       drops: Object.keys(s.droppedBy).length, halted: halted(close, prev) ? nextDay(today) : undefined });
     if (!s.halted) delete s.halted;
+  }
+  // Sunday's close: the week's dividends, as a rate per show (the votes helper pays them to the holders)
+  if (isSunday(today)) {
+    const rates = Object.fromEntries(Object.entries(season.shows).map(([t, x]) => [t, dividendRate(x.group, x.ratings)]).filter(([, r]) => r > 0));
+    season.dividends = [...(season.dividends || []).filter(d => d.day !== today), { day: today, rates }];
   }
   return season;
 }

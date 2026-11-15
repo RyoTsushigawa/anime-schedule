@@ -344,13 +344,35 @@ async function ceddlChange(body,env,remove){
  await awardsStore(env).put('ceddl:'+season,JSON.stringify(list));
  return {ok:true,candidates:list};
 }
+// the winner per category: most points (12/10/8), ties by more 12s, then 10s, as on the Awards page
+function awardWinners(ballots){
+ const won=new Map();
+ for(const id of AWARD_CATEGORIES){
+  const score=new Map();
+  for(const b of ballots)(Array.isArray(b.picks?.[id])?b.picks[id]:b.picks?.[id]?[b.picks[id]]:[]).forEach((t,i)=>{if(!t||i>2)return;const x=score.get(t)||{p:0,c:[0,0,0]};x.p+=[12,10,8][i];x.c[i]++;score.set(t,x);});
+  const best=[...score].sort((a,b)=>b[1].p-a[1].p||b[1].c[0]-a[1].c[0]||b[1].c[1]-a[1].c[1]||a[0].localeCompare(b[0],'de'))[0];
+  if(best)won.set(id,best[0]);
+ }
+ return won;
+}
+// At "Auflösen": +10 Taler on that season's Börse account for every category whose winner got your 12 points
+const AWARD_BONUS=10;
 async function awardsReveal(body,env){
  const season=awardSeason(body.season);
  const {meta,ballots}=await awardsState(env,season);
  if(meta.revealed)return {ok:true,season,revealed:true};
  if(!ballots.length)fail(409,'Noch hat niemand abgestimmt.');
  await awardsStore(env).put('meta:'+season,JSON.stringify({revealed:true,revealedAt:new Date().toISOString()}));
- return {ok:true,season,revealed:true};
+ const won=awardWinners(ballots),day=berlinDay(Date.now()),bonus={};
+ for(const b of ballots){
+  const hits=[...won].filter(([id,title])=>(Array.isArray(b.picks?.[id])?b.picks[id][0]:b.picks?.[id])===title).length;
+  if(!hits)continue;
+  const key='stock:'+season+':'+b.person,store=awardsStore(env);
+  const a=JSON.parse(await store.get(key)||'null')||newAccount(b.person),amount=hits*AWARD_BONUS;
+  await store.put(key,JSON.stringify({...a,cash:cents((a.cash??STOCK_CASH)+amount),payouts:[...(a.payouts||[]),{day,kind:'awards',hits,amount}].slice(-60)}));
+  bonus[b.person]=amount;
+ }
+ return {ok:true,season,revealed:true,bonus};
 }
 // Anime-Börse (boerse.html): play money for the season's real anime, traded the whole season at the day's close
 // (boerse-prices.json on the site, written daily by tools/boerse-prices.mjs; rules as in boerse-core.mjs).
@@ -402,8 +424,8 @@ async function stockAccounts(env,season){
 async function stocksGet(url,env,now,request){
  const season=awardSeason(url.searchParams.get('season')),window=stockWindow(season,now),today=berlinDay(now);
  const [stored,priced]=await Promise.all([stockAccounts(env,season),stockPrices(env,season)]);
- // limit orders reached by a new close are filled now, for everyone (so the ranking is right too)
- const accounts=await Promise.all(stored.map(async a=>{const r=fillOrders(a,priced);
+ // limit orders reached by a new close are filled and Sunday dividends paid now, for everyone (so the ranking is right too)
+ const accounts=await Promise.all(stored.map(async a=>{const r=catchUp(a,priced);
   if(r.changed)await awardsStore(env).put('stock:'+season+':'+a.person,JSON.stringify(r.account));return r.account;}));
  const prices=latest(priced),person=str(url.searchParams.get('person'));
  const ranking=accounts.map(a=>({person:a.person,value:accountValue(a,prices)})).sort((x,y)=>y.value-x.value||x.person.localeCompare(y.person,'de'));
@@ -434,6 +456,32 @@ const newAccount=person=>({person,cash:STOCK_CASH,pending:[],holdings:{},trades:
 // the day the order was placed on (a day's close is set after midnight); the first close that reaches the limit
 // fills it at that close. Filled or failed orders go to orderLog (the last 20). Runs whenever the Börse is read.
 const STOCK_ORDERS=10;
+// Dividends (boerse-prices.json "dividends": [{ day: a Sunday, rates: { title: 0.005–0.02 } }]): paid once per
+// account and Sunday on the shares held at that day's close (from the trades), at that close; a short pays it.
+// The payouts are kept in "payouts" (the last 60), the paid Sundays in "paidDividends".
+function payDividends(account,priced){
+ const paid=new Set(account.paidDividends||[]),todo=(priced.dividends||[]).filter(d=>d?.day&&!paid.has(d.day));
+ if(!todo.length)return {account,changed:false};
+ let cash=account.cash??STOCK_CASH;const payouts=[...(account.payouts||[])];
+ for(const d of todo){
+  const held={};for(const t of account.trades||[])if(t.day<=d.day)held[t.title]=(held[t.title]||0)+t.qty;
+  const i=(priced.days||[]).indexOf(d.day);
+  for(const [title,rate] of Object.entries(d.rates||{})){
+   const shares=held[title]||0,close=priced.shows?.[title]?.closes?.[i];
+   if(!shares||!(close>0)||!(rate>0))continue;
+   const amount=cents(shares*close*rate);
+   if(!amount)continue;
+   cash=cents(cash+amount);payouts.push({day:d.day,title,shares,amount,kind:'dividend'});
+  }
+  paid.add(d.day);
+ }
+ return {account:{...account,cash,payouts:payouts.slice(-60),paidDividends:[...paid].sort().slice(-30)},changed:true};
+}
+// everything due since the last visit: limit orders reached by a close, then the Sunday dividends
+function catchUp(account,priced){
+ const a=fillOrders(account,priced),b=payDividends(a.account,priced);
+ return {account:b.account,changed:a.changed||b.changed};
+}
 function fillOrders(account,priced){
  if(!account.orders?.length)return {account,changed:false};
  const days=priced.days||[],prices=latest(priced);
@@ -459,7 +507,7 @@ async function stocksTrade(body,env,now,request){
  const today=berlinDay(now),price=show.closes[show.closes.length-1];
  if(show.halted===today)fail(409,'Handel ausgesetzt: Kurs heute um 7 % oder mehr gefallen (Circuit Breaker).');
  const store=awardsStore(env),key='stock:'+season+':'+person;
- const {account:a}=fillOrders(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
+ const {account:a}=catchUp(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
  const next={...applyTrade(a,{title,qty,price,day:today,prices:latest(priced)}),person};
  await store.put(key,JSON.stringify(next));
  return {ok:true,account:settled(next,today),price};
@@ -469,7 +517,7 @@ async function stocksOrder(body,env,now,request,cancel){
  const season=awardSeason(body.season),person=await verifiedPerson(request,env,body.person);
  const store=awardsStore(env),key='stock:'+season+':'+person,today=berlinDay(now);
  const priced=await stockPrices(env,season);
- let {account:a}=fillOrders(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
+ let {account:a}=catchUp(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
  if(cancel){
   const id=str(body.id);
   if(!(a.orders||[]).some(o=>o.id===id))fail(404,'Diese Order gibt es nicht (mehr). Vielleicht wurde sie schon ausgeführt.');

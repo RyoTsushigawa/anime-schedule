@@ -122,3 +122,18 @@ test('midnight boundary and close date in Berlin, including DST changes', () => 
  assert.equal(closingDay(Date.parse('2027-03-28T06:00:00Z')),'2027-03-27');
  assert.equal(closingDay(Date.parse('2026-10-25T07:00:00Z')),'2026-10-24');
 });
+
+test('dividends: the rate follows the group rating; Sunday closes record the rates', async () => {
+  const { dividendRate, isSunday } = await import('../boerse-core.mjs');
+  assert.deepEqual([85, 72, 64, 55, 40].map(g => dividendRate(g, 2)), [0.02, 0.015, 0.01, 0.005, 0]);
+  assert.equal(dividendRate(null, 0), 0, 'unrated pays nothing');
+  assert.equal(isSunday('2026-11-15'), true);
+  assert.equal(isSunday('2026-11-14'), false);
+  const shows = [{ title: 'Alpha' }, { title: 'Beta' }];
+  const ratings = new Map([['Alpha', [{ user: 'a', status: 'CURRENT', score: 85 }, { user: 'b', status: 'CURRENT', score: 81 }]], ['Beta', [{ user: 'a', status: 'CURRENT', score: 40 }]]]);
+  let s = await updateSeason(undefined, shows, '2026-11-14', { media: new Map(), ratings });
+  assert.equal(s.dividends, undefined, 'Saturday: none');
+  s = await updateSeason(s, shows, '2026-11-15', { media: new Map(), ratings });
+  assert.equal(s.shows.Alpha.group, 83);
+  assert.deepEqual(s.dividends, [{ day: '2026-11-15', rates: { Alpha: 0.02 } }]);
+});

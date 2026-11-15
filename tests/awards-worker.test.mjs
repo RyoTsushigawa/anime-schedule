@@ -123,3 +123,17 @@ test('the Awards deadline is midnight German time in summer time too', async () 
   assert.equal((await call(env,'/awards?season=Sommer%202040')).body.closesAt,'2040-09-30T22:00:00.000Z');
   assert.equal((await call(env,'/awards?season=Winter%202040')).body.closesAt,'2040-03-31T22:00:00.000Z');
 });
+
+test('Auflösen pays 10 Taler per category won with your 12 points into that season\'s Börse account', async () => {
+  const env = { SITE_ORIGIN: origin, AWARDS: kv() };
+  await call(env, '/awards/ballot', { season, person: 'Rei', picks: { best: ['Frieren'], villain: ['Omega'] } });
+  await call(env, '/awards/ballot', { season, person: 'Belly', picks: { best: ['Frieren', 'Dandadan'], villain: ['Zeta'] } });
+  await call(env, '/awards/ballot', { season, person: 'Mia', picks: { best: ['Dandadan'] } });
+  const r = await call(env, '/awards/reveal', { season });
+  // best: Frieren 24 vs Dandadan 22; villain: Omega and Zeta 12 each, Omega first by name
+  assert.deepEqual(r.body.bonus, { Rei: 20, Belly: 10 });
+  const rei = JSON.parse(env.AWARDS.data.get('stock:' + season + ':Rei'));
+  assert.equal(rei.cash, 1020);
+  assert.deepEqual(rei.payouts, [{ day: rei.payouts[0].day, kind: 'awards', hits: 2, amount: 20 }]);
+  assert.equal(env.AWARDS.data.has('stock:' + season + ':Mia'), false);
+});
