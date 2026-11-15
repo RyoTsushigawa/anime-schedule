@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {
   englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
-  hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry
+  hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry,ANIME_WORDS
 } from '../games-logic.mjs';
 
 const game=readFileSync(new URL('../games.js',import.meta.url),'utf8')
@@ -19,7 +19,7 @@ async function openGame({mode='daily',difficulty='normal',accounts=['Belly'],ani
   const {window}=dom,ctx=dom.getInternalVMContext(),requests=[];
   window.localStorage.setItem('titleGameMode',JSON.stringify(mode));
   window.localStorage.setItem('titleGameDifficulty',JSON.stringify(difficulty));
-  Object.assign(window,{englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
+  Object.assign(window,{ANIME_WORDS,englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,
     hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry});
   window.fetch=async(url,options)=>{
     requests.push({url,options});
@@ -306,5 +306,18 @@ test('Schwer keeps two hints and has no "Auflösen"', async () => {
     $('gameHintButton').click(); $('gameHintButton').click();
     assert.equal($('gameHintButton').hidden, true);
     assert.equal($('gameSolveRow').hidden, true);
+  } finally { page.close(); }
+});
+
+test('anime loanwords the English list lacks (TANUKIS, NINJA, SENSEI) count as guesses', async () => {
+  const extreme = [['STRIKER', 'Detective Conan: The Eleventh Striker'], ['DRAGONS', 'Dragons Rioting']];
+  const page = await openGame({ difficulty: 'extreme', mode: 'endless', endless: { words: [], popular: [], extreme } });
+  try {
+    assert.equal(page.run('puzzle.word.length'), 7);
+    assert.equal(page.run("allowed.has('TANUKIS')"), true);
+    assert.equal(page.run("allowed.has('SAMURAI')"), true);
+    page.run("typing='TANUKIS'; press('Enter')");
+    assert.equal(page.run('state.guesses.length'), 1, 'the guess counted');
+    assert.equal(page.run("extremePool.some(e=>e.word==='TANUKIS')"), false, 'only an answer where a title has it');
   } finally { page.close(); }
 });

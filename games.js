@@ -1,6 +1,6 @@
 // Titel-Rätsel: English words from Guckplan titles, or public group AniLists
 // in Hard mode. Daily puzzles are independent of endlessly replayable rounds.
-import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry} from './games-logic.mjs';
+import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry,ANIME_WORDS} from './games-logic.mjs';
 
 const $ = id => document.getElementById(id);
 const TRIES = 6;
@@ -22,8 +22,9 @@ const sourceWordSet = entries => new Set(entries.map(e=>e.word));
 // see games-guesses.json); without it you could only guess words from someone's titles.
 let guessWords=null;
 async function dictionaryWords(length) {
-  try{guessWords??=(await json('games-guesses.json')).words||{};}catch{return [];}
-  return String(guessWords[length]||'').split(' ').filter(Boolean);
+  const anime=ANIME_WORDS.filter(w=>w.length===length);
+  try{guessWords??=(await json('games-guesses.json')).words||{};}catch{return anime;}
+  return [...String(guessWords[length]||'').split(' ').filter(Boolean),...anime];
 }
 let dailyData=null, sheetPool=null, hardUsers=null;
 const hardCache=new Map();
