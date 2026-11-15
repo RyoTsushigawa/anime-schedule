@@ -1,48 +1,6 @@
 {
- "updated": "2026-11-15T18:15:10.129Z",
+ "updated": "2026-11-15T18:32:08.278Z",
  "moves": [
-  {
-   "show": "aonohakoseason2",
-   "title": "Blue Box Season 2",
-   "tag": "So.",
-   "time": "18:45",
-   "week": "2026-10-26"
-  },
-  {
-   "show": "toaruanbunoitem",
-   "title": "A Certain Dark Side's Item",
-   "tag": "Fr.",
-   "time": "22:00",
-   "week": "2026-10-26"
-  },
-  {
-   "show": "aoashiseason2",
-   "title": "Ao Ashi Season 2",
-   "tag": "So.",
-   "time": "20:45",
-   "week": "2026-10-26"
-  },
-  {
-   "show": "darksummonertodekiteiru",
-   "title": "I'm Dating a Dark Summoner",
-   "tag": "So.",
-   "time": "20:00",
-   "week": "2026-10-26"
-  },
-  {
-   "show": "ojisanwakawaiimonogaosuki",
-   "title": "Uncle's Obsession with Cute Things",
-   "tag": "So.",
-   "time": "20:15",
-   "week": "2026-10-26"
-  },
-  {
-   "show": "tankchair",
-   "title": "Tank Chair",
-   "tag": "So.",
-   "time": "21:15",
-   "week": "2026-10-26"
-  },
   {
    "show": "fxsenshikurumichan",
    "title": "FX Fighter Kurumi-chan",
@@ -192,6 +150,14 @@
    "tag": "",
    "time": "",
    "week": "2026-11-02",
+   "skip": true
+  },
+  {
+   "show": "yozakurasanchinodaisakusenseason2part2",
+   "title": "Mission: Yozakura Family Season 2 Part 2",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-09",
    "skip": true
   }
  ],
