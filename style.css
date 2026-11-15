@@ -1444,8 +1444,8 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
 @media (max-width: 480px) {
   /* the header buttons need the room: only the logo, no title (the view and week show below anyway) */
   /* only the "?" stays, next to the logo, so help is always there */
-  header .logo + .brand { flex: none; }
-  header .logo + .brand h1, header .logo + .brand #tabName, header .logo + .brand #weekSub { display: none; }
+  /* the "?" now sits with the buttons: the title block is empty here and takes no gap */
+  header .logo + .brand { display: none; }
   header .logo ~ .top-actions { margin-left: auto; gap: 4px; }
   header .logo + .brand .brand-help { width: 26px; height: 26px; }
   header > .bar:first-child { column-gap: 6px; }
@@ -1703,3 +1703,12 @@ body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; 
 #saveState.failed { color: var(--text); border-color: #e5737a; }
 #saveState .pill { font-size: 12px; padding: 3px 10px; }
 body:has(#notice:not([hidden])) #saveState { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+/* narrow phones (360–400 px): slightly smaller header icons, so the account button stays on screen */
+@media (max-width: 400px) {
+  header .round, header .logo, header .header-primary .round.misc-trigger { width: 31px; height: 31px; min-height: 31px; }
+  header .logo ~ .top-actions, header .header-primary { gap: 2px; }
+  header > .bar:first-child { column-gap: 4px; }
+  header { padding-left: 8px; padding-right: 8px; }
+  header #editSchedule { padding-inline: 7px; }
+  header .top-actions > .brand-help { flex-basis: 26px; width: 26px; height: 26px; }
+}
