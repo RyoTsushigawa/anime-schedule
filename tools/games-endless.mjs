@@ -70,7 +70,8 @@ export async function checkPeople(pairs, people, until) {
         const [a, b] = pair.split(' ');
         const same = full => { const n = String(full || '').toUpperCase().replace(/[^A-Z ]/g, '').trim(); return n === a + ' ' + b || n === b + ' ' + a; };
         const group = st => (st.primaryOccupations || []).some(o => /band|group|unit|idol|circle|orchestra|choir|character/i.test(o));
-        people[pair] = (data['p' + j].staff || []).some(st => same(st.name?.full) && !group(st))
+        // a real person has a job on AniList (mangaka, writer, voice actor …); song credits for a unit often have none
+        people[pair] = (data['p' + j].staff || []).some(st => same(st.name?.full) && (st.primaryOccupations || []).length && !group(st))
           && !(data['c' + j].characters || []).some(c => same(c.name?.full));
       });
     } catch {}
@@ -222,6 +223,8 @@ async function main() {
   // names that are a real person's name in that title are left out (people: { "TATSUKI FUJIMOTO": true })
   let people = {};
   try { people = (await json('games-endless.json')).persons || {}; } catch {}
+  // pairs counted as people are checked again on every run (a handful, one request): a stricter rule applies to them too
+  for (const [pair, v] of Object.entries(people)) if (v === true) delete people[pair];
   const nameTitles = [...merged.values(), ...popularCandidates, ...extremeCandidates, ...extremeBefore].filter(w => !dictionary.has(w.word)).map(w => w.title);
   const pairs = [...new Set(nameTitles.flatMap(t => namePairs(t, dictionary)))].filter(p => !(p in people));
   if (!offline && pairs.length) await checkPeople(pairs, people, until + 10 * 60000);
