@@ -11,6 +11,7 @@
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseCsv } from './boerse-prices.mjs';
+import { ANIME_WORDS } from '../games-logic.mjs';
 
 const root = new URL('../', import.meta.url);
 const path = file => fileURLToPath(new URL(file, root));
@@ -140,7 +141,8 @@ async function anilistTitles() {
 async function main() {
   const started = Date.now();
   const guesses = await json('games-guesses.json');
-  const dictionary = new Set(Object.values(guesses.words).flatMap(s => s.split(' ')).map(w => w.toUpperCase()));
+  // English words, plus the anime words every fan knows (RAMEN, NINJA …: games-logic.mjs)
+  const dictionary = new Set([...Object.values(guesses.words).flatMap(s => s.split(' ')).map(w => w.toUpperCase()), ...ANIME_WORDS]);
   const catalog = await json('seasons.json'), streams = await json('streams-de.json');
   const titles = [
     ...await sheetTitles(),

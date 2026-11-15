@@ -1,6 +1,6 @@
 // Titel-Rätsel: English words from Guckplan titles, or public group AniLists
 // in Hard mode. Daily puzzles are independent of endlessly replayable rounds.
-import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry} from './games-logic.mjs';
+import {englishTitleWords,titleEntries,approvedDailyEntries,scoreGuess,hardHintError,hashWord,pickEntry,pickFreshEntry,pickEndlessEntry,ANIME_WORDS} from './games-logic.mjs';
 
 const $ = id => document.getElementById(id);
 const TRIES = 6;
@@ -21,15 +21,6 @@ const sourceWordSet = entries => new Set(entries.map(e=>e.word));
 // Both modes: any common English word of the right length counts as a guess (SCOWL list,
 // see games-guesses.json); without it you could only guess words from someone's titles.
 let guessWords=null;
-// Japanese words every anime fan knows, which the English list lacks (TANUKIS, NINJA, SENSEI …): allowed as
-// guesses, never picked as answers
-const ANIME_WORDS=('TANUKI TANUKIS KITSUNE KITSUNES NINJA NINJAS SAMURAI SAMURAIS SENSEI SENSEIS SENPAI SENPAIS SEMPAI KOUHAI KOHAI '
-  +'OTAKU OTAKUS KAWAII RAMEN SUSHI MANGA MANGAS MANGAKA ANIME ANIMES YOKAI YOKAIS KATANA KATANAS SHINOBI KUNAI KUNAIS MECHA MECHAS '
-  +'ISEKAI SHOUJO SHOUNEN SHONEN SHOJO SEINEN JOSEI WAIFU WAIFUS HUSBANDO TSUNDERE YANDERE KUUDERE DANDERE KAIJU KAIJUS YAKUZA '
-  +'RONIN RONINS SHOGUN SHOGUNS GEISHA GEISHAS BENTO BENTOS ONIGIRI MOCHI HAIKU HAIKUS NINJUTSU SHURIKEN TEMPURA MATCHA SAKURA '
-  +'ONSEN ONSENS KOTATSU TATAMI KABUKI TORII TAIKO KENDO KENJUTSU BUSHIDO SEPPUKU DAIMYO DAIMYOS HOKAGE CHAKRA JUTSU GENIN CHUNIN '
-  +'JONIN NAKAMA SUGOI ONICHAN ONEESAN OBAASAN OJIISAN KAMISAMA SHINTO SHRINES MIKO YUKATA KIMONOS OBENTO TAKOYAKI DANGO DANGOS '
-  +'KAPPA KAPPAS TENGU TENGUS ONRYO YUREI').split(' ');
 async function dictionaryWords(length) {
   const anime=ANIME_WORDS.filter(w=>w.length===length);
   try{guessWords??=(await json('games-guesses.json')).words||{};}catch{return anime;}
