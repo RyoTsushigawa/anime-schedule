@@ -5,11 +5,14 @@ import { openPage } from './harness.mjs';
 test('schedule diagnostics preview and copy only the selected show data', async t => {
   const p = await openPage();
   t.after(() => p.close());
-  const button = p.$('list').querySelector('[data-plan-diagnostic]');
-  assert.ok(button);
-  const menu = button.closest('.day-more');
-  await p.click(menu.querySelector('[data-day-more]'));
+  // U: in Wartung (Mehr), not in the day's menu any more
+  assert.equal(p.$('list').querySelector('[data-plan-diagnostic]'), null);
+  await p.click(p.$('maintenanceButton'));
+  assert.equal(p.$('maintenanceDlg').open, true);
+  const button = p.$('seriesDataButton');
+  assert.equal(button.disabled, false);
   await p.click(button);
+  assert.equal(p.$('maintenanceDlg').open, false, 'Wartung closes for the check it opens');
   assert.equal(p.$('planDiagnosticDlg').open, true);
   const text = p.$('planDiagnosticText');
   assert.match(text.value, /AniList-ID: [0-9]+/);

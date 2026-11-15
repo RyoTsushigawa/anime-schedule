@@ -18,7 +18,7 @@ test('main header exposes Schedule and Games, with More and existing Settings',(
 test('More keeps all planning, recap and extra links without duplicating Games',()=>{
  assert.ok(menu,'More menu exists');
  const headings=[...menu.matchAll(/<h3 class="misc-section-title">([^<]+)<\/h3>/g)].map(m=>m[1]);
- assert.deepEqual(headings,['Anime','Sonstiges']);
+ assert.deepEqual(headings,['Season','Spaß','Sonstiges']);
  const hrefs=[...menu.matchAll(/<a href="([^"]+)"/g)].map(m=>m[1]);
  assert.deepEqual(hrefs,[
   'season-preview.html','planner.html','wrapped.html','awards.html','tierlist.html','boerse.html','advent.html','masterset/','https://mcdelivery.de/'

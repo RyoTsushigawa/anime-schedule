@@ -155,8 +155,9 @@ if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
 // N39 Datenstand: when each source was last updated, and whether a saved copy is in use
 const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
-$('list').addEventListener('click', event => {
+document.addEventListener('click', event => {
   const button = event.target.closest('[data-plan-diagnostic]');
+  if (button?.disabled) return;
   if (!button) return;
   const { week, shows } = JSON.parse(button.dataset.planDiagnostic);
   const picker = $('planDiagnosticShow'), report = $('planDiagnosticText'), status = $('planDiagnosticStatus');
@@ -196,7 +197,7 @@ $('list').addEventListener('click', event => {
   dialog.showModal();
 });
 let readinessRun = 0;
-$('list').addEventListener('click', async event => {
+document.addEventListener('click', async event => {
   if (!event.target.closest('#planReadinessButton')) return;
   const run = ++readinessRun;
   const dialog = $('planReadinessDlg'), status = $('planReadinessStatus'), list = $('planReadinessList');
@@ -1045,3 +1046,8 @@ $('list').addEventListener('click', e => { if (e.target.closest('[data-pick-peop
 
 $('list').addEventListener('click', e => { if (e.target.closest('[data-back-to-week]')) $('viewWeek').click(); });
 
+
+// U: Wartung — the checks (Plan-Check, Seriendaten, Datenstand, Folgennummern, Discord-Zustellung, Link-Meldungen,
+// Bearbeitungszugang) in one dialog instead of the plan or the Mehr menu; choosing one closes it
+$('maintenanceButton').onclick = () => $('maintenanceDlg').showModal();
+$('maintenanceDlg').addEventListener('click', e => { if (e.target.closest('.maintenance-list button')) $('maintenanceDlg').close(); });

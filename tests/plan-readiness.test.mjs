@@ -31,6 +31,6 @@ test('without edit access there is no Plan-Check (it is a tool for whoever maint
   const p = await openPage();
   t.after(() => p.close());
   await p.settle(300);
-  assert.equal(p.$('planReadinessButton'), null);
+  assert.equal(p.$('planReadinessButton').hidden, true);
   assert.ok(p.$('scheduleInboxButton'), 'Planänderungen stays for everyone');
 });

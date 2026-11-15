@@ -1731,3 +1731,23 @@ body:has(#notice:not([hidden])) #saveState { bottom: calc(86px + env(safe-area-i
   header #editSchedule { padding-inline: 7px; }
   header .top-actions > .brand-help { flex-basis: 26px; width: 26px; height: 26px; }
 }
+/* U: Wartung — the checks in one dialog, in the look of the Mehr menu */
+.maintenance-dlg { width: min(460px, calc(100vw - 32px)); }
+.maintenance-list { display: grid; gap: 2px; margin: 10px 0 4px; }
+.maintenance-list .misc-action { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 54px; padding: 8px 10px; border: 0; border-radius: var(--ui-radius); background: none; color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.maintenance-list .misc-action[hidden] { display: none; }
+.maintenance-list .misc-action:hover, .maintenance-list .misc-action:focus-visible { background: var(--today); }
+.maintenance-list .misc-action:disabled { opacity: .5; cursor: default; }
+.maintenance-list .misc-icon { width: 30px; height: 30px; }
+.maintenance-list .misc-text small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+/* U: the Mehr menu as a compact grid, two entries per row; what each one does is in its tooltip */
+.misc-menu.site-tools, .header-primary .misc-menu.site-tools { width: min(380px, calc(100vw - 24px)); }
+.misc-menu .misc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.misc-menu .misc-grid > :is(a, button), .header-primary .misc-menu .misc-grid > .misc-action { min-height: 42px; padding: 5px 8px; gap: 9px; color: var(--text); }
+.misc-menu .misc-grid .misc-icon { width: 28px; height: 28px; }
+.misc-menu .misc-grid .misc-text small:not(.delivery-alert) { display: none; }
+.misc-menu .misc-grid .misc-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.misc-menu .misc-grid > [hidden] { display: none; }
+@media (max-width: 560px) {
+  .misc-menu.site-tools, .header-primary .misc-menu.site-tools { position: fixed; top: 58px; left: 12px; right: 12px; width: auto; max-width: none; }
+}

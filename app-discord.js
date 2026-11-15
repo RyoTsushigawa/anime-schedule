@@ -331,6 +331,7 @@ $('deliveryList').innerHTML = d.rows.length ? d.rows.map(r => `<li class="${r.st
 <small>${esc(when(r.at))}</small>${r.retry ? `<span class="repair-actions"><button type="button" class="pill primary" data-delivery-retry="${r.id}">Erneut versuchen</button></span>` : ''}</li>`).join('')
 : '<li class="muted">Noch keine Zustellungen.</li>';
 $('deliveryAlert').textContent = d.attention ? '⚠' : '';
+$('maintenanceAlert').textContent = d.attention && !$('deliveryButton').hidden ? '⚠' : '';
 }
 async function refreshDeliveries(showErrors = true) {
 if (!movesKey) return;
