@@ -131,7 +131,12 @@ function score(v, titles, fromAniList, start, channelPref) {
   // from a preferred channel one distinctive word of the title is enough ("Hasunosora")
   const loose = preferred && titles.filter(Boolean).some(x => [...tokens(x)].filter(w => w.length >= 6 && !/^(school|season|anime)$/.test(w)).some(w => norm(t).includes(w)));  // norm drops spaces: "Hasu No Sora" = "hasunosora"
   if (!fromAniList && !loose && !matches(titles, t)) return -99;
-  if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(t) && !/trailer|pv/i.test(t)) return -50;
+  // the show's own name is no hint: "Love Live! Hasunosora …" is no live stream or concert (U: its trailer was
+  // thrown out for the "Live" in its name)
+  const own = titles.filter(Boolean).join(' '), plain = t
+    .replace(/love ?live[!！]?\s*(sunshine|superstar|nijigasaki|hasunosora)?/gi, ' ').replace(/ラブライブ[!！]?/g, ' ')
+    .replace(/\blive\b/gi, w => /\blive\b/i.test(own) ? ' ' : w);
+  if (/\b(op|ed|opening|ending|creditless|non-?credit|reaction|review|episode|ep\.? ?\d|clip|amv|music video|mv|cm|commercial|preview|予告|ncop|nced|live|stream|interview)\b/i.test(plain) && !/trailer|pv/i.test(t)) return -50;
   let s = 0;
   if (/main (trailer|pv)|official trailer|本pv|メインpv/i.test(t)) s += 5;
   else if (/trailer|\bpv\b|pv ?\d/i.test(t)) s += 3;
@@ -142,7 +147,7 @@ function score(v, titles, fromAniList, start, channelPref) {
   if (ENGLISH_OFFICIAL.test(ch.trim())) s += 6; else if (official(ch)) s += 3; else s -= 3;
   if (preferred) s += 8;
   // a film or concert of the franchise is not this show's trailer (unless the show itself is a film)
-  if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(t) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) return -50;
+  if (/\bmovie\b|\bfilm\b|劇場版|concert|ライブ|\blive\b(?! action)/i.test(plain) && !titles.some(x => /movie|film|劇場版/i.test(x || ''))) return -50;
   // subtitles in another language than German or English
   if (/vostfr|legendado|sub(titulado)? español|sub ita|\bfr\b|crunchyroll (fr|br|es|de dub)|latino/i.test(t + ' ' + v.snippet.channelTitle)) s -= 5;
   if (fromAniList) s += 2;
