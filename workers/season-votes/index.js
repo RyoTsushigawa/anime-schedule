@@ -1,3 +1,4 @@
+import {solverOwner,solveWordle} from './wordle-solver.mjs';
 // Cloudflare Worker for Season Preview voting.
 // No browser-supplied member mapping, sheet range or anime row is trusted.
 const OPTIONS = ['Ja','Nein','Vielleicht','Demons','Allein','Wenn Belly dabei ist','Okinawa 3','Default'];
@@ -560,6 +561,13 @@ export default {
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
   const path=new URL(request.url).pathname.replace(/\/$/,'');
   try{
+   if((path==='/wordle-solver/access'&&request.method==='GET')||(path==='/wordle-solver/solve'&&request.method==='POST')){
+    await solverOwner(request);
+    if(request.method==='GET')return json({ok:true},200,cors);
+    const raw=await request.text();if(raw.length>8192)fail(413,'Anfrage zu groß.');
+    let body;try{body=JSON.parse(raw);}catch{fail(400,'Ungültige Eingabe.');}
+    return json(await solveWordle(body,env),200,cors);
+   }
    if(request.method==='GET'&&path==='/health')return json({ok:true},200,cors);
    if(request.method==='GET'&&path==='/access'){
     await authorized(request,env);
@@ -644,5 +652,6 @@ export default {
   }catch(error){return json({error:error?.status?error.message:'Die Abstimmung konnte nicht verarbeitet werden.'},error?.status||500,cors);}
  }
 };
+
 
 

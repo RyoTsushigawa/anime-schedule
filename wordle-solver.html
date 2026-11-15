@@ -1,0 +1,15 @@
+<!doctype html><html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://anime-season-preview-votes.shigeruhagano.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Wordle-Solver · Ryo</title><link rel="icon" href="icon-72.png"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="wordle-solver.css"></head><body class="solver-page">
+<header><div class="bar"><a href="games.html" class="pill">← Zu den Spielen</a><span>Privates Werkzeug · Ryo</span></div></header>
+<main class="solver-main"><p class="solver-eyebrow">DEINE HINWEISE. WENIGER MÖGLICHKEITEN.</p><h1>Wordle-Solver</h1><p class="solver-intro">Trage deine Versuche ein und übernimm die Farben aus dem Rätsel. Der Solver zeigt Wörter, die zu allen Hinweisen passen.</p>
+<section id="solverAccess" class="solver-panel"><p id="solverAuthStatus" role="status">Dein Zugang wird geprüft …</p><a href="./" class="pill">Zum Bearbeitungszugang</a> <button id="solverRetry" type="button" class="pill">Erneut prüfen</button></section>
+<section id="solverApp" hidden>
+<div class="solver-settings"><label>Wortlänge<select id="solverLength"><option>5</option><option>6</option><option>7</option><option>8</option></select></label><label>Wortliste<select id="solverSource"><option value="anime">Anime-Titel der Seite</option><option value="english">Englisches Wörterbuch</option></select></label><button id="solverReset" type="button" class="pill">Leeren</button></div>
+<p class="solver-legend"><span>Grau: nicht enthalten</span><span>Gelb: andere Stelle</span><span>Grün: richtige Stelle</span></p><p class="solver-help">Buchstaben anklicken: Grau → Gelb → Grün. Doppelte Buchstaben werden einzeln berücksichtigt.</p>
+<div id="solverRows"></div><div class="solver-actions"><button id="solverAdd" type="button" class="pill">+ Versuch</button><button id="solverFind" type="button" class="pill primary">Mögliche Antworten finden</button></div>
+<p id="solverStatus" role="status" aria-live="polite"></p><section id="solverResults" aria-label="Mögliche Antworten"></section>
+<p class="solver-help">Die Anime-Liste umfasst die Titel-Wortlisten der Seite. Für andere englische Wordles kannst du zum Wörterbuch wechseln. Keine Liste ist vollständig; es wird keine Tageslösung nachgeschlagen. Deine Eingaben werden nicht gespeichert.</p>
+</section></main><script type="module" src="wordle-solver.mjs"></script></body></html>
