@@ -21,8 +21,16 @@ test('Plan-Check lists an aired show without a watch day', async t => {
     'Anime Titel,Eng Anime Titel,Wo,Tag,Uhrzeit,MaRyo,Belly',
     'Show Alpha,Alpha EN,C,,,Ja,Ja'
   ].join('\n');
-  const p = await openPage({ sheets: { csv: { 111: csv, 222: csv } } });
+  const p = await openPage({ storage: { movesKey: 'fixture-only' }, sheets: { csv: { 111: csv, 222: csv } } });
   t.after(() => p.close());
   await p.click(p.$('planReadinessButton'), 650);
   assert.match(p.$('planReadinessList').textContent, /Alpha EN.*Kein Guck-Tag eingetragen/);
+});
+
+test('without edit access there is no Plan-Check (it is a tool for whoever maintains the plan)', async t => {
+  const p = await openPage();
+  t.after(() => p.close());
+  await p.settle(300);
+  assert.equal(p.$('planReadinessButton'), null);
+  assert.ok(p.$('scheduleInboxButton'), 'Planänderungen stays for everyone');
 });
