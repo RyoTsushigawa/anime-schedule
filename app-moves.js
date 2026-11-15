@@ -245,6 +245,26 @@ const key = norm(show.romaji || show.english);
 return moves.find(m => m.show === key && m.week === isoDay(monday)) || moves.find(m => m.show === key && !m.week);
 }
 let movesQueue = Promise.resolve(), movesPending = 0;
+// Apply only this editor's changes to the newest saved calendar. A stale tab must
+// never replace another person's entries (including additions on the same day).
+function mergeAwayState(remote, next) {
+const base = next.base;
+if (!base) throw new Error('Abwesenheiten bitte neu öffnen und erneut speichern.');
+const stable = x => JSON.stringify(x, Object.keys(x || {}).sort());
+const dayMap = rows => new Map((rows || []).flatMap(({ people, ...row }) => (people || []).map(person => [JSON.stringify([row.day, person]), { ...row, people: [person] }])));
+const merge = (old, wanted, current) => {
+  for (const key of new Set([...old.keys(), ...wanted.keys()])) {
+    const a = old.get(key), b = wanted.get(key), c = current.get(key);
+    if (stable(a) === stable(b)) continue;
+    if (stable(c) !== stable(a) && stable(c) !== stable(b)) throw new Error('Dieser Eintrag wurde inzwischen geändert. Bitte den Kalender neu öffnen.');
+    if (b) current.set(key, b); else current.delete(key);
+  }
+  return [...current.values()];
+};
+const ruleMap = rows => new Map((rows || []).map(r => [r.id, r]));
+return { days: merge(dayMap(base.days), dayMap(next.days), dayMap(remote.absent)).sort((a,b) => a.day.localeCompare(b.day)),
+  rules: merge(ruleMap(base.rules), ruleMap(next.rules), ruleMap(remote.absentRules)) };
+}
 function saveMoves(next, changeDelays = null, reasons = null, absentNext = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const before = { moves, absentDays, absentRules };
@@ -268,17 +288,21 @@ const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.
 for (let attempt = 0; attempt < 4; attempt++) {
 if (attempt) await new Promise(r => setTimeout(r, 800 * attempt));
 const current = await fetch(MOVES_API + '?ref=main&_=' + Date.now(), { headers, cache: 'no-store' });
+if (absentNext && !current.ok) throw new Error('Der aktuelle Kalender konnte nicht geladen werden. Bitte erneut versuchen.');
 let meta = current.ok ? await current.json() : null;
 let remote = {};
-try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); } catch {}
+try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\s/g, ''))))); }
+catch (e) { if (absentNext) throw new Error('Der gespeicherte Kalender konnte nicht gelesen werden. Es wurde nichts überschrieben.'); }
+if (absentNext && !meta?.sha) throw new Error('Der aktuelle Kalender fehlt. Es wurde nichts überschrieben.');
 if (meta?.sha && movesWritten && meta.sha === movesWritten.replaced) { remote = movesWritten.file; meta = { sha: movesWritten.sha }; }
 let nextDelays = remote.delays || [];
 if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
 const remoteReasons = goodReasons(remote.reasons);
-const nextAbsent = (absentNext?.days || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
+const mergedAway = absentNext ? mergeAwayState(remote, absentNext) : null;
+const nextAbsent = (mergedAway?.days || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
 // rules that ended more than two days ago go, like single days
-const nextRules = goodRules(absentNext ? absentNext.rules : remote.absentRules).filter(r => !r.end || Date.parse(r.end) > Date.now() - 2 * 86400000);
+const nextRules = goodRules(mergedAway ? mergedAway.rules : remote.absentRules).filter(r => !r.end || Date.parse(r.end) > Date.now() - 2 * 86400000);
 const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), ...(nextRules.length && { absentRules: nextRules }), ...(Array.isArray(remote.editors) && remote.editors.length && { editors: remote.editors }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
@@ -801,3 +825,4 @@ $('planRemove').onclick = () => {
 const { m, old } = planning;
 storeMoves(moves.filter(x => x !== old), `${m.title.english || m.title.romaji}: Nachholen entfernt.`, 'planDlg', 'planMsg');
 };
+

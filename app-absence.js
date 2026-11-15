@@ -402,7 +402,7 @@ $('awayTime').hidden = awayCal.mode === 'day' || awayCal.mode === 'maybe';
 $('awayPeople').innerHTML = [...new Set([...allPeople(), ...awayCal.extra])].map(p => {
 const on = awayCal.mode === 'day' ? days.filter(d => absentOn(d).includes(p)).length : 0;
 const state = on === days.length && on ? 'true' : on ? 'mixed' : p === awayCal.me ? 'true' : 'false';
-return `<button type="button" class="pill" data-away="${esc(p)}" aria-pressed="${state}" style="${personStyle(p)}">${esc(p)}</button>`;
+return `<button type="button" class="pill" data-away="${esc(p)}" data-away-original="${on === days.length && on ? 'true' : 'false'}" aria-pressed="${state}" style="${personStyle(p)}">${esc(p)}</button>`;
 }).join('');
 }
 const pencil = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
@@ -474,6 +474,7 @@ $('repSummary').textContent = !awayRep.weekdays.length ? 'Wochentag wählen.'
 // Saves `next` ({ days, rules }); `days` are the single days that changed. The save service takes 92 days at a
 // time; rules go along with the first part (only when they changed), and its answer must have them.
 async function saveAway(next, days) {
+next = { ...next, base: { days: absentDays, rules: absentRules.map(canonRule) } };
 if (movesKey) return saveMoves(moves, d => d, null, next);
 if (!delaysUrl) throw new Error('Speichern für alle ist noch nicht eingerichtet');
 const rulesChanged = JSON.stringify(next.rules) !== JSON.stringify(absentRules.map(canonRule));
@@ -548,7 +549,7 @@ try {
 await saveAway(next, days);
 } catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return false; }
 finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
-absentDays = next.days; absentRules = next.rules;
+// saveMoves/postDelay already installed the authoritative, merged response.
 if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else if (awayCal.tab === 'week') drawAwayWeek(); else drawAway();
 $('awayMsg').textContent = `${done} Alle sehen es in etwa einer Minute.`;
 try { if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); } catch (e) { console.error(e); }
@@ -602,8 +603,8 @@ $('awaySave').onclick = () => {
 const days = selectedDays();
 if (!days.length) { $('awayMsg').textContent = 'Bitte einen Tag wählen.'; return; }
 const chips = [...$('awayPeople').querySelectorAll('[data-away]')];
-const on = chips.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.away);
-const off = chips.filter(b => b.getAttribute('aria-pressed') === 'false').map(b => b.dataset.away);
+const on = chips.filter(b => b.getAttribute('aria-pressed') === 'true' && (b.dataset.awayOriginal !== 'true' || b.dataset.awayEditing === 'true')).map(b => b.dataset.away);
+const off = chips.filter(b => b.getAttribute('aria-pressed') === 'false' && b.dataset.awayOriginal === 'true').map(b => b.dataset.away);
 const time = awayCal.mode === 'maybe' ? true : awayCal.mode === 'day' ? null : clockOf($('awayClock').value);
 if (awayCal.mode !== 'day' && !time) { $('awayMsg').textContent = 'Uhrzeit wie 21:00.'; return; }
 if (awayCal.mode !== 'day' && !on.length) { $('awayMsg').textContent = 'Wer? Mindestens eine Person auswählen.'; return; }
@@ -719,8 +720,12 @@ if (edit) {
   if (existing?.from || existing?.until) $('awayClock').value = existing.from || existing.until;
   $('awayReason').value = existing?.reason || '';
   drawAway();
-  for (const b of $('awayPeople').querySelectorAll('[data-away]'))
-    b.setAttribute('aria-pressed', String((run.people || [run.p]).includes(b.dataset.away)));
+  for (const b of $('awayPeople').querySelectorAll('[data-away]')) {
+    const selected = (run.people || [run.p]).includes(b.dataset.away);
+    b.setAttribute('aria-pressed', String(selected));
+    b.dataset.awayOriginal = String(selected);
+    b.dataset.awayEditing = String(selected);
+  }
   $('awayMsg').textContent = 'Eintrag ausgewählt. Ändern und speichern.';
   $('awayEditor').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   return;
@@ -733,3 +738,4 @@ if (run.weekly && !confirm(`Alle ${run.days.length} kommenden Termine (jeden ${A
 const before = { next: { days: absentDays, rules: absentRules.map(canonRule) }, days: run.days };
 storeAway({ days: withoutRun(absentDays, run, run.days), rules: absentRules.map(canonRule) }, run.days, `${who}: entfernt.`).then(ok => { if (ok) offerAwayUndo(before); });
 });
+
