@@ -308,3 +308,16 @@ test('Schwer keeps two hints and has no "Auflösen"', async () => {
     assert.equal($('gameSolveRow').hidden, true);
   } finally { page.close(); }
 });
+
+test('anime loanwords the English list lacks (TANUKIS, NINJA, SENSEI) count as guesses, but are never answers', async () => {
+  const extreme = [['STRIKER', 'Detective Conan: The Eleventh Striker'], ['DRAGONS', 'Dragons Rioting']];
+  const page = await openGame({ difficulty: 'extreme', mode: 'endless', endless: { words: [], popular: [], extreme } });
+  try {
+    assert.equal(page.run('puzzle.word.length'), 7);
+    assert.equal(page.run("allowed.has('TANUKIS')"), true);
+    assert.equal(page.run("allowed.has('SAMURAI')"), true);
+    page.run("typing='TANUKIS'; press('Enter')");
+    assert.equal(page.run('state.guesses.length'), 1, 'the guess counted');
+    assert.equal(page.run("extremePool.some(e=>e.word==='TANUKIS')"), false, 'not an answer');
+  } finally { page.close(); }
+});
