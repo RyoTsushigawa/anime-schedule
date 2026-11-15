@@ -1692,7 +1692,14 @@ body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; 
 .bulk-skip-options [data-bulk-count] { color: var(--muted); font-size: 12px; flex: 1 1 230px; }
 .bulk-skip-options [data-bulk-error]:empty { display: none; }
 .bulk-skip-options [data-bulk-error] { flex-basis: 100%; color: var(--late); }
-.weekline > [data-bulk-toggle] { order: 1; }
+/* the week's ⋯ menu (Plan-Check, Planänderungen, Folgen skippen): same look as a day's menu */
+.weekline > .week-more { order: 1; }
+.day h2 > :is(.day-absent-button, .day-watched) { display: inline-flex; align-items: center; gap: 5px; }
+.weekline .day-more-btn { display: inline-grid; place-items: center; min-height: 30px; padding: 3px 12px; font-size: 15px; line-height: 1; letter-spacing: 1px; }
+.week-menu { min-width: 200px; }
+.week-menu > button { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 13px; font-weight: 500; text-align: left; white-space: nowrap; }
+.week-menu > button:hover, .week-menu > button:focus-visible { background: var(--today); }
+.week-menu > button[hidden] { display: none; }
 .weekline > .bulk-skip-options { flex-basis: 100%; order: 10; }
 /* editing on a narrower window: "Diese Woche / Dauerhaft" needs the room, the logo alone names the page */
 @media (max-width: 1150px) {
