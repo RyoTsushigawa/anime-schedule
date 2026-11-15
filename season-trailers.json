@@ -371,6 +371,34 @@
     "peropero sparkles": {
      "sequelStatus": "not_sequel",
      "youtubeStatus": "not_found"
+    },
+    "tsugumi project": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "v79n9_MRLrk",
+     "title": "TVアニメ 『虎鶫　－ＴＳＵＧＵＭＩ　ＰＲＯＪＥＣＴ－』 Teaser PV",
+     "seconds": 29
+    },
+    "nabe ni dangan wo ukenagara": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "fmafMZNXeHw",
+     "title": "TVアニメ「鍋に弾丸を受けながら」ティザーPV",
+     "seconds": 45
+    },
+    "isekai douraku ni akitara": {
+     "sequelStatus": "not_sequel",
+     "youtubeStatus": "not_found"
+    },
+    "aoharu once more": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "O_Ox06aca1c",
+     "title": "PV | Aoharu Once More - official trailer",
+     "seconds": 42
     }
    }
   }
