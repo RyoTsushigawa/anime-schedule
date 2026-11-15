@@ -1544,7 +1544,8 @@ const lines = [
 ...unknown.map(({ show: s, why }) => `<div><b>${esc(s.english || s.romaji)}</b> · <span class="why">${esc(why || 'Keine Folge für diese Woche bestätigt; Ausstrahlung unklar')}</span></div>`),
 ];
 // The chip stays where it is (right of the day strip); what it lists opens underneath, across the full width.
-const readinessButton = '<button type="button" class="pill" id="planReadinessButton" aria-haspopup="dialog">Plan-Check</button>';
+// Plan-Check lists what to fix in the plan, with the move editor: only for those who can edit it
+const readinessButton = canMove() ? '<button type="button" class="pill" id="planReadinessButton" aria-haspopup="dialog">Plan-Check</button>' : '';
 const alerts = !lines.length ? '' : `<button type="button" id="airingWarnings" class="alerts-chip" aria-expanded="${alertsOpen}" aria-controls="airingBody"><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></button>`;
 const inboxButton = '<button type="button" class="pill schedule-inbox-button" id="scheduleInboxButton" aria-haspopup="dialog">Planänderungen</button>';
 const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts alerts-body"${alertsOpen ? '' : ' hidden'}>${lines.join('')}</div>`;

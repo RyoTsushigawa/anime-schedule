@@ -15,7 +15,7 @@ const warnings = p => p.$('airingWarnings')?.textContent || '';
 const gammaShown = p => /Gamma EN/.test(p.$('list').textContent);
 
 test('a show whose last episode aired last week is left out quietly, before AniList says FINISHED', async t => {
-  const p = await openPage({ streams: streams({ next: null, airings: [{ episode: 12, at: sec(2026, 9, 22, 20) }], airingStatus: { status: 'RELEASING', episodes: 12 } }) });
+  const p = await openPage({ storage: { movesKey: 'fixture-only' }, streams: streams({ next: null, airings: [{ episode: 12, at: sec(2026, 9, 22, 20) }], airingStatus: { status: 'RELEASING', episodes: 12 } }) });
   t.after(() => p.close());
   await p.settle(600);
   assert.equal(gammaShown(p), false, p.$('list').textContent);
