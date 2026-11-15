@@ -1444,8 +1444,8 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
 @media (max-width: 480px) {
   /* the header buttons need the room: only the logo, no title (the view and week show below anyway) */
   /* only the "?" stays, next to the logo, so help is always there */
-  /* the "?" now sits with the buttons: the title block is empty here and takes no gap */
-  header .logo + .brand { display: none; }
+  header .logo + .brand { flex: none; }
+  header .logo + .brand :is(h1, #tabName, #weekSub) { display: none; }
   header .logo ~ .top-actions { margin-left: auto; gap: 4px; }
   header .logo + .brand .brand-help { width: 26px; height: 26px; }
   header > .bar:first-child { column-gap: 6px; }
@@ -1701,16 +1701,9 @@ body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; 
 .week-menu > button:hover, .week-menu > button:focus-visible { background: var(--today); }
 .week-menu > button[hidden] { display: none; }
 .weekline > .bulk-skip-options { flex-basis: 100%; order: 10; }
-/* editing on a narrower window: "Diese Woche / Dauerhaft" needs the room, the logo alone names the page */
-@media (max-width: 1150px) {
-  header:has(#editScope:not([hidden])) .logo + .brand { display: none; }
-  header:has(#editScope:not([hidden])) :is(.header-nav-link, .header-primary .round.misc-trigger) { width: 34px; padding: 0; justify-content: center; }
-  header:has(#editScope:not([hidden])) :is(.header-nav-link span, .header-primary .misc-trigger > span) { display: none; }
-}
 /* the brand never runs into the buttons next to it: it shortens instead (U: edit mode on a narrower window) */
 header .brand { overflow: hidden; }
 header .brand-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-header:has(#editScope:not([hidden])) .title-long { display: none; }
 .bulk-skip-preview { flex-basis: 100%; margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
 .bulk-skip-preview:empty { display: none; }
 .row > .bulk-skip-pick { grid-column: 1 / -1; justify-self: end; flex: none; border-radius: 99px; padding: 5px 15px; }
@@ -1754,3 +1747,9 @@ body:has(#notice:not([hidden])) #saveState { bottom: calc(86px + env(safe-area-i
 /* U: the Season Preview's turn on the plan, two weeks before the next season */
 .weekline > .preview-call { order: 1; color: var(--accent); border-color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
 .weekline > .preview-call:hover { background: var(--today); text-decoration: none; }
+/* U (the owner's mockup): a calm top row. "?" next to the name; Spiele and Mehr as icons side by side, Abwesend
+   keeps its name; Bearbeiten moved to the controls below, next to the person */
+header .header-primary :is(.header-games, .misc-trigger) { width: 34px; padding: 0; justify-content: center; }
+header .header-primary :is(.header-games span, .misc-trigger > span) { display: none; }
+header .header-primary .header-games { margin-right: -2px; }
+.controls-left > .edit-schedule, .controls-left > .edit-scope { flex: none; }

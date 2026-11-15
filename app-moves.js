@@ -6,7 +6,8 @@ const end = new Date(start); end.setDate(end.getDate() + 6);
 const currentWeek = () => view === 'week' && start.getTime() === weekStart(weekOffset).getTime();
 const year = start.getFullYear() !== end.getFullYear() || start.getFullYear() !== new Date().getFullYear();
 const fmt = d => d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
-const dates = `${fmt(start)} – ${fmt(end)}`;
+// "9. – 15. Nov." within a month, "26. Okt. – 1. Nov." across two
+const dates = !year && start.getMonth() === end.getMonth() ? `${start.getDate()}. – ${fmt(end)}` : `${fmt(start)} – ${fmt(end)}`;
 const selectedDay = range === 'today' ? new Date() : range === 'day' && pickedDay ? new Date(pickedDay + 'T12:00:00') : null;
 $('week').textContent = selectedDay ? `${shortDayName(selectedDay)} ${fmt(selectedDay)}` : dates;
 $('weekSub').textContent = selectedDay ? `${$('week').textContent} · Einzelansicht` : dates;
