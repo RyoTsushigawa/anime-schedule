@@ -41,7 +41,10 @@ test('Every existing setting and help action remains available once, with existi
  const account=html.match(/<div id="accountMenu"[\s\S]*?<\/section>\n<section id="listSyncSection"/)?.[0]||'';
  for(const id of ['accountCheckButton','transferButton','healthButton','syncButton']) assert.match(account,new RegExp('id="'+id+'"'),id);
  const more=html.match(/<nav id="miscMenu"[\s\S]*?<\/nav>/)?.[0]||'';
- for(const id of ['settingsNicknames','deliveryButton','episodeCrosswalkButton','dataButton','repairButton','movesSetup']) assert.match(more,new RegExp('id="'+id+'"'),id);
+ for(const id of ['settingsNicknames','maintenanceButton']) assert.match(more,new RegExp('id="'+id+'"'),id);
+ // the checks are together in "Wartung"
+ const maintenance=html.match(/<dialog id="maintenanceDlg"[\s\S]*?<\/dialog>/)?.[0]||'';
+ for(const id of ['planReadinessButton','seriesDataButton','dataButton','episodeCrosswalkButton','deliveryButton','repairButton','movesSetup']) assert.match(maintenance,new RegExp('id="'+id+'"'),id);
  for(const id of ['accountCheckButton','settingsNicknames','movesSetup','deliveryAlert']){
   const count=[...html.matchAll(new RegExp('id="'+id+'"','g'))].length;
   assert.equal(count,1,id+' must still exist exactly once');
