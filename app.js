@@ -745,6 +745,13 @@ function nextSeasonName(date = new Date()) {
 const q = Math.floor(date.getMonth() / 3) + 1;
 return `${SOON_SEASONS[q % 4]} ${date.getFullYear() + (q === 4 ? 1 : 0)}`;
 }
+// the next season starts on the 1st of January, April, July or October; from 14 days before, voting is due
+function previewCall(now = new Date()) {
+const start = new Date(now.getFullYear(), (Math.floor(now.getMonth() / 3) + 1) * 3, 1);
+const days = Math.ceil((start - now) / 864e5);
+if (days < 1 || days > 14) return '';
+return `<a class="pill preview-call" href="season-preview.html" title="Trailer ansehen und abstimmen, welche Serien wir schauen">Season Preview ${esc(nextSeasonName(now))} · ${days === 1 ? 'morgen' : `noch ${days} Tage`}</a>`;
+}
 async function loadStartingSoon() {
 const name = nextSeasonName();
 const html = await (await fetch(SHEET + '/htmlview', { cache: 'no-cache' })).text();
@@ -1553,7 +1560,10 @@ const inboxButton = '<button type="button" class="pill schedule-inbox-button" id
 // U: only the everyday things stay visible; tools for now and then are behind ⋯ (Folgen skippen joins them there)
 const weekMenu = `<span class="day-more week-more"><button type="button" class="pill day-more-btn" data-day-more aria-haspopup="true" aria-expanded="false" aria-label="Mehr zu dieser Woche" title="Mehr zu dieser Woche">⋯</button><span class="day-menu week-menu" hidden>${inboxButton}</span></span>`;
 const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts alerts-body"${alertsOpen ? '' : ' hidden'}>${lines.join('')}</div>`;
-html = `${staleNotice}<div class="weekline">${strip}${alerts}${weekMenu}${alertsBody}</div>` + html;
+// U: in the last two weeks before a season starts, the Season Preview is on the plan itself (and not in Mehr)
+const preview = previewCall();
+$('miscMenu').querySelector('a[href="season-preview.html"]')?.toggleAttribute('hidden', !!preview);
+html = `${staleNotice}<div class="weekline">${strip}${alerts}${preview}${weekMenu}${alertsBody}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');

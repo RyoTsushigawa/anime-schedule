@@ -11,7 +11,7 @@ async function authenticate(){
  $('solverRetry').disabled=true;
  try{if(!key()){lock('Nur für Ryo. Richte deinen Bearbeitungszugang auf der Hauptseite ein und prüfe dann erneut.');return;}
   $('solverAuthStatus').textContent='Dein Zugang wird geprüft …';
-  const config=await fetch('config.json',{cache:'no-cache'}).then(r=>r.json());api=String(config.previewVotesUrl||'').replace(/\/$/,'');
+  const config=await fetch('config.json',{cache:'no-cache'}).then(r=>r.json());api=String(config.previewVotesUrl||'https://anime-season-preview-votes.shigeruhagano.workers.dev').replace(/\/$/,'');
   if(new URL(api).origin!=='https://anime-season-preview-votes.shigeruhagano.workers.dev')throw Error('Der private Zugang ist nicht eingerichtet.');
   await request('/wordle-solver/access');$('solverAccess').hidden=true;$('solverApp').hidden=false;if(!rows.length)addRow();
  }catch(e){lock(e.name==='TimeoutError'?'Die Zugangsprüfung dauert zu lange. Bitte erneut versuchen.':e.message);}finally{$('solverRetry').disabled=false;}
