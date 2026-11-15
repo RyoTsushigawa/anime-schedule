@@ -1756,11 +1756,11 @@ header .header-primary .header-games { margin-right: -2px; }
 /* the person in the account menu: always there (also in Gruppe and Catch-up), full width */
 #personSlot #soloPerson { display: block !important; width: 100%; max-width: none; }
 #accountMenu .person-home { padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
-/* U: Anzeigen as compact chips instead of a long list of switches: on = filled */
-#settingsMenu .settings-options { display: flex; flex-direction: row; flex-wrap: wrap; gap: 5px; padding: 2px 0 4px; }
-#settingsMenu .settings-options .toggle { flex: 0 0 auto; width: auto; min-height: 0; padding: 5px 11px; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; justify-content: center; cursor: pointer; }
+/* U: Anzeigen as pairs of equal chips (two per row, related ones side by side): on = filled */
+#settingsMenu .settings-options { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 2px 0 4px; }
+#settingsMenu .settings-options .toggle { min-width: 0; min-height: 0; padding: 5px 4px; border: 1px solid var(--line); border-radius: 99px; font-size: 11.5px; justify-content: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 #settingsMenu .settings-options .toggle::after { content: none; }
 #settingsMenu .settings-options .toggle:has(input:checked) { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 #settingsMenu .settings-options .toggle:has(input:checked):hover { background: var(--accent); }
-#settingsMenu .settings-options .pill { margin: 0; }
+#settingsMenu .settings-options .pill { grid-column: 1 / -1; justify-self: start; margin: 0; }
 @media (pointer: coarse) { #settingsMenu .settings-options .toggle { min-height: 36px; } }
