@@ -221,3 +221,14 @@ test('N38: the Woche tab shows everyone for the week: away, partly, spontan da a
     assert.deepEqual(cells('MaRyo'), ['✓', '✓', '✓', '✓', '✓', '✓', '✓']);
   } finally { p.close(); }
 });
+
+test('a new absence starts with nobody chosen, also in Solo view', async () => {
+  const p = await openPage({ storage: { movesKey: 'fixture-only', mode: 'solo', soloPerson: 'MaRyo' }, movesFile: { moves: [] } });
+  try {
+    p.window.Element.prototype.scrollIntoView = () => {};
+    await p.click(p.$('awayButton'));
+    await p.click(p.$('awayGrid').querySelector('[data-away-day="2026-10-31"]'));
+    assert.equal(p.$('awayPeople').querySelectorAll('[aria-pressed="true"]').length, 0);
+    assert.equal(p.$('repPeople').querySelectorAll('[aria-pressed="true"]').length, 0);
+  } finally { p.close(); }
+});

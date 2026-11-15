@@ -356,8 +356,8 @@ const pick = date && date >= today ? date : null;
 awayCal.month = (pick || today).slice(0, 7);
 awayCal.start = pick; awayCal.end = null; awayCal.mode = 'day'; awayCal.allOnce = false; awayCal.extra = [];
 $('awayReason').value = '';
-// in Solo view the dialog starts with that person chosen, until someone picks by hand
-awayCal.me = mode === 'solo' && soloPerson ? soloPerson : null;
+// U: nobody is chosen at the start: who is away is picked by hand every time
+awayCal.me = null;
 resetRepeat();
 drawAwayWho();
 showAwayTab('calendar');
@@ -439,7 +439,7 @@ const end = g.end ? `bis ${shortDate(g.end)}` : 'bis auf Weiteres';
 return [repeatLabel(g.weekdays), g.cond, span, end].filter(Boolean).join(' · ');
 }
 function resetRepeat() {
-Object.assign(awayRep, { people: mode === 'solo' && soloPerson ? [soloPerson] : [], weekdays: [], mode: 'day', edit: null });
+Object.assign(awayRep, { people: [], weekdays: [], mode: 'day', edit: null });
 $('repFrom').value = isoDay(new Date());
 $('repUntil').value = '';
 $('repOpen').checked = true;
