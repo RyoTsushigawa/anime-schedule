@@ -43,7 +43,7 @@ test('seasonal ballots isolate voters and seasons, persist choices, and share th
   `);
   const tick = () => new Promise(resolve => setImmediate(resolve));
   await tick();
-  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] .awards-place input`)[i];
+  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] .awards-place :is(input, select)`)[i];
   const change = (field, value) => {
     field.value = value;
     field.dispatchEvent(new window.Event('change'));
@@ -53,9 +53,8 @@ test('seasonal ballots isolate voters and seasons, persist choices, and share th
   assert.equal(byId('awardsBallot').querySelectorAll('[data-category="best"] .awards-points').length, 3);
   assert.deepEqual([...byId('awardsList-show').options].map(o => o.value), ['Beta EN', 'The Alpha']);
   change(place('best'), 'The Alpha');
-  // not in the list, or already on another place: not taken
-  change(place('best', 1), 'Nope');
-  assert.ok(place('best', 1).classList.contains('bad'));
+  // a dropdown of the eligible shows only; a show already on another place is not taken
+  assert.deepEqual([...place('best', 1).options].map(o => o.value), ['', 'Beta EN', 'The Alpha']);
   change(place('best', 1), 'The Alpha');
   assert.ok(place('best', 1).classList.contains('bad'));
   change(place('best', 1), 'Beta EN');
@@ -131,7 +130,7 @@ test('shared voting: who voted shows before Auflösen; then the Eurovision show 
   `);
   const tick = async () => { for (let i = 0; i < 8; i++) await new Promise(r => setImmediate(r)); };
   await tick();
-  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] .awards-place input`)[i];
+  const place = (category, i = 0) => byId('awardsBallot').querySelectorAll(`[data-category="${category}"] .awards-place :is(input, select)`)[i];
   const vote = async (person, picks) => {
     byId('awardsPerson').value = person; byId('awardsPerson').dispatchEvent(new window.Event('change'));
     picks.forEach((value, i) => { place('best', i).value = value; place('best', i).dispatchEvent(new window.Event('change')); });
@@ -247,7 +246,7 @@ test('only for yourself: your AniList login picks and confirms you; without AniL
   await tick();
   assert.equal(byId('awardsPerson').value, 'Ryo', 'your own name first');
   assert.match(byId('awardsIdentity').textContent, /Ryo, bestätigt über AniList \(RyoTsushigawa\)/);
-  const best = byId('awardsBallot').querySelector('[data-category="best"] .awards-place input');
+  const best = byId('awardsBallot').querySelector('[data-category="best"] .awards-place :is(input, select)');
   best.value = 'The Alpha'; best.dispatchEvent(new window.Event('change'));
   byId('awardsSubmit').click(); await tick();
   assert.deepEqual(sent.map(s => [s.person, s.headers['X-AniList-Token']]), [['Ryo', 'ryo-token']]);
@@ -259,7 +258,7 @@ test('only for yourself: your AniList login picks and confirms you; without AniL
   byId('awardsPerson').value = 'Rei'; byId('awardsPerson').dispatchEvent(new window.Event('change')); await tick();
   const pin = byId('awardsIdentity').querySelector('input[type="password"]');
   assert.ok(pin);
-  const b2 = byId('awardsBallot').querySelector('[data-category="best"] .awards-place input');
+  const b2 = byId('awardsBallot').querySelector('[data-category="best"] .awards-place :is(input, select)');
   b2.value = 'The Alpha'; b2.dispatchEvent(new window.Event('change'));
   assert.equal(byId('awardsSubmit').disabled, true, 'not before the PIN');
   pin.value = 'rei-pin'; byId('awardsIdentity').querySelector('button').click(); await tick();
@@ -342,15 +341,15 @@ test('U59 Auslassen and U54 deadline: skipped categories are sent apart; a close
   await tick();
   assert.match(byId('awardsGroup').textContent, /Abstimmen bis Do\., 31\. Dez\./);
   const cat = id => byId('awardsBallot').querySelector(`[data-category="${id}"]`);
-  const best = cat('best').querySelector('.awards-place input');
+  const best = cat('best').querySelector('.awards-place :is(input, select)');
   best.value = 'The Alpha'; best.dispatchEvent(new window.Event('change'));
   // skipping keeps typed picks but they don't count
   const villain = cat('villain'), skip = villain.querySelector('.awards-skip input');
-  villain.querySelector('.awards-place input').value = 'The Alpha';
-  villain.querySelector('.awards-place input').dispatchEvent(new window.Event('change'));
+  villain.querySelector('.awards-place :is(input, select)').value = 'The Alpha';
+  villain.querySelector('.awards-place :is(input, select)').dispatchEvent(new window.Event('change'));
   skip.checked = true; skip.dispatchEvent(new window.Event('change'));
   assert.ok(villain.classList.contains('skipped'));
-  assert.equal(villain.querySelector('.awards-place input').disabled, true);
+  assert.equal(villain.querySelector('.awards-place :is(input, select)').disabled, true);
   assert.match(byId('awardsProgress').textContent, /1 von \d+ Kategorien ausgefüllt · 1 ausgelassen · \d+ offen/);
   byId('awardsSubmit').click(); await tick();
   assert.deepEqual(sent.picks, { best: ['The Alpha'] });
