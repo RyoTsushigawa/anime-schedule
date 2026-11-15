@@ -222,7 +222,7 @@ function sync() {
   const available = new Set();
   for (const row of $('list').querySelectorAll('.row')) {
     const move = row.querySelector('.move[data-move-title]');
-    const eligible = active && move && !move.dataset.skip && row.closest('.day')?.dataset.date >= isoDay(new Date());
+    const eligible = active && move && !move.dataset.skip && !row.closest('[hidden], .hidden-by-search') && row.closest('.day')?.dataset.date >= isoDay(new Date());
     let pick = row.querySelector('.bulk-skip-pick');
     if (!eligible) { if (pick) pick.remove(); row.classList.remove('bulk-skip-selected'); continue; }
     const key = norm(move.dataset.moveTitle);
@@ -252,6 +252,7 @@ function sync() {
 toggle.onclick = () => { active = true; selectedWeek = isoDay(weekStart(weekOffset)); error.textContent = ''; sync(); };
 bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { active = false; selected.clear(); sync(); } };
 save.onclick = async () => {
+  sync();
   if (busy || !active || !selected.size || !canMove() || view !== 'week' || selectedWeek !== isoDay(weekStart(weekOffset))) return;
   const week = selectedWeek, shows = [...selected.values()], keys = new Set(selected.keys());
   const keep = bar.querySelector('[data-bulk-keep]').checked;
