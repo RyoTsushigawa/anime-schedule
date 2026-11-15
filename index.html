@@ -96,6 +96,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <label class="toggle" title="Der Droppen-Button neben jedem ✓ (wenn AniList verbunden ist)"><input type="checkbox" id="dropButtons">Drop-Button</label>
 <label class="toggle drop-always-toggle" title="Der Drop-Button ist immer zu sehen, nicht erst beim Drüberfahren mit der Maus"><input type="checkbox" id="dropAlways">Drop-Button immer sichtbar</label>
 <label class="toggle week-only" title="In deiner eigenen Ansicht (Solo) Folgen ausblenden, die du schon abgehakt hast"><input type="checkbox" id="hideWatched">Gesehene ausblenden</label>
+<label class="toggle" title="Die Personen-Auswahl (Solo) in der Leiste statt im Konto-Menü: praktisch, wenn du oft die Pläne anderer ansiehst"><input type="checkbox" id="personInBar">Person in der Leiste</label>
 <label class="toggle week-only" title="Tage ohne Folgen ausblenden. Heute und Tage mit Abwesenheiten bleiben sichtbar."><input type="checkbox" id="hideEmptyDays">Leere Tage ausblenden</label>
 <button type="button" id="clearSearches" class="pill" title="Die zuletzt gesuchten Begriffe in diesem Browser löschen" hidden>Letzte Suchen löschen</button>
 </div>
@@ -130,6 +131,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="settings">
 <button id="accountButton" class="round" aria-label="AniList" aria-haspopup="true" aria-expanded="false"></button>
 <div id="accountMenu" class="popover menu" hidden>
+<section class="person-home"><div class="menu-label">Person</div><div id="personSlot" title="Wessen Plan und Liste du siehst"></div></section>
 <section>
 <div class="menu-label">Listen-Konten</div>
 <div id="accountSection" class="pills"></div>

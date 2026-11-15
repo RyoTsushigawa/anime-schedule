@@ -331,7 +331,7 @@ if (id === 'moveButtons') syncMoveEditor();
 }
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
 const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'textsize', 'contrast', 'servicePriority', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
-  'who', 'behind', 'hideWatched', 'hideEmptyDays', 'markOnOpen', 'dropButtons', 'dropAlways', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
+  'who', 'behind', 'hideWatched', 'hideEmptyDays', 'personInBar', 'markOnOpen', 'dropButtons', 'dropAlways', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
   'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
 {
   const select = $('servicePriority');
@@ -385,6 +385,19 @@ $('editSchedule').onclick = () => {
 $('moveButtons').checked = !$('moveButtons').checked;
 $('moveButtons').dispatchEvent(new Event('change'));
 };
+// U: the person (Solo) is usually picked once, so it lives at the top of the account menu; "Person in der Leiste"
+// puts it back into the controls for those who switch often
+{
+  const select = $('soloPerson'), picker = $('groupButton').closest('.picker');
+  const place = () => {
+    const inBar = $('personInBar').checked;
+    if (inBar) picker.before(select); else $('personSlot').append(select);
+    document.body.classList.toggle('person-in-bar', inBar);
+  };
+  try { $('personInBar').checked = localStorage.getItem('personInBar') === '1'; } catch {}
+  $('personInBar').onchange = () => { try { localStorage.setItem('personInBar', $('personInBar').checked ? '1' : '0'); } catch {} place(); };
+  place();
+}
 // U43 Gesehene ausblenden (own Solo view) and U53 Leere Tage ausblenden: body classes, the CSS hides the rows / days
 for (const [id, cls] of [['hideWatched', 'hide-watched'], ['hideEmptyDays', 'hide-empty-days'], ['dropAlways', 'drop-always']]) {
   try { $(id).checked = localStorage.getItem(id) === '1'; } catch {}

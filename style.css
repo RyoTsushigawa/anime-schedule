@@ -1753,3 +1753,6 @@ header .header-primary :is(.header-games, .misc-trigger) { width: 34px; padding:
 header .header-primary :is(.header-games span, .misc-trigger > span) { display: none; }
 header .header-primary .header-games { margin-right: -2px; }
 .controls-left > .edit-schedule, .controls-left > .edit-scope { flex: none; }
+/* the person in the account menu: always there (also in Gruppe and Catch-up), full width */
+#personSlot #soloPerson { display: block !important; width: 100%; max-width: none; }
+#accountMenu .person-home { padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
