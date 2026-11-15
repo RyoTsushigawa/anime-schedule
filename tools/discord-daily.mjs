@@ -19,7 +19,7 @@
 // waits for 09:00. GitHub's own timer was too unreliable (hours late, or not at all).
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { boerseLine, previewLine } from './discord-extras.mjs';
+import { previewLine } from './discord-extras.mjs';
 import { seasonStart } from '../boerse-core.mjs';
 
 const SITE = process.env.SITE_URL || 'https://ryotsushigawa.github.io/anime-schedule/';
@@ -157,9 +157,8 @@ try {
   });
   if (!today) throw new Error('Today is missing from the rendered week.');
   let message = today.message;
-  // extra lines: yesterday at the Börse; before a new season, who still has open Season Preview votes
+  // Before a new season: who still has open Season Preview votes. The Börse stays on the site.
   const extras = [];
-  try { extras.push(boerseLine(JSON.parse(readFileSync('boerse-prices.json', 'utf8')))); } catch (e) { console.log('Börse line skipped: ' + e.message); }
   try {
     const tabs = await page.evaluate(async () => [...(await (await fetch(SHEET + '/htmlview')).text()).matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].map(([, name, gid]) => ({ name: name.trim(), gid })));
     for (const tab of tabs.filter(t => /^(Winter|Frühling|Sommer|Herbst) \d{4}$/.test(t.name))) {
@@ -207,3 +206,4 @@ try {
 } finally {
   await browser.close();
 }
+
