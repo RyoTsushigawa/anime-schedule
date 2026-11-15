@@ -101,7 +101,11 @@ return `--person:${c};--person-text:${text}`;
 }
 const SHEET_ID = SHEET.split('/d/')[1];
 let configPromise = null;
-const config = () => configPromise ??= fetch('config.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+// The votes helper's address is fixed: a config.json without it (an older copy uploaded from the PC on 15 Nov)
+// must not switch off the Season Preview, Awards, Börse, Advent and the Wordle-Solver
+const VOTES_URL = 'https://anime-season-preview-votes.shigeruhagano.workers.dev';
+const config = () => configPromise ??= fetch('config.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  .then(c => ({ ...c, previewVotesUrl: c.previewVotesUrl || VOTES_URL }));
 async function hiddenRows(tab) {
 const { sheetsKey } = await config();
 if (!sheetsKey) throw new Error('kein Sheets-API-Schlüssel');

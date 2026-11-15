@@ -1751,3 +1751,6 @@ body:has(#notice:not([hidden])) #saveState { bottom: calc(86px + env(safe-area-i
 @media (max-width: 560px) {
   .misc-menu.site-tools, .header-primary .misc-menu.site-tools { position: fixed; top: 58px; left: 12px; right: 12px; width: auto; max-width: none; }
 }
+/* U: the Season Preview's turn on the plan, two weeks before the next season */
+.weekline > .preview-call { order: 1; color: var(--accent); border-color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.weekline > .preview-call:hover { background: var(--today); text-decoration: none; }
