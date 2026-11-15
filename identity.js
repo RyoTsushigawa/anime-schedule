@@ -42,11 +42,15 @@ const Identity = (() => {
     const input = Object.assign(document.createElement('input'), { type: 'password', className: 'pill', placeholder: 'PIN', autocomplete: 'off', maxLength: 32 });
     input.setAttribute('aria-label', 'PIN für ' + person);
     const save = Object.assign(document.createElement('button'), { type: 'button', className: 'pill', textContent: has ? 'PIN ändern' : 'PIN merken' });
+    // a saved PIN shows only "PIN ändern"; the field comes when it is wanted
+    input.hidden = !!has;
     save.onclick = () => {
+      if (input.hidden) { input.hidden = false; save.textContent = 'PIN merken'; input.focus(); return; }
       if (!/^\S{4,32}$/.test(input.value)) { hint.textContent = 'Mindestens 4 Zeichen, ohne Leerzeichen.'; return; }
       try { sessionStorage.setItem(pinKey(person), input.value); } catch {}
       input.value = ''; draw(box, person, onChange); onChange?.();
     };
+    input.onkeydown = e => { if (e.key === 'Enter') save.click(); };
     const hint = line(has ? `✓ PIN für ${person} ist für diese Sitzung gemerkt.` : `${person} hat kein AniList: mit einer PIN bestätigen. Beim ersten Mal legst du sie fest; vergessen? Ryo kann sie zurücksetzen.`);
     box.append(hint, input, save);
     // the owner (the browser with the site's GitHub key) resets a forgotten PIN
