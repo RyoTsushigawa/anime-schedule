@@ -96,13 +96,19 @@ $('fullWeek').title = range === 'week' ? 'Ganze Woche wird angezeigt · Klick: w
 $('fullWeek').setAttribute('aria-label', $('fullWeek').title);
 }
 setRange('rest');
-let resumeY = null;
+let resumeY = null, resumeShow = '';
 try {
 const place = JSON.parse(sessionStorage.getItem('resumePlace'));
 sessionStorage.removeItem('resumePlace');
-if (place) { weekOffset = place.weekOffset; setRange(place.range); pickedDay = place.pickedDay; resumeY = place.y; }
+// U: back from a streaming service after the browser dropped the page: the same week, day and spot again
+const stream = !place && JSON.parse(sessionStorage.getItem('streamReturn'));
+sessionStorage.removeItem('streamReturn');
+const back = place || (stream && Date.now() - stream.time < 4 * 3600000 && stream.view === 'week' && stream);
+if (back) { weekOffset = back.weekOffset; setRange(back.range); pickedDay = back.pickedDay; resumeY = back.y; }
+// the show that was opened: highlighted and in view, like a shared link (sharedShowKey)
+if (back === stream && stream?.key) { resumeShow = stream.key; resumeY = null; }
 } catch {}
-let sharedShowKey = '';
+let sharedShowKey = resumeShow;
 let sharedShowShown = false;
 {
 const params = new URLSearchParams(location.search);
@@ -158,6 +164,10 @@ try { localStorage.removeItem('todayFirst'); } catch {}
 try { localStorage.removeItem('others'); } catch {}
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
+// The moves as last seen on the server (loaded, or written by this browser): what a save compares with, so it
+// writes only this browser's own changes and keeps everyone else's (mergeMoves)
+let movesBase = [], movesWriteSeq = 0;
+const movesWrites = [];
 let delays = [];
 // absentDays: [{ day, people }] for the whole day, or with from ("ab 21:00") / until ("bis 20:00"),
 // or maybe: true ("spontan da": not planned with, but might turn up).
@@ -232,6 +242,7 @@ setNote('moves', `${unreachable('Die Seite')}: verschobene Serien konnten nicht 
 try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
+movesBase = moves;
 delays = newest?.delays || [];
 movesUpdated = newest?.updated || '';
 absentDays = Array.isArray(newest?.absent) ? newest.absent : [];
@@ -265,7 +276,91 @@ const ruleMap = rows => new Map((rows || []).map(r => [r.id, r]));
 return { days: merge(dayMap(base.days), dayMap(next.days), dayMap(remote.absent)).sort((a,b) => a.day.localeCompare(b.day)),
   rules: merge(ruleMap(base.rules), ruleMap(next.rules), ruleMap(remote.absentRules)) };
 }
-function saveMoves(next, changeDelays = null, reasons = null, absentNext = null) {
+// U: a small "Speichert… / Gespeichert" at the bottom edge for every change to the plan; a failed change stays
+// there with "Erneut versuchen" (a conflict: keep theirs, or save your own version over it)
+const saveState = (() => {
+  let box = null, timer = 0, retry = null;
+  const el = () => {
+    if (box) return box;
+    box = Object.assign(document.createElement('div'), { id: 'saveState', hidden: true });
+    box.setAttribute('role', 'status');
+    document.body.append(box);
+    return box;
+  };
+  const show = (text, cls, buttons = []) => {
+    const b = el();
+    clearTimeout(timer);
+    b.className = cls; b.hidden = false;
+    b.replaceChildren(Object.assign(document.createElement('span'), { textContent: text }), ...buttons.map(([label, act, primary]) => {
+      const x = Object.assign(document.createElement('button'), { type: 'button', className: 'pill' + (primary ? ' primary' : ''), textContent: label });
+      x.onclick = act; return x;
+    }));
+  };
+  const hide = () => { if (box) box.hidden = true; retry = null; };
+  const again = force => { const run = retry; retry = null; if (!run) return; run(force).then(() => { notice('Gespeichert. Alle sehen es in etwa einer Minute.'); load(true); }, () => {}); };
+  return {
+    pending() { if (!retry) show('Speichert…', 'busy'); },
+    done() { if (movesPending > 0 || retry) return; show('Gespeichert ✓', 'ok'); timer = setTimeout(hide, 2500); },
+    failed(error, run) {
+      retry = run;
+      if (error instanceof MovesConflict) show(error.message, 'failed conflict', [['Ihre behalten', hide], ['Meine Fassung speichern', () => again(true), true]]);
+      else show('Nicht gespeichert: ' + error.message, 'failed', [['Erneut versuchen', () => again(false), true], ['✕', hide]]);
+    },
+  };
+})();
+// One entry per show and week ("dauerhaft" = no week); keys are compared in a stable order
+const moveGroup = m => m.show + '|' + (m.week || '');
+const canonJson = x => Array.isArray(x) ? '[' + x.map(canonJson).join(',') + ']'
+  : x && typeof x === 'object' ? '{' + Object.keys(x).sort().map(k => JSON.stringify(k) + ':' + canonJson(x[k])).join(',') + '}' : JSON.stringify(x);
+function groupMoves(list) {
+  const groups = new Map();
+  for (const m of list || []) groups.set(moveGroup(m), [...groups.get(moveGroup(m)) || [], m]);
+  return groups;
+}
+const sameRows = (a, b) => canonJson((a || []).map(canonJson).sort()) === canonJson((b || []).map(canonJson).sort());
+// U: three-way merge. base = what this browser started from, local = what it wants, remote = what is saved now.
+// Only the entries this browser changed are written; an entry someone else changed in the meantime is a conflict
+// (unless both want the same), and stays theirs unless "force" (the person chose to keep their own version).
+function mergeMoves(base, local, remote, force = false) {
+  const B = base instanceof Map ? base : groupMoves(base), L = groupMoves(local), R = groupMoves(remote);
+  const out = new Map(R), conflicts = [];
+  for (const key of new Set([...B.keys(), ...L.keys()])) {
+    if (sameRows(B.get(key), L.get(key)) || sameRows(R.get(key), L.get(key))) continue;
+    if (!sameRows(R.get(key), B.get(key)) && !force) { conflicts.push({ key, mine: L.get(key) || [], theirs: R.get(key) || [], before: B.get(key) || [] }); continue; }
+    if (L.get(key)) out.set(key, L.get(key)); else out.delete(key);
+  }
+  return { moves: [...out.values()].flat(), conflicts };
+}
+// the base a save started from, plus what this browser itself wrote since (a queued second change builds on the first)
+function baseFor(start) {
+  const groups = groupMoves(start.base);
+  for (const w of movesWrites) if (w.seq > start.seq) for (const [key, rows] of w.changed) { if (rows) groups.set(key, rows); else groups.delete(key); }
+  return groups;
+}
+function noteWrite(base, written) {
+  const B = base instanceof Map ? base : groupMoves(base), W = groupMoves(written), changed = new Map();
+  for (const key of new Set([...B.keys(), ...W.keys()])) if (!sameRows(B.get(key), W.get(key))) changed.set(key, W.get(key) || null);
+  movesWrites.push({ seq: ++movesWriteSeq, changed });
+  if (movesWrites.length > 50) movesWrites.shift();
+  movesBase = written;
+}
+function describeMove(rows) {
+  const r = rows.find(x => !x.extra) || rows[0];
+  if (!r) return 'wieder in ihrem normalen Slot';
+  if (r.skip) return 'geskippt' + (r.keepTime ? ' (Zeiten beibehalten)' : '');
+  if (r.extra) return 'als Nachholen eingetragen';
+  return [r.tag && String(r.tag).slice(0, 2), r.time].filter(Boolean).join(' ') || 'verschoben';
+}
+class MovesConflict extends Error {
+  constructor(conflicts, remote) {
+    const week = w => !w ? 'dauerhaft' : w === isoDay(weekStart(0)) ? 'diese Woche' : 'Woche ab ' + new Date(w + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' });
+    const lines = conflicts.map(c => { const [, w] = c.key.split('|'); const title = (c.theirs[0] || c.mine[0] || c.before[0])?.title || c.key.split('|')[0];
+      return `„${title}“ (${week(w)}) hat inzwischen jemand anders geändert: jetzt ${describeMove(c.theirs)}, du wolltest ${describeMove(c.mine)}`; });
+    super(lines.join(' · ') + '. Nichts davon wurde überschrieben.');
+    this.conflicts = conflicts; this.remote = remote;
+  }
+}
+function saveMoves(next, changeDelays = null, reasons = null, absentNext = null, start = null) {
 next = next.filter(m => !m.week || Date.parse(m.week) > Date.now() - 14 * 86400000);
 const before = { moves, absentDays, absentRules };
 if (!changeDelays) {
@@ -273,17 +368,23 @@ moves = next;
 if (absentNext) { absentDays = absentNext.days; absentRules = absentNext.rules; }
 if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true);
 }
+const begun = start || { base: movesBase, seq: movesWriteSeq };
 movesPending++;
-const job = movesQueue.catch(() => {}).then(() => saveMovesNow(next, changeDelays, reasons, absentNext)).finally(() => movesPending--);
+saveState.pending();
+const job = movesQueue.catch(() => {}).then(() => saveMovesNow(next, changeDelays, reasons, absentNext, begun)).finally(() => movesPending--);
 movesQueue = job;
-return job.catch(e => {
-if (!changeDelays) { moves = before.moves; absentDays = before.absentDays; absentRules = before.absentRules; if (lastWeekRender && view === 'week') render(...lastWeekRender, false, true); }
+return job.then(() => { saveState.done(); }, e => {
+if (!changeDelays) { moves = before.moves; absentDays = before.absentDays; absentRules = before.absentRules; }
+// a conflict: show what is saved now, so the person sees the other change
+if (e instanceof MovesConflict && Array.isArray(e.remote?.moves)) { moves = e.remote.moves; movesBase = e.remote.moves; }
+if (lastWeekRender && view === 'week' && (!changeDelays || e instanceof MovesConflict)) render(...lastWeekRender, false, true);
+saveState.failed(e, force => saveMoves(next, changeDelays, reasons, absentNext, { ...begun, force }));
 throw e;
 });
 }
 let movesWritten = null;
-async function saveMovesNow(next, changeDelays, reasons, absentNext) {
-if (!movesKey) return saveMovesAsEditor(next, changeDelays || reasons || absentNext);
+async function saveMovesNow(next, changeDelays, reasons, absentNext, start) {
+if (!movesKey) return saveMovesAsEditor(next, changeDelays || reasons || absentNext, start);
 const headers = { Authorization: `Bearer ${movesKey}`, Accept: 'application/vnd.github+json' };
 for (let attempt = 0; attempt < 4; attempt++) {
 if (attempt) await new Promise(r => setTimeout(r, 800 * attempt));
@@ -295,6 +396,9 @@ try { if (meta?.content) remote = JSON.parse(decodeURIComponent(escape(atob(meta
 catch (e) { if (absentNext) throw new Error('Der gespeicherte Kalender konnte nicht gelesen werden. Es wurde nichts überschrieben.'); }
 if (absentNext && !meta?.sha) throw new Error('Der aktuelle Kalender fehlt. Es wurde nichts überschrieben.');
 if (meta?.sha && movesWritten && meta.sha === movesWritten.replaced) { remote = movesWritten.file; meta = { sha: movesWritten.sha }; }
+const base = baseFor(start);
+const merged = changeDelays ? null : mergeMoves(base, next, remote.moves || [], start.force);
+if (merged?.conflicts.length) throw new MovesConflict(merged.conflicts, remote);
 let nextDelays = remote.delays || [];
 if (changeDelays) nextDelays = changeDelays(nextDelays);
 nextDelays = nextDelays.filter(d => Date.parse(d.day) > Date.now() - 2 * 86400000);
@@ -303,13 +407,14 @@ const mergedAway = absentNext ? mergeAwayState(remote, absentNext) : null;
 const nextAbsent = (mergedAway?.days || (Array.isArray(remote.absent) ? remote.absent : [])).filter(x => Date.parse(x.day) > Date.now() - 2 * 86400000 && x.people?.length);
 // rules that ended more than two days ago go, like single days
 const nextRules = goodRules(mergedAway ? mergedAway.rules : remote.absentRules).filter(r => !r.end || Date.parse(r.end) > Date.now() - 2 * 86400000);
-const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : next, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), ...(nextRules.length && { absentRules: nextRules }), ...(Array.isArray(remote.editors) && remote.editors.length && { editors: remote.editors }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
+const file = { updated: new Date().toISOString(), moves: changeDelays ? (remote.moves || next) : merged.moves, ...(nextDelays.length && { delays: nextDelays }), ...(nextAbsent.length && { absent: nextAbsent }), ...(nextRules.length && { absentRules: nextRules }), ...(Array.isArray(remote.editors) && remote.editors.length && { editors: remote.editors }), reasons: reasons || (remoteReasons.length ? remoteReasons : DELAY_REASONS) };
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(file, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers,
 body: JSON.stringify({ message: reasons ? 'Verspätungsgründe' : absentNext ? 'Abwesend' : changeDelays ? 'Verspätung' : 'Move shows', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
 if (res.ok) {
 const sha = (await res.json().catch(() => null))?.content?.sha;
 movesWritten = sha && meta?.sha ? { replaced: meta.sha, sha, file } : null;
+noteWrite(changeDelays ? groupMoves(remote.moves || []) : base, file.moves);
 const later = movesPending > 1;
 if (!later) { moves = file.moves; absentDays = nextAbsent; absentRules = nextRules; }
 delays = nextDelays;
@@ -323,9 +428,21 @@ if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
 }
 // N61: an editor's moves go through the delays helper, which checks the code
-async function saveMovesAsEditor(next, other) {
+async function saveMovesAsEditor(next, other, start) {
 if (other || !editorName || !delaysUrl) throw new Error('kein Bearbeitungszugang');
-const res = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ editor: editorCode, moves: next }) });
+// the newest saved list (public), so only this editor's own changes go out; without it, as before
+const base = baseFor(start);
+let send = next;
+try {
+  const current = await fetch(MOVES_API + '?ref=main&_=' + Date.now(), { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+  if (current.ok) {
+    const remote = JSON.parse(decodeURIComponent(escape(atob((await current.json()).content.replace(/\s/g, '')))));
+    const merged = mergeMoves(base, next, remote.moves || [], start.force);
+    if (merged.conflicts.length) throw new MovesConflict(merged.conflicts, remote);
+    send = merged.moves;
+  }
+} catch (e) { if (e instanceof MovesConflict) throw e; }
+const res = await fetch(delaysUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ editor: editorCode, moves: send }) });
 const file = await res.json().catch(() => ({}));
 if (!res.ok) {
 if (res.status === 403 && /Bearbeiter/.test(file.error || '')) { editorName = ''; refreshEditor(); }
@@ -333,6 +450,7 @@ const old = Number(res.headers?.get?.('X-Helper-Version')) < 20;
 throw new Error(old ? 'der Speicher-Dienst kann noch keine Bearbeiter (Version 20 nötig)' : file.error || `Speicher-Dienst antwortet ${res.status}`);
 }
 if (movesPending <= 1) { moves = file.moves || []; absentDays = Array.isArray(file.absent) ? file.absent : []; absentRules = goodRules(file.absentRules); }
+noteWrite(base, file.moves || []);
 delays = file.delays || [];
 movesSeen = movesStamp();
 try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
@@ -570,9 +688,10 @@ notice(`${b.dataset.moveName}: ${slotLabel(to)}${to.parallel ? ' (daneben)' : ''
 movesUndo = before;
 load(true);
 }
+// movesUndo: the whole list before, or a function that undoes only its own entries on the newest list
 async function undoMove() {
 const before = movesUndo;
-try { await saveMoves(before); notice('Rückgängig gemacht.'); load(true); } catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
+try { await saveMoves(typeof before === 'function' ? before(moves) : before); notice('Rückgängig gemacht.'); before.after?.(); load(true); } catch (e) { notice(`Nicht rückgängig gemacht: ${e.message}`); }
 }
 
 // Keep a pending save attached to the editor that started it.

@@ -206,11 +206,53 @@ storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (di
 const bar = document.createElement('section');
 bar.className = 'bulk-skip-bar week-only'; bar.hidden = true;
 bar.setAttribute('aria-label', 'Mehrere Folgen skippen');
-bar.innerHTML = '<button type="button" class="pill" data-bulk-toggle aria-pressed="false">Folgen skippen</button><div class="bulk-skip-options" hidden><span data-bulk-count role="status"></span><label class="toggle"><input type="checkbox" data-bulk-keep>Zeiten beibehalten</label><button type="button" class="pill primary" data-bulk-save disabled>Auswahl skippen</button><button type="button" class="pill" data-bulk-cancel>Abbrechen</button><span data-bulk-error role="alert"></span></div>';
+bar.innerHTML = '<button type="button" class="pill" data-bulk-toggle aria-pressed="false">Folgen skippen</button><div class="bulk-skip-options" hidden><span data-bulk-count role="status"></span><label class="toggle"><input type="checkbox" data-bulk-keep>Zeiten beibehalten</label><button type="button" class="pill primary" data-bulk-save disabled>Auswahl skippen</button><button type="button" class="pill" data-bulk-cancel>Abbrechen</button><span data-bulk-error role="alert"></span><ul class="bulk-skip-preview" data-bulk-preview aria-live="polite"></ul></div>';
 $('list').before(bar);
 const toggle = bar.querySelector('[data-bulk-toggle]'), options = bar.querySelector('.bulk-skip-options');
 const save = bar.querySelector('[data-bulk-save]'), count = bar.querySelector('[data-bulk-count]'), error = bar.querySelector('[data-bulk-error]');
 let active = false, busy = false, selectedWeek = '', selected = new Map();
+const keepBox = bar.querySelector('[data-bulk-keep]'), preview = bar.querySelector('[data-bulk-preview]');
+// the list as it would be saved: the selected shows skipped this week
+function candidate(keep, keys = new Set(selected.keys())) {
+  const week = selectedWeek;
+  return moves.filter(m => !(keys.has(m.show) && m.week === week)).concat([...selected.values()].filter(s => keys.has(s.key)).map(s => {
+    const current = moves.find(m => m.show === s.key && m.week === week) || moves.find(m => m.show === s.key && !m.week);
+    return {show:s.key, title:s.name, tag:current?.tag || '', time:current?.time || '', week, skip:true, ...(keep && {keepTime:true})};
+  }));
+}
+// U: before saving, what the skips do to each evening (the group's plan, parallel slots included):
+// "Mi 28.: endet 22:00 statt 23:00 · Beta 21:00 → 20:30"
+let previewFor = '';
+const clock = at => new Date(at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const rowKey = r => norm(r.show?.romaji || r.show?.english || '');
+const slotsOf = r => ((r.slot?.double || r.double) && r.episodes?.length > 1) || r.long ? 2 : 1;
+const endOf = day => { const rows = day.rows.filter(r => !r.pause && r.watchAt != null); return rows.length ? Math.max(...rows.map(r => r.watchAt + slotsOf(r) * SLOT_MINUTES * 60000)) : null; };
+function drawPreview() {
+  const keep = keepBox.checked, sig = [...selected.keys()].sort().join('|') + keep + selectedWeek;
+  if (sig === previewFor) return;
+  previewFor = sig;
+  preview.replaceChildren();
+  if (!active || !selected.size || !lastWeekRender || isoDay(lastWeekRender[1]) !== selectedWeek) return;
+  const saved = moves;
+  let before, after;
+  try { before = render(...lastWeekRender, true); moves = candidate(keep); after = render(...lastWeekRender, true); }
+  catch { return; } finally { moves = saved; }
+  const lines = [];
+  before.forEach((day, i) => {
+    const next = after[i], picked = day.rows.filter(r => selected.has(rowKey(r)) && !r.pause);
+    if (!picked.length) return;
+    const b = endOf(day), a = endOf(next), parts = [];
+    parts.push(a == null ? 'kein Anime mehr' : a === b ? `endet weiter um ${clock(a)}` : `endet ${clock(a)} statt ${clock(b)}`);
+    const moved = next.rows.filter(r => !r.pause && r.watchAt != null).map(r => [r, day.rows.find(x => !x.pause && rowKey(x) === rowKey(r))]).filter(([r, was]) => was && was.watchAt !== r.watchAt);
+    if (moved.length) parts.push(moved.slice(0, 3).map(([r, was]) => `${r.show.english || r.show.romaji} ${clock(was.watchAt)} → ${clock(r.watchAt)}`).join(', ') + (moved.length > 3 ? ` +${moved.length - 3}` : ''));
+    // a skipped show with another one in the same slot: the slot stays, nothing moves up for it
+    const parallel = keep ? [] : picked.flatMap(p => day.rows.filter(x => !x.pause && x !== p && !selected.has(rowKey(x)) && x.watchAt === p.watchAt).map(x => [p, x]));
+    if (parallel.length) parts.push(parallel.slice(0, 2).map(([p, x]) => `${clock(p.watchAt)} bleibt belegt (${x.show.english || x.show.romaji} parallel)`).join(', '));
+    lines.push(`${shortDayName(day.date)} ${day.date.getDate()}.: ${parts.join(' · ')}`);
+  });
+  preview.replaceChildren(...lines.map(t => Object.assign(document.createElement('li'), { textContent: t })));
+}
+keepBox.onchange = () => drawPreview();
 function sync() {
   const week = isoDay(weekStart(weekOffset));
   const allowed = canMove() && view === 'week';
@@ -248,30 +290,34 @@ function sync() {
   if (!busy) for (const key of selected.keys()) if (!available.has(key)) selected.delete(key);
   count.textContent = `${selected.size} ausgewählt · nur diese Woche · für die Gruppe`;
   save.disabled = busy || !selected.size;
+  if (!busy) drawPreview();
 }
 toggle.onclick = () => { active = true; selectedWeek = isoDay(weekStart(weekOffset)); error.textContent = ''; sync(); };
-bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { active = false; selected.clear(); sync(); } };
+bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { active = false; selected.clear(); previewFor = ''; sync(); } };
 save.onclick = async () => {
   sync();
   if (busy || !active || !selected.size || !canMove() || view !== 'week' || selectedWeek !== isoDay(weekStart(weekOffset))) return;
   const week = selectedWeek, shows = [...selected.values()], keys = new Set(selected.keys());
-  const keep = bar.querySelector('[data-bulk-keep]').checked;
-  const next = moves.filter(m => !(keys.has(m.show) && m.week === week)).concat(shows.map(s => {
-    const current = moves.find(m => m.show === s.key && m.week === week) || moves.find(m => m.show === s.key && !m.week);
-    return {show:s.key, title:s.name, tag:current?.tag || '', time:current?.time || '', week, skip:true, ...(keep && {keepTime:true})};
-  }));
+  const keep = keepBox.checked;
+  const previous = moves.filter(m => keys.has(m.show) && m.week === week);
+  const next = candidate(keep, keys);
   busy = true; error.textContent = ''; sync();
   for (const el of bar.querySelectorAll('input, button')) el.disabled = true;
   try {
     await saveMoves(next);
     active = false; selected.clear();
-    notice(`${shows.length} Einträge diese Woche geskippt. ${keep ? 'Die übrigen Zeiten bleiben gleich.' : 'Spätere Slots rücken vor.'}`);
+    notice(`${shows.length} Einträge diese Woche geskippt. ${keep ? 'Die übrigen Zeiten bleiben gleich.' : 'Spätere Slots rücken vor.'}`, true);
+    // U: one click undoes the whole selection (only these entries, on the newest list) and opens it again to fix
+    movesUndo = Object.assign(current => current.filter(m => !(keys.has(m.show) && m.week === week)).concat(previous), {
+      after: () => { if (view !== 'week' || isoDay(weekStart(weekOffset)) !== week) return; active = true; selectedWeek = week; selected = new Map(shows.map(s => [s.key, s])); keepBox.checked = keep; previewFor = ''; sync(); },
+    });
     await load(true);
   } catch (e) { error.textContent = `Nicht gespeichert: ${e.message}`; }
   finally { busy = false; for (const el of bar.querySelectorAll('input, button')) el.disabled = false; sync(); }
 };
 let scheduled = false;
-const refresh = () => { if (!scheduled) { scheduled = true; queueMicrotask(() => { scheduled = false; sync(); }); } };
+// (a closed page, e.g. a test that ended, has no window any more: nothing to do)
+const refresh = () => { if (!scheduled) { scheduled = true; Promise.resolve().then(() => { scheduled = false; if (document?.defaultView) sync(); }); } };
 // Observe renders, not our own button text/selection changes.
 new MutationObserver(records => { if (records.some(r => [...r.addedNodes, ...r.removedNodes].some(n => n.nodeType === 1 && !n.classList.contains('bulk-skip-pick')))) refresh(); }).observe($('list'), {childList:true, subtree:true});
 new MutationObserver(refresh).observe(document.body, {attributes:true, attributeFilter:['class']});

@@ -131,6 +131,7 @@ try { res = await send(); } catch { throw new Error('der Speicherdienst (workers
 const body = await res.json().catch(() => ({}));
 if (!res.ok) throw new Error(body.error || `der Speicherdienst antwortet ${res.status}`);
 moves = body.moves || moves;
+if (Array.isArray(body.moves)) movesBase = body.moves;
 delays = body.delays || [];
 if (Array.isArray(body.moves)) { // the whole saved file
   absentDays = Array.isArray(body.absent) ? body.absent : [];

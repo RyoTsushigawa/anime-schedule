@@ -954,6 +954,7 @@ let openedShow = null;
 function restoreOpenedShow() {
 const opened = openedShow;
 openedShow = null;
+try { sessionStorage.removeItem('streamReturn'); } catch {}
 if (!opened || opened.view !== view || Date.now() - opened.time > 4 * 3600000 || document.querySelector('dialog[open]')) return;
 const row = [...document.querySelectorAll('#list .row')].find(r => r.closest('[data-search]')?.dataset.search === opened.key &&
 !r.closest('.hidden-by-search, details:not([open])'));
@@ -971,6 +972,8 @@ const row = event.target.closest?.('#list .row .links a')?.closest('.row');
 if (!row) return;
 const key = row.closest('[data-search]')?.dataset.search;
 if (key) openedShow = { key, view, time: Date.now() };
+// kept for this tab too: a phone often drops the page while the streaming app is open
+if (key) try { sessionStorage.setItem('streamReturn', JSON.stringify({ key, view, weekOffset, range, pickedDay, y: scrollY, time: Date.now() })); } catch {}
 if (!keyRows().includes(row)) return;
 selectRow(row);
 if ($('markOnOpen').checked && !(Number(row.dataset.at) > Date.now())) row.querySelector('.watch:not(.done):not(:disabled):not([data-select])')?.click();
