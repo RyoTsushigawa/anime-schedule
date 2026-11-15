@@ -86,8 +86,12 @@
      "sequelStatus": "sequel"
     },
     "love live! hasunosora jogakuin school idol club": {
+     "auto": true,
+     "type": "full_trailer",
      "sequelStatus": "not_sequel",
-     "youtubeStatus": "not_found"
+     "youtubeId": "66Wv8mUx4C0",
+     "title": "by hand",
+     "seconds": 42
     },
     "spirit circle": {
      "auto": true,

@@ -172,14 +172,13 @@
      "romaji": "Love Live! Hasunosora Jogakuin School Idol Club",
      "english": "Love Live! Hasunosora Jogakuin School Idol Club",
      "anilist": 210157,
-     "video": null,
-     "notSequel": true,
-     "videoTitle": "",
+     "video": "66Wv8mUx4C0",
+     "videoTitle": "by hand",
      "channel": "",
-     "channelPref": "Team ONIBE",
      "skip": null,
-     "searched": "2026-11-15T20:16:08.111Z",
-     "caption": false
+     "caption": false,
+     "fixed": true,
+     "seconds": 42
     },
     {
      "romaji": "Spirit Circle",
@@ -762,13 +761,14 @@
      "channel": "TR anime",
      "caption": false,
      "officialCheck": true,
-     "searched": "2026-11-15T20:16:19.503Z"
+     "subsCheck": true,
+     "searched": "2026-11-15T20:16:32.057Z"
     }
    ],
    "playlist": "PLMKUhokF0XN8",
    "url": "https://www.youtube.com/playlist?list=PLMKUhokF0XN8",
-   "synced": "2026-11-15T20:16:19.700Z"
+   "synced": "2026-11-15T20:16:32.676Z"
   }
  },
- "updated": "2026-11-15T20:16:19.701Z"
+ "updated": "2026-11-15T20:16:32.777Z"
 }
