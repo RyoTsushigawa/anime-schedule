@@ -188,6 +188,13 @@ let catchupGeneration = 0;
 async function loadCatchupContent(refresh = false) {
 const generation = ++catchupGeneration, account = auth;
 updateFallbackControls();
+// U: opened straight into Catch-up (the remembered view), the plan's people aren't known yet: without them a person
+// without AniList has no local list to pick, and the default AniList list was shown instead of theirs
+if (!localPlanPeople.length) {
+  await ready;
+  try { const people = (await sheetFor(tabFor(tabs, new Date())))?.people; if (people?.length && !localPlanPeople.length) fillPeople(people); } catch {}
+  if (generation !== catchupGeneration) return;
+}
 const user = listUser(), friend = friendList.value;
 const local = isLocalList(), person = local ? localListPerson() : soloPerson;
 const provider = local ? 'Lokal' : friend ? 'AniList' : listService();

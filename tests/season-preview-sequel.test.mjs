@@ -6,17 +6,24 @@ const source=readFileSync(new URL('../season-preview.js',import.meta.url),'utf8'
 const start=source.indexOf('function sequelSuggestion(');
 const end=source.indexOf('async function sequelGraph(',start);
 assert.ok(start>=0&&end>start,'sequel recommendation helper exists');
-const suggest=new Function('prequels','statuses',source.slice(start,end)+'\nreturn sequelSuggestion(prequels,statuses);');
+const run=new Function('prequels','statuses',source.slice(start,end)+'\nreturn sequelSuggestion(prequels,statuses);');
+const suggest=(p,s)=>{const h=run(p,s);return h?h.vote+' · '+h.why:'';};
 
 test('completed direct prequel recommends Ja',()=>{
- assert.equal(suggest([101],new Map([[101,'COMPLETED']])),'Ja');
+ assert.equal(suggest([101],new Map([[101,'COMPLETED']])),'Ja · abgeschlossen');
 });
 test('dropped direct prequel recommends Nein',()=>{
- assert.equal(suggest([101],new Map([[101,'DROPPED']])),'Nein');
+ assert.equal(suggest([101],new Map([[101,'DROPPED']])),'Nein · abgebrochen');
 });
-test('unrecognized prequels never invent a recommendation',()=>{
+test('a sequel whose prequel was never started (not on the list, or only planned) recommends Nein',()=>{
+ assert.equal(suggest([102],new Map([[101,'COMPLETED']])),'Nein · nie angefangen');
+ assert.equal(suggest([102],new Map([[102,'PLANNING']])),'Nein · nie angefangen');
+});
+test('no prequel, or still watching / paused: no recommendation',()=>{
  assert.equal(suggest([],new Map([[101,'COMPLETED']])),'');
- assert.equal(suggest([102],new Map([[101,'COMPLETED']])),'');
+ assert.equal(suggest(undefined,new Map()),'');
+ assert.equal(suggest([101],new Map([[101,'CURRENT']])),'');
+ assert.equal(suggest([101],new Map([[101,'PAUSED']])),'');
 });
 test('conflicting completed and dropped prequels have no automatic answer',()=>{
  assert.equal(suggest([101,102],new Map([[101,'COMPLETED'],[102,'DROPPED']])),'');

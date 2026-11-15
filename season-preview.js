@@ -254,17 +254,22 @@ function externalUrl(input){
   return url.href;
  }catch{return '';}
 }
-// Vote suggestions (#84): a sequel whose direct AniList prequel this person completed → "Ja", dropped → "Nein".
+// Vote suggestions (#84): a sequel whose direct AniList prequel this person completed → "Ja", dropped → "Nein",
+// never started (not on the list, or only planned) → "Nein"; still watching or paused → no suggestion.
 // Only a suggestion: it's saved when clicked, and a vote already in the Sheet always wins.
 const SEQUEL_GRAPH_QUERY = `query ($ids:[Int]) { Page(page:1,perPage:50) { media(idMal_in:$ids,type:ANIME) { idMal relations { edges { relationType node { id } } } } } }`;
-const SEQUEL_LIST_QUERY = `query ($user:String) { MediaListCollection(userName:$user,type:ANIME,status_in:[COMPLETED,DROPPED]) { lists { entries { status media { id } } } } }`;
+const SEQUEL_LIST_QUERY = `query ($user:String) { MediaListCollection(userName:$user,type:ANIME) { lists { entries { status media { id } } } } }`;
 // Only explicit AniList PREQUEL relations. These are non-persisted suggestions;
 // saved votes from Google Sheets always take priority.
 const sequelGraphs=new Map(),sequelLists=new Map();
 let sequelProfiles=null,sequelSuggestions=new Map(),sequelRequest=0;
 function sequelSuggestion(prequels,statuses){
- const values=new Set((prequels||[]).map(id=>statuses.get(id)).filter(x=>x==='COMPLETED'||x==='DROPPED'||x==='CONFLICT'));
- return values.size===1?(values.has('COMPLETED')?'Ja':values.has('DROPPED')?'Nein':''):'';
+ const why={COMPLETED:['Ja','abgeschlossen'],DROPPED:['Nein','abgebrochen'],NEVER:['Nein','nie angefangen']};
+ if(!prequels?.length)return null;
+ // not on the list or only planned = never started; watching, paused, rewatching or two accounts that disagree = no hint
+ const values=new Set(prequels.map(id=>{const x=statuses.get(id);return !x||x==='PLANNING'?'NEVER':x;}));
+ const [only]=values;
+ return values.size===1&&why[only]?{vote:why[only][0],why:why[only][1]}:null;
 }
 async function sequelGraph(tab,items){
  if(!sequelGraphs.has(tab.gid))sequelGraphs.set(tab.gid,(async()=>{
@@ -295,7 +300,7 @@ async function sequelStatuses(person){
   const statuses=new Map();
   for(const entry of records.flat()){
    const id=entry.media?.id,status=entry.status;
-   if(!Number.isSafeInteger(id)||!['COMPLETED','DROPPED'].includes(status))continue;
+   if(!Number.isSafeInteger(id)||!status)continue;
    const old=statuses.get(id);
    statuses.set(id,old&&old!==status?'CONFLICT':old||status);
   }
@@ -327,8 +332,8 @@ function draftButton(s,voter){
  return '<button type="button" class="preview-auto preview-draft" data-retry-vote="'+safeText(draft)+'" data-anime="'+safeText(s.key)+'" title="Diese Stimme kam nicht im Sheet an. Antippen sendet sie erneut.">Nicht gesendet: '+safeText(draft)+' · erneut senden</button>';
 }
 function autoVote(s,voter){
- const suggestion=voter&&voteValue(s,voter)==='Default'&&!saving.has(s.key)?sequelSuggestions.get(s.key):'';
- return suggestion?'<button type="button" class="preview-auto" data-auto-vote="'+suggestion+'" data-anime="'+safeText(s.key)+'" title="AniList: direkter Vorgänger '+(suggestion==='Ja'?'abgeschlossen':'abgebrochen')+'. Antippen speichert den Vorschlag.">Vorschlag: '+suggestion+'</button>':'';
+ const hint=voter&&voteValue(s,voter)==='Default'&&!saving.has(s.key)?sequelSuggestions.get(s.key):null;
+ return hint?'<button type="button" class="preview-auto" data-auto-vote="'+hint.vote+'" data-anime="'+safeText(s.key)+'" title="AniList: vorherige Staffel '+hint.why+'. Antippen speichert den Vorschlag.">Vorschlag: '+hint.vote+' · '+hint.why+'</button>':'';
 }
 function voteValue(show,person){
  const vote=show.votes.find(v=>v.name===person)?.value||'';
@@ -502,7 +507,7 @@ pv('previewList').addEventListener('click',event=>{
  const auto=event.target.closest('button[data-auto-vote]');
  if(auto){
   const show=shows.find(s=>s.key===auto.dataset.anime);
-  if(show&&voteValue(show,currentVoter())==='Default'&&sequelSuggestions.get(show.key)===auto.dataset.autoVote)
+  if(show&&voteValue(show,currentVoter())==='Default'&&sequelSuggestions.get(show.key)?.vote===auto.dataset.autoVote)
    saveVote(show,auto.dataset.autoVote);
   return;
  }
