@@ -31,6 +31,47 @@ export function endlessWords(titles, dictionary) {
   return [...words.values()].sort((a, b) => a.word.localeCompare(b.word));
 }
 
+// A name in a title that is a real person's name ("Tatsuki Fujimoto 17-26", an anthology named after its mangaka)
+// is no answer: two names in a row ("TATSUKI FUJIMOTO"), checked against AniList's staff (people) once and kept in
+// the file ("people"). The same name stays an answer elsewhere when it's a character's (Tatsuki in Bleach).
+// short English words and Japanese particles/honorifics are never part of a person's name (the English list only
+// has words of 5 to 8 letters, so these would look like names)
+const NOT_A_NAME = new Set(('A AN AND THE OF TO IN ON AT BY FOR WITH FROM INTO YOUR MY OUR HIS HER ITS ARE WAS IS BE BUT NOT ALL ONE TWO OUT UP '
+  + 'NO GA WA WO NI DE TO MO YA KA NA NE YO SAN KUN CHAN SAMA DONO SENSEI SENPAI TAN').split(' '));
+const nameLike = (t, dictionary) => t.length >= 3 && !dictionary.has(t) && !NOT_A_NAME.has(t);
+// pairs of two names in a row, at least one of them a possible answer (5 to 8 letters)
+export function namePairs(title, dictionary) {
+  const tokens = String(title).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^A-Za-z]+/).filter(Boolean).map(t => t.toUpperCase());
+  const out = [];
+  for (let i = 0; i + 1 < tokens.length; i++) {
+    const [a, b] = [tokens[i], tokens[i + 1]];
+    if (nameLike(a, dictionary) && nameLike(b, dictionary) && [a, b].some(t => t.length >= 5 && t.length <= 8)) out.push(a + ' ' + b);
+  }
+  return out;
+}
+export const personWords = (title, dictionary, people) => new Set(namePairs(title, dictionary).filter(p => people[p] === true).flatMap(p => p.split(' ')));
+// up to 10 pairs per AniList request; a pair counts as a person when a staff entry's full name is exactly it (either order)
+export async function checkPeople(pairs, people, until) {
+  for (let i = 0; i < pairs.length; i += 10) {
+    if (Date.now() > until) { console.log(`Personen: ${pairs.length - i} Namenspaare warten auf den nächsten Lauf`); return; }
+    const batch = pairs.slice(i, i + 10);
+    try {
+      const query = 'query (' + batch.map((_, j) => `$p${j}: String`).join(', ') + ') { ' + batch.map((_, j) => `p${j}: Page(perPage: 5) { staff(search: $p${j}) { name { full } } }`).join(' ') + ' }';
+      const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables: Object.fromEntries(batch.map((p, j) => ['p' + j, p])) }) });
+      if (res.status === 429) { await new Promise(r => setTimeout(r, 60000)); i -= 10; continue; }
+      if (!res.ok) continue;
+      const data = (await res.json()).data || {};
+      batch.forEach((pair, j) => {
+        if (!data['p' + j]) return;
+        const [a, b] = pair.split(' ');
+        people[pair] = (data['p' + j].staff || []).some(st => { const n = String(st.name?.full || '').toUpperCase().replace(/[^A-Z ]/g, '').trim(); return n === a + ' ' + b || n === b + ' ' + a; });
+      });
+    } catch {}
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
+
 async function sheetTitles() {
   const out = [];
   const dir = path('backup/sheet/');
@@ -172,14 +213,21 @@ async function main() {
   if (!offline) await checkAllNames(unchecked([...merged.values(), ...popularCandidates]), names, until);
   // Extrem has thousands of names: at most 1000 new checks a run, most popular anime first; the rest follow later
   if (!offline) await checkAllNames(unchecked(extremeCandidates).slice(0, 1000), names, until);
-  const words = selectWords(merged.values(), dictionary, names);
-  const popular = selectWords(popularCandidates, dictionary, names);
+  // names that are a real person's name in that title are left out (people: { "TATSUKI FUJIMOTO": true })
+  let people = {};
+  try { people = (await json('games-endless.json')).people || {}; } catch {}
+  const nameTitles = [...merged.values(), ...popularCandidates, ...extremeCandidates, ...extremeBefore].filter(w => !dictionary.has(w.word)).map(w => w.title);
+  const pairs = [...new Set(nameTitles.flatMap(t => namePairs(t, dictionary)))].filter(p => !(p in people));
+  if (!offline && pairs.length) await checkPeople(pairs, people, until + 10 * 60000);
+  const notPerson = list => [...list].filter(w => dictionary.has(w.word) || !personWords(w.title, dictionary, people).has(w.word));
+  const words = selectWords(notPerson(merged.values()), dictionary, names);
+  const popular = selectWords(notPerson(popularCandidates), dictionary, names);
   // Extrem: [word, title] pairs, compact; candidates stay in the file so unchecked names get their turn later
-  const extremeKept = new Map([...extremeBefore, ...extremeCandidates].map(w => [w.word, w]));
+  const extremeKept = new Map(notPerson([...extremeBefore, ...extremeCandidates]).map(w => [w.word, w]));
   const extreme = selectWords(extremeKept.values(), dictionary, names).map(w => [w.word, w.title]);
   const extremePending = [...extremeKept.values()].filter(w => !dictionary.has(w.word) && !(w.word in names)).map(w => [w.word, w.title]);
   await writeFile(path('games-endless.json'), JSON.stringify({ about: 'Endless Titel-Rätsel answers, generated by tools/games-endless.mjs', words, popular,
-    extreme: [...extreme, ...extremePending.map(([w, t]) => [w, t, 0])], extremeUpdated: all ? new Date().toISOString() : extremeUpdated, names }, null, 0) + '\n');
+    extreme: [...extreme, ...extremePending.map(([w, t]) => [w, t, 0])], extremeUpdated: all ? new Date().toISOString() : extremeUpdated, names, people }, null, 0) + '\n');
   console.log(`Schwer: ${popular.length} Wörter aus den Top 500 auf AniList · Extrem: ${extreme.length} Wörter (${extremePending.length} Namen noch ungeprüft)`);
   const yes = Object.values(names).filter(Boolean).length;
   console.log(`${words.length} Wörter (${titles.length} Titel), davon ${words.filter(w => w.name).length} Namen; ${Object.keys(names).length} Namen geprüft, ${yes} bestätigt`);
