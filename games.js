@@ -32,6 +32,8 @@ let gameMode=load('titleGameMode','daily')==='endless'?'endless':'daily';
 let difficulty=['hard','extreme'].includes(load('titleGameDifficulty','normal'))?load('titleGameDifficulty','normal'):'normal';
 // Schwer and Extrem share the rules: use every hint, two optional hints
 const strict = level => level==='hard'||level==='extreme';
+// Extrem has four hints (Schwer two); the last one shows the title with the answer blanked out
+const maxHints = level => level==='extreme'?4:2;
 
 async function fetchSheetPool() {
   if(sheetPool) return sheetPool;
@@ -264,7 +266,7 @@ async function start() {
       mode,level};
     state=saved?.id===id && saved?.word===entry.word ? saved
       :{id,word:entry.word,guesses:[],done:false,won:false};
-    state.hints = Math.max(0,Math.min(2,Number(state.hints)||0));
+    state.hints = Math.max(0,Math.min(maxHints(level),Number(state.hints)||0));
     $('gameNumber').textContent=(level==='hard'?'Schwer · ':level==='extreme'?'Extrem · ':'')+
       (mode==='daily'?'Titel-Rätsel #':'Endlos #')+puzzle.number;
     $('gameHint').textContent=puzzle.word.length+' Buchstaben · '+allowed.size+' gültige Wörter';
@@ -287,9 +289,13 @@ function hardHintText() {
     // the title itself would give the answer away: only how long it is and how it starts
     const words=String(puzzle.title||'').split(/\s+/).filter(Boolean);
     const label='Der Titel hat '+words.length+' '+(words.length===1?'Wort':'Wörter')+' und beginnt mit „'+(words[0]||'?')[0].toUpperCase()+'“.';
-    if(state.hints===1)return label;
-    const index=hashWord(puzzle.id+':hint')%puzzle.word.length;
-    return label+' Buchstabe '+(index+1)+' ist '+puzzle.word[index]+'.';
+    const len=puzzle.word.length, first=hashWord(puzzle.id+':hint')%len, second=(first+1+hashWord(puzzle.id+':hint2')%(len-1))%len;
+    const lines=[label];
+    if(state.hints>=2)lines.push('Buchstabe '+(first+1)+' ist '+puzzle.word[first]+'.');
+    if(state.hints>=3)lines.push('Buchstabe '+(second+1)+' ist '+puzzle.word[second]+'.');
+    // the last hint: the title, with the answer blanked out
+    if(state.hints>=4)lines.push('Der Titel: „'+String(puzzle.title).replace(new RegExp('\\b'+puzzle.word+'\\b','gi'),'_'.repeat(len))+'“');
+    return lines.join(' ');
   }
   const owner = (puzzle.from || '').replace(/^AniList\s*·\s*/, '');
   const label = /^Top 500/.test(puzzle.from || '') ? 'Aus den 500 beliebtesten Anime auf AniList.' : !/^AniList/.test(puzzle.from || '') ? 'Aus dem Guckplan.' : owner ? 'Aus der AniList von ' + owner + '.' : 'Aus einer Gruppen-AniList.';
@@ -301,14 +307,25 @@ function refreshHardHints(){
   const show=!!puzzle && !!state && strict(puzzle.level) && !state.done && !state.wordFound;
   $('gameHardHints').hidden=!show;
   $('gameHintText').textContent=show?hardHintText():'';
-  $('gameHintButton').textContent=state?.hints===1?'Zweiter Hinweis': 'Hinweis anzeigen';
-  $('gameHintButton').hidden=!show || (state?.hints||0)>=2;
+  const most=puzzle?maxHints(puzzle.level):2, used=state?.hints||0;
+  $('gameHintButton').textContent=!used?'Hinweis anzeigen':most>2?'Weiterer Hinweis ('+(used+1)+'/'+most+')':'Zweiter Hinweis';
+  $('gameHintButton').hidden=!show || used>=most;
+  // Extrem: "Auflösen" shows the word and the anime (the round counts as not solved)
+  $('gameSolveRow').hidden=!(puzzle&&state&&puzzle.level==='extreme'&&!state.done);
 }
 $('gameHintButton').onclick=()=>{
-  if(!puzzle || !state || !strict(puzzle.level) || state.done || state.hints>=2)return;
+  if(!puzzle || !state || !strict(puzzle.level) || state.done || state.hints>=maxHints(puzzle.level))return;
   state.hints++;
   save(currentKey()+':'+puzzle.id,state);
   refreshHardHints();
+};
+$('gameSolve').onclick=()=>{
+  if(!puzzle||!state||state.done||puzzle.level!=='extreme')return;
+  if(!confirm('Auflösen? Du siehst Wort und Anime, die Runde zählt als nicht gelöst.'))return;
+  state.gaveUp=true;state.done=true;state.won=false;typing='';
+  save(currentKey()+':'+puzzle.id,state);draw();refreshHardHints();drawTitlePick();
+  if(puzzle.mode==='endless')rememberAnswer(puzzle.word);
+  finish(true);
 };
 function message(text){$('gameMsg').textContent=text;}
 function draw(){
@@ -400,7 +417,7 @@ function finish(fresh){
   }
   $('gameEnd').hidden=false;
   const answer=$('gameAnswer');answer.replaceChildren();
-  answer.append(document.createTextNode(state.won?'Richtig! Gesucht war ':state.wordFound?'Das Wort stimmte, aber der Anime nicht. Gesucht war ':'Leider nicht. Gesucht war '));
+  answer.append(document.createTextNode(state.won?'Richtig! Gesucht war ':state.gaveUp?'Aufgelöst. Gesucht war ':state.wordFound?'Das Wort stimmte, aber der Anime nicht. Gesucht war ':'Leider nicht. Gesucht war '));
   const bold=document.createElement('b');bold.textContent=puzzle.word;answer.append(bold);
   answer.append(document.createTextNode(' aus '));
   const title=document.createElement('i');title.textContent=puzzle.title;answer.append(title,document.createTextNode('.'));

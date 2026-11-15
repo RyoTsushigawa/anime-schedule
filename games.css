@@ -22,6 +22,10 @@
 .game-hard-hints[hidden], .game-hard-hints button[hidden] {display:none!important;}
 .game-hard-hints button {min-height:36px;font-size:12px;}
 .game-hard-hints span {line-height:1.5;overflow-wrap:anywhere;}
+.game-solve {width:100%;display:flex;justify-content:center;}
+.game-solve[hidden] {display:none!important;}
+.game-solve button {min-height:32px;font-size:12px;color:var(--muted);border-color:transparent;background:none;text-decoration:underline;text-underline-offset:3px;}
+.game-solve button:hover {color:var(--text);}
 .game-msg { min-height: 20px; margin: 0; color: var(--muted); font-size: 13px; text-align: center; white-space: pre-line; }
 .game-end { display: grid; gap: 12px; justify-items: center; text-align: center; }
 .game-answer { margin: 0; font-size: 15px; }

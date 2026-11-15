@@ -274,3 +274,37 @@ test('Extrem: the word alone isn\'t solved; picking the right anime is; the wron
     } finally { page.close(); }
   }
 });
+
+test('Extrem: four hints (two letters, then the title with the answer blanked) and "Auflösen", which counts as not solved', async () => {
+  const extreme = [['DRAGON', 'Dragon Ball Super'], ['CASTLE', 'Howl\'s Moving Castle'], ['KNIGHT', 'Knight\'s & Magic']];
+  const page = await openGame({ difficulty: 'extreme', mode: 'endless', endless: { words: [], popular: [], extreme } });
+  try {
+    const $ = id => page.window.document.getElementById(id);
+    for (let i = 1; i <= 4; i++) { $('gameHintButton').click(); assert.equal(page.run('state.hints'), i); }
+    assert.equal($('gameHintButton').hidden, true, 'no fifth hint');
+    const text = $('gameHintText').textContent, word = page.run('puzzle.word');
+    assert.equal((text.match(/Buchstabe \d ist [A-Z]\./g) || []).length, 2, text);
+    const [a, b] = [...text.matchAll(/Buchstabe (\d)/g)].map(m => m[1]);
+    assert.notEqual(a, b, 'two different letters');
+    assert.match(text, new RegExp('Der Titel: „.*' + '_'.repeat(word.length)));
+    assert.doesNotMatch(text.replace(/Buchstabe \d ist [A-Z]\./g, ''), new RegExp(word, 'i'), 'the word itself never shows');
+    assert.equal(page.run('state.guesses.length'), 0, 'hints cost no guess');
+    // Auflösen
+    assert.equal($('gameSolveRow').hidden, false);
+    page.window.confirm = () => true;
+    $('gameSolve').click();
+    assert.equal(page.run('state.done'), true);
+    assert.equal(page.run('state.won'), false);
+    assert.match($('gameAnswer').textContent, new RegExp('^Aufgelöst\\. Gesucht war ' + word));
+    assert.equal($('gameSolveRow').hidden, true);
+  } finally { page.close(); }
+});
+test('Schwer keeps two hints and has no "Auflösen"', async () => {
+  const page = await openGame({ difficulty: 'hard' });
+  try {
+    const $ = id => page.window.document.getElementById(id);
+    $('gameHintButton').click(); $('gameHintButton').click();
+    assert.equal($('gameHintButton').hidden, true);
+    assert.equal($('gameSolveRow').hidden, true);
+  } finally { page.close(); }
+});
