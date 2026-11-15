@@ -1692,6 +1692,18 @@ body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; 
 .bulk-skip-options [data-bulk-count] { color: var(--muted); font-size: 12px; flex: 1 1 230px; }
 .bulk-skip-options [data-bulk-error]:empty { display: none; }
 .bulk-skip-options [data-bulk-error] { flex-basis: 100%; color: var(--late); }
+.weekline > [data-bulk-toggle] { order: 1; }
+.weekline > .bulk-skip-options { flex-basis: 100%; order: 10; }
+/* editing on a narrower window: "Diese Woche / Dauerhaft" needs the room, the logo alone names the page */
+@media (max-width: 1150px) {
+  header:has(#editScope:not([hidden])) .logo + .brand { display: none; }
+  header:has(#editScope:not([hidden])) :is(.header-nav-link, .header-primary .round.misc-trigger) { width: 34px; padding: 0; justify-content: center; }
+  header:has(#editScope:not([hidden])) :is(.header-nav-link span, .header-primary .misc-trigger > span) { display: none; }
+}
+/* the brand never runs into the buttons next to it: it shortens instead (U: edit mode on a narrower window) */
+header .brand { overflow: hidden; }
+header .brand-title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header:has(#editScope:not([hidden])) .title-long { display: none; }
 .bulk-skip-preview { flex-basis: 100%; margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
 .bulk-skip-preview:empty { display: none; }
 .row > .bulk-skip-pick { grid-column: 1 / -1; justify-self: end; flex: none; border-radius: 99px; padding: 5px 15px; }
