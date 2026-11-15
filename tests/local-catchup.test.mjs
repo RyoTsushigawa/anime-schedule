@@ -68,3 +68,13 @@ test('A person without a tracker can add a non-seasonal series and keep progress
     assert.equal(p.storage()['localAnimeProgress:v1:MaRyo'],undefined);
   } finally {p.close();}
 });
+
+test('opened straight into Catch-up: a person without AniList gets their local list, not the default AniList list', async () => {
+  const p = await openPage({ storage:{soloPerson:'Matthias', view:'catchup'}, sheets, planNext:{episode:5, airingAt:sec(2026,10,4,14)} });
+  try {
+    await p.settle(800);
+    assert.equal(p.$('friendList').value, 'local:Matthias');
+    assert.match(p.$('tabName').textContent, /Matthias.*Lokal/);
+    assert.match(p.$('list').textContent, /Alpha EN/);
+  } finally { p.close(); }
+});

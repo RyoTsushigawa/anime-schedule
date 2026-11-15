@@ -8,10 +8,10 @@ const css=readFileSync(new URL('../style.css',import.meta.url),'utf8');
 const menu=html.match(/<nav id="miscMenu"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
 const primary=html.match(/<nav class="header-primary"[^>]*>([\s\S]*?)<div class="misc-tools">/)?.[1];
 
-test('main header exposes Schedule and Games, with More and existing Settings',()=>{
+test('main header exposes Games, with More and existing Settings (Zeitplan is the tab below, not twice)',()=>{
  assert.ok(primary,'primary nav exists');
  const direct=[...primary.matchAll(/<a class="header-nav-link[^"]*" href="([^"]+)"/g)].map(m=>m[1]);
- assert.deepEqual(direct,['./?view=week','games.html']);
+ assert.deepEqual(direct,['games.html']);
  assert.match(html,/id="miscButton"[^>]*aria-controls="miscMenu"/);
  assert.match(html,/id="settingsButton"/);
 });
