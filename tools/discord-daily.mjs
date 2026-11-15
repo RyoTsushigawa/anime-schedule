@@ -157,6 +157,7 @@ try {
   });
   if (!today) throw new Error('Today is missing from the rendered week.');
   let message = today.message;
+  // Explicit opt-in only: see AGENTS.md. New daily-post content needs the user's specific agreement.
   // Before a new season: who still has open Season Preview votes. The Börse stays on the site.
   const extras = [];
   try {
@@ -206,4 +207,5 @@ try {
 } finally {
   await browser.close();
 }
+
 
