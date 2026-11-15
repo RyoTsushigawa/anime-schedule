@@ -67,6 +67,8 @@ function optionsFor(kind) {
   if (kind === 'ceddl') return ceddl.map(c => c.anime ? `${c.name} (${c.anime})` : c.name);
   return titles;
 }
+// nothing to pick in this category this season (no fitting show, no Ceddl candidate yet): only a hint, and it isn't "offen"
+const noChoice = kind => (kind === 'ceddl' && !ceddl.length) || (!!kind && kind !== 'couple' && !!showInfo.size && !optionsFor(kind).length);
 const valid = (kind, value) => {
   if (!value) return true;
   if (kind === 'couple') { const parts = value.split(' × '); return parts.length === 2 && parts.every(p => optionsFor('char').includes(p) || (!showInfo.size && p.trim())); }
@@ -111,7 +113,7 @@ function updateAwardsCopy() {
   const submit = $('awardsSubmit');
   if (submit) submit.disabled = !ballotSummary().length || (!!ID && !ID.canAct(personSelect.value)) || !!shared?.closed;
   const filled = awardCategories.filter(([id]) => !skipped.has(id) && (ballot[id] || []).some(Boolean)).length;
-  const open = awardCategories.length - filled - skipped.size;
+  const open = awardCategories.filter(([id, , kind]) => !skipped.has(id) && !(ballot[id] || []).some(Boolean) && !noChoice(kind)).length;
   $('awardsProgress').textContent = `${filled} von ${awardCategories.length} Kategorien ausgefüllt` + (skipped.size ? ` · ${skipped.size} ausgelassen` : '') + (open ? ` · ${open} offen` : '');
 }
 function saveDraft() {
@@ -188,6 +190,7 @@ function renderBallot() {
       skipBox.onchange = () => { if (skipBox.checked) skipped.add(id); else skipped.delete(id); markSkipped(); saveDraft(); };
       if (kind === 'ceddl' && !ceddl.length) { const p = document.createElement('p'); p.className = 'awards-hint'; p.textContent = 'Noch keine Kandidaten: unten welche sammeln.'; box.append(p); }
       else if (kind && kind !== 'couple' && showInfo.size && !optionsFor(kind).length) { const p = document.createElement('p'); p.className = 'awards-hint'; p.textContent = 'Diese Season passt laut AniList keine Serie: einfach leer lassen.'; box.append(p); }
+      if (noChoice(kind) && !ballot[id]) { skip.hidden = true; grid.append(box); continue; }
       POINTS.forEach((points, place) => {
         const row = document.createElement('label'); row.className = 'awards-place';
         const badge = document.createElement('span'); badge.className = 'awards-points'; badge.textContent = points;
@@ -228,8 +231,9 @@ function renderBallot() {
 
 // AniList (optional): genres, whether a show is a sequel, and its characters, for the filters and the character
 // categories. AniList ids come from the site's streams-de.json; kept a day per season in this browser.
+const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv|final season)\b/i;
 async function loadShowInfo(request) {
-  const key = 'awardsInfo:' + seasonSelect.value;
+  const key = 'awardsInfo2:' + seasonSelect.value;
   try {
     const kept = JSON.parse(localStorage.getItem(key) || 'null');
     if (kept && Date.now() - kept.at < 864e5) return new Map(kept.info);
@@ -245,7 +249,8 @@ async function loadShowInfo(request) {
   if (!res.ok) throw new Error('AniList ' + res.status);
   const info = new Map();
   for (const m of (await res.json()).data?.Page?.media || []) info.set(wanted.get(m.id), {
-    genres: m.genres || [], sequel: (m.relations?.edges || []).some(e => e.relationType === 'PREQUEL'),
+    // AniList's PREQUEL link, or the title says so ("Blue Box Season 2"): new entries often lack the link
+    genres: m.genres || [], sequel: (m.relations?.edges || []).some(e => e.relationType === 'PREQUEL') || SEQUEL_TITLE.test([wanted.get(m.id), ...(streams.status?.[m.id]?.titles || [])].join(' ')),
     chars: (m.characters?.edges || []).map(e => ({ name: e.node?.name?.full, role: e.role })).filter(c => c.name),
   });
   try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), info: [...info] })); } catch {}
