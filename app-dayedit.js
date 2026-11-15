@@ -257,10 +257,11 @@ function sync() {
   const week = isoDay(weekStart(weekOffset));
   const allowed = canMove() && view === 'week';
   if (!allowed || (active && selectedWeek !== week)) { active = false; selected.clear(); }
-  // U: no row of its own: the button sits with Plan-Check and Planänderungen, the options open underneath
-  const line = allowed && $('list').querySelector('.weekline');
-  if (line) {
-    if (toggle.parentElement !== line) line.insertBefore(toggle, line.querySelector('#airingBody'));
+  // U: no row of its own: the button is in the week's ⋯ menu with Plan-Check and Planänderungen,
+  // the options open underneath the day strip
+  const line = allowed && $('list').querySelector('.weekline'), menu = line && line.querySelector('.week-menu');
+  if (line && menu) {
+    if (toggle.parentElement !== menu) menu.append(toggle);
     if (options.parentElement !== line) line.append(options);
   } else if (toggle.parentElement !== bar) bar.prepend(toggle, options);
   bar.hidden = !allowed || !bar.contains(toggle);
