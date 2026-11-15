@@ -245,7 +245,7 @@ function sync() {
     row.classList.toggle('bulk-skip-selected', selected.has(key));
   }
   // A filtered-out or newly skipped entry must not be saved invisibly.
-  for (const key of selected.keys()) if (!available.has(key)) selected.delete(key);
+  if (!busy) for (const key of selected.keys()) if (!available.has(key)) selected.delete(key);
   count.textContent = `${selected.size} ausgewählt · nur diese Woche · für die Gruppe`;
   save.disabled = busy || !selected.size;
 }
