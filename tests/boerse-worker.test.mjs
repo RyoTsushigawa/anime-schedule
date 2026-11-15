@@ -130,3 +130,21 @@ test('limit orders: placed any time, filled at the first new close that reaches 
  assert.deepEqual(state.account.holdings,{Frieren:3});
 });
 
+
+test('Sunday dividends are paid once on the shares held at that close; a short pays them', async () => {
+  const { url, file } = site({ Frieren: { closes: [100] }, Dandadan: { closes: [100] } });
+  file.seasons[season].days = ['2027-01-09'];
+  const store = kv();
+  await call(env(url, '2027-01-09T10:00:00Z', store), '/stocks/trade', { season, person: 'Rei', title: 'Frieren', qty: 5 });
+  await call(env(url, '2027-01-09T10:00:00Z', store), '/stocks/trade', { season, person: 'Rei', title: 'Dandadan', qty: -2 });
+  // Sunday 10 Jan: Frieren 120 at 2 %, Dandadan 50 at 1 %
+  file.seasons[season].days.push('2027-01-10'); file.seasons[season].shows.Frieren.closes.push(120); file.seasons[season].shows.Dandadan.closes.push(50);
+  file.seasons[season].dividends = [{ day: '2027-01-10', rates: { Frieren: 0.02, Dandadan: 0.01 } }];
+  let a = (await get(env(url, '2027-01-11T10:00:00Z', store), 'Rei')).body.account;
+  const cashAfterTrades = 1000 - 501;
+  assert.equal(a.cash, cashAfterTrades + 5 * 120 * 0.02 - 2 * 50 * 0.01 + 199, a.cash);
+  assert.deepEqual(a.payouts.map(p => [p.title, p.shares, p.amount]), [['Frieren', 5, 12], ['Dandadan', -2, -1]]);
+  // reading again pays nothing twice
+  a = (await get(env(url, '2027-01-12T10:00:00Z', store), 'Rei')).body.account;
+  assert.equal(a.payouts.length, 2);
+});

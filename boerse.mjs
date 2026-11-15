@@ -42,6 +42,7 @@ function valueHistory(account) {
   return priced.days.map((d, i) => {
     let cash = CASH; const held = {};
     for (const t of trades) if (t.day <= d) { cash += -t.qty * t.price - t.fee; held[t.title] = (held[t.title] || 0) + t.qty; }
+    for (const p of account?.payouts || []) if (p.day <= d) cash += p.amount;
     return cash + Object.entries(held).reduce((n, [title, c]) => n + c * (priced.shows[title]?.closes?.[i] ?? PRICE), 0);
   });
 }
@@ -79,9 +80,14 @@ function draw() {
     </div>`;
   }).join('') || '<p class="boerse-hint">Für diese Season gibt es noch keine Kurse.</p>';
   $('stockQty').closest('label').hidden = !open;
-  const trades = state?.account?.trades || [];
-  $('stockTradesBox').hidden = !trades.length;
-  $('stockTrades').innerHTML = [...trades].reverse().map(t => `<li><span>${day(t.day)}</span> ${t.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(t.qty)}× ${esc(t.title)} zu ${taler(t.price)} <small>(+${t.fee} Gebühr${t.limit ? ` · Limit ${taler(t.limit)}` : ''})</small></li>`).join('');
+  const trades = state?.account?.trades || [], payouts = state?.account?.payouts || [];
+  $('stockTradesBox').hidden = !trades.length && !payouts.length;
+  // orders, Sunday dividends and the Awards bonus in one list, newest first
+  const entries = [...trades.map(t => ({ day: t.day, html: `${t.qty > 0 ? 'Kauf' : 'Verkauf'} ${Math.abs(t.qty)}× ${esc(t.title)} zu ${taler(t.price)} <small>(+${t.fee} Gebühr${t.limit ? ` · Limit ${taler(t.limit)}` : ''})</small>` })),
+    ...payouts.map(p => ({ day: p.day, html: p.kind === 'awards' ? `Awards-Bonus: ${p.hits} ${p.hits === 1 ? 'Treffer' : 'Treffer'} mit deinen 12 Punkten <b class="up">+${taler(p.amount)}</b>`
+      : `Dividende ${Math.abs(p.shares)}× ${esc(p.title)} <b class="${cls(p.amount)}">${p.amount > 0 ? '+' : ''}${taler(p.amount)}</b>${p.shares < 0 ? ' <small>(Leerverkauf zahlt)</small>' : ''}` }))]
+    .sort((a, b) => b.day.localeCompare(a.day));
+  $('stockTrades').innerHTML = entries.map(e => `<li><span>${day(e.day)}</span> ${e.html}</li>`).join('');
   // open limit orders (with "Streichen") and the ones that couldn't be carried out
   const orders = state?.account?.orders || [], failed = (state?.account?.orderLog || []).filter(o => o.status === 'failed').slice(-3).reverse();
   $('stockOrdersBox').hidden = !orders.length && !failed.length;
