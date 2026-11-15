@@ -134,6 +134,33 @@ function drawLists() {
   }));
 }
 const listId = kind => 'awardsList-' + (kind || 'show').replace(/\W+/g, '-');
+// One place on the ballot: a <select> with the eligible entries (characters grouped by their anime), or a text
+// field with suggestions where there is no fixed list (characters without AniList)
+function choiceField(kind, empty, value) {
+  const freeText = kind?.startsWith('char') && !showInfo.size;
+  if (freeText) {
+    const input = document.createElement('input');
+    input.className = 'pill'; input.setAttribute('list', listId(kind)); input.placeholder = empty === '— wählen —' ? 'Tippen zum Suchen …' : empty; input.value = value;
+    return input;
+  }
+  const select = document.createElement('select');
+  select.className = 'pill';
+  select.append(new Option(empty, ''));
+  if (kind?.startsWith('char')) {
+    const role = kind.split(':')[1];
+    for (const t of [...nominees.values()]) {
+      const chars = (showInfo.get(t)?.chars || []).filter(c => !role || c.role === role);
+      if (!chars.length) continue;
+      const group = document.createElement('optgroup'); group.label = t;
+      group.append(...chars.map(c => new Option(c.name, charLabel(c, t))));
+      select.append(group);
+    }
+  } else select.append(...optionsFor(kind).map(t => new Option(t, t)));
+  // a saved pick that is no longer on the list stays visible (marked by the check), so nothing vanishes silently
+  if (value && ![...select.options].some(o => o.value === value)) select.append(new Option(value + ' (nicht mehr in der Auswahl)', value));
+  select.value = value;
+  return select;
+}
 function renderBallot() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(ballotKey())); } catch {}
@@ -157,7 +184,7 @@ function renderBallot() {
       const skipBox = document.createElement('input'); skipBox.type = 'checkbox'; skipBox.checked = skipped.has(id);
       skipBox.setAttribute('aria-label', name + ' auslassen');
       skip.append(skipBox, ' Auslassen'); legend.append(skip); box.append(legend);
-      const markSkipped = () => { box.classList.toggle('skipped', skipBox.checked); box.querySelectorAll('.awards-place input').forEach(i => { i.disabled = skipBox.checked; }); };
+      const markSkipped = () => { box.classList.toggle('skipped', skipBox.checked); box.querySelectorAll('.awards-place :is(input, select)').forEach(i => { i.disabled = skipBox.checked; }); };
       skipBox.onchange = () => { if (skipBox.checked) skipped.add(id); else skipped.delete(id); markSkipped(); saveDraft(); };
       if (kind === 'ceddl' && !ceddl.length) { const p = document.createElement('p'); p.className = 'awards-hint'; p.textContent = 'Noch keine Kandidaten: unten welche sammeln.'; box.append(p); }
       else if (kind && kind !== 'couple' && showInfo.size && !optionsFor(kind).length) { const p = document.createElement('p'); p.className = 'awards-hint'; p.textContent = 'Diese Season passt laut AniList keine Serie: einfach leer lassen.'; box.append(p); }
@@ -167,12 +194,13 @@ function renderBallot() {
         row.append(badge);
         const current = ballot[id]?.[place] || '';
         const inputs = (kind === 'couple' ? [0, 1] : [0]).map(part => {
-          const input = document.createElement('input');
-          input.className = 'pill'; input.setAttribute('list', listId(kind === 'couple' ? 'char' : kind));
-          input.placeholder = kind === 'couple' ? (part ? 'und …' : 'Figur …') : place ? 'optional' : 'Tippen zum Suchen …';
-          input.setAttribute('aria-label', `${name}: ${points} Punkte${kind === 'couple' ? (part ? ', zweite Figur' : ', erste Figur') : ''}`);
-          input.value = kind === 'couple' ? (current.split(' × ')[part] || '') : current;
-          return input;
+          const label = `${name}: ${points} Punkte${kind === 'couple' ? (part ? ', zweite Figur' : ', erste Figur') : ''}`;
+          const value = kind === 'couple' ? (current.split(' × ')[part] || '') : current;
+          // a dropdown of only the eligible entries (also a reminder of what there is); free text only for
+          // characters while AniList can't be reached
+          const field = choiceField(kind === 'couple' ? 'char' : kind, kind === 'couple' ? (part ? 'und …' : 'Figur …') : place ? 'optional' : '— wählen —', value);
+          field.setAttribute('aria-label', label);
+          return field;
         });
         const update = () => {
           const value = kind === 'couple' ? (inputs.every(i => i.value.trim()) ? inputs.map(i => i.value.trim()).sort((a, b) => a.localeCompare(b, 'de')).join(' × ') : '') : inputs[0].value.trim();
