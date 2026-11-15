@@ -1684,3 +1684,14 @@ body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; 
 .away-reason { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
 .away-reason small { color: var(--muted); font-size: 12px; }
 .away-reason select { min-width: 0; max-width: 60%; }
+
+/* Help has its own flex item: it never competes with a wrapping title. */
+.top-actions > .brand-help { position: static; flex: 0 0 28px; width: 28px; height: 28px; align-self: center; }
+.bulk-skip-bar { max-width: 1000px; margin: 12px auto 0; padding: 0 16px; }
+.bulk-skip-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--ui-radius); background: var(--card); }
+.bulk-skip-options [data-bulk-count] { color: var(--muted); font-size: 12px; flex: 1 1 230px; }
+.bulk-skip-options [data-bulk-error]:empty { display: none; }
+.bulk-skip-options [data-bulk-error] { flex-basis: 100%; color: var(--late); }
+.row > .bulk-skip-pick { grid-column: 1 / -1; justify-self: end; flex: none; border-radius: 99px; padding: 5px 15px; }
+.row > .bulk-skip-pick[aria-pressed="true"] { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+.row.bulk-skip-selected { outline: 2px solid var(--accent); outline-offset: -2px; }

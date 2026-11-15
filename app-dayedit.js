@@ -199,3 +199,80 @@ next = withMove(next, s, row.querySelector('select').value, clockOf(time));
 if (next === moves) { $('dayDlg').close(); return; }
 storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (diese Woche)' : ''}.`, 'dayDlg', 'dayMsg');
 };
+
+// Quick multi-skip: select schedule entries without opening the day editor.
+// Keep the selected week fixed and clear selection when navigation changes it.
+(() => {
+const bar = document.createElement('section');
+bar.className = 'bulk-skip-bar week-only'; bar.hidden = true;
+bar.setAttribute('aria-label', 'Mehrere Folgen skippen');
+bar.innerHTML = '<button type="button" class="pill" data-bulk-toggle aria-pressed="false">Folgen skippen</button><div class="bulk-skip-options" hidden><span data-bulk-count role="status"></span><label class="toggle"><input type="checkbox" data-bulk-keep>Zeiten beibehalten</label><button type="button" class="pill primary" data-bulk-save disabled>Auswahl skippen</button><button type="button" class="pill" data-bulk-cancel>Abbrechen</button><span data-bulk-error role="alert"></span></div>';
+$('list').before(bar);
+const toggle = bar.querySelector('[data-bulk-toggle]'), options = bar.querySelector('.bulk-skip-options');
+const save = bar.querySelector('[data-bulk-save]'), count = bar.querySelector('[data-bulk-count]'), error = bar.querySelector('[data-bulk-error]');
+let active = false, busy = false, selectedWeek = '', selected = new Map();
+function sync() {
+  const week = isoDay(weekStart(weekOffset));
+  const allowed = canMove() && view === 'week';
+  if (!allowed || (active && selectedWeek !== week)) { active = false; selected.clear(); }
+  bar.hidden = !allowed;
+  toggle.setAttribute('aria-pressed', String(active));
+  options.hidden = !active;
+  toggle.hidden = active;
+  const available = new Set();
+  for (const row of $('list').querySelectorAll('.row')) {
+    const move = row.querySelector('.move[data-move-title]');
+    const eligible = active && move && !move.dataset.skip && row.closest('.day')?.dataset.date >= isoDay(new Date());
+    let pick = row.querySelector('.bulk-skip-pick');
+    if (!eligible) { if (pick) pick.remove(); row.classList.remove('bulk-skip-selected'); continue; }
+    const key = norm(move.dataset.moveTitle);
+    available.add(key);
+    if (!pick) {
+      pick = document.createElement('button'); pick.type = 'button'; pick.className = 'bulk-skip-pick';
+      pick.textContent = 'Skip';
+      pick.setAttribute('aria-label', 'Zum Skip auswählen: ' + move.dataset.moveName);
+      pick.onclick = e => {
+        e.stopPropagation();
+        if (busy) return;
+        if (selected.has(key)) selected.delete(key);
+        else selected.set(key, {key, name:move.dataset.moveName});
+        sync();
+      };
+      row.append(pick);
+    }
+    pick.disabled = busy;
+    pick.setAttribute('aria-pressed', String(selected.has(key)));
+    row.classList.toggle('bulk-skip-selected', selected.has(key));
+  }
+  // A filtered-out or newly skipped entry must not be saved invisibly.
+  for (const key of selected.keys()) if (!available.has(key)) selected.delete(key);
+  count.textContent = `${selected.size} ausgewählt · nur diese Woche · für die Gruppe`;
+  save.disabled = busy || !selected.size;
+}
+toggle.onclick = () => { active = true; selectedWeek = isoDay(weekStart(weekOffset)); error.textContent = ''; sync(); };
+bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { active = false; selected.clear(); sync(); } };
+save.onclick = async () => {
+  if (busy || !active || !selected.size || !canMove() || view !== 'week' || selectedWeek !== isoDay(weekStart(weekOffset))) return;
+  const week = selectedWeek, shows = [...selected.values()], keys = new Set(selected.keys());
+  const keep = bar.querySelector('[data-bulk-keep]').checked;
+  const next = moves.filter(m => !(keys.has(m.show) && m.week === week)).concat(shows.map(s => {
+    const current = moves.find(m => m.show === s.key && m.week === week) || moves.find(m => m.show === s.key && !m.week);
+    return {show:s.key, title:s.name, tag:current?.tag || '', time:current?.time || '', week, skip:true, ...(keep && {keepTime:true})};
+  }));
+  busy = true; error.textContent = ''; sync();
+  for (const el of bar.querySelectorAll('input, button')) el.disabled = true;
+  try {
+    await saveMoves(next);
+    active = false; selected.clear();
+    notice(`${shows.length} Einträge diese Woche geskippt. ${keep ? 'Die übrigen Zeiten bleiben gleich.' : 'Spätere Slots rücken vor.'}`);
+    await load(true);
+  } catch (e) { error.textContent = `Nicht gespeichert: ${e.message}`; }
+  finally { busy = false; for (const el of bar.querySelectorAll('input, button')) el.disabled = false; sync(); }
+};
+let scheduled = false;
+const refresh = () => { if (!scheduled) { scheduled = true; queueMicrotask(() => { scheduled = false; sync(); }); } };
+// Observe renders, not our own button text/selection changes.
+new MutationObserver(records => { if (records.some(r => [...r.addedNodes, ...r.removedNodes].some(n => n.nodeType === 1 && !n.classList.contains('bulk-skip-pick')))) refresh(); }).observe($('list'), {childList:true, subtree:true});
+new MutationObserver(refresh).observe(document.body, {attributes:true, attributeFilter:['class']});
+sync();
+})();
