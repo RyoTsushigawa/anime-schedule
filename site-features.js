@@ -16,6 +16,7 @@ const SITE_FEATURES = [
     'Warnung im Bot-Kanal, wenn der Tagespost fehlschlägt',
   ]],
   ['Plan bearbeiten', [
+    '„Speichert… / Gespeichert“ mit „Erneut versuchen“', 'Konflikte beim gleichzeitigen Bearbeiten werden erklärt', 'Mehrere Folgen skippen mit Zeitvorschau und Rückgängig',
     'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig, bis zu einer Woche oder dauerhaft), auch per Ziehen', 'Warnungen beim Verschieben: Überschneidung, vor der Ausstrahlung', 'Tag bearbeiten',
     'Serie überspringen, mit „Zeiten beibehalten“', 'Verspätungen für alle, mit Gründe-Liste', 'Nachholen: Folgen in den Plan legen',
     'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Bearbeiter-Zugang für vertraute Leute (ohne den GitHub-Schlüssel)', 'Discord-Zustellung',
@@ -29,11 +30,13 @@ const SITE_FEATURES = [
     'Allein schauen', 'Lokale Liste mit Backup (Export und Import)',
   ]],
   ['Einstellungen & Werkzeuge', [
+    'Wartung: alle Prüfungen an einem Ort', 'Person schnell wechseln (Person in der Leiste)',
     'Hell / dunkel', 'Akzentfarben, auch die eigene Guckplan-Farbe', 'Dichte (bequem, kompakt, nur Text)', 'Schriftgröße', 'Hoher Kontrast',
     'Einstellungen exportieren und importieren', 'Datenstand', 'Sync-Verlauf', 'Listen-Check (auch Fremdeinträge aus dem Guckplan entfernen)', 'Kontoverbindung prüfen',
     'AniList ↔ MAL vergleichen', 'Ausgewählte Einträge von AniList auf MyAnimeList übernehmen', 'Hilfe mit Themen und Tastenkürzeln, immer erreichbar über das ? neben dem Namen', 'Willkommen beim ersten Besuch: drei kurze Schritte', 'Patch-Notes mit „Letztes neues Feature“', 'Feedback-Link',
   ]],
   ['Season Preview', [
+    'Kurz vor Season-Start direkt im Plan verlinkt',
     'Trailer zu jeder Serie', 'Gemeinsam abstimmen (Ja / Vielleicht / Nein)', 'Stimmen mit Namen', 'Filter, die gemerkt werden',
     'Start-Leiste nach Startwoche', 'Cover (AniList, sonst MyAnimeList)', 'Entwürfe, wenn eine Stimme nicht ankam', '„Nächste offene Serie“',
     'Vorschläge für Fortsetzungen', 'Gruppencode', 'Automatische YouTube-Trailer-Playlist', 'Gesamtlänge der Trailer an der Playlist', 'Eigene alternative Videos',

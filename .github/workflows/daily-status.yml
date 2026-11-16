@@ -31,5 +31,5 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Daily LiveChart status"
           # the PC at home may have published meanwhile; put this commit on top of it
-          git pull --rebase origin main
+          git pull --rebase --autostash origin main
           git push
