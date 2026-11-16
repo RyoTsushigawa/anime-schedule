@@ -1563,7 +1563,9 @@ const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts aler
 // U: in the last two weeks before a season starts, the Season Preview is on the plan itself (and not in Mehr)
 const preview = previewCall();
 $('miscMenu').querySelector('a[href="season-preview.html"]')?.toggleAttribute('hidden', !!preview);
-html = `${staleNotice}<div class="weekline">${strip}${alerts}${preview}${weekMenu}${alertsBody}</div>` + html;
+// U: the week arrows sit at both ends of the day strip, not in the controls row
+const stepPrev = '<button type="button" class="icon strip-step" data-week-step="-1" aria-label="Vorherige Woche" title="Vorherige Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>', stepNext = '<button type="button" class="icon strip-step" data-week-step="1" aria-label="Nächste Woche" title="Nächste Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+html = `${staleNotice}<div class="weekline">${stepPrev}${strip}${stepNext}${alerts}${preview}${weekMenu}${alertsBody}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');

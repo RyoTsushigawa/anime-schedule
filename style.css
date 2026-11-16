@@ -1770,4 +1770,8 @@ header .header-primary .header-games { margin-right: -2px; }
 .controls-left { gap: 6px; }
 #editScope button { padding-inline: 10px; }
 #editSchedule { padding-inline: 11px; }
-#soloPerson { max-width: 86px; }
+#soloPerson { max-width: 100px; }
+/* U: the week arrows at the ends of the day strip; the controls row keeps date, Heute and Woche */
+.weeknav #prev, .weeknav #next { display: none; }
+.weekline > .strip-step { flex: none; align-self: center; }
+#editScope button { min-width: 34px; font-size: 14px; }

@@ -133,6 +133,7 @@ resumeY = null;
 }
 $('prev').onclick = () => { weekOffset--; setRange('week'); enter = { x: -14 }; load(); };
 $('next').onclick = () => { weekOffset++; setRange('week'); enter = { x: 14 }; load(); };
+$('list').addEventListener('click', e => { const step = e.target.closest('[data-week-step]'); if (step) $(step.dataset.weekStep === '1' ? 'next' : 'prev').click(); });
 $('jumpToday').onclick = () => { setView('week'); weekOffset = 0; setRange('today'); enter = { y: 4 }; load(); };
 $('fullWeek').onclick = () => {
 if (range === 'week') { weekOffset = 0; setRange('rest'); }
