@@ -1751,7 +1751,7 @@ body:has(#notice:not([hidden])) #saveState { bottom: calc(86px + env(safe-area-i
 .weekline > .preview-call:hover { background: var(--today); text-decoration: none; }
 /* U (the owner's mockup): a calm top row. "?" next to the name; Spiele and Mehr as icons side by side, Abwesend
    keeps its name; Bearbeiten moved to the controls below, next to the person */
-header .header-primary :is(.header-games, .misc-trigger) { width: 34px; padding: 0; justify-content: center; }
+header .header-primary :is(.header-games, .misc-trigger), header .header-primary .round.misc-trigger { width: 34px; height: 34px; min-height: 34px; padding: 0; gap: 0; justify-content: center; }
 header .header-primary :is(.header-games span, .misc-trigger > span) { display: none; }
 header .header-primary .header-games { margin-right: -2px; }
 .controls-left > .edit-schedule, .controls-left > .edit-scope { flex: none; }
