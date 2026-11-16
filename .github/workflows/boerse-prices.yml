@@ -42,6 +42,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
           git commit -qm "Anime-Börse prices"
-          git pull --rebase origin main
+          git pull --rebase --autostash origin main
           git push
 
