@@ -67,8 +67,15 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-15T10:05:00Z', name: 'Börse: Dividenden und Awards-Bonus' };
+const LAST_FEATURE = { at: '2026-11-16T10:00:00Z', name: 'Aufgeräumter Kopf und Wartung' };
 const PATCH_NOTES = [
+{ id: '2026-11-16', title: 'A calmer header, a Wartung menu and safer plan changes', items: [
+'The top row is lighter: the ? sits next to the name, Spiele and Mehr are icons. Your person is at the top of the account menu (switch on „Person schnell wechseln“ to keep it in the row). The week arrows sit at both ends of the day strip.',
+'Mehr is a compact grid (Season, Spaß, Plan, Sonstiges). Every check – Plan-Check, Seriendaten, Datenstand, Folgennummern, Discord-Zustellung – is now in Mehr › Wartung, not in the plan.',
+'Each day shows what you need daily (Verspätung, Alle gesehen, Abwesend); the rest is behind ⋯. Planänderungen and Folgen skippen are in the ⋯ next to the day strip. Non-seasonal is now „Other“, editing offers 1× or ∞.',
+'Saving the plan shows „Speichert… / Gespeichert“, keeps changes others made in the meantime and explains a conflict instead of overwriting it. Skipping several shows shows how the evening changes first and can be undone in one click.',
+'Season Preview: a sequel whose first season you never started now suggests „Nein“, and in the last two weeks before a season the Season Preview is linked right on the plan.',
+] },
 { id: '2026-11-14', title: 'Easier to find your way: tidy menus, help next to the name, automatic double episodes', items: [
 'New here? A short welcome on the first visit: pick your name, how a row works, and that connecting a list is optional. The help (the ? next to the name, on phones next to the logo) can show it again under „Erste Schritte“.',
 'Settings are tidy: only real settings, the on/off options as switches right away, Streaming, Lesbarkeit and saving settings folded below. List tools moved to the account menu, plan and Discord tools to Mehr › Plan & Discord.',
