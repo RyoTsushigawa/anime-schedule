@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CASH, marketOpen, tradingWindow, priceOf, dropValue, fairValue, nextClose, noise, halted, trade, settle, accountValue, ranking } from '../boerse-core.mjs';
+import { CASH, marketOpen, tradingWindow, priceOf, dropValue, fairValue, nextClose, noise, halted, trade, settle, accountValue, ranking, demandEffect } from '../boerse-core.mjs';
 import { seasonShows, updateSeason, closingDay } from '../tools/boerse-prices.mjs';
 // Anime-Börse: the daily market (prices from AniList and the group), trading rules like Wall Street
 
@@ -136,4 +136,26 @@ test('dividends: the rate follows the group rating; Sunday closes record the rat
   s = await updateSeason(s, shows, '2026-11-15', { media: new Map(), ratings });
   assert.equal(s.shows.Alpha.group, 83);
   assert.deepEqual(s.dividends, [{ day: '2026-11-15', rates: { Alpha: 0.02 } }]);
+});
+
+test('demand: net shares bought push the close up, sold down, 0.3 % each, at most ±5 % a day', () => {
+  assert.equal(demandEffect(0), 0);
+  assert.equal(Math.round(demandEffect(10) * 1000) / 1000, 0.03);
+  assert.equal(demandEffect(50), 0.05);
+  assert.equal(demandEffect(-500), -0.05);
+  const base = { prev: 100, fair: 100, seed: 'x' };
+  const still = nextClose(base), bought = nextClose({ ...base, flow: 20 }), sold = nextClose({ ...base, flow: -20 });
+  assert.ok(bought > still && sold < still);
+  assert.ok(Math.abs(bought / still - 1.05) < 0.002, 'capped at +5 %');
+});
+
+test('the daily close applies the day\'s demand per show', async () => {
+  const shows = [{ title: 'Frieren', romaji: 'Frieren', english: 'Frieren' }, { title: 'Dandadan', romaji: 'Dandadan', english: 'Dandadan' }];
+  const media = new Map([['Frieren', { id: 1, averageScore: 70, popularity: 1000 }], ['Dandadan', { id: 2, averageScore: 70, popularity: 1000 }]]);
+  const first = await updateSeason(undefined, shows, '2026-11-13', { media, ratings: new Map() });
+  const plain = await updateSeason(structuredClone(first), shows, '2026-11-14', { media, ratings: new Map() });
+  const busy = await updateSeason(structuredClone(first), shows, '2026-11-14', { media, ratings: new Map(), flow: { Frieren: 100, Dandadan: -3 } });
+  const ratio = t => busy.shows[t].closes[1] / plain.shows[t].closes[1];
+  assert.ok(Math.abs(ratio('Frieren') - 1.05) < 0.002, 'capped at +5 %');
+  assert.ok(Math.abs(ratio('Dandadan') - 0.991) < 0.002, '-3 shares: -0.9 %');
 });

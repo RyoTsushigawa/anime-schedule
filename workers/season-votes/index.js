@@ -511,7 +511,20 @@ async function stocksTrade(body,env,now,request){
  const {account:a}=catchUp(JSON.parse(await store.get(key)||'null')||newAccount(person),priced);
  const next={...applyTrade(a,{title,qty,price,day:today,prices:latest(priced)}),person};
  await store.put(key,JSON.stringify(next));
+ await noteFlow(store,season,today,title,qty);
  return {ok:true,account:settled(next,today),price};
+}
+// U: the day's net shares per show (orders at the current price), read by the daily close (tools/boerse-prices.mjs):
+// buying pushes the next close up, selling down, at most ±5 % a day (boerse-core.mjs nextClose)
+async function noteFlow(store,season,day,title,qty){
+ const key='flow:'+season+':'+day,flow=JSON.parse(await store.get(key)||'{}');
+ flow[title]=(flow[title]||0)+qty;
+ await store.put(key,JSON.stringify(flow),{expirationTtl:60*86400});
+}
+async function stocksFlow(url,env){
+ const season=awardSeason(url.searchParams.get('season')),day=str(url.searchParams.get('day'));
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day))fail(400,'Ungültiger Tag.');
+ return {season,day,flow:JSON.parse(await awardsStore(env).get('flow:'+season+':'+day)||'{}')};
 }
 // a limit order: placed any time while the season is traded (also outside opening hours), at most 10 open
 async function stocksOrder(body,env,now,request,cancel){
@@ -671,6 +684,10 @@ export default {
     let body;try{body=JSON.parse(raw);}catch{fail(400,'Ungültige Anfrage.');}
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
     return json(await adventSave(body,env,now,request),200,cors);
+   }
+   if(request.method==='GET'&&path==='/stocks/flow'){
+    await authorized(request,env);
+    return json(await stocksFlow(new URL(request.url),env),200,cors);
    }
    if(request.method==='GET'&&path==='/stocks'){
     await authorized(request,env);

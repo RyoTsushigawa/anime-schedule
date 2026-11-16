@@ -75,7 +75,7 @@ async function anilistIds(shows) {
   return ids;
 }
 
-export async function updateSeason(entry, shows, today, { media, ratings }) {
+export async function updateSeason(entry, shows, today, { media, ratings, flow = {} }) {
   const season = { days: [], shows: {}, ...entry };
   // the Sheet's "Amount" count was once read as a show ("60", "65"): such entries go
   for (const title of Object.keys(season.shows)) if (/^\d+$/.test(title)) delete season.shows[title];
@@ -93,7 +93,7 @@ export async function updateSeason(entry, shows, today, { media, ratings }) {
     const g = groupScore(list);
     const prev = index ? s.closes[index - 1] : PRICE;
     const close = index ? nextClose({ prev, fair: fairValue({ community: m.averageScore, group: g.score, groupCount: g.count }),
-      popNow: m.popularity || 0, popBefore: s.pops[index - 1] || 0, trending: m.trending || 0, newDrops, seed: today + ':' + show.title }) : PRICE;
+      popNow: m.popularity || 0, popBefore: s.pops[index - 1] || 0, trending: m.trending || 0, newDrops, seed: today + ':' + show.title, flow: flow[show.title] || 0 }) : PRICE;
     s.closes[index] = close; s.pops[index] = m.popularity || 0;
     s.closes.length = s.pops.length = index + 1;
     // a big fall at the close halts the show for the next trading day
@@ -107,6 +107,22 @@ export async function updateSeason(entry, shows, today, { media, ratings }) {
     season.dividends = [...(season.dividends || []).filter(d => d.day !== today), { day: today, rates }];
   }
   return season;
+}
+
+// The day's net shares per show from the votes helper (buying pushes the close up, selling down, at most ±5 %).
+// Needs the group code (GROUP_CODE, the repository secret SEASON_GROUP_ACCESS_CODE); without it, or if the helper
+// can't be reached, the close is computed without demand, as before.
+async function dayFlow(season, day) {
+  try {
+    const config = JSON.parse(await readFile(path('config.json'), 'utf8'));
+    const api = String(config.previewVotesUrl || 'https://anime-season-preview-votes.shigeruhagano.workers.dev').replace(/\/$/, '');
+    const code = process.env.GROUP_CODE || '';
+    const res = await fetch(`${api}/stocks/flow?season=${encodeURIComponent(season)}&day=${day}`, { headers: { Origin: 'https://ryotsushigawa.github.io', ...(code && { 'X-Group-Code': code }) } });
+    if (!res.ok) throw new Error('Antwort ' + res.status);
+    const flow = (await res.json()).flow || {};
+    console.log(`${season} · ${day}: Nachfrage ${Object.entries(flow).map(([t, n]) => `${t} ${n > 0 ? '+' : ''}${n}`).join(' · ') || 'keine Käufe oder Verkäufe'}`);
+    return flow;
+  } catch (e) { console.log(`${season}: Nachfrage nicht verfügbar (${e.message}); Schlusskurs ohne Nachfrage.`); return {}; }
 }
 
 // Midnight belongs to the new calendar day; the close always belongs to the previous day.
@@ -140,7 +156,8 @@ async function main() {
         } catch (e) { console.log(`${user}: ${e.message}`); }
       }
     }
-    file.seasons[tab.season] = await updateSeason(file.seasons[tab.season], shows, today, { media, ratings });
+    const flow = await dayFlow(tab.season, today);
+    file.seasons[tab.season] = await updateSeason(file.seasons[tab.season], shows, today, { media, ratings, flow });
     console.log(`${tab.season} · ${today}: ` + shows.map(s => `${s.title} ${file.seasons[tab.season].shows[s.title].closes.at(-1)}`).join(' · '));
   }
   file.updated = new Date(now).toISOString();
