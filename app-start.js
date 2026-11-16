@@ -580,6 +580,7 @@ $('repairList').addEventListener('click', async event => {
 $('repairButton').onclick = () => { showSettings(false); $('repairStatus').textContent = ''; $('repairDlg').showModal(); loadRepairQueue(); };
 $('repairReload').onclick = loadRepairQueue;
 $('repairButton').hidden = !movesKey;
+$('adventReviewLink').hidden = !movesKey;
 // N59 Transfer-Assistent, preview first: AniList and MyAnimeList entries matched by MAL ID; nothing is written
 const TRANSFER_QUERY = `query ($user: String) { MediaListCollection(userName: $user, type: ANIME) { lists { entries {
   status progress score media { id idMal episodes siteUrl title { english romaji } } } } } }`;
