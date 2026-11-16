@@ -46,6 +46,8 @@ try {
 const items = (await airings).flat();
 if (!currentWeek()) return;
 render(items, start, plans);
+// the group's AniList progress: an episode everyone has seen before its slot becomes a skip (seenByAll)
+refreshGroupSeen(items.map(it => it.media.id)).then(changed => { if (changed && currentWeek() && lastWeekRender) render(...lastWeekRender, false, true); }, () => {});
 chaseLookups();
 if (!refresh) scrollToStart();
 resumeScroll();

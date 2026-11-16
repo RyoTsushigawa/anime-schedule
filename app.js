@@ -34,6 +34,35 @@ const listService = () => auth?.provider === 'mal' ? 'MyAnimeList' : 'AniList';
 // The Guckplan person of the connected account, from the "Wer ist wer" list (wrapped-profiles.json, as in
 // Wrapped and the friend lists); RyoTsushigawa is MaRyo. null when the account isn't listed there.
 let profileList = {};
+// U: what each AniList account in "Wer ist wer" has watched of this week's shows (read-only, public lists):
+// an episode that everyone who watches it has already ticked before its slot is skipped like a "Skip"
+let groupSeen = new Map(), groupSeenFor = '', groupSeenAt = 0;
+async function refreshGroupSeen(ids) {
+  const accounts = [...new Set(Object.values(profileList || {}).flat().filter(a => a?.provider === 'anilist' && a.name).map(a => a.name))];
+  const key = [...new Set(ids)].sort().join(',');
+  if (!accounts.length || !key || (key === groupSeenFor && Date.now() - groupSeenAt < 5 * 60000)) return false;
+  groupSeenFor = key; groupSeenAt = Date.now();
+  const next = new Map();
+  await Promise.all(accounts.map(async user => {
+    try {
+      const d = await anilist('query ($user: String, $ids: [Int]) { Page(perPage: 50) { mediaList(userName: $user, mediaId_in: $ids, type: ANIME) { mediaId progress } } }', { user, ids: key.split(',').map(Number) });
+      next.set(user.toLowerCase(), new Map((d.Page?.mediaList || []).map(e => [e.mediaId, e.progress || 0])));
+    } catch {}
+  }));
+  const stamp = m => JSON.stringify([...m].map(([k, v]) => [k, [...v]]).sort());
+  const changed = stamp(next) !== stamp(groupSeen);
+  groupSeen = next;
+  return changed;
+}
+// everyone who watches it has an AniList account in "Wer ist wer" and is at this episode or further
+// (MaRyo: both accounts); one person without a readable list and it stays in the plan
+function seenByAll(who, mediaId, episode) {
+  if (!who?.length || !mediaId || !groupSeen.size) return false;
+  return who.every(p => {
+    const accounts = (profileList?.[p] || []).filter(a => a?.provider === 'anilist' && a.name);
+    return accounts.length && accounts.every(a => (groupSeen.get(a.name.toLowerCase())?.get(mediaId) || 0) >= episode);
+  });
+}
 function accountPerson() {
 if (!auth?.name) return null;
 const provider = auth.provider === 'mal' ? 'mal' : 'anilist', name = auth.name.toLowerCase();
@@ -1247,7 +1276,7 @@ slot: { tag: DAY_TAGS[(day.date.getDay() + 6) % 7], time: x.time || '' },
 show: { romaji: `${m.title.romaji || name} · Nachholen`, english: `${name} · Nachholen` } });
 }
 const heads = p => p === 'MaRyo' ? 2 : 1;
-const fullDays = (!everyone || snapshotPerson) && (delays.length || absentDays.length || absentRules.length || moves.some(m => m.skip || m.double || m.long)
+const fullDays = (!everyone || snapshotPerson) && (delays.length || absentDays.length || absentRules.length || groupSeen.size || moves.some(m => m.skip || m.double || m.long)
   || Object.values(streamsDe?.status || {}).some(s => s.long?.length)) ? render(items, start, plans, true) : null;
 const showKey = (day, r) => isoDay(day.date) + '|' + norm(r.show?.romaji || r.show?.english || '');
 const finalAt = shifted || (fullDays && new Map(fullDays.flatMap(d => d.rows.filter(r => !r.pause && r.watchAt != null).map(r => [showKey(d, r), r.watchAt]))));
@@ -1260,6 +1289,10 @@ if (r.pause || !r.episodes) return r;
 if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r.episodes.includes(first - 1)) r.episodes.unshift(first - 1); }
 const at = finalAt?.get(showKey(day, r)) ?? r.watchAt;
 const minute = at == null ? null : Math.round((at - dayStart) / 60000);
+// everyone has already seen this episode before its slot: it is skipped, later shows move up
+const newest = Math.max(...r.episodes);
+if (r.m?.id && at != null && at > Date.now() && seenByAll(r.who, r.m.id, newest))
+  return { pause: true, skipped: true, seen: true, show: r.show, slot: r.slot, when: r.when, episode: newest, alId: r.m.id, links: r.links, who: r.who };
 const isAway = p => awayAt(isoDay(day.date), p, minute);
 const missing = (r.who || []).filter(isAway);
 const left = (r.who || []).filter(p => !isAway(p)).reduce((n, p) => n + heads(p), 0);
@@ -1408,13 +1441,13 @@ const why = missing.map(p => { const x = absencesForDay(day).find(e => e.people?
 const left = (who || []).filter(p => !missing.includes(p));
 return `Um ${time} fehlen: ${why.join(', ')}. ${left.length ? `Übrig: ${left.join(', ')}` : 'Niemand bleibt übrig'}. Eine Serie läuft nur, wenn mindestens zwei Personen dabei sind, also setzt sie an diesem Tag aus.`;
 };
-const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, maybe, recap, alId, links, who, awayDay }) => `
+const pause = ({ show, slot, when, episode, note, news, watchAt, skipped, missing, maybe, recap, alId, links, who, awayDay, seen }) => `
       <div class="row pause${skipped ? ' skipped' : ''}" ${searchKey(show.english, show.romaji)}>
         <div class="time">Pause</div>
         ${coverFor(alId) ? `<img src="${safeUrl(coverFor(alId))}" alt="" loading="lazy">` : '<span class="no-cover"></span>'}
         <div class="info">
-          <div class="title">${esc(show.english || show.romaji)}${skipped && missing?.length && awayDay ? `<button type="button" class="ep-tag away-why-tag" data-away-why aria-expanded="false" title="Warum setzt die Serie aus?">Abwesend</button>` : skipped || recap ? `<span class="ep-tag">${skipped ? 'Skip' : 'Recap'}</span>` : ''}</div>
-          <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? missing.every(p => maybe?.includes(p)) ? `${missing.map(esc).join(', ')} spontan da` : `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : `Folge ${episode}`}${slot.keepTime ? ' <span class="keep-time-note">Zeiten beibehalten</span>' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>${skipped && missing?.length && awayDay ? `<div class="away-why" hidden>${esc(awayWhy(awayDay, missing, who, watchAt))}</div>` : ''}
+          <div class="title">${esc(show.english || show.romaji)}${skipped && missing?.length && awayDay ? `<button type="button" class="ep-tag away-why-tag" data-away-why aria-expanded="false" title="Warum setzt die Serie aus?">Abwesend</button>` : seen ? `<span class="ep-tag" title="Alle, die die Serie schauen, haben diese Folge auf AniList schon abgehakt">Schon gesehen</span>` : skipped || recap ? `<span class="ep-tag">${skipped ? 'Skip' : 'Recap'}</span>` : ''}</div>
+          <div class="ep">${skipped ? `<s>${new Date(watchAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}</s> · ${missing?.length ? missing.every(p => maybe?.includes(p)) ? `${missing.map(esc).join(', ')} spontan da` : `${missing.map(esc).join(', ')} ${missing.length === 1 ? 'fehlt' : 'fehlen'}` : seen ? `Folge ${episode} · alle haben sie schon gesehen` : `Folge ${episode}`}${slot.keepTime ? ' <span class="keep-time-note">Zeiten beibehalten</span>' : ''}` : recap ? 'Keine reguläre Folge' : backLine(when, note, news)}</div>${skipped && missing?.length && awayDay ? `<div class="away-why" hidden>${esc(awayWhy(awayDay, missing, who, watchAt))}</div>` : ''}
         </div>
         <div class="links">${skipped && alId ? linkButtons(links || [], alId, who) : ''}</div>
         ${skipped && alId && episode > 0 && ownShow(alId, who) ? `${auth ? dropButton(alId) : ''}${watchButton(alId, episode)}` : checkSpace}${moveButton(show, slot)}

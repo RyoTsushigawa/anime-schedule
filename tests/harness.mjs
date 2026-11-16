@@ -101,6 +101,8 @@ export async function openPage(opts = {}) {
     if (query.includes('DeleteMediaListEntry')) { delete list[v.id - 900]; return { DeleteMediaListEntry: { deleted: true } }; }
     if (query.includes('mediaListEntry { progress status score } } }'))
       return { Media: { mediaListEntry: list[v.id] ? { progress: list[v.id].progress, status: list[v.id].status, score: list[v.id].score || 0 } : null } };
+    // opts.groupSeen: { accountName: { mediaId: progress } }, the group's AniList progress (seenByAll in app.js)
+    if (query.includes('mediaList(userName: $user, mediaId_in')) return { Page: { mediaList: Object.entries(opts.groupSeen?.[v.user] || {}).map(([id, progress]) => ({ mediaId: Number(id), progress })) } };
     if (query.includes('mediaList(userId: $id')) return opts.accountCheckListUnavailable ? {} : { Page: { mediaList: [] } };
     if (query.includes('MediaListCollection')) {
       // No status filter (Wrapped) → the whole list, like AniList
