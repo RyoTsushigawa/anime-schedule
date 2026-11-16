@@ -32,6 +32,8 @@ jobs:
       - name: The Guckplan as of now (only read, not committed here)
         run: node tools/sheet-backup.mjs || echo "Sheet not reachable; using the last backup"
       - name: Today's closes
+        env:
+          GROUP_CODE: ${{ secrets.SEASON_GROUP_ACCESS_CODE }}   # reads the day's net trades from the votes helper
         run: node tools/boerse-prices.mjs
       - name: AniList IDs of the group's accounts (the votes helper reads them; AniList blocks Cloudflare)
         run: node tools/anilist-ids.mjs || echo "AniList IDs not updated"

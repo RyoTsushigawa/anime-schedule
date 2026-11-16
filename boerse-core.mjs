@@ -58,11 +58,15 @@ export function noise(seed) {
 }
 // One day's close: a third of the way towards the fair value, AniList momentum (members gained, trending),
 // a shock for every new drop in the group (the earlier, the harder), and the noise. Never below 1.
-export function nextClose({ prev, fair, popNow = 0, popBefore = 0, trending = 0, newDrops = [], seed = '' }) {
+// demand: the day's net shares bought (minus sold) at the current price, 0.3 % each, at most ±5 % a day
+export const DEMAND_STEP = 0.003, DEMAND_MAX = 0.05;
+export const demandEffect = flow => Math.max(-DEMAND_MAX, Math.min(DEMAND_MAX, (Number(flow) || 0) * DEMAND_STEP));
+export function nextClose({ prev, fair, popNow = 0, popBefore = 0, trending = 0, newDrops = [], seed = '', flow = 0 }) {
   const growth = popBefore > 0 ? popNow / popBefore - 1 : 0;
   const momentum = Math.max(-0.03, Math.min(0.03, growth * 3 + Math.min(trending, 200) / 10000));
   let price = prev + (fair * (1 + momentum) - prev) / 3;
   for (const d of newDrops) price *= 1 - (0.06 + 0.14 * (1 - watchedShare(d)));
+  price *= 1 + demandEffect(flow);
   price *= 1 + noise(seed);
   return Math.max(1, Math.round(price * 100) / 100);
 }

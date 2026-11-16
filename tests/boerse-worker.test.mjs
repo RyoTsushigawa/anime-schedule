@@ -148,3 +148,17 @@ test('Sunday dividends are paid once on the shares held at that close; a short p
   a = (await get(env(url, '2027-01-12T10:00:00Z', store), 'Rei')).body.account;
   assert.equal(a.payouts.length, 2);
 });
+
+test('demand: every trade at the current price counts toward the day\'s net shares per show, readable for the close', async () => {
+ const {url}=site({Frieren:{closes:[100,120]},Dandadan:{closes:[100,80]}});
+ const store=kv(),e=env(url,'2027-01-04T15:00:00Z',store);
+ await call(e,'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:5});
+ await call(e,'/stocks/trade',{season,person:'Mia',title:'Frieren',qty:3});
+ await call(e,'/stocks/trade',{season,person:'Rei',title:'Frieren',qty:-2});
+ await call(e,'/stocks/trade',{season,person:'Mia',title:'Dandadan',qty:-4});
+ const r=await call(e,'/stocks/flow?season='+encodeURIComponent(season)+'&day=2027-01-04');
+ assert.equal(r.status,200);
+ assert.deepEqual(r.body.flow,{Frieren:6,Dandadan:-4});
+ assert.deepEqual((await call(e,'/stocks/flow?season='+encodeURIComponent(season)+'&day=2027-01-05')).body.flow,{});
+ assert.equal((await call(e,'/stocks/flow?season='+encodeURIComponent(season)+'&day=x')).status,400);
+});

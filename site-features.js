@@ -50,7 +50,7 @@ const SITE_FEATURES = [
     'Nominierte durchsuchen (auch Figuren von AniList)', 'Ceddl of the Year: Kandidaten über die Season sammeln', 'Geheime Gruppenabstimmung mit „Auflösen“',
     'Abstimmungsschluss zum Start der nächsten Season', 'Kategorien bewusst auslassen',
     'Punktevergabe-Show: Wertung für Wertung, „… und unsere 12 Punkte gehen an …“', 'Ruhmeshalle']],
-  ['Anime-Börse', ['Aktien auf die Season-Anime mit Spielgeld, die ganze Season täglich von 8 bis 24 Uhr handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
+  ['Anime-Börse', ['Nachfrage: eure Käufe und Verkäufe bewegen den Schlusskurs (höchstens ±5 % am Tag)', 'Aktien auf die Season-Anime mit Spielgeld, die ganze Season täglich von 8 bis 24 Uhr handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
     'Kurs-Graphen pro Serie und für dein Depot', 'Wall-Street-Regeln: Ordergebühr, T+1, Leerverkäufe, Circuit Breaker', 'Rangliste nach Depotwert', 'Dividenden jeden Sonntag (nach eurer Bewertung)', 'Awards-Bonus für richtige 12-Punkte-Tipps', 'Limit-Orders (kaufen oder verkaufen, sobald ein Schlusskurs dein Limit erreicht)', 'Nur für dich: Bestätigung über AniList oder PIN (auch bei den Awards)']],
   ['Spiele', ['Spieleseite mit dem heutigen Stand und kurzer Erklärung je Spiel', 'Titel-Rätsel (täglich / endlos, normal / schwer / extrem, Hinweise, Auflösen im Extrem-Modus)', 'Anime Cover Quiz',
     'Inhalts-Rätsel mit Archiv und Statistik', 'Anime-Quiz']],
