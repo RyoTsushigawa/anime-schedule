@@ -40,7 +40,7 @@ function openDoor(n,trigger){
   });choices.append(b);});body.append(choices,answer);
  }else body.append(el('p',item.note,'advent-prompt-note'));
  if(n&&!preview){opened.add(n);if(!writeOpened(storage,opened))body.append(el('p','Dein Browser kann den Fortschritt gerade nicht speichern. Die Türchen funktionieren trotzdem.','advent-prompt-note'));render();}
- if(!preview){const answers=el('section',null,'advent-answers');body.append(answers);mountAnswers(answers,n||0);}
+ if(!preview){const answers=el('section',null,'advent-answers');body.append(answers);mountAnswers(answers,n||0,{chain:!!item.chain});}
  else if(n){const box=el('section',null,'advent-answers advent-review-box');body.append(box);mountReview(box,n,render);}
  $('adventReviewNav').hidden=!preview||!n;
  $('adventPrev').disabled=n<=1;$('adventNext').disabled=n>=24;

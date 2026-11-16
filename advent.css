@@ -53,3 +53,4 @@
 .advent-review-row{display:flex;flex-wrap:wrap;gap:8px;}.advent-review-form{display:grid;gap:8px;margin-top:10px;}.advent-review-form textarea{box-sizing:border-box;width:100%;font:inherit;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);}
 #adventReviewSummary{font-weight:600;}
 .advent-review-row .pill[aria-pressed="true"],.advent-review-form .pill.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);}
+.advent-chain-text{font-size:15px;line-height:1.6;margin:8px 0 4px;}

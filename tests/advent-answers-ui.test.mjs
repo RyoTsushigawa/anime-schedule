@@ -16,3 +16,14 @@ test('shared answer UI saves text safely, retains failed drafts, and edits the e
  assert.match(host.querySelector('[role="status"]').textContent,/Nicht gespeichert/);assert.equal(w.localStorage.getItem('advent-draft:2026:0:Ryo'),'Mein Entwurf');
  host.replaceChildren();await mountAnswers(host,0,deps);assert.equal(host.querySelector('textarea').value,'Mein Entwurf');dom.window.close();
 });
+
+test('a chain door shows the parts in the order they were saved, as one text', async () => {
+ const dom=new JSDOM('<section id="host"></section>',{url:'https://example.test'}),w=dom.window;globalThis.Option=w.Option;globalThis.savedGroupCode=()=> 'group-code';
+ const identity={draw(){},canAct:()=>true,myPeople:()=>['Ryo'],headers:()=>({}),askGroupCode(){}};
+ const saved=[{person:'Belly',text:'und alle Snacks sind weg.',updatedAt:'2026-12-12T20:02:00Z'},{person:'Ryo',text:'Ich wurde als Guckplan wiedergeboren',updatedAt:'2026-12-12T20:00:00Z'}];
+ const deps={identity,storage:w.localStorage,chain:true,setup:async()=>({api:'https://example.test',people:['Ryo','Belly']}),fetch:async()=>new Response(JSON.stringify({answers:saved}))};
+ const host=w.document.getElementById('host');await mountAnswers(host,12,deps);
+ assert.equal(host.querySelector('.advent-chain-text').textContent,'Ich wurde als Guckplan wiedergeboren und alle Snacks sind weg.');
+ assert.match(host.textContent,/Von Ryo → Belly/);
+ dom.window.close();
+});
