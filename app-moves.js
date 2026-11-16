@@ -562,7 +562,7 @@ const repo = res.ok ? await res.json() : null;
 if (!repo?.permissions?.push) throw new Error(res.ok ? "dieser Schlüssel kann die Seite nicht ändern" : `GitHub antwortet ${res.status}`);
 movesKey = key;
 try { localStorage.setItem('movesKey', key); } catch {}
-$('movesSetup').hidden = $('moveToggle').hidden = $('repairButton').hidden = $('deliveryButton').hidden = false;
+$('movesSetup').hidden = $('moveToggle').hidden = $('repairButton').hidden = $('deliveryButton').hidden = $('adventReviewLink').hidden = false;
 syncMoveEditor();
 drawEditorBoxes();
 $('keyMsg').textContent = 'Gespeichert.';
@@ -571,7 +571,7 @@ load(true);
 };
 $('keyRemove').onclick = () => {
 movesKey = '';
-$('repairButton').hidden = $('deliveryButton').hidden = true;
+$('repairButton').hidden = $('deliveryButton').hidden = $('adventReviewLink').hidden = true;
 refreshEditor();
 drawEditorBoxes();
 try { localStorage.removeItem('movesKey'); } catch {}

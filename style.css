@@ -1729,6 +1729,7 @@ body:has(#notice:not([hidden])) #saveState { bottom: calc(86px + env(safe-area-i
 /* U: Wartung — the checks in one dialog, in the look of the Mehr menu */
 .maintenance-dlg { width: min(460px, calc(100vw - 32px)); }
 .maintenance-list { display: grid; gap: 2px; margin: 10px 0 4px; }
+.maintenance-list .misc-action, .maintenance-list a.misc-action { text-decoration: none; }
 .maintenance-list .misc-action { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 54px; padding: 8px 10px; border: 0; border-radius: var(--ui-radius); background: none; color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .maintenance-list .misc-action[hidden] { display: none; }
 .maintenance-list .misc-action:hover, .maintenance-list .misc-action:focus-visible { background: var(--today); }

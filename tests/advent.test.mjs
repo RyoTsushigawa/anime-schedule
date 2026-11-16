@@ -43,9 +43,17 @@ test('editor preview opens every door without saving progress or publishing answ
  const dom=new JSDOM(readFileSync(new URL('../advent.html',import.meta.url),'utf8'),{url:'https://example.test/advent.html?preview=1',runScripts:'outside-only'}),w=dom.window;
  w.matchMedia=()=>({matches:false,addEventListener(){}});w.setInterval=()=>0;
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};
- let mounts=0;Object.assign(w,{mountAnswers:()=>mounts++,CALENDAR_YEAR:2026,calendarState:()=>({available:0,today:null}),readOpened,writeOpened,doors,sample});
+ let mounts=0,reviews=[];const review={doors:{3:{status:'ok'},5:{status:'change',note:'andere Frage'}}};
+ Object.assign(w,{mountAnswers:()=>mounts++,CALENDAR_YEAR:2026,calendarState:()=>({available:0,today:null}),readOpened,writeOpened,doors,sample,
+  review,loadReview:async()=>review,mountReview:(box,n)=>reviews.push(n),summary:()=>'1 freigegeben · 1 Änderungswünsche · 22 offen'});
  w.eval(readFileSync(new URL('../advent.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,''));
  w.document.querySelector('[data-day="24"]').click();assert.equal(w.document.getElementById('adventDialog').open,true);assert.equal(w.document.getElementById('adventNext').disabled,true);
  w.document.getElementById('adventPrev').click();assert.match(w.document.getElementById('adventDoorType').textContent,/23/);
- assert.equal(mounts,0);assert.equal(w.localStorage.getItem('advent-opened-2026'),null);dom.window.close();
+ assert.equal(mounts,0);assert.equal(w.localStorage.getItem('advent-opened-2026'),null);
+ // the owner's review: each door shows its verdict, and an opened door gets the ✓ / ✎ controls
+ assert.deepEqual(reviews,[24,23]);
+ assert.equal(w.document.querySelector('[data-day="3"]').dataset.review,'ok');
+ assert.match(w.document.querySelector('[data-day="5"]').textContent,/Ändern/);
+ assert.match(w.document.getElementById('adventReviewSummary').textContent,/1 freigegeben/);
+ dom.window.close();
 });
