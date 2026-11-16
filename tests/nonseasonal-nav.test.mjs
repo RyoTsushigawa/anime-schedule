@@ -11,7 +11,7 @@ test('time plan, absences and Catch-up remain one-click navigation actions', () 
   assert.match(html, /id="awayButton"[^>]*aria-label="Abwesenheiten"/);
   assert.match(html, /id="viewWeek">Zeitplan<\/button>/);
   assert.match(html, /id="viewCatchup">Catch-up/);
-  assert.match(html, /id="viewPace"[^>]*>Non-seasonal<\/button>/);
+  assert.match(html, /id="viewPace"[^>]*>Other<\/button>/);
 });
 
 test('Non-seasonal hides when a verified person has no older unwatched shows', async () => {

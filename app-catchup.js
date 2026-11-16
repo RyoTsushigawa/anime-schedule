@@ -200,7 +200,7 @@ const local = isLocalList(), person = local ? localListPerson() : soloPerson;
 const provider = local ? 'Lokal' : friend ? 'AniList' : listService();
 const shown = view;
 const current = () => generation === catchupGeneration && auth === account && view === shown && listUser() === user && friendList.value === friend;
-const name = shown === 'pace' ? 'Non-seasonal' : 'Catch-up';
+const name = shown === 'pace' ? 'Other' : 'Catch-up';
 $('tabName').textContent = user ? name + ' · ' + (local ? person : user) + ' · ' + provider + (friend && !local ? ' · Nur lesen' : '') : name;
 if (!user) { $('list').innerHTML = '<div class="status">Kein AniList-Name eingetragen.</div>'; return; }
 if (!document.querySelector('#list .row')) $('list').innerHTML = LOADING_HTML;

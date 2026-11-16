@@ -82,7 +82,7 @@ const click = async (page, selector, wait = 600) => { try { await page.click(sel
       await page.keyboard.press('Escape'); await page.waitForTimeout(300);
       if (name === 'edit mode') continue; // stays on for the move dialog
     }
-    for (const [name, button] of [['Catch-up', '#viewCatchup'], ['Non-seasonal', '#viewPace'], ['Zeitplan', '#viewWeek']]) {
+    for (const [name, button] of [['Catch-up', '#viewCatchup'], ['Other', '#viewPace'], ['Zeitplan', '#viewWeek']]) {
       if (!await click(page, button, 2500)) fail(`the view "${name}" does not open`);
     }
     await page.keyboard.press('/'); await page.keyboard.type('a'); await page.waitForTimeout(800);

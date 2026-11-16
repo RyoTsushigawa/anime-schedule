@@ -918,7 +918,7 @@ helpReturnFocus?.focus({ preventScroll: true });
 });
 for (const [id, key, hint] of [
 ['prev', 'ArrowLeft', 'Vorherige Woche (←)'], ['next', 'ArrowRight', 'Nächste Woche (→)'],
-['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Non-seasonal (3)'],
+['viewWeek', '1', 'Zeitplan (1)'], ['viewCatchup', '2', 'Catch-up (2)'], ['viewPace', '3', 'Other (3)'],
 ['modeSolo', 'G', 'Solo (G)'], ['modeGroup', 'G', 'Gruppe (G)'],
 ['searchButton', '/', 'Serien suchen (/)'], ['helpButton', 'Shift+/', 'Hilfe (?)'],
 ]) {
