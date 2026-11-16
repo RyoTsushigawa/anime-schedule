@@ -1559,7 +1559,9 @@ body.text-only #list .row:not(.compact) { min-height: 0 !important; }
 
 /* U43 Gesehene ausblenden: only in your own Solo view; U53 Leere Tage ausblenden: today and days with absences stay */
 body.solo.hide-watched #list .day .row:has(.watch.done) { display: none; }
-body.hide-empty-days #list .day.empty:not(.is-today):not(:has(.away-note)) { display: none; }
+/* an absence on a day without episodes changes nothing in the plan: such days go too (U: recurring absences kept
+   almost every empty day visible); today always stays */
+body.hide-empty-days #list .day.empty:not(.is-today) { display: none; }
 /* U50: the shows on "Später", each can come back on its own */
 .later-list { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
 .later-item { display: inline-flex; align-items: center; gap: 6px; }
