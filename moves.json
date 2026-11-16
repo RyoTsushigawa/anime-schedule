@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-15T18:32:24.931Z",
+ "updated": "2026-11-16T13:36:26.841Z",
  "moves": [
   {
    "show": "fxsenshikurumichan",
@@ -171,20 +171,6 @@
  ],
  "absent": [
   {
-   "day": "2026-11-14",
-   "people": [
-    "Rei"
-   ],
-   "until": "21:00"
-  },
-  {
-   "day": "2026-11-14",
-   "people": [
-    "Matthias"
-   ],
-   "until": "21:00"
-  },
-  {
    "day": "2026-11-15",
    "people": [
     "Belly",
@@ -199,6 +185,14 @@
     "Rei"
    ],
    "until": "23:00"
+  },
+  {
+   "day": "2026-11-17",
+   "people": [
+    "Ceddl"
+   ],
+   "from": "18:00",
+   "reason": "5:30 Mittwoch Dienstbeginn"
   },
   {
    "day": "2026-11-18",
