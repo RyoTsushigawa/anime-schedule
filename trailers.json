@@ -57,6 +57,21 @@
      "seconds": 38
     },
     {
+     "romaji": "Isekai Tensei Soudouki",
+     "english": "Multi-mind Mayhem",
+     "anilist": 209221,
+     "skip": null,
+     "video": "G7ddo_2gKXE",
+     "videoTitle": "「異世界転生騒動記」PV第1弾 ｜ 2027年1月から放送開始！",
+     "channel": "アルファポリス公式",
+     "subs": [],
+     "subsCheck": true,
+     "caption": true,
+     "via": "anilist",
+     "searched": "2026-11-11T18:55:17.868Z",
+     "seconds": 75
+    },
+    {
      "romaji": "Gacha wo Mawashite Nakama wo Fuyasu: Saikyou no Bishoujo Gundan wo Tsukuriagero",
      "english": "Gacha Girls Corps",
      "anilist": 194030,
@@ -161,6 +176,16 @@
      "searched": "2026-11-11T13:38:10.674Z"
     },
     {
+     "romaji": "MASHLE Sanma Taisou Shinkakusha Saishu Shiken-hen",
+     "english": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc",
+     "anilist": null,
+     "skip": "sequel",
+     "video": null,
+     "videoTitle": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc | Official Trailer",
+     "channel": "Crunchyroll",
+     "searched": "2026-11-11T13:38:11.961Z"
+    },
+    {
      "romaji": "Shangri-La Frontier 3rd Season",
      "english": "Shangri-La Frontier Season 3",
      "anilist": 189323,
@@ -201,16 +226,6 @@
      "video": null,
      "skip": "sequel",
      "searched": "2026-11-11T13:38:11.436Z"
-    },
-    {
-     "romaji": "MASHLE Sanma Taisou Shinkakusha Saishu Shiken-hen",
-     "english": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc",
-     "anilist": null,
-     "skip": "sequel",
-     "video": null,
-     "videoTitle": "MASHLE: MAGIC AND MUSCLES The Tri-Magicathlon Divine Visionary Final Exam Arc | Official Trailer",
-     "channel": "Crunchyroll",
-     "searched": "2026-11-11T13:38:11.961Z"
     },
     {
      "romaji": "Isekai de Cheat Skill wo Te ni Shita Ore wa, Genjitsu Sekai wo mo Musou Suru ~Level Up wa Jinsei wo Kaeta~ 2nd Season",
@@ -400,21 +415,6 @@
      "via": "anilist",
      "searched": "2026-11-15T20:16:11.262Z",
      "seconds": 61
-    },
-    {
-     "romaji": "Isekai Tensei Soudouki",
-     "english": "Multi-mind Mayhem",
-     "anilist": 209221,
-     "skip": null,
-     "video": "G7ddo_2gKXE",
-     "videoTitle": "「異世界転生騒動記」PV第1弾 ｜ 2027年1月から放送開始！",
-     "channel": "アルファポリス公式",
-     "subs": [],
-     "subsCheck": true,
-     "caption": true,
-     "via": "anilist",
-     "searched": "2026-11-11T18:55:17.868Z",
-     "seconds": 75
     },
     {
      "romaji": "Odebu Akujo ni Tensei shitara, Nazeka Last Boss Oujisama ni Shuuchaku sareteimasu",
@@ -767,8 +767,8 @@
    ],
    "playlist": "PLMKUhokF0XN8",
    "url": "https://www.youtube.com/playlist?list=PLMKUhokF0XN8",
-   "synced": "2026-11-15T20:16:32.676Z"
+   "synced": "2026-11-16T19:41:10.582Z"
   }
  },
- "updated": "2026-11-15T20:16:32.777Z"
+ "updated": "2026-11-16T19:41:10.678Z"
 }

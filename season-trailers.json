@@ -25,6 +25,14 @@
      "title": "【PV】アニメ「メラ×デス　死神と僕の異常な恋」｜モンスターストライク",
      "seconds": 38
     },
+    "isekai tensei soudouki": {
+     "auto": true,
+     "type": "full_trailer",
+     "sequelStatus": "not_sequel",
+     "youtubeId": "G7ddo_2gKXE",
+     "title": "「異世界転生騒動記」PV第1弾 ｜ 2027年1月から放送開始！",
+     "seconds": 75
+    },
     "gacha wo mawashite nakama wo fuyasu: saikyou no bishoujo gundan wo tsukuriagero": {
      "auto": true,
      "type": "full_trailer",
@@ -82,6 +90,9 @@
     "the fable 2nd season": {
      "sequelStatus": "sequel"
     },
+    "mashle sanma taisou shinkakusha saishu shiken-hen": {
+     "sequelStatus": "sequel"
+    },
     "shangri-la frontier 3rd season": {
      "sequelStatus": "sequel"
     },
@@ -102,9 +113,6 @@
      "seconds": 82
     },
     "sekai saikou no ansatsusha, isekai kizoku ni tensei suru season2": {
-     "sequelStatus": "sequel"
-    },
-    "mashle sanma taisou shinkakusha saishu shiken-hen": {
      "sequelStatus": "sequel"
     },
     "isekai de cheat skill wo te ni shita ore wa, genjitsu sekai wo mo musou suru ~level up wa jinsei wo kaeta~ 2nd season": {
@@ -204,14 +212,6 @@
      "youtubeId": "C6ecZk2mHqA",
      "title": "TVアニメ『死して生きるSSS級ハンター』第2弾PV｜2027年1月放送",
      "seconds": 61
-    },
-    "isekai tensei soudouki": {
-     "auto": true,
-     "type": "full_trailer",
-     "sequelStatus": "not_sequel",
-     "youtubeId": "G7ddo_2gKXE",
-     "title": "「異世界転生騒動記」PV第1弾 ｜ 2027年1月から放送開始！",
-     "seconds": 75
     },
     "odebu akujo ni tensei shitara, nazeka last boss oujisama ni shuuchaku sareteimasu": {
      "auto": true,
