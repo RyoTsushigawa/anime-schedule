@@ -761,11 +761,12 @@ friendList.focus();
 });
 $('modeSolo').onclick = () => { setMode('solo'); redraw(); };
 $('modeGroup').onclick = () => { setMode('group'); redraw(); };
+// U: a short label, so switching to Gruppe doesn't push the week onto a new line; the names are in the tooltip
 function updateGroupButton() {
 const names = [...selectedPeople];
-$('groupButton').textContent = !names.length ? 'Leute wählen'
-: names.length <= 2 ? names.join(', ')
-: `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
+const all = localPlanPeople.length && localPlanPeople.every(p => selectedPeople.has(p));
+$('groupButton').textContent = !names.length ? 'Leute wählen' : all ? 'Alle' : names.length === 1 ? names[0] : `${names.length} Leute`;
+$('groupButton').title = names.length ? names.join(', ') : '';
 }
 updateGroupButton();
 function showPeople(open) {
