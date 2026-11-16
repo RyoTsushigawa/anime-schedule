@@ -3,6 +3,7 @@
 // once, bug fixes and background jobs don't. Add a line here with every new feature.
 const SITE_FEATURES = [
   ['Wochenplan', [
+    'Folgen, die alle schon gesehen haben, werden vor ihrem Slot automatisch übersprungen',
     'Guckplan live aus dem Google Sheet der Gruppe', 'Sendezeiten von AniList', 'Release-Zeit, Guck-Zeit oder beide',
     'Deutsche Stream-Links pro Serie', 'Alternative Quellen (AniWorld, SubsPlease, Nyaa, 0neko)', 'Bevorzugter Dienst und Prime-Link-Auswahl',
     'Wochen blättern und „Heute“', 'Angezeigte Tage wählen', 'Eigene Ansicht („Für“: nur die Serien einer Person)',
