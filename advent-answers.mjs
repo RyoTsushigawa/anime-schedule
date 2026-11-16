@@ -36,9 +36,13 @@ export async function mountAnswers(host,door,dependencies={}){
   const draftKey=()=>`advent-draft:2026:${door}:${person}`;
   function readDraft(){try{return storage.getItem(draftKey());}catch{return null;}}
   function keepDraft(){if(person)try{storage.setItem(draftKey(),input.value);}catch{}count.textContent=`${input.value.length} / 1000`;}
+  // chain doors (one part per person, e.g. a title or a story): the parts in the order they were saved, as one text
+  const chain=!!dependencies.chain;
   function drawList(){summary.textContent=`Antworten der Runde (${answers.length})`;list.replaceChildren();
-   if(!answers.length)list.append(element('p','Noch keine Antworten. Vielleicht macht deine den Anfang.','advent-prompt-note'));
-   for(const a of answers){const card=element('article',null,'advent-group-answer');card.append(element('b',a.person),element('p',a.text));list.append(card);}
+   if(!answers.length)list.append(element('p',chain?'Noch kein Teil. Deiner macht den Anfang.':'Noch keine Antworten. Vielleicht macht deine den Anfang.','advent-prompt-note'));
+   else if(chain){const parts=[...answers].sort((a,b)=>String(a.updatedAt||'').localeCompare(String(b.updatedAt||'')));
+    list.append(element('p',parts.map(a=>a.text).join(' '),'advent-chain-text'),element('p','Von '+parts.map(a=>a.person).join(' → '),'advent-prompt-note'));}
+   else for(const a of answers){const card=element('article',null,'advent-group-answer');card.append(element('b',a.person),element('p',a.text));list.append(card);}
   }
   function choose(){person=select.value;identity.draw(authBox,person,()=>{form.hidden=!identity.canAct(person);});form.hidden=!person||!identity.canAct(person);
    input.value=readDraft()??answers.find(a=>a.person===person)?.text??'';count.textContent=`${input.value.length} / 1000`;
@@ -66,5 +70,7 @@ export async function mountAnswers(host,door,dependencies={}){
    finally{busy=false;select.disabled=input.disabled=save.disabled=refresh.disabled=false;}
   });
   await load();
+  // the group's answers follow on their own while the door is open (every 20 seconds, not while typing or hidden)
+  const timer=setInterval(()=>{if(!host.isConnected){clearInterval(timer);return;}if(!doc.hidden&&!busy&&doc.activeElement!==input)load();},20000);
  }catch(e){if(host.isConnected){status.textContent=e.message;const retry=element('button','Noch einmal versuchen','pill');retry.type='button';retry.onclick=()=>{host.replaceChildren();mountAnswers(host,door,dependencies);};host.append(retry);}}
 }
