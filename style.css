@@ -1766,3 +1766,8 @@ header .header-primary .header-games { margin-right: -2px; }
 #settingsMenu .settings-options .toggle:has(input:checked):hover { background: var(--accent); }
 #settingsMenu .settings-options .pill { grid-column: 1 / -1; justify-self: start; margin: 0; }
 @media (pointer: coarse) { #settingsMenu .settings-options .toggle { min-height: 36px; } }
+/* U: the second row stays in one line with person picker and Edit: a little tighter */
+.controls-left { gap: 6px; }
+#editScope button { padding-inline: 10px; }
+#editSchedule { padding-inline: 11px; }
+#soloPerson { max-width: 86px; }
