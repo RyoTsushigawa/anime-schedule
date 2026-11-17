@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-16T23:47:31.636Z",
+ "generated": "2026-11-17T23:02:30.712Z",
  "byAnilist": {
   "21": {
    "title": "One Piece",
@@ -378,6 +378,10 @@
    "title": "Re:Zero kara Hajimeru Isekai Seikatsu 4th season",
    "malId": 61316,
    "aniworld": "https://aniworld.to/anime/stream/rezero-starting-life-in-another-world/staffel-4"
+  },
+  "189121": {
+   "title": "BanG Dream! MyGO!!!!! // Ave Mujica",
+   "malId": 61324
   },
   "189123": {
    "title": "Ao no Hako Season2",
@@ -1130,6 +1134,10 @@
   "214049": {
    "title": "Kizuguchi to Houtai",
    "malId": 64600
+  },
+  "214055": {
+   "title": "Tsugumi Project",
+   "malId": 64608
   },
   "214461": {
    "title": "Shin no Seijo de Aru Watashi wa Tsuihou saremashita. Dakara Kono Kuni wa Mou Owari desu",
