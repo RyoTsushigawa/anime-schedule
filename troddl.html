@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://s4.anilist.co; connect-src 'self' https://graphql.anilist.co https://anime-season-preview-votes.shigeruhagano.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin"><script src="frame-guard.js"></script><script src="tool-theme.js" data-accent></script>
+<title>Troddl</title>
+<link rel="icon" type="image/png" href="troddl-icon.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="troddl.css">
+</head>
+<body>
+<header><div class="bar">
+<a class="tool-back pill" href="./"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><img src="./icon-72.png" alt="" width="20" height="20">Zum Plan</a><div class="brand troddl-brand">
+<img src="troddl-logo.png" alt="" width="44" height="44">
+<div><h1>Troddl</h1>
+<div>Reviews der Gruppe · jede Kritik unter einem Kritiker-Namen</div></div>
+</div>
+</div></header>
+<main class="troddl-page">
+<section class="troddl-me">
+<label>Du bist <select id="troddlPerson" class="pill" disabled></select></label>
+<span id="troddlPen" class="troddl-pen"></span>
+</section>
+<div id="troddlIdentity" class="identity-box" role="status"></div>
+<div class="troddl-toolbar">
+<button type="button" id="troddlWrite" class="pill primary" disabled>Review schreiben</button>
+<label>Season <select id="troddlSeason" class="pill"><option value="">Alle</option></select></label>
+<label>Sortieren <select id="troddlSort" class="pill"><option value="rating">Troddlrating</option><option value="new">Neueste</option><option value="count">Meiste Reviews</option></select></label>
+</div>
+<p id="troddlStatus" class="troddl-hint" role="status">Lädt …</p>
+<div id="troddlList" class="troddl-list"></div>
+<dialog id="troddlDlg" class="dlg troddl-dlg" aria-labelledby="troddlDlgTitle">
+<form method="dialog" id="troddlForm">
+<b id="troddlDlgTitle">Review schreiben</b>
+<div id="troddlSearchBox"><input id="troddlSearch" class="pill" type="search" placeholder="Anime suchen (AniList)" autocomplete="off" aria-label="Anime suchen"><div id="troddlResults" class="troddl-results"></div></div>
+<div id="troddlPicked" class="troddl-picked" hidden></div>
+<div class="troddl-score-row"><label for="troddlScore">Wertung</label><input id="troddlScoreRange" type="range" min="0" max="100" value="70" aria-label="Wertung (Regler)"><input id="troddlScore" class="pill" type="number" min="0" max="100" value="70" inputmode="numeric"><span id="troddlScoreBadge" class="troddl-score good">70</span></div>
+<textarea id="troddlText" rows="10" maxlength="6000" placeholder="Was hat funktioniert, was nicht? Story, Figuren, Animation, Musik … mindestens 300 Zeichen."></textarea>
+<p id="troddlCount" class="troddl-hint"></p>
+<p id="troddlFormMsg" class="troddl-hint" role="status"></p>
+<div class="dlg-row dlg-foot"><button value="cancel" class="pill" formnovalidate>Abbrechen</button><button type="submit" value="save" id="troddlSave" class="pill primary" disabled>Veröffentlichen</button></div>
+</form>
+</dialog>
+</main>
+<script src="common.js"></script>
+<script src="identity.js"></script>
+<script type="module" src="troddl.mjs"></script>
+</body>
+</html>

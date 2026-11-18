@@ -615,6 +615,55 @@ async function adventSave(body,env,now,request){
  return {ok:true,year,door,answer};
 }
 
+// Troddl reviews (troddl.html): every person reviews under a pen name they choose. One KV record per person
+// (troddl:<person>) with the pen name and their reviews, so nobody's save can overwrite someone else's.
+// Reads give pen names only, never who is behind them; "mine" marks the caller's own when they are confirmed.
+const REVIEW_MIN=300,REVIEW_MAX=6000,PEN=/^[\p{L}\p{N}][\p{L}\p{N} .,'’&!?:+\-]{1,30}[\p{L}\p{N}.!?']$/u;
+async function troddlAll(env){
+ const store=awardsStore(env),out=[];let cursor;
+ do {const page=await store.list({prefix:'troddl:',...(cursor&&{cursor})});
+  for(const key of page.keys){try{const r=JSON.parse(await store.get(key.name)||'null');if(r?.person)out.push(r);}catch{}}
+  cursor=page.list_complete?undefined:page.cursor;
+ }while(cursor);
+ return out;
+}
+const troddlRecord=async(env,person)=>JSON.parse(await awardsStore(env).get('troddl:'+person)||'null')||{person,pen:'',reviews:[]};
+async function troddlGet(url,env,request){
+ const all=await troddlAll(env);let me='';
+ const claimed=str(url.searchParams.get('person'));
+ if(claimed){try{me=await verifiedPerson(request,env,claimed);}catch{me='';}}
+ const reviews=[];
+ for(const r of all)if(r.pen)for(const v of r.reviews||[])reviews.push({...v,pen:r.pen,...(r.person===me&&{mine:true})});
+ const mine=me?all.find(r=>r.person===me):null;
+ return {reviews:reviews.sort((a,b)=>String(b.at).localeCompare(String(a.at))),...(me&&{me:{person:me,pen:mine?.pen||''}})};
+}
+async function troddlPen(body,env,request){
+ const person=await verifiedPerson(request,env,body.person),pen=str(body.pen).replace(/\s+/g,' ');
+ if(!PEN.test(pen))fail(400,'Der Name braucht 3 bis 32 Zeichen: Buchstaben, Zahlen, Leerzeichen und . , \' & ! ? : + -');
+ const taken=(await troddlAll(env)).find(r=>r.person!==person&&r.pen&&r.pen.toLocaleLowerCase('de')===pen.toLocaleLowerCase('de'));
+ if(taken)fail(409,'Diesen Namen hat schon jemand.');
+ const record=await troddlRecord(env,person);
+ await awardsStore(env).put('troddl:'+person,JSON.stringify({...record,pen}));
+ return {ok:true,pen};
+}
+async function troddlSave(body,env,request,now,remove){
+ const person=await verifiedPerson(request,env,body.person),mediaId=Number(body.mediaId);
+ if(!Number.isSafeInteger(mediaId)||mediaId<=0)fail(400,'Ungültige Serie.');
+ const record=await troddlRecord(env,person),reviews=(record.reviews||[]).filter(r=>r.mediaId!==mediaId);
+ if(remove){await awardsStore(env).put('troddl:'+person,JSON.stringify({...record,reviews}));return {ok:true};}
+ if(!record.pen)fail(400,'Leg zuerst deinen Kritiker-Namen fest.');
+ const score=Number(body.score),text=typeof body.text==='string'?body.text.trim():'',title=str(body.title).slice(0,200),season=str(body.season).slice(0,30);
+ if(!Number.isInteger(score)||score<0||score>100)fail(400,'Die Wertung ist eine ganze Zahl von 0 bis 100.');
+ if(text.length<REVIEW_MIN)fail(400,'Eine richtige Review hat mindestens '+REVIEW_MIN+' Zeichen.');
+ if(text.length>REVIEW_MAX)fail(400,'Höchstens '+REVIEW_MAX+' Zeichen.');
+ if(!title)fail(400,'Titel fehlt.');
+ const cover=/^https:\/\/s4\.anilist\.co\/[\w./-]+$/.test(str(body.cover))?str(body.cover):'';
+ const old=(record.reviews||[]).find(r=>r.mediaId===mediaId),at=new Date(now).toISOString();
+ const review={mediaId,title,cover,season,score,text,at:old?.at||at,...(old&&{editedAt:at})};
+ await awardsStore(env).put('troddl:'+person,JSON.stringify({...record,reviews:[...reviews,review]}));
+ return {ok:true,review:{...review,pen:record.pen,mine:true}};
+}
+
 export default {
  async fetch(request,env){
   const origin=request.headers.get('Origin')||'';
@@ -684,6 +733,18 @@ export default {
     let body;try{body=JSON.parse(raw);}catch{fail(400,'Ungültige Anfrage.');}
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
     return json(await adventSave(body,env,now,request),200,cors);
+   }
+   if(request.method==='GET'&&path==='/troddl'){
+    await authorized(request,env);
+    return json(await troddlGet(new URL(request.url),env,request),200,cors);
+   }
+   if(request.method==='POST'&&(path==='/troddl/pen'||path==='/troddl/review'||path==='/troddl/review/delete')){
+    const raw=await request.text();if(raw.length>16384)fail(413,'Anfrage zu groß.');
+    await authorized(request,env);
+    let body;try{body=JSON.parse(raw);}catch{fail(400,'Ungültige Anfrage.');}
+    if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
+    const now=Number(env.TEST_NOW)||Date.now();
+    return json(path==='/troddl/pen'?await troddlPen(body,env,request):await troddlSave(body,env,request,now,path==='/troddl/review/delete'),200,cors);
    }
    if(request.method==='GET'&&path==='/stocks/flow'){
     await authorized(request,env);

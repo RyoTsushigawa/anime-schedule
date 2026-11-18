@@ -1,0 +1,52 @@
+.troddl-page { width: min(100% - 2rem, 50rem); margin: 1.5rem auto 3rem; }
+.troddl-page [hidden] { display: none !important; }
+.troddl-brand { display: flex; align-items: center; gap: .7rem; }
+.troddl-brand img { border-radius: 50%; flex: none; }
+.troddl-me { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-bottom: .8rem; }
+.troddl-me label, .troddl-toolbar label { display: inline-flex; align-items: center; gap: .45rem; font-size: 13px; color: var(--muted); }
+.troddl-pen { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .45rem; font-size: 13px; color: var(--muted); }
+.troddl-pen b { color: var(--text); font-size: 14px; }
+.troddl-pen input { width: 14rem; }
+.troddl-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin: 0 0 1rem; }
+.troddl-toolbar #troddlWrite { margin-inline-end: auto; }
+.troddl-hint { color: var(--muted); font-size: 12px; margin: .3rem 0; }
+.troddl-hint.ok { color: #4fbf7f; }
+.troddl-list { display: grid; gap: .5rem; }
+.troddl-show { border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
+.troddl-show > summary { list-style: none; display: flex; align-items: center; gap: .8rem; padding: .55rem .8rem .55rem .55rem; cursor: pointer; }
+.troddl-show > summary::-webkit-details-marker { display: none; }
+.troddl-show > summary img, .troddl-nocover { width: 42px; height: 58px; object-fit: cover; border-radius: 7px; flex: none; background: var(--line); }
+.troddl-show-text { display: grid; gap: .15rem; min-width: 0; flex: 1; }
+.troddl-show-text b { overflow-wrap: anywhere; color: var(--text); font-size: 15px; }
+.troddl-show-text small, .troddl-review-head small { color: var(--muted); font-size: 12px; }
+.troddl-show[open] > summary { border-bottom: 1px solid var(--line); }
+.troddl-score { display: inline-grid; place-items: center; min-width: 2.1rem; height: 2.1rem; padding: 0 .3rem; border-radius: 7px; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: #fff; flex: none; }
+.troddl-score.big { min-width: 3rem; height: 3rem; font-size: 19px; border-radius: 9px; }
+.troddl-score.good { background: #2f9e5a; }
+.troddl-score.mixed { background: #e6b422; color: #1b1b1f; }
+.troddl-score.bad { background: #d6454b; }
+.troddl-score.tbd { background: transparent; color: var(--muted); border: 1px dashed var(--line); font-size: 12px; font-weight: 650; }
+.troddl-review { padding: .8rem .9rem; display: grid; gap: .45rem; }
+.troddl-review + .troddl-review { border-top: 1px dashed var(--line); }
+.troddl-review.mine { box-shadow: inset 3px 0 0 var(--accent); }
+.troddl-review-head b { color: var(--text); }
+.troddl-review-head { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }
+.troddl-own { margin-inline-start: auto; display: inline-flex; gap: .35rem; }
+.troddl-own .pill { padding: 2px 10px; font-size: 12px; }
+.troddl-review p { margin: 0; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; font-size: 14px; }
+.troddl-add { margin: .2rem .9rem .8rem; }
+.troddl-dlg { width: min(40rem, 94vw); }
+.troddl-dlg form { display: grid; gap: .7rem; }
+.troddl-dlg #troddlSearch { width: 100%; }
+.troddl-results { display: grid; gap: .3rem; margin-top: .4rem; max-height: 18rem; overflow-y: auto; font-size: 13px; color: var(--muted); }
+.troddl-result, .troddl-picked { display: flex; align-items: center; gap: .6rem; text-align: start; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; }
+.troddl-result { cursor: pointer; }
+.troddl-result:hover, .troddl-result:focus-visible { border-color: var(--accent); }
+.troddl-result img, .troddl-picked img { width: 30px; height: 42px; object-fit: cover; border-radius: 5px; flex: none; }
+.troddl-result span, .troddl-picked span { display: grid; min-width: 0; }
+.troddl-result small, .troddl-picked small { color: var(--muted); font-size: 11px; }
+.troddl-score-row { display: flex; align-items: center; gap: .6rem; }
+.troddl-score-row label { font-size: 13px; color: var(--muted); }
+.troddl-score-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.troddl-dlg .troddl-score-row input[type="number"] { width: 4.8rem; flex: none; }
+.troddl-dlg textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 10rem; padding: .6rem .7rem; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; }
