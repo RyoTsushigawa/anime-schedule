@@ -285,7 +285,7 @@ function scheduleInboxEntries(days) {
   })));
 }
 let scheduleInboxRun = 0;
-$('list').addEventListener('click', async event => {
+document.addEventListener('click', async event => {
   if (!event.target.closest('#scheduleInboxButton')) return;
   const run = ++scheduleInboxRun, person = soloPerson, start = weekStart(weekOffset);
   const dialog = $('scheduleInboxDlg'), status = $('scheduleInboxStatus');

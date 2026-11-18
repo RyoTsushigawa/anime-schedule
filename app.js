@@ -1589,16 +1589,13 @@ $('planReadinessButton').hidden = !canMove();
   $('seriesDataButton').dataset.planDiagnostic = JSON.stringify({ week: start.getTime(), shows });
   $('seriesDataButton').disabled = !shows.length; }
 const alerts = !lines.length ? '' : `<button type="button" id="airingWarnings" class="alerts-chip" aria-expanded="${alertsOpen}" aria-controls="airingBody"><span class="notice-count">${[breaks.length ? `${breaks.length} ${breaks.length === 1 ? 'Pause' : 'Pausen'}` : '', finales.length ? `${finales.length} Finale` : '', unknown.length ? `${unknown.length} unbestätigt` : ''].filter(Boolean).join(' · ')}</span></button>`;
-const inboxButton = '<button type="button" class="pill schedule-inbox-button" id="scheduleInboxButton" aria-haspopup="dialog" title="Was sich seit letzter Woche im Plan geändert hat">Planänderungen</button>';
-// U: only the everyday things stay visible; tools for now and then are behind ⋯ (Folgen skippen joins them there)
-const weekMenu = `<span class="day-more week-more"><button type="button" class="pill day-more-btn" data-day-more aria-haspopup="true" aria-expanded="false" aria-label="Mehr zu dieser Woche" title="Mehr zu dieser Woche">⋯</button><span class="day-menu week-menu" hidden>${inboxButton}</span></span>`;
 const alertsBody = !lines.length ? '' : `<div id="airingBody" class="alerts alerts-body"${alertsOpen ? '' : ' hidden'}>${lines.join('')}</div>`;
 // U: in the last two weeks before a season starts, the Season Preview is on the plan itself (and not in Mehr)
 const preview = previewCall();
 $('miscMenu').querySelector('a[href="season-preview.html"]')?.toggleAttribute('hidden', !!preview);
 // U: the week arrows sit at both ends of the day strip, not in the controls row
 const stepPrev = '<button type="button" class="icon strip-step" data-week-step="-1" aria-label="Vorherige Woche" title="Vorherige Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>', stepNext = '<button type="button" class="icon strip-step" data-week-step="1" aria-label="Nächste Woche" title="Nächste Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
-html = `${staleNotice}<div class="weekline">${stepPrev}${strip}${stepNext}${alerts}${preview}${weekMenu}${alertsBody}</div>` + html;
+html = `${staleNotice}<div class="weekline">${stepPrev}${strip}${stepNext}${alerts}${preview}${alertsBody}</div>` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
