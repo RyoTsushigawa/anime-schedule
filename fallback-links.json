@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-17T23:02:30.712Z",
+ "generated": "2026-11-18T22:39:15.709Z",
  "byAnilist": {
   "21": {
    "title": "One Piece",
@@ -217,6 +217,12 @@
    "subsplease": "https://subsplease.org/shows/romelia-senki",
    "aniworld": "https://aniworld.to/anime/stream/romelia-war-chronicle"
   },
+  "181951": {
+   "title": "Ookami to Koushinryou MERCHANT MEETS THE WISE WOLF 2nd Season",
+   "malId": 59928,
+   "subsplease": "https://subsplease.org/shows/spice-and-wolf-2024",
+   "aniworld": "https://aniworld.to/anime/stream/spice-and-wolf-merchant-meets-the-wise-wolf/staffel-2"
+  },
   "182205": {
    "title": "Tensei Shitara Slime Datta Ken 4th Season",
    "malId": 59970,
@@ -234,6 +240,10 @@
    "malId": 60153,
    "subsplease": "https://subsplease.org/shows/rilakkuma",
    "aniworld": "https://aniworld.to/anime/stream/rilakkuma"
+  },
+  "183960": {
+   "title": "Isekai Munchkin: HP1 no Mama de Saikyou Saisoku Dungeon Kouryaku",
+   "malId": 60253
   },
   "184356": {
    "title": "Dogulwang",
