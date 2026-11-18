@@ -1695,7 +1695,6 @@ body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; 
 .bulk-skip-options [data-bulk-error]:empty { display: none; }
 .bulk-skip-options [data-bulk-error] { flex-basis: 100%; color: var(--late); }
 /* the week's ⋯ menu (Plan-Check, Planänderungen, Folgen skippen): same look as a day's menu */
-.weekline > .week-more { order: 1; }
 .day h2 > :is(.day-absent-button, .day-watched) { display: inline-flex; align-items: center; gap: 5px; }
 .weekline .day-more-btn { display: inline-grid; place-items: center; min-height: 30px; padding: 3px 12px; font-size: 15px; line-height: 1; letter-spacing: 1px; }
 .week-menu { min-width: 200px; }

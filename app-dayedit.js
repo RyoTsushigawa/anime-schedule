@@ -256,22 +256,21 @@ keepBox.onchange = () => drawPreview();
 function sync() {
   const week = isoDay(weekStart(weekOffset));
   const allowed = canMove() && view === 'week';
-  if (!allowed || (active && selectedWeek !== week)) { active = false; selected.clear(); }
-  // U: no row of its own: the button is in the week's ⋯ menu with Plan-Check and Planänderungen,
-  // the options open underneath the day strip
-  const line = allowed && $('list').querySelector('.weekline'), menu = line && line.querySelector('.week-menu');
-  if (line && menu) {
-    if (toggle.parentElement !== menu) menu.append(toggle);
-    if (options.parentElement !== line) line.append(options);
-  } else if (toggle.parentElement !== bar) bar.prepend(toggle, options);
-  bar.hidden = !allowed || !bar.contains(toggle);
-  toggle.setAttribute('aria-pressed', String(active));
-  options.hidden = !active;
-  toggle.hidden = active;
+  // U: skipping is part of Edit: while Edit is on, every upcoming show has its own "Skip" button; the bar with
+  // the preview and "Auswahl skippen" opens under the day strip once something is picked
+  const editing = !!$('moveButtons')?.checked;
+  if (!allowed || !editing) { active = false; selected.clear(); }
+  else { if (selectedWeek !== week) selected.clear(); active = true; selectedWeek = week; }
+  const line = allowed && $('list').querySelector('.weekline');
+  if (line) { if (options.parentElement !== line) line.append(options); }
+  else if (options.parentElement !== bar) bar.append(options);
+  bar.hidden = !allowed || !bar.contains(options);
+  toggle.hidden = true;
+  options.hidden = !active || (!selected.size && !error.textContent);
   const available = new Set();
   for (const row of $('list').querySelectorAll('.row')) {
     const move = row.querySelector('.move[data-move-title]');
-    const eligible = active && move && !move.dataset.skip && !row.closest('[hidden], .hidden-by-search') && row.closest('.day')?.dataset.date >= isoDay(new Date());
+    const eligible = active && move && !move.dataset.skip && !row.classList.contains('pause') && !row.closest('[hidden], .hidden-by-search') && row.closest('.day')?.dataset.date >= isoDay(new Date());
     let pick = row.querySelector('.bulk-skip-pick');
     if (!eligible) { if (pick) pick.remove(); row.classList.remove('bulk-skip-selected'); continue; }
     const key = norm(move.dataset.moveTitle);
@@ -299,8 +298,8 @@ function sync() {
   save.disabled = busy || !selected.size;
   if (!busy) drawPreview();
 }
-toggle.onclick = () => { active = true; selectedWeek = isoDay(weekStart(weekOffset)); error.textContent = ''; sync(); };
-bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { active = false; selected.clear(); previewFor = ''; sync(); } };
+$('moveButtons')?.addEventListener('change', () => { error.textContent = ''; previewFor = ''; sync(); });
+bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { selected.clear(); error.textContent = ''; previewFor = ''; sync(); } };
 save.onclick = async () => {
   sync();
   if (busy || !active || !selected.size || !canMove() || view !== 'week' || selectedWeek !== isoDay(weekStart(weekOffset))) return;
@@ -316,7 +315,7 @@ save.onclick = async () => {
     notice(`${shows.length} Einträge diese Woche geskippt. ${keep ? 'Die übrigen Zeiten bleiben gleich.' : 'Spätere Slots rücken vor.'}`, true);
     // U: one click undoes the whole selection (only these entries, on the newest list) and opens it again to fix
     movesUndo = Object.assign(current => current.filter(m => !(keys.has(m.show) && m.week === week)).concat(previous), {
-      after: () => { if (view !== 'week' || isoDay(weekStart(weekOffset)) !== week) return; active = true; selectedWeek = week; selected = new Map(shows.map(s => [s.key, s])); keepBox.checked = keep; previewFor = ''; sync(); },
+      after: () => { if (view !== 'week' || isoDay(weekStart(weekOffset)) !== week || !$('moveButtons')?.checked) return; selectedWeek = week; selected = new Map(shows.map(s => [s.key, s])); keepBox.checked = keep; previewFor = ''; sync(); },
     });
     await load(true);
   } catch (e) { error.textContent = `Nicht gespeichert: ${e.message}`; }
