@@ -64,7 +64,7 @@ const text = (body, status = 200) => ({ ok: status < 300, status, json: async ()
 // opts.airings and opts.streams instead of the ones above.
 // The page's scripts in index.html's order (frame-guard.js and early.js left out; early.js with opts.early)
 export const PAGE_SCRIPTS = [...read('index.html').matchAll(/<script\b[^>]*\bsrc="([^"?]+)/g)].map(m => m[1])
-  .filter(f => !['frame-guard.js', 'early.js'].includes(f));
+  .filter(f => !['frame-guard.js', 'early.js'].includes(f) && !f.endsWith('.mjs'));
 export async function openPage(opts = {}) {
   const html = read(opts.wrapped ? 'wrapped.html' : 'index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
   const dom = new JSDOM(html, { url: 'https://ryotsushigawa.github.io/anime-schedule/' + (opts.hash || ''), runScripts: 'outside-only', pretendToBeVisual: true });

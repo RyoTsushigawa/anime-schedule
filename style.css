@@ -1767,3 +1767,18 @@ header .header-primary .header-games { margin-right: -2px; }
 .weeknav #prev, .weeknav #next { display: none; }
 .weekline > .strip-step { flex: none; align-self: center; }
 #editScope button { min-width: 34px; font-size: 14px; }
+
+/* Troddl: the group's review score on hover of a show's name (troddl-hover.mjs) */
+.troddl-card { position: fixed; z-index: 60; width: min(300px, calc(100vw - 24px)); padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); box-shadow: 0 10px 30px rgba(0,0,0,.28); font-size: 12px; display: grid; gap: 7px; }
+.troddl-card[hidden] { display: none; }
+.troddl-card-head { display: flex; align-items: center; gap: 9px; }
+.troddl-card-head img { width: 22px; height: 22px; border-radius: 50%; }
+.troddl-card-head span:not(.troddl-score) { display: grid; flex: 1; min-width: 0; }
+.troddl-card-head small, .troddl-card q + small { color: var(--muted); }
+.troddl-card q { display: block; color: var(--text); line-height: 1.4; quotes: "„" "“"; }
+.troddl-card a { color: var(--accent); font-weight: 650; text-decoration: none; justify-self: end; }
+.troddl-card .troddl-score { display: inline-grid; place-items: center; min-width: 34px; height: 34px; border-radius: 7px; font-weight: 800; font-size: 15px; color: #fff; }
+.troddl-card .troddl-score.good { background: #2f9e5a; }
+.troddl-card .troddl-score.mixed { background: #e6b422; color: #1b1b1f; }
+.troddl-card .troddl-score.bad { background: #d6454b; }
+.troddl-card .troddl-score.tbd { background: transparent; color: var(--muted); border: 1px dashed var(--line); font-size: 11px; }

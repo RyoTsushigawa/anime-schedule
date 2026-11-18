@@ -67,8 +67,12 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-16T10:00:00Z', name: 'Aufgeräumter Kopf und Wartung' };
+const LAST_FEATURE = { at: '2026-11-18T22:00:00Z', name: 'Troddl-Reviews' };
 const PATCH_NOTES = [
+{ id: '2026-11-18', title: 'Troddl: your own reviews, Metacritic style', items: [
+'New in Mehr › Spaß: Troddl. Everyone picks a pen name of their own (the others only ever see it) and writes real reviews: a score from 0 to 100 and at least 300 characters.',
+'Each show gets a Troddlrating, the average of your scores, once two of you reviewed it. Hover a show’s name in Zeitplan, Catch-up or Other to see it with the latest review; „Alle Reviews“ opens the full page, sorted by season, to read again after the season.',
+] },
 { id: '2026-11-16', title: 'A calmer header, a Wartung menu and safer plan changes', items: [
 'The top row is lighter: the ? sits next to the name, Spiele and Mehr are icons. Your person is at the top of the account menu (switch on „Person schnell wechseln“ to keep it in the row). The week arrows sit at both ends of the day strip.',
 'Mehr is a compact grid (Season, Spaß, Plan, Sonstiges). Every check – Plan-Check, Seriendaten, Datenstand, Folgennummern, Discord-Zustellung – is now in Mehr › Wartung, not in the plan.',
