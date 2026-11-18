@@ -210,7 +210,7 @@ bar.innerHTML = '<button type="button" class="pill" data-bulk-toggle aria-presse
 $('list').before(bar);
 const toggle = bar.querySelector('[data-bulk-toggle]'), options = bar.querySelector('.bulk-skip-options');
 const save = bar.querySelector('[data-bulk-save]'), count = bar.querySelector('[data-bulk-count]'), error = bar.querySelector('[data-bulk-error]');
-let active = false, busy = false, selectedWeek = '', selected = new Map();
+let active = false, busy = false, selectedWeek = '', selected = new Map(), skipMode = false;
 const keepBox = bar.querySelector('[data-bulk-keep]'), preview = bar.querySelector('[data-bulk-preview]');
 // the list as it would be saved: the selected shows skipped this week
 function candidate(keep, keys = new Set(selected.keys())) {
@@ -258,7 +258,10 @@ function sync() {
   const allowed = canMove() && view === 'week';
   // U: skipping is part of Edit: while Edit is on, every upcoming show has its own "Skip" button; the bar with
   // the preview and "Auswahl skippen" opens under the day strip once something is picked
-  const editing = !!$('moveButtons')?.checked;
+  // (or the Skip icon next to Verspätung, without the rest of Edit)
+  const editing = !!$('moveButtons')?.checked || skipMode;
+  if (!allowed) skipMode = false;
+  for (const b of $('list').querySelectorAll('[data-day-skip]')) b.setAttribute('aria-pressed', String(allowed && editing));
   if (!allowed || !editing) { active = false; selected.clear(); }
   else { if (selectedWeek !== week) selected.clear(); active = true; selectedWeek = week; }
   const line = allowed && $('list').querySelector('.weekline');
@@ -271,6 +274,18 @@ function sync() {
   for (const row of $('list').querySelectorAll('.row')) {
     const move = row.querySelector('.move[data-move-title]');
     const eligible = active && move && !move.dataset.skip && !row.classList.contains('pause') && !row.closest('[hidden], .hidden-by-search') && row.closest('.day')?.dataset.date >= isoDay(new Date());
+    // U: a show skipped for this week gets ↺ to bring it back (only skips from the plan, not absences or "Schon gesehen")
+    const skippedHere = active && move?.dataset.skip && row.classList.contains('skipped') && !row.closest('[hidden], .hidden-by-search') && row.closest('.day')?.dataset.date >= isoDay(new Date());
+    let undoSkip = row.querySelector('.bulk-unskip');
+    if (!skippedHere) undoSkip?.remove();
+    else if (!undoSkip) {
+      undoSkip = document.createElement('button'); undoSkip.type = 'button'; undoSkip.className = 'bulk-unskip';
+      undoSkip.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      undoSkip.title = 'Skip aufheben: die Folge läuft wieder'; undoSkip.setAttribute('aria-label', 'Skip aufheben: ' + move.dataset.moveName);
+      undoSkip.onclick = e => { e.stopPropagation(); unskip(norm(move.dataset.moveTitle), move.dataset.moveName); };
+      row.append(undoSkip);
+    }
+    if (undoSkip) undoSkip.disabled = busy;
     let pick = row.querySelector('.bulk-skip-pick');
     if (!eligible) { if (pick) pick.remove(); row.classList.remove('bulk-skip-selected'); continue; }
     const key = norm(move.dataset.moveTitle);
@@ -299,6 +314,29 @@ function sync() {
   if (!busy) drawPreview();
 }
 $('moveButtons')?.addEventListener('change', () => { error.textContent = ''; previewFor = ''; sync(); });
+// the Skip icon in a day heading switches the Skip buttons on and off
+$('list').addEventListener('click', e => {
+  if (!e.target.closest('[data-day-skip]') || busy) return;
+  const on = !(skipMode || $('moveButtons')?.checked);
+  skipMode = on;
+  if (!on && $('moveButtons')?.checked) { $('moveButtons').checked = false; $('moveButtons').dispatchEvent(new Event('change')); }
+  error.textContent = ''; previewFor = ''; sync();
+});
+// bring a skipped show back for this week (one click, with Rückgängig)
+async function unskip(key, name) {
+  if (busy) return;
+  const week = isoDay(weekStart(weekOffset));
+  const removed = moves.filter(m => m.show === key && m.week === week && m.skip);
+  if (!removed.length) return;
+  busy = true; sync();
+  try {
+    await saveMoves(moves.filter(m => !removed.includes(m)));
+    notice(`${name}: Skip aufgehoben, läuft diese Woche wieder.`, true);
+    movesUndo = current => current.filter(m => !(m.show === key && m.week === week && m.skip)).concat(removed);
+    await load(true);
+  } catch (err) { error.textContent = `Nicht gespeichert: ${err.message}`; }
+  finally { busy = false; sync(); }
+}
 bar.querySelector('[data-bulk-cancel]').onclick = () => { if (!busy) { selected.clear(); error.textContent = ''; previewFor = ''; sync(); } };
 save.onclick = async () => {
   sync();
@@ -311,11 +349,11 @@ save.onclick = async () => {
   for (const el of bar.querySelectorAll('input, button')) el.disabled = true;
   try {
     await saveMoves(next);
-    active = false; selected.clear();
+    active = false; selected.clear(); skipMode = false;
     notice(`${shows.length} Einträge diese Woche geskippt. ${keep ? 'Die übrigen Zeiten bleiben gleich.' : 'Spätere Slots rücken vor.'}`, true);
     // U: one click undoes the whole selection (only these entries, on the newest list) and opens it again to fix
     movesUndo = Object.assign(current => current.filter(m => !(keys.has(m.show) && m.week === week)).concat(previous), {
-      after: () => { if (view !== 'week' || isoDay(weekStart(weekOffset)) !== week || !$('moveButtons')?.checked) return; selectedWeek = week; selected = new Map(shows.map(s => [s.key, s])); keepBox.checked = keep; previewFor = ''; sync(); },
+      after: () => { if (view !== 'week' || isoDay(weekStart(weekOffset)) !== week) return; if (!$('moveButtons')?.checked) skipMode = true; selectedWeek = week; selected = new Map(shows.map(s => [s.key, s])); keepBox.checked = keep; previewFor = ''; sync(); },
     });
     await load(true);
   } catch (e) { error.textContent = `Nicht gespeichert: ${e.message}`; }
