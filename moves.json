@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-18T18:59:59.911Z",
+ "updated": "2026-11-18T19:00:54.942Z",
  "moves": [
   {
    "show": "fxsenshikurumichan",
@@ -28,13 +28,6 @@
    "tag": "Fr.",
    "time": "19:00",
    "week": ""
-  },
-  {
-   "show": "uchinootoutodomogasumimasen",
-   "title": "Please Excuse My Younger Brothers",
-   "tag": "Fr.",
-   "time": "19:00",
-   "week": "2026-11-02"
   },
   {
    "show": "uchinootoutodomogasumimasen",
@@ -86,71 +79,11 @@
    "week": ""
   },
   {
-   "show": "marronnieroukokunoshichininnokishi",
-   "title": "The Seven Knights of the Marronnier Kingdom",
-   "tag": "",
-   "time": "",
-   "week": "2026-11-02",
-   "skip": true
-  },
-  {
-   "show": "vertexforce",
-   "title": "VERTEX FORCE",
-   "tag": "",
-   "time": "",
-   "week": "2026-11-02",
-   "skip": true
-  },
-  {
-   "show": "hyoukennomajutsushigasekaiwosuberuii",
-   "title": "The Iceblade Sorcerer Shall Rule the World II",
-   "tag": "",
-   "time": "",
-   "week": "2026-11-02",
-   "skip": true
-  },
-  {
-   "show": "yaseinolastbossgaarawaretaseason2",
-   "title": "A Wild Last Boss Appeared! Season 2",
-   "tag": "Sa.",
-   "time": "21:30",
-   "week": "2026-11-02"
-  },
-  {
-   "show": "kerorogunsou",
-   "title": "Keroro Gunsou☆",
-   "tag": "Sa.",
-   "time": "22:00",
-   "week": "2026-11-02"
-  },
-  {
-   "show": "seitokainimoanawaaru",
-   "title": "Seitokai ni mo Ana wa Aru!",
-   "tag": "Sa.",
-   "time": "21:00",
-   "week": "2026-11-02"
-  },
-  {
-   "show": "magicalexplorer",
-   "title": "Magical★Explorer",
-   "tag": "Sa.",
-   "time": "20:30",
-   "week": "2026-11-02"
-  },
-  {
    "show": "aonohakoseason2",
    "title": "Blue Box Season 2",
    "tag": "So.",
    "time": "18:45",
    "week": ""
-  },
-  {
-   "show": "aonohakoseason2",
-   "title": "Blue Box Season 2",
-   "tag": "",
-   "time": "",
-   "week": "2026-11-02",
-   "skip": true
   },
   {
    "show": "yozakurasanchinodaisakusenseason2part2",
@@ -167,6 +100,15 @@
    "time": "",
    "week": "2026-11-09",
    "skip": true
+  },
+  {
+   "show": "sekaisaikyounomajohajimemashita",
+   "title": "The World's Strongest Witch",
+   "tag": "",
+   "time": "",
+   "week": "2026-11-16",
+   "skip": true,
+   "keepTime": true
   }
  ],
  "absent": [
