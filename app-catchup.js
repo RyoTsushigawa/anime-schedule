@@ -275,7 +275,7 @@ const single = singleEpisodes;
 const title = m => `<div class="title"><a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(m.title.english || m.title.romaji)}</a>${mine ? pinButton(m, pinned.has(m.id)) : ''}</div>`;
 const seen = (progress, m) => m.episodes ? `${progress} von ${m.episodes} gesehen` : `${progress} gesehen`;
 const progressBar = (progress, m) => Number.isSafeInteger(m.episodes) && m.episodes > 0
-  ? `<progress class="catchup-progress" value="${Math.max(0, Math.min(progress, m.episodes))}" max="${m.episodes}" aria-label="${esc(seen(progress, m))}"></progress>`
+  ? (v => `<div class="season-progress" role="progressbar" aria-label="${esc(seen(progress, m))}" aria-valuemin="0" aria-valuemax="${m.episodes}" aria-valuenow="${v}" title="${esc(seen(progress, m))} (${Math.round(v / m.episodes * 100)} %)"><span style="width:${Math.round(v / m.episodes * 100)}%"></span></div>`)(Math.max(0, Math.min(progress, m.episodes)))
   : '';
 const grouped = ({ m, first, out, nextAt, missing, links, progress, idleWeeks }) => `
     <div class="row catchup-single" ${artStyle(m)} ${searchKey(...mediaTitles(m))}>
@@ -314,7 +314,7 @@ const paced = ({ m, first, out, progress, links }) => `
       <div class="time"><span class="time-day">Folge</span> ${first}</div>
       <img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">
       <div class="info">${title(m)}
-        <div class="ep">${progress} von ${m.episodes || out} gesehen</div>
+        <div class="ep">${progress} von ${m.episodes || out} gesehen</div>${progressBar(progress, m)}
       </div>
       <div class="links">${linkButtons(links, m.id)}</div>
       ${mine ? (local ? '' : dropButton(m.id)) + (selecting ? '<div class="watch-space"></div>' : out > first && (auth || local) ? stepper(m, first, out, false, 1) : check(m, first, false)) : ''}
