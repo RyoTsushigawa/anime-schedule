@@ -871,10 +871,22 @@ function rememberSearch() {
 drawRecentSearches();
 $('search').addEventListener('input', () => { clearTimeout(recentTimer); recentTimer = setTimeout(rememberSearch, 1500); });
 $('search').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(recentTimer); rememberSearch(); } });
+// U: on a phone the day's buttons can wrap to the start of a line; the menu then opens to the right of ⋯
+// instead of off the screen's left edge, and is never wider than the screen
+function keepMenuInView(menu) {
+  menu.style.left = menu.style.right = menu.style.minWidth = '';
+  const pad = 8, vw = document.documentElement.clientWidth, room = vw - 2 * pad;
+  if (menu.offsetWidth > room) menu.style.minWidth = room + 'px';
+  const box = menu.getBoundingClientRect();
+  if (box.left >= pad && box.right <= vw - pad) return;
+  const anchor = menu.parentElement.getBoundingClientRect(), width = Math.min(menu.offsetWidth, room);
+  menu.style.right = 'auto';
+  menu.style.left = (Math.max(pad, Math.min(anchor.left, vw - pad - width)) - anchor.left) + 'px';
+}
 $('list').addEventListener('click', e => {
 const toggle = e.target.closest('[data-day-more]');
 for (const menu of document.querySelectorAll('#list .day-menu:not([hidden])')) if (menu.previousElementSibling !== toggle) { menu.hidden = true; menu.previousElementSibling.setAttribute('aria-expanded', 'false'); }
-if (toggle) { const menu = toggle.nextElementSibling; menu.hidden = !menu.hidden; toggle.setAttribute('aria-expanded', String(!menu.hidden)); }
+if (toggle) { const menu = toggle.nextElementSibling; menu.hidden = !menu.hidden; toggle.setAttribute('aria-expanded', String(!menu.hidden)); if (!menu.hidden) keepMenuInView(menu); }
 else if (e.target.closest('.day-menu button')) { const menu = e.target.closest('.day-menu'); menu.hidden = true; menu.previousElementSibling.setAttribute('aria-expanded', 'false'); }
 });
 document.addEventListener('click', e => { if (!e.target.closest('.day-more')) for (const menu of document.querySelectorAll('#list .day-menu:not([hidden])')) { menu.hidden = true; menu.previousElementSibling.setAttribute('aria-expanded', 'false'); } });

@@ -1332,7 +1332,7 @@ button.header-nav-link { font-family: inherit; cursor: pointer; }
 /* day headings: pause shift and the delay clock stay, everything else behind "⋯" */
 .day-more { position: relative; display: inline-flex; order: 2; }
 .day h2 .day-more-btn { display: inline-grid; place-items: center; padding: 3px 10px; font-size: 15px; line-height: 1; letter-spacing: 1px; }
-.day-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 2px; min-width: 250px; padding: 5px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 10px 30px #0005; }
+.day-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 2px; min-width: 250px; max-width: calc(100vw - 16px); box-sizing: border-box; padding: 5px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 10px 30px #0005; }
 .day-menu[hidden] { display: none; }
 .day h2 .day-menu > button { order: 0; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 34px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 13px; font-weight: 500; text-align: left; white-space: nowrap; justify-content: flex-start; min-width: 0; }
 .day h2 .day-menu > button::after { content: attr(aria-label); }
@@ -1811,4 +1811,9 @@ header .header-primary .header-games { margin-right: -2px; }
  .row > .links > .cr { padding-inline: 8px; column-gap: 5px; }
  .row:not(.compact) { column-gap: 7px; }
  .row:has(> .ep-stepper) > .links > .cr { font-size: 0; column-gap: 0; padding-inline: 10px; }
+}
+/* U: on a phone a day's absence note goes on its own line under the date, so the day's buttons stay together */
+@media (max-width: 560px) {
+ .day h2 > span:first-child { margin-inline-end: auto; }
+ .day h2 .away-note { order: 8; flex-basis: 100%; white-space: normal; margin-top: -4px; }
 }
