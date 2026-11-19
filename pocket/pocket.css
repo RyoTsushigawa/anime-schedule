@@ -129,3 +129,5 @@ a { color: var(--accent); }
 .pk-traded { margin-top: .4rem; }
 
 .pk-import-action{display:flex;justify-content:flex-end;margin:0 0 .7rem}.pk-import-preview{max-height:13rem;overflow:auto;overflow-wrap:anywhere;font-size:.85rem;line-height:1.65}.pk-import-action button{white-space:nowrap}#pkImportDlg label{display:block;margin:.75rem 0}#pkImportDlg input[type=file]{display:block;max-width:100%;margin-top:.4rem}
+
+#pkImportBulk{display:block;width:100%;min-height:9rem;box-sizing:border-box;background:var(--surface, #222);color:inherit;border:1px solid #777;border-radius:.5rem;padding:.65rem;font:inherit}#pkImportSource{max-width:100%;margin-left:.5rem}
