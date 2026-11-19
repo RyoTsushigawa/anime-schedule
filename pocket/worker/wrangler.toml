@@ -1,8 +1,0 @@
-name = "pocket-collection"
-main = "index.js"
-compatibility_date = "2026-11-11"
-workers_dev = true
-# Secrets (optional): GROUP_CODE (16+ characters, asked once per device), ADMIN_KEY (16+, resets a forgotten PIN).
-# The KV namespace "pocket-collection" (binding POCKET) is created and added by .github/workflows/pocket-worker-deploy.yml.
-[vars]
-SITE_ORIGIN = "https://ryotsushigawa.github.io"
