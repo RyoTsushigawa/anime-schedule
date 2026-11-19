@@ -43,6 +43,9 @@ const TEXT = {
     join: '+ Neu dabei', yourName: 'Dein Name', pin: 'PIN', login: 'Anmelden', joinNow: 'Beitreten', logout: 'Abmelden',
     loggedIn: p => `✓ Angemeldet als ${p}`, needPin: p => `Mit deiner PIN als ${p} anmelden, um zu bearbeiten:`, joinHint: 'Name und PIN (4–32 Zeichen) wählen. Die PIN bleibt auf diesem Gerät gespeichert.',
     groupCode: 'Gruppencode', groupCodeHint: 'Der Gruppencode fehlt auf diesem Gerät:', save: 'Speichern',
+    quickBtn: '⚡ Schnell erfassen', quickAll1: 'Alle fehlenden auf 1', quickAll0: 'Ganzes Set auf 0',
+    quickHint: acc => `Wie viele hast du? Zahl antippen: wird auf „${acc}“ gespeichert und springt zur nächsten Karte. 0 = fehlt, → = überspringen, ← = zurück. Am PC gehen Zifferntasten und Pfeile. Tipp: erst „Alle fehlenden auf 1“, dann nur Doppelte und Fehlende ändern.`,
+    quickProgress: (have, total, done) => `${have}/${total} im Besitz · ${done} bearbeitet`, quickAll0Confirm: (set, acc) => `Alle Karten von „${set}“ auf „${acc}“ auf 0 setzen?`, quickEnd: 'Ende des Sets erreicht.',
     packBtn: '＋ Pack geöffnet', packTitle: 'Pack geöffnet', undo: 'Rückgängig', done: 'Fertig', newCard: 'NEU',
     packHint: (n, acc) => `Tippe die ${n} gezogenen Karten an (Reihenfolge egal). Danach wird sie automatisch auf „${acc}“ gespeichert, und das nächste Pack beginnt. Eine Karte in der Leiste antippen nimmt sie wieder raus.`,
     packSaved: (n, acc) => `✓ ${n} Karten auf „${acc}“ eingetragen. Nächstes Pack:`,
@@ -82,6 +85,9 @@ const TEXT = {
     join: '+ New here', yourName: 'Your name', pin: 'PIN', login: 'Log in', joinNow: 'Join', logout: 'Log out',
     loggedIn: p => `✓ Logged in as ${p}`, needPin: p => `Log in with your PIN as ${p} to edit:`, joinHint: 'Choose a name and a PIN (4–32 characters). The PIN stays saved on this device.',
     groupCode: 'Group code', groupCodeHint: 'The group code is missing on this device:', save: 'Save',
+    quickBtn: '⚡ Quick entry', quickAll1: 'All missing to 1', quickAll0: 'Whole set to 0',
+    quickHint: acc => `How many do you have? Tap the number: it saves to “${acc}” and moves to the next card. 0 = missing, → = skip, ← = back. On a computer, number keys and arrows work. Tip: first “All missing to 1”, then change only duplicates and missing cards.`,
+    quickProgress: (have, total, done) => `${have}/${total} owned · ${done} edited`, quickAll0Confirm: (set, acc) => `Set every card of “${set}” on “${acc}” to 0?`, quickEnd: 'End of the set.',
     packBtn: '+ Pack opened', packTitle: 'Pack opened', undo: 'Undo', done: 'Done', newCard: 'NEW',
     packHint: (n, acc) => `Tap the ${n} cards you pulled (any order). Then it saves to “${acc}” by itself and the next pack starts. Tap a card in the tray to take it out.`,
     packSaved: (n, acc) => `✓ ${n} cards added to “${acc}”. Next pack:`,
@@ -203,6 +209,7 @@ function fillAccounts() {
   $('pkAccount').disabled = accounts.length < 2;
   $('pkAccounts').hidden = !mine();
   $('pkPackBtn').hidden = !mine();
+  $('pkQuickBtn').hidden = !mine();
   $('pkImportBtn').hidden = !mine();
 }
 
@@ -528,6 +535,83 @@ $('pkAccountList').onclick = e => {
   if (!a || !confirm(T().removeConfirm(a.name))) return;
   change(r => { r.accounts = r.accounts.filter(x => x.id !== a.id); delete r.owned[a.id]; });
   fillAccounts(); drawAccountList();
+};
+
+// ---------- quick entry ----------
+// One tap per card, in the game's order: the number pad sets the count on one account and moves on.
+let quick = { list: [], at: 0, done: 0 };
+function quickSet(account, id, n) {
+  const o = record.owned[account] ||= {};
+  if (n > 0) o[id] = Math.min(MAX_COPIES, n); else delete o[id];
+}
+function quickChanged() { record = normalize(record); people[person()] = record; queueSave(); }
+function openQuick() {
+  if (!mine()) return;
+  $('pkQuickAccount').replaceChildren(...record.accounts.map(a => new Option(a.name, a.id)));
+  $('pkQuickAccount').value = scope() !== 'all' ? scope() : record.accounts[0].id;
+  const sets = [...data.sets].reverse();
+  $('pkQuickSet').replaceChildren(...sets.map(x => new Option(`${x.name[lang] || x.name.en} (${x.code})`, x.code)));
+  $('pkQuickSet').value = $('pkSet').value || sets[0].code;
+  quick = { list: [], at: 0, done: 0 };
+  loadQuick(); $('pkQuickDlg').showModal();
+}
+function loadQuick() {
+  quick.list = data.cards.filter(c => c.s === $('pkQuickSet').value).sort((a, b) => a.n - b.n);
+  quick.at = 0;
+  const acc = record.accounts.find(a => a.id === $('pkQuickAccount').value);
+  $('pkQuickHint').textContent = T().quickHint(acc?.name || '');
+  const owned = record.owned[$('pkQuickAccount').value] || {};
+  $('pkQuickGrid').innerHTML = quick.list.map((c, i) => `<button type="button" data-q="${i}" class="${owned[c.id] ? '' : 'zero'}" aria-label="${esc(label(c))}"><img src="${IMG(c)}" alt="" loading="lazy"><span class="num">${c.n > 0 ? c.n : 'AN'}</span>${owned[c.id] ? `<span class="n">${owned[c.id]}</span>` : ''}</button>`).join('');
+  drawQuick();
+}
+function drawQuickCell(i) {
+  const c = quick.list[i], b = $('pkQuickGrid').querySelector(`[data-q="${i}"]`); if (!c || !b) return;
+  const n = record.owned[$('pkQuickAccount').value]?.[c.id] || 0;
+  b.classList.toggle('zero', !n);
+  b.querySelector('.n')?.remove();
+  if (n) b.insertAdjacentHTML('beforeend', `<span class="n">${n}</span>`);
+}
+function drawQuick(message = '') {
+  const c = quick.list[quick.at], owned = record.owned[$('pkQuickAccount').value] || {};
+  for (const b of $('pkQuickGrid').querySelectorAll('.cur')) b.classList.remove('cur');
+  const cell = $('pkQuickGrid').querySelector(`[data-q="${quick.at}"]`);
+  if (cell) { cell.classList.add('cur'); cell.scrollIntoView({ block: 'nearest' }); }
+  $('pkPadCard').innerHTML = c ? `<img src="${IMG(c)}" alt=""><span><b>${esc(nameOf(c))}</b><small class="pk-hint">${esc(c.id)} · ${esc(rarity(c.r))} · ×${owned[c.id] || 0}</small>${message ? `<small class="pk-hint">${esc(message)}</small>` : ''}</span>` : '';
+  $('pkQuickProgress').textContent = T().quickProgress(quick.list.filter(x => owned[x.id]).length, quick.list.length, quick.done);
+}
+function quickKey(key) {
+  const c = quick.list[quick.at]; if (!c) return;
+  const account = $('pkQuickAccount').value, n = record.owned[account]?.[c.id] || 0;
+  let message = '';
+  if (/^\d$/.test(key)) { quickSet(account, c.id, Number(key)); quickChanged(); quick.done++; drawQuickCell(quick.at); quick.at++; }
+  else if (key === 'plus' || key === 'plus10') { quickSet(account, c.id, n + (key === 'plus' ? 1 : 10)); quickChanged(); drawQuickCell(quick.at); }
+  else if (key === 'skip') quick.at++;
+  else if (key === 'back') quick.at = Math.max(0, quick.at - 1);
+  if (quick.at >= quick.list.length) { quick.at = quick.list.length - 1; message = T().quickEnd; }
+  drawQuick(message);
+}
+$('pkQuickBtn').onclick = openQuick;
+$('pkQuickClose').onclick = () => $('pkQuickDlg').close();
+$('pkQuickDlg').addEventListener('close', () => draw());
+$('pkQuickSet').onchange = loadQuick;
+$('pkQuickAccount').onchange = loadQuick;
+$('pkQuickGrid').onclick = e => { const b = e.target.closest('[data-q]'); if (b) { quick.at = Number(b.dataset.q); drawQuick(); } };
+$('pkPad').onclick = e => { const b = e.target.closest('[data-key]'); if (b) quickKey(b.dataset.key); };
+$('pkQuickDlg').addEventListener('keydown', e => {
+  if (e.target.matches('select, input')) return;
+  const key = /^\d$/.test(e.key) ? e.key : { ArrowRight: 'skip', ArrowLeft: 'back', Backspace: 'back', '+': 'plus' }[e.key];
+  if (key) { e.preventDefault(); quickKey(key); }
+});
+$('pkQuickAll1').onclick = () => {
+  const account = $('pkQuickAccount').value;
+  for (const c of quick.list) if (!record.owned[account]?.[c.id]) quickSet(account, c.id, 1);
+  quickChanged(); loadQuick();
+};
+$('pkQuickAll0').onclick = () => {
+  const account = $('pkQuickAccount').value, acc = record.accounts.find(a => a.id === account);
+  if (!confirm(T().quickAll0Confirm(setName($('pkQuickSet').value), acc?.name || ''))) return;
+  for (const c of quick.list) quickSet(account, c.id, 0);
+  quickChanged(); loadQuick();
 };
 
 // ---------- pack opened ----------

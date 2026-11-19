@@ -18,6 +18,9 @@ in this folder (page, styles, theme, card data, settings, backend). The schedule
 - **Trade worth**: how much the group wants a card (chase 3, wishlist 2, missing 1) divided by the others' spare
   copies + 1. Within a rarity, a card gets you any card with a lower worth, and *Dafür bekommst du* lists them.
 
+- **Schnell erfassen** (quick entry, in *Sammlung*): one set on one account, card by card in the game's order. A
+  number pad sets the count and moves to the next card (0 = missing, → skip, ← back; number keys and arrows on a
+  computer). *Alle fehlenden auf 1* fills a set at once, so only duplicates and missing cards need a tap.
 - **Pack geöffnet** (the floating button): the last pack and account are preselected, you tap the cards you
   pulled and it saves by itself once the pack is full; the next pack starts right away, with *Rückgängig* to undo.
 - **Getauscht**: in *Tausch*, tap your card and the friend's, then *Getauscht*. The server updates **both**

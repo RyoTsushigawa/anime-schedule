@@ -33,7 +33,7 @@
 </nav>
 
 <section id="pkCards" data-panel="cards">
-<div class="pk-import-action"><button type="button" id="pkImportBtn" class="pill" hidden>Sammlung importieren / Import collection</button></div>
+<div class="pk-import-action"><button type="button" id="pkQuickBtn" class="pill primary" data-t="quickBtn" hidden>⚡ Schnell erfassen</button> <button type="button" id="pkImportBtn" class="pill" hidden>Sammlung importieren / Import collection</button></div>
 <div class="pk-filters">
 <select id="pkSet" class="pill" aria-label="Set"></select>
 <select id="pkRarity" class="pill" aria-label="Rarity"></select>
@@ -74,6 +74,26 @@
 <div id="pkCardGroup"></div>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
 </form>
+</dialog>
+
+<dialog id="pkQuickDlg" class="dlg pk-quick-dlg" aria-labelledby="pkQuickTitle">
+<div class="pk-quick-head">
+<h2 id="pkQuickTitle" data-t="quickBtn">Schnell erfassen</h2>
+<select id="pkQuickAccount" class="pill" aria-label="Konto"></select>
+<select id="pkQuickSet" class="pill" aria-label="Set"></select>
+<button type="button" id="pkQuickClose" class="pill" data-t="done">Fertig</button>
+</div>
+<p id="pkQuickHint" class="pk-hint"></p>
+<div class="pk-quick-bulk"><button type="button" id="pkQuickAll1" class="pill" data-t="quickAll1">Alle fehlenden auf 1</button><button type="button" id="pkQuickAll0" class="pill" data-t="quickAll0">Ganzes Set auf 0</button><span id="pkQuickProgress" class="pk-hint"></span></div>
+<div id="pkQuickGrid" class="pk-quick-grid"></div>
+<div class="pk-pad" id="pkPad">
+<div class="pk-pad-card" id="pkPadCard"></div>
+<div class="pk-pad-keys">
+<button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button>
+<button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="0" class="zero">0</button>
+<button type="button" data-key="back" aria-label="Vorherige Karte">←</button><button type="button" data-key="plus" aria-label="+1">+1</button><button type="button" data-key="plus10" aria-label="+10">+10</button><button type="button" data-key="skip" aria-label="Überspringen">→</button>
+</div>
+</div>
 </dialog>
 
 <dialog id="pkImportDlg" class="dlg pk-dlg" aria-labelledby="pkImportTitle">
