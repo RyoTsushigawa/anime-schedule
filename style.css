@@ -1817,3 +1817,8 @@ header .header-primary .header-games { margin-right: -2px; }
  .day h2 > span:first-child { margin-inline-end: auto; }
  .day h2 .away-note { order: 8; flex-basis: 100%; white-space: normal; margin-top: -4px; }
 }
+
+/* finished a show: the score dialog also offers a Troddl review (opens the writer with the show picked) */
+.score-troddl { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 4px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
+.score-troddl img { border-radius: 50%; }
+.score-troddl:hover { text-decoration: underline; }
