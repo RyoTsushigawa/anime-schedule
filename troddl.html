@@ -25,7 +25,7 @@
 </section>
 <div id="troddlIdentity" class="identity-box" role="status"></div>
 <div class="troddl-toolbar">
-<button type="button" id="troddlWrite" class="pill primary" disabled>Review schreiben</button>
+<button type="button" id="troddlWrite" class="pill primary">✎ Review schreiben</button>
 <label>Season <select id="troddlSeason" class="pill"><option value="">Alle</option></select></label>
 <label>Sortieren <select id="troddlSort" class="pill"><option value="rating">Troddlrating</option><option value="new">Neueste</option><option value="count">Meiste Reviews</option></select></label>
 </div>
@@ -34,13 +34,25 @@
 <dialog id="troddlDlg" class="dlg troddl-dlg" aria-labelledby="troddlDlgTitle">
 <form method="dialog" id="troddlForm">
 <b id="troddlDlgTitle">Review schreiben</b>
-<div id="troddlSearchBox"><input id="troddlSearch" class="pill" type="search" placeholder="Anime suchen (AniList)" autocomplete="off" aria-label="Anime suchen"><div id="troddlResults" class="troddl-results"></div></div>
+<section class="troddl-step"><h3><span>1</span>Welcher Anime?</h3>
+<div id="troddlSearchBox">
+<div id="troddlRecentBox" hidden><p class="troddl-hint">Zuletzt auf deiner Liste – antippen:</p><div id="troddlRecent" class="troddl-recent"></div></div>
+<input id="troddlSearch" class="pill" type="search" placeholder="… oder Anime suchen" autocomplete="off" aria-label="Anime suchen"><div id="troddlResults" class="troddl-results"></div></div>
 <div id="troddlPicked" class="troddl-picked" hidden></div>
-<div class="troddl-score-row"><label for="troddlScore">Wertung</label><input id="troddlScoreRange" type="range" min="0" max="100" value="70" aria-label="Wertung (Regler)"><input id="troddlScore" class="pill" type="number" min="0" max="100" value="70" inputmode="numeric"><span id="troddlScoreBadge" class="troddl-score good">70</span></div>
-<textarea id="troddlText" rows="10" maxlength="6000" placeholder="Was hat funktioniert, was nicht? Story, Figuren, Animation, Musik … mindestens 300 Zeichen."></textarea>
+</section>
+<section class="troddl-step" id="troddlStepScore"><h3><span>2</span>Wie gut war er?</h3>
+<div class="troddl-score-row"><input id="troddlScoreRange" type="range" min="0" max="100" value="70" aria-label="Wertung (Regler)"><input id="troddlScore" class="pill" type="number" min="0" max="100" value="70" inputmode="numeric" aria-label="Wertung"><span id="troddlScoreBadge" class="troddl-score good">70</span></div>
+<p id="troddlScoreWord" class="troddl-score-word"></p>
+</section>
+<section class="troddl-step" id="troddlStepText"><h3><span>3</span>Deine Review</h3>
+<div class="troddl-prompts" aria-label="Themen einfügen"><span class="troddl-hint">Worüber?</span><button type="button" class="pill" data-prompt="Story">Story</button><button type="button" class="pill" data-prompt="Figuren">Figuren</button><button type="button" class="pill" data-prompt="Animation">Animation</button><button type="button" class="pill" data-prompt="Musik">Musik</button><button type="button" class="pill" data-prompt="Fazit">Fazit</button></div>
+<p id="troddlDraft" class="troddl-hint" hidden></p>
+<textarea id="troddlText" rows="9" maxlength="6000" placeholder="Was hat dir gefallen, was nicht? Tipp oben auf ein Thema, um damit anzufangen."></textarea>
+<div class="troddl-meter" aria-hidden="true"><span id="troddlMeter"></span></div>
 <p id="troddlCount" class="troddl-hint"></p>
+</section>
 <p id="troddlFormMsg" class="troddl-hint" role="status"></p>
-<div class="dlg-row dlg-foot"><button value="cancel" class="pill" formnovalidate>Abbrechen</button><button type="submit" value="save" id="troddlSave" class="pill primary" disabled>Veröffentlichen</button></div>
+<div class="dlg-row dlg-foot"><span id="troddlWhy" class="troddl-hint troddl-why"></span><button value="cancel" class="pill" formnovalidate>Abbrechen</button><button type="submit" value="save" id="troddlSave" class="pill primary" disabled>Veröffentlichen</button></div>
 </form>
 </dialog>
 </main>
