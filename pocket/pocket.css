@@ -127,3 +127,5 @@ a { color: var(--accent); }
 .pk-history li.undone { opacity: .5; text-decoration: line-through; }
 .pk-history button { padding: 1px 8px; font-size: 12px; margin-inline-start: .4rem; }
 .pk-traded { margin-top: .4rem; }
+
+.pk-import-action{display:flex;justify-content:flex-end;margin:0 0 .7rem}.pk-import-preview{max-height:13rem;overflow:auto;overflow-wrap:anywhere;font-size:.85rem;line-height:1.65}.pk-import-action button{white-space:nowrap}#pkImportDlg label{display:block;margin:.75rem 0}#pkImportDlg input[type=file]{display:block;max-width:100%;margin-top:.4rem}
