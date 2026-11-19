@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-18T22:00:00Z', name: 'Troddl-Reviews' };
+const LAST_FEATURE = { at: '2026-11-19T10:09:00Z', name: 'Pocket-Sammlung' };
 const PATCH_NOTES = [
 { id: '2026-11-18', title: 'Troddl: your own reviews, Metacritic style', items: [
 'New in Mehr › Spaß: Troddl. Everyone picks a pen name of their own (the others only ever see it) and writes real reviews: a score from 0 to 100 and at least 300 characters.',
