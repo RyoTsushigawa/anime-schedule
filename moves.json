@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-19T14:05:16.337Z",
+ "updated": "2026-11-19T19:50:25.724Z",
  "moves": [
   {
    "show": "fxsenshikurumichan",
@@ -118,6 +118,20 @@
    "week": "2026-11-16",
    "skip": true,
    "keepTime": true
+  },
+  {
+   "show": "koorinojouhekiseason2",
+   "title": "Koori no Jouheki 2nd Season",
+   "tag": "Do.",
+   "time": "20:30",
+   "week": "2026-11-16"
+  },
+  {
+   "show": "fxsenshikurumichan",
+   "title": "FX Senshi Kurumi-chan",
+   "tag": "Do.",
+   "time": "20:00",
+   "week": "2026-11-16"
   }
  ],
  "absent": [
