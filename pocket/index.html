@@ -80,6 +80,8 @@
 <form method="dialog">
 <h2 id="pkImportTitle">Pokémon Zone CSV</h2>
 <p id="pkImportHelp" class="pk-hint"></p>
+<label id="pkImportSourceLabel">Quelle / Source <select id="pkImportSource" class="pill"><option value="csv">Pokémon Zone CSV</option><option value="bulk">Text / Bulk entry (all friends)</option></select></label>
+<label id="pkImportBulkLabel" hidden>Cards <textarea id="pkImportBulk" rows="7" placeholder="A1-1 2&#10;A1-2=3&#10;A1: 4-20"></textarea></label>
 <label id="pkImportFileLabel">CSV <input id="pkImportFile" type="file" accept=".csv,text/csv"></label>
 <label id="pkImportModeLabel"><input type="checkbox" id="pkImportReplace"> <span id="pkImportModeText"></span></label>
 <p id="pkImportStatus" class="pk-hint" role="status"></p>
