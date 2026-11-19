@@ -1822,3 +1822,9 @@ header .header-primary .header-games { margin-right: -2px; }
 .score-troddl { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 4px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 .score-troddl img { border-radius: 50%; }
 .score-troddl:hover { text-decoration: underline; }
+
+/* U: the tool pages' line under the name stays on one line on a phone, like the Watch-Planer */
+@media (max-width: 560px) {
+ header .brand h1 + div { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+ header .brand { min-width: 0; }
+}
