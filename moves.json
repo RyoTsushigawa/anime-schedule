@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-19T14:05:08.691Z",
+ "updated": "2026-11-19T14:05:16.337Z",
  "moves": [
   {
    "show": "fxsenshikurumichan",
@@ -106,6 +106,15 @@
    "title": "Even Though I'm a Super Timid Noble Girl, I Accepted the Bet From My Cunning Fiancé",
    "tag": "",
    "time": "",
+   "week": "2026-11-16",
+   "skip": true,
+   "keepTime": true
+  },
+  {
+   "show": "mahoushoujoikuseikeikakurestart",
+   "title": "Magical Girl Raising Project: Restart",
+   "tag": "Do.",
+   "time": "19:00",
    "week": "2026-11-16",
    "skip": true,
    "keepTime": true
