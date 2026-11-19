@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://graphql.anilist.co https://anime-season-preview-votes.shigeruhagano.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src https://a.animethemes.moe; connect-src 'self' https://graphql.anilist.co https://api.animethemes.moe https://anime-season-preview-votes.shigeruhagano.workers.dev https://docs.google.com https://*.googleusercontent.com https://sheets.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Seasonal Anime Awards</title>
 <link rel="icon" type="image/png" href="icon-72.png">
@@ -28,6 +28,11 @@
 <p id="awardsIntro">Vergib pro Kategorie 12, 10 und 8 Punkte, wie beim Eurovision Song Contest. Zur Wahl stehen nur passende Shows aus dem Guckplan; leere Plätze sind erlaubt.</p>
 <p id="awardsProgress" class="awards-progress"></p>
 <p id="awardsStatus" role="status">Lade Guckplan…</p>
+<details id="awardsListen" class="awards-listen" hidden><summary>♫ Openings &amp; Endings anhören</summary>
+<div class="awards-listen-head"><button type="button" class="pill" data-listen="OP" aria-pressed="true">Openings</button><button type="button" class="pill" data-listen="ED" aria-pressed="false">Endings</button><audio id="awardsAudio" controls preload="none"></audio></div>
+<ol id="awardsTracks" class="awards-tracks"></ol>
+<p class="awards-hint">Songs von AnimeThemes.moe · antippen zum Abspielen, danach läuft der nächste.</p>
+</details>
 <div id="awardsBallot" class="awards-ballot"></div>
 <div id="awardsLists" hidden></div>
 <section id="awardsCeddl" class="awards-ceddl" hidden>
