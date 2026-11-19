@@ -206,7 +206,7 @@ storeMoves(next, `${dayEdit.label} gespeichert${dayEdit.scope === 'week' ? ' (di
 const bar = document.createElement('section');
 bar.className = 'bulk-skip-bar week-only'; bar.hidden = true;
 bar.setAttribute('aria-label', 'Mehrere Folgen skippen');
-bar.innerHTML = '<button type="button" class="pill" data-bulk-toggle aria-pressed="false">Folgen skippen</button><div class="bulk-skip-options" hidden><span data-bulk-count role="status"></span><label class="toggle"><input type="checkbox" data-bulk-keep>Zeiten beibehalten</label><button type="button" class="pill primary" data-bulk-save disabled>Auswahl skippen</button><button type="button" class="pill" data-bulk-cancel>Abbrechen</button><span data-bulk-error role="alert"></span><ul class="bulk-skip-preview" data-bulk-preview aria-live="polite"></ul></div>';
+bar.innerHTML = '<button type="button" class="pill" data-bulk-toggle aria-pressed="false">Folgen skippen</button><div class="bulk-skip-options" hidden><span data-bulk-count role="status"></span><label class="toggle"><input type="checkbox" data-bulk-keep>Zeiten beibehalten</label><button type="button" class="pill primary" data-bulk-save disabled>Auswahl skippen</button><button type="button" class="pill" data-bulk-cancel title="Auswahl aufheben" aria-label="Abbrechen">Abbrechen</button><span data-bulk-error role="alert"></span><ul class="bulk-skip-preview" data-bulk-preview aria-live="polite"></ul></div>';
 $('list').before(bar);
 const toggle = bar.querySelector('[data-bulk-toggle]'), options = bar.querySelector('.bulk-skip-options');
 const save = bar.querySelector('[data-bulk-save]'), count = bar.querySelector('[data-bulk-count]'), error = bar.querySelector('[data-bulk-error]');

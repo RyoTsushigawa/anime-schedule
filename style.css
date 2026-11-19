@@ -1782,3 +1782,33 @@ header .header-primary .header-games { margin-right: -2px; }
 .troddl-card .troddl-score.mixed { background: #e6b422; color: #1b1b1f; }
 .troddl-card .troddl-score.bad { background: #d6454b; }
 .troddl-card .troddl-score.tbd { background: transparent; color: var(--muted); border: 1px dashed var(--line); font-size: 11px; }
+
+/* U: phone layout pass – the week arrows stay on the strip's line, a day's buttons are one size,
+   Skip / ↺ take the drop button's place in the row and the selection bar is one compact line */
+@media (max-width: 560px) {
+ .weekline { column-gap: 6px; }
+ .weekline > .daystrip { flex: 1 1 calc(100% - 84px); }
+ .weekline > .strip-step { width: 34px; min-width: 34px; height: 44px; padding: 0; display: inline-grid; place-items: center; }
+ .day h2 :is(.day-delay, .day-absent-button, .pause-shift, .day-discord, .day-edit, .day-skip, .day-more-btn) { width: 40px; min-width: 40px; height: 40px; min-height: 40px; padding: 0; display: inline-grid; place-items: center; border-radius: 99px; }
+ .day h2 { gap: 6px; }
+ .row:has(> .bulk-skip-pick, > .bulk-unskip) > :is(.drop, .drop-space) { display: none; }
+ .row > :is(.bulk-skip-pick, .bulk-unskip) { grid-area: 2 / 3; align-self: center; justify-self: end; }
+ .row > .bulk-skip-pick { padding: 6px 12px; min-height: 36px; }
+ .row > .bulk-unskip { width: 40px; height: 40px; }
+ .bulk-skip-options { gap: 8px; padding: 8px 10px; }
+ .bulk-skip-options [data-bulk-count] { flex: 1 1 100%; }
+ .bulk-skip-options .toggle { font-size: 12px; }
+ .bulk-skip-options .pill { padding: 6px 12px; font-size: 13px; min-height: 36px; }
+ .bulk-skip-options [data-bulk-save] { margin-inline-start: auto; }
+ .bulk-skip-options [data-bulk-cancel] { width: 36px; min-width: 36px; padding: 0; font-size: 0; display: inline-grid; place-items: center; }
+ .bulk-skip-options [data-bulk-cancel]::before { content: '✕'; font-size: 14px; }
+ #settingsMenu { width: calc(100vw - 24px); }
+ body:not(.no-move) .row:has(> .move):has(> :is(.bulk-unskip, .bulk-skip-pick)) > .links > .cr { font-size: 0; gap: 0; padding-inline: 10px; grid-template-columns: auto; }
+ #settingsMenu .settings-options .toggle { font-size: 12px; padding-inline: 6px; }
+}
+@media (max-width: 400px) {
+ .row > .drop { padding-inline: 7px; font-size: 11px; }
+ .row > .links > .cr { padding-inline: 8px; column-gap: 5px; }
+ .row:not(.compact) { column-gap: 7px; }
+ .row:has(> .ep-stepper) > .links > .cr { font-size: 0; column-gap: 0; padding-inline: 10px; }
+}
