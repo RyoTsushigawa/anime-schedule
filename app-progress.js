@@ -462,6 +462,7 @@ $('scoreName').textContent = title;
 $('scoreService').textContent = 'Bewertung';
 $('scoreService').title = `Abgeschlossen. Deine Bewertung auf ${listService()}`;
 $('scoreMsg').textContent = '';
+$('scoreTroddl').href = 'troddl.html#write=' + mediaId;
 $('scoreClear').hidden = !current;
 $('scoreSave').hidden = !['POINT_100', 'POINT_10_DECIMAL'].includes(format);
 const box = $('scoreInput');
