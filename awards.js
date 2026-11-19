@@ -7,7 +7,8 @@
 
 // Categories like the Crunchyroll Anime Awards, in groups. The kind decides what can be picked: a show from
 // the Guckplan (genre or new/sequel filters when AniList knows the show), a character of the season's shows
-// ("Name (Anime)"), a couple of two characters, or a Ceddl candidate collected over the season.
+// ("Name (Anime)"), a couple of two characters, an opening or ending (AnimeThemes; the show itself while its
+// songs aren't known), or a Ceddl candidate collected over the season.
 const AWARD_GROUPS = [
   ['Hauptpreise', [['best', 'Anime der Season'], ['new', 'Beste neue Serie', 'new'], ['sequel', 'Beste Fortsetzung', 'sequel'],
     ['surprise', 'Größte Überraschung'], ['finale', 'Bestes Finale']]],
@@ -16,7 +17,7 @@ const AWARD_GROUPS = [
   ['Figuren', [['protagonist', 'Beste Hauptfigur', 'char:MAIN'], ['supporting', 'Beste Nebenfigur', 'char:SUPPORTING'],
     ['villain', 'Bester Bösewicht', 'char'], ['couple', 'Bestes Paar', 'couple']]],
   ['Handwerk', [['animation', 'Beste Animation'], ['soundtrack', 'Bester Soundtrack'], ['design', 'Bestes Charakterdesign'],
-    ['fight', 'Beste Kampfszene'], ['opening', 'Bestes Opening'], ['ending', 'Bestes Ending']]],
+    ['fight', 'Beste Kampfszene'], ['opening', 'Bestes Opening', 'theme:OP'], ['ending', 'Bestes Ending', 'theme:ED']]],
   ['Ceddl of the Year', [['ceddl', 'Ceddl of the Year', 'ceddl']]],
 ];
 const awardCategories = AWARD_GROUPS.flatMap(([, list]) => list);
@@ -45,6 +46,7 @@ const drawIdentity = () => { if (ID && $('awardsIdentity')) ID.draw($('awardsIde
 let shared = null; // the helper's answer for this season: { revealed, voters, ballots? } or { error }
 let showInfo = new Map(); // title → { genres, sequel, chars: [{ name, role }] } from AniList, when reachable
 let ceddl = []; // Ceddl of the Year candidates: [{ id, name, anime, by }]
+let themes = new Map(); // title → [{ type: 'OP' | 'ED', slug, song, artists, audio }] from AnimeThemes, when reachable
 
 function ballotKey() {
   return 'seasonal-awards:' + JSON.stringify([SHEET_ID, seasonSelect.value, personSelect.value]);
@@ -55,6 +57,8 @@ const picksOf = value => (Array.isArray(value) ? value : value ? [value] : []).m
 
 // what a category offers
 const charLabel = (c, title) => `${c.name} (${title})`;
+const themeLabel = (t, title) => `${title} – ${t.slug} „${t.song}“`;
+const themesOf = (title, type) => (themes.get(title) || []).filter(t => t.type === type);
 function optionsFor(kind) {
   const titles = [...nominees.values()];
   if (!kind) return titles;
@@ -65,6 +69,8 @@ function optionsFor(kind) {
     return titles.flatMap(t => (showInfo.get(t)?.chars || []).filter(c => !role || c.role === role).map(c => charLabel(c, t)));
   }
   if (kind === 'ceddl') return ceddl.map(c => c.anime ? `${c.name} (${c.anime})` : c.name);
+  // a show's openings / endings; a show whose songs aren't known is picked by its title
+  if (kind.startsWith('theme:')) return titles.flatMap(t => { const list = themesOf(t, kind.slice(6)); return list.length ? list.map(x => themeLabel(x, t)) : [t]; });
   return titles;
 }
 // nothing to pick in this category this season (no fitting show, no Ceddl candidate yet): only a hint, and it isn't "offen"
@@ -74,6 +80,8 @@ const valid = (kind, value) => {
   if (kind === 'couple') { const parts = value.split(' × '); return parts.length === 2 && parts.every(p => optionsFor('char').includes(p) || (!showInfo.size && p.trim())); }
   // characters without AniList: free text is allowed, the voters agree on the spelling themselves
   if (kind?.startsWith('char') && !showInfo.size) return true;
+  // picked before the songs were known: the show's title still counts
+  if (kind?.startsWith('theme:') && [...nominees.values()].includes(value)) return true;
   return optionsFor(kind).includes(value);
 };
 
@@ -157,6 +165,17 @@ function choiceField(kind, empty, value) {
       group.append(...chars.map(c => new Option(c.name, charLabel(c, t))));
       select.append(group);
     }
+  } else if (kind?.startsWith('theme:')) {
+    // grouped by show like the characters; shows without known songs at the end, by title
+    const type = kind.slice(6), plain = [];
+    for (const t of [...nominees.values()]) {
+      const list = themesOf(t, type);
+      if (!list.length) { plain.push(t); continue; }
+      const group = document.createElement('optgroup'); group.label = t;
+      group.append(...list.map(x => new Option(`${x.slug} „${x.song}“${x.artists ? ' – ' + x.artists : ''}`, themeLabel(x, t))));
+      select.append(group);
+    }
+    if (plain.length) { const group = document.createElement('optgroup'); group.label = themes.size ? 'Ohne Songdaten' : 'Serien'; group.append(...plain.map(t => new Option(t, t))); select.append(group); }
   } else select.append(...optionsFor(kind).map(t => new Option(t, t)));
   // a saved pick that is no longer on the list stays visible (marked by the check), so nothing vanishes silently
   if (value && ![...select.options].some(o => o.value === value)) select.append(new Option(value + ' (nicht mehr in der Auswahl)', value));
@@ -232,17 +251,22 @@ function renderBallot() {
 // AniList (optional): genres, whether a show is a sequel, and its characters, for the filters and the character
 // categories. AniList ids come from the site's streams-de.json; kept a day per season in this browser.
 const SEQUEL_TITLE = /\b(?:season\s*[2-9]\d*|[2-9]\d*(?:st|nd|rd|th)\s+season|part\s*[2-9]|cour\s*[2-9]|s[2-9]|ii|iii|iv|final season)\b/i;
+// the season's shows by AniList id (from the site's streams-de.json): id → Guckplan title
+async function seasonIds() {
+  const streams = await (await fetch('streams-de.json', { cache: 'no-cache' })).json();
+  const ids = new Map();
+  for (const [id, s] of Object.entries(streams.status || {})) for (const t of s.titles || []) ids.set(norm(t), Number(id));
+  const wanted = new Map();
+  for (const [k, title] of nominees) { const id = ids.get(k) || ids.get(norm(title)); if (id) wanted.set(id, title); }
+  return { streams, wanted };
+}
 async function loadShowInfo(request) {
   const key = 'awardsInfo2:' + seasonSelect.value;
   try {
     const kept = JSON.parse(localStorage.getItem(key) || 'null');
     if (kept && Date.now() - kept.at < 864e5) return new Map(kept.info);
   } catch {}
-  const streams = await (await fetch('streams-de.json', { cache: 'no-cache' })).json();
-  const ids = new Map();
-  for (const [id, s] of Object.entries(streams.status || {})) for (const t of s.titles || []) ids.set(norm(t), Number(id));
-  const wanted = new Map();
-  for (const [k, title] of nominees) { const id = ids.get(k) || ids.get(norm(title)); if (id) wanted.set(id, title); }
+  const { streams, wanted } = await seasonIds();
   if (!wanted.size) return new Map();
   const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id genres relations { edges { relationType } } characters(sort: [ROLE, RELEVANCE], perPage: 10) { edges { role node { name { full } } } } } } }';
   const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query, variables: { ids: [...wanted.keys()].slice(0, 50) } }) });
@@ -256,6 +280,56 @@ async function loadShowInfo(request) {
   try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), info: [...info] })); } catch {}
   return info;
 }
+
+// Openings and endings from AnimeThemes.moe (by AniList id, one show per request), kept a day per season in this
+// browser. A theme's first version without NSFW marking gives the song to listen to.
+function themesFrom(anime) {
+  return (anime?.animethemes || []).filter(t => t.type === 'OP' || t.type === 'ED').map(t => {
+    const entries = t.animethemeentries || [], entry = entries.find(e => !e.nsfw) || entries[0];
+    const video = entry?.videos?.[0];
+    return { type: t.type, seq: t.sequence || 0, slug: t.slug || t.type + (t.sequence || ''), song: t.song?.title || 'ohne Titel',
+      artists: (t.song?.artists || []).map(a => a.name).filter(Boolean).join(', '), audio: video?.audio?.link || '' };
+  }).sort((a, b) => a.type.localeCompare(b.type) || a.seq - b.seq).map(({ seq, ...t }) => t);
+}
+async function loadThemes() {
+  const key = 'awardsThemes1:' + seasonSelect.value;
+  try {
+    const kept = JSON.parse(localStorage.getItem(key) || 'null');
+    if (kept && Date.now() - kept.at < 864e5) return new Map(kept.themes);
+  } catch {}
+  const { wanted } = await seasonIds(), found = new Map(), ids = [...wanted.keys()];
+  for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
+    const query = new URLSearchParams({ 'filter[has]': 'resources', 'filter[site]': 'AniList', 'filter[external_id]': id, include: 'animethemes.song.artists,animethemes.animethemeentries.videos.audio' });
+    try {
+      const res = await fetch('https://api.animethemes.moe/anime?' + query, { headers: { Accept: 'application/json' } });
+      const list = res.ok ? themesFrom((await res.json()).anime?.[0]) : [];
+      if (list.length) found.set(wanted.get(id), list);
+    } catch {}
+  }));
+  if (found.size) try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), themes: [...found] })); } catch {}
+  return found;
+}
+
+// Listening before voting: the season's openings or endings as a playlist, one after another
+let listenType = 'OP';
+function drawListen() {
+  const box = $('awardsListen'), tracks = [...nominees.values()].flatMap(t => themesOf(t, listenType).filter(x => x.audio).map(x => ({ ...x, title: t })));
+  box.hidden = !themes.size;
+  for (const b of box.querySelectorAll('[data-listen]')) b.setAttribute('aria-pressed', String(b.dataset.listen === listenType));
+  const list = $('awardsTracks'), audio = $('awardsAudio');
+  list.replaceChildren(...tracks.map((t, i) => {
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.type = 'button'; b.dataset.track = i; b.className = audio.dataset.src === t.audio ? 'playing' : '';
+    const name = document.createElement('b'); name.textContent = `${t.title} · ${t.slug}`;
+    const song = document.createElement('small'); song.textContent = `„${t.song}“${t.artists ? ' – ' + t.artists : ''}`;
+    b.append(name, song); li.append(b); return li;
+  }));
+  if (!tracks.length) list.append(Object.assign(document.createElement('li'), { className: 'awards-hint', textContent: 'Für diese Season sind noch keine Songs bekannt.' }));
+  const play = i => { const t = tracks[i]; if (!t) return; audio.src = audio.dataset.src = t.audio; audio.dataset.index = i; try { audio.play()?.catch?.(() => {}); } catch {} drawListen(); };
+  list.onclick = e => { const b = e.target.closest('[data-track]'); if (b) play(Number(b.dataset.track)); };
+  audio.onended = () => play(Number(audio.dataset.index) + 1);
+}
+$('awardsListen').addEventListener('click', e => { const b = e.target.closest('[data-listen]'); if (b) { listenType = b.dataset.listen; drawListen(); } });
 
 // Ceddl of the Year: candidates collected over the season, shared through the votes helper
 async function loadCeddl() {
@@ -480,7 +554,7 @@ async function loadAwardsSeason(tab) {
   ballotElement.replaceChildren();
   copyButton.disabled = true;
   $('awardsManual').hidden = true;
-  shared = null; showInfo = new Map(); ceddl = [];
+  shared = null; showInfo = new Map(); ceddl = []; themes = new Map();
   awardsStatus.textContent = 'Lade Guckplan…';
   try {
     const plan = await loadPlan(tab);
@@ -507,9 +581,11 @@ async function loadAwardsSeason(tab) {
     drawShared();
     loadShared();
     // characters, genres and the Ceddl candidates fill in when they arrive
-    Promise.allSettled([loadShowInfo(request).then(info => { if (request === seasonRequest) showInfo = info; }), loadCeddl()]).then(() => {
+    Promise.allSettled([loadShowInfo(request).then(info => { if (request === seasonRequest) showInfo = info; }), loadCeddl(),
+      loadThemes().then(found => { if (request === seasonRequest) themes = found; })]).then(() => {
       if (request !== seasonRequest) return;
       drawCeddl();
+      drawListen();
       if (!revealed()) renderBallot(); else drawLists();
     });
   } catch {

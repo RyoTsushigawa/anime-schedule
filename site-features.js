@@ -49,7 +49,7 @@ const SITE_FEATURES = [
   ['Anime Wrapped', ['Season-Wrapped', 'Jahres-Wrapped', 'Ganze Gruppe', '„Wer ist wer?“', 'Karte als Bild speichern', 'Essen zur Season', 'Börse und Awards im Rückblick']],
   ['Tier-Liste & Awards', ['Tier-Liste mit „Für Discord kopieren“', 'Awards mit 22 Kategorien wie bei den Crunchyroll Awards', 'Eurovision-Punkte: 12, 10 und 8 pro Kategorie',
     'Nominierte durchsuchen (auch Figuren von AniList)', 'Ceddl of the Year: Kandidaten über die Season sammeln', 'Geheime Gruppenabstimmung mit „Auflösen“',
-    'Abstimmungsschluss zum Start der nächsten Season', 'Kategorien bewusst auslassen',
+    'Abstimmungsschluss zum Start der nächsten Season', 'Kategorien bewusst auslassen', 'Bestes Opening / Ending: die Songs der Season zur Wahl (AnimeThemes)', 'Openings und Endings vorher anhören, als Playlist',
     'Punktevergabe-Show: Wertung für Wertung, „… und unsere 12 Punkte gehen an …“', 'Ruhmeshalle']],
   ['Anime-Börse', ['Nachfrage: eure Käufe und Verkäufe bewegen den Schlusskurs (höchstens ±5 % am Tag)', 'Aktien auf die Season-Anime mit Spielgeld, die ganze Season täglich von 8 bis 24 Uhr handelbar', 'Tägliche Kurse aus AniList und euren eigenen Bewertungen', 'Drops lassen den Kurs fallen, je früher desto stärker',
     'Kurs-Graphen pro Serie und für dein Depot', 'Wall-Street-Regeln: Ordergebühr, T+1, Leerverkäufe, Circuit Breaker', 'Rangliste nach Depotwert', 'Dividenden jeden Sonntag (nach eurer Bewertung)', 'Awards-Bonus für richtige 12-Punkte-Tipps', 'Limit-Orders (kaufen oder verkaufen, sobald ein Schlusskurs dein Limit erreicht)', 'Nur für dich: Bestätigung über AniList oder PIN (auch bei den Awards)']],
