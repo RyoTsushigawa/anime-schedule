@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-19T08:40:11.146Z",
+ "updated": "2026-11-19T14:05:08.691Z",
  "moves": [
   {
    "show": "fxsenshikurumichan",
@@ -109,14 +109,6 @@
    "week": "2026-11-16",
    "skip": true,
    "keepTime": true
-  },
-  {
-   "show": "mahoushoujoikuseikeikakurestart",
-   "title": "Magical Girl Raising Project: Restart",
-   "tag": "Do.",
-   "time": "19:00",
-   "week": "2026-11-16",
-   "skip": true
   }
  ],
  "absent": [
