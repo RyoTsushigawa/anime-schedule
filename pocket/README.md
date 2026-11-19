@@ -29,6 +29,24 @@ account through an unofficial connection; that is deliberately not done here.)
 
 Cards are identified by set and number (`A1-25`), so the language a card is in doesn't matter.
 
+## Pokémon Zone CSV import
+
+Open **Sammlung → CSV importieren** after signing in and select one specific account (not **Alle Konten**).
+Use a CSV produced by the community [Pokémon Zone Exporter](https://github.com/1Tdd/Pokemon-Zone-Exporter).
+The importer recognizes its `Id` and `NumberOwned` columns, matches cards to the local database by set-number,
+and previews quantity changes before applying them. The file is parsed in the browser and is not uploaded.
+By default, only listed cards are updated to their exported counts; missing rows are left alone.
+Optional **replace** also removes cards absent from the export, and is disabled if the file has unknown IDs or invalid rows.
+Each person can update only their own collection through the existing PIN-protected save flow.
+Wishlist, chase list, other accounts and trade history are not intentionally changed.
+
+**Direct sync investigation (19 Nov 2026):** No documented, authorized Pokémon Zone collection API or OAuth
+connection has been verified. The third-party exporter reads Pokémon Zone's already-rendered card list and
+generates a local CSV; it does not grant API access. Pokémon Zone's Nintendo-account sync is unofficial
+and may conflict with Nintendo's terms. Do not automate Nintendo login, intercept sessions, or collect credentials.
+If Pokémon Zone later provides an authorized API or documented user-controlled export, it can be added as
+another import source behind the same preview/merge logic.
+
 ## Files
 
 | File | |
