@@ -22,10 +22,7 @@
 .troddl-show[open] > summary { border-bottom: 1px solid var(--line); }
 .troddl-score { display: inline-grid; place-items: center; min-width: 2.1rem; height: 2.1rem; padding: 0 .3rem; border-radius: 7px; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: #fff; flex: none; }
 .troddl-score.big { min-width: 3rem; height: 3rem; font-size: 19px; border-radius: 9px; }
-.troddl-score.good { background: #2f9e5a; }
-.troddl-score.mixed { background: #e6b422; color: #1b1b1f; }
-.troddl-score.bad { background: #d6454b; }
-.troddl-score.tbd { background: transparent; color: var(--muted); border: 1px dashed var(--line); font-size: 12px; font-weight: 650; }
+.troddl-score.tbd { font-size: 12px; font-weight: 650; }
 .troddl-review { padding: .8rem .9rem; display: grid; gap: .45rem; }
 .troddl-review + .troddl-review { border-top: 1px dashed var(--line); }
 .troddl-review.mine { box-shadow: inset 3px 0 0 var(--accent); }

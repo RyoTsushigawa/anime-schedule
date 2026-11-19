@@ -22,7 +22,6 @@ main.tier-page { max-width: 1180px; display: grid; gap: 12px; }
 .tiers { display: grid; gap: 6px; }
 .tier-row { --tier: var(--muted); display: grid; grid-template-columns: minmax(72px, 110px) minmax(0, 1fr); min-height: 104px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); transition: border-color .12s, box-shadow .12s; }
 .tier-row.over { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
-.tier-s { --tier: #e5484d; } .tier-a { --tier: #f0883e; } .tier-b { --tier: #e2b93b; } .tier-c { --tier: #46a758; } .tier-d { --tier: #3e8ed0; }
 .tier-label { display: grid; place-items: center; padding: 6px; overflow-wrap: anywhere; text-align: center; background: color-mix(in srgb, var(--tier) 80%, var(--card)); color: #fff; font-size: clamp(11px, 1.5vw, 20px); font-weight: 800; line-height: 1.25; text-shadow: 0 1px 2px #0005; }
 .tier-pool .tier-label { background: var(--today); color: var(--muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; text-shadow: none; writing-mode: vertical-rl; transform: rotate(180deg); }
 .tier-pool { border-style: dashed; background: transparent; }
