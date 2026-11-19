@@ -24,15 +24,17 @@ export function parseZoneCsv(text, validIds) {
   const idCol = head.indexOf('id'), qtyCol = head.indexOf('numberowned');
   if (idCol < 0 || qtyCol < 0) throw Error('Expected Pokémon Zone Exporter columns: Id, NumberOwned');
   const owned = new Map(), unknown = [], invalid = [], seen = new Set();
+  const canonical = new Map([...validIds].map(id => [id.toUpperCase(), id]));
   for (const [i, cells] of rows.entries()) {
     const raw = (cells[idCol] || '').trim(), quantity = (cells[qtyCol] || '').trim();
     if (!raw && !quantity) continue;
     const m = /^([a-z0-9]+(?:-[a-z0-9]+)?)-(\d{1,4})$/i.exec(raw);
     const id = m ? m[1].toUpperCase() + '-' + Number(m[2]) : '';
     if (!id || !/^\d+$/.test(quantity) || Number(quantity) > 99) { invalid.push(i + 2); continue; }
-    if (!validIds.has(id)) { unknown.push(id); continue; }
-    if (seen.has(id)) { invalid.push(i + 2); continue; }
-    seen.add(id); owned.set(id, Number(quantity));
+    const actual = canonical.get(id.toUpperCase());
+    if (!actual) { unknown.push(id); continue; }
+    if (seen.has(actual)) { invalid.push(i + 2); continue; }
+    seen.add(actual); owned.set(actual, Number(quantity));
   }
   return { owned, unknown, invalid, total: rows.length };
 }
