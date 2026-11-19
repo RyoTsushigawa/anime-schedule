@@ -22,7 +22,6 @@ async function call(path, body, as = '') {
 function drawPen() {
   const box = $('troddlPen'), me = data.me, can = Identity.canAct(person());
   box.replaceChildren();
-  $('troddlWrite').disabled = !(me?.pen);
   if (!can || !me) return;
   const field = Object.assign(document.createElement('input'), { className: 'pill', maxLength: 32, placeholder: 'Dein Kritiker-Name', value: me.pen || '' });
   field.setAttribute('aria-label', 'Kritiker-Name');
@@ -80,38 +79,88 @@ async function load() {
   drawPen(); drawList();
 }
 
-// writing: search AniList for the show, then score and text; a draft stays in this browser until it is published
+// writing, in three steps: which anime (your recent list or a search), how good, and the text.
+// A draft stays in this browser until it is published.
 const draftKey = () => `troddl-draft:${person()}:${editing?.mediaId || ''}`;
+const WORDS = [[90, 'Meisterwerk'], [75, 'Sehr gut'], [60, 'Gut'], [50, 'Durchwachsen'], [30, 'Schwach'], [0, 'Zeitverschwendung']];
+const scoreWord = n => WORDS.find(([min]) => n >= min)[1];
 function scoreTo(v) {
   const n = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
   $('troddlScore').value = $('troddlScoreRange').value = n;
   const b = $('troddlScoreBadge'); b.textContent = n; b.className = 'troddl-score ' + scoreClass(n);
+  $('troddlScoreWord').textContent = scoreWord(n);
+  $('troddlScoreWord').className = 'troddl-score-word ' + scoreClass(n);
 }
-function check() {
-  const n = $('troddlText').value.trim().length;
-  $('troddlCount').textContent = n < MIN_TEXT ? `${n} / ${MIN_TEXT} Zeichen: noch ${MIN_TEXT - n}` : `${n} Zeichen ✓`;
-  $('troddlCount').className = 'troddl-hint' + (n < MIN_TEXT ? '' : ' ok');
-  $('troddlSave').disabled = !editing || n < MIN_TEXT || n > MAX_TEXT;
-  try { if (editing) localStorage.setItem(draftKey(), JSON.stringify({ text: $('troddlText').value, score: $('troddlScore').value })); } catch {}
+function check(save = true) {
+  const n = $('troddlText').value.trim().length, left = Math.max(0, MIN_TEXT - n);
+  $('troddlMeter').style.width = Math.min(100, n / MIN_TEXT * 100) + '%';
+  $('troddlMeter').parentElement.classList.toggle('done', !left);
+  $('troddlCount').textContent = left ? `Noch ${left} Zeichen bis zur Mindestlänge (${MIN_TEXT})` : `${n} Zeichen · lang genug ✓`;
+  $('troddlCount').className = 'troddl-hint' + (left ? '' : ' ok');
+  $('troddlWhy').textContent = !editing ? 'Erst einen Anime wählen' : left ? `Noch ${left} Zeichen` : n > MAX_TEXT ? 'Zu lang' : '';
+  $('troddlSave').disabled = !editing || !!left || n > MAX_TEXT;
+  for (const id of ['troddlStepScore', 'troddlStepText']) $(id).classList.toggle('waiting', !editing);
+  try { if (save && editing) localStorage.setItem(draftKey(), JSON.stringify({ text: $('troddlText').value, score: $('troddlScore').value, at: Date.now() })); } catch {}
 }
 function pick(show) {
   editing = show;
   $('troddlSearchBox').hidden = true;
   const box = $('troddlPicked'); box.hidden = false;
-  box.innerHTML = `${show.cover ? `<img src="${esc(show.cover)}" alt="">` : ''}<span><b>${esc(show.title)}</b><small>${esc(show.season || '')}</small></span>`;
+  box.innerHTML = `${show.cover ? `<img src="${esc(show.cover)}" alt="">` : ''}<span><b>${esc(show.title)}</b><small>${esc(show.season || '')}</small></span><button type="button" class="pill" data-repick>Ändern</button>`;
+  box.querySelector('[data-repick]').onclick = () => { editing = null; $('troddlSearchBox').hidden = false; box.hidden = true; $('troddlDraft').hidden = true; $('troddlDlgTitle').textContent = 'Review schreiben'; check(false); $('troddlSearch').focus(); };
   const own = data.reviews.find(r => r.mine && r.mediaId === show.mediaId);
   let draft = null; try { draft = JSON.parse(localStorage.getItem(draftKey()) || 'null'); } catch {}
   $('troddlText').value = draft?.text ?? own?.text ?? '';
   scoreTo(draft?.score ?? own?.score ?? 70);
+  const note = $('troddlDraft');
+  note.hidden = !draft?.text;
+  if (draft?.text) {
+    note.innerHTML = `Dein Entwurf${draft.at ? ' vom ' + new Date(draft.at).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }) : ''} ist wieder da. <button type="button" class="troddl-link" data-drop-draft>Verwerfen</button>`;
+    note.querySelector('[data-drop-draft]').onclick = () => { try { localStorage.removeItem(draftKey()); } catch {} $('troddlText').value = own?.text || ''; scoreTo(own?.score ?? 70); note.hidden = true; check(false); };
+  }
   $('troddlDlgTitle').textContent = own ? 'Review bearbeiten' : 'Review schreiben';
-  check(); $('troddlText').focus();
+  check(false); $('troddlScoreRange').focus();
+}
+const showFrom = m => ({ mediaId: m.id, title: m.title.english || m.title.romaji, cover: m.coverImage?.medium || '', season: seasonLabel(m) });
+const reviewed = id => data.reviews.some(r => r.mine && r.mediaId === id);
+function tile(s, cls) {
+  const b = Object.assign(document.createElement('button'), { type: 'button', className: cls });
+  b.innerHTML = `${s.cover ? `<img src="${esc(s.cover)}" alt="">` : '<span class="troddl-nocover"></span>'}<span><b>${esc(s.title)}</b><small>${reviewed(s.mediaId) ? '✓ schon bewertet · bearbeiten' : esc(s.season)}</small></span>`;
+  if (reviewed(s.mediaId)) b.classList.add('done');
+  b.onclick = () => pick(s);
+  return b;
+}
+// your AniList list, newest first: finished and watching shows are the likely ones to review
+let recent = { who: '', shows: [] };
+async function loadRecent() {
+  const who = person(), account = Identity.accountsOf(who)[0];
+  $('troddlRecentBox').hidden = true;
+  if (!account) return;
+  if (recent.who !== who) {
+    try {
+      const d = await anilist('query($u:String){Page(perPage:12){mediaList(userName:$u,type:ANIME,status_in:[COMPLETED,CURRENT,PAUSED],sort:UPDATED_TIME_DESC){media{id title{romaji english} coverImage{medium} season seasonYear}}}}', { u: account });
+      recent = { who, shows: (d?.Page?.mediaList || []).map(e => showFrom(e.media)) };
+    } catch { recent = { who: '', shows: [] }; }
+  }
+  if (person() !== who || !recent.shows.length || editing) return;
+  $('troddlRecent').replaceChildren(...recent.shows.map(s => tile(s, 'troddl-tile')));
+  $('troddlRecentBox').hidden = false;
+}
+// what is still missing before you can write: who you are, then your pen name
+function ready() {
+  const who = person();
+  if (!who) { $('troddlStatus').textContent = 'Wähl oben zuerst aus, wer du bist.'; $('troddlPerson').focus(); return false; }
+  if (!Identity.canAct(who) || !data.me) { $('troddlStatus').textContent = `Bestätige zuerst, dass du ${who} bist (oben).`; $('troddlIdentity').querySelector('input, a, button')?.focus(); return false; }
+  if (!data.me.pen) { $('troddlStatus').textContent = 'Leg zuerst deinen Kritiker-Namen fest (oben).'; $('troddlPen').querySelector('input')?.focus(); return false; }
+  return true;
 }
 function openWriter(show = null) {
-  editing = null; $('troddlFormMsg').textContent = ''; $('troddlText').value = ''; scoreTo(70);
+  if (!ready()) return;
+  editing = null; $('troddlFormMsg').textContent = ''; $('troddlText').value = ''; scoreTo(70); $('troddlDraft').hidden = true;
   $('troddlSearchBox').hidden = false; $('troddlPicked').hidden = true; $('troddlResults').replaceChildren(); $('troddlSearch').value = '';
   $('troddlDlgTitle').textContent = 'Review schreiben';
   $('troddlDlg').showModal();
-  if (show) pick(show); else { check(); $('troddlSearch').focus(); }
+  if (show) pick(show); else { check(false); loadRecent(); $('troddlSearch').focus(); }
 }
 let searchTimer = 0;
 $('troddlSearch').oninput = () => {
@@ -122,20 +171,21 @@ $('troddlSearch').oninput = () => {
     try {
       const d = await anilist('query($s:String){Page(perPage:8){media(search:$s,type:ANIME,sort:SEARCH_MATCH){id title{romaji english} coverImage{medium} season seasonYear}}}', { s: q });
       if ($('troddlSearch').value.trim() !== q) return;
-      const found = (d?.Page?.media || []).map(m => ({ mediaId: m.id, title: m.title.english || m.title.romaji, cover: m.coverImage?.medium || '', season: seasonLabel(m) }));
-      $('troddlResults').replaceChildren(...found.map(s => {
-        const b = Object.assign(document.createElement('button'), { type: 'button', className: 'troddl-result' });
-        b.innerHTML = `${s.cover ? `<img src="${esc(s.cover)}" alt="">` : ''}<span><b>${esc(s.title)}</b><small>${esc(s.season)}</small></span>`;
-        b.onclick = () => pick(s);
-        return b;
-      }));
+      const found = (d?.Page?.media || []).map(showFrom);
+      $('troddlResults').replaceChildren(...found.map(s => tile(s, 'troddl-result')));
       if (!found.length) $('troddlResults').textContent = 'Nichts gefunden.';
     } catch (e) { $('troddlResults').textContent = 'AniList-Suche fehlgeschlagen: ' + e.message; }
   }, 350);
 };
 $('troddlScore').oninput = () => { scoreTo($('troddlScore').value); check(); };
 $('troddlScoreRange').oninput = () => { scoreTo($('troddlScoreRange').value); check(); };
-$('troddlText').oninput = check;
+$('troddlText').oninput = () => check();
+// a topic button starts a new paragraph "Story: " at the end, ready to type
+for (const b of document.querySelectorAll('[data-prompt]')) b.onclick = () => {
+  const t = $('troddlText'), text = t.value.replace(/\s+$/, '');
+  t.value = (text ? text + '\n\n' : '') + b.dataset.prompt + ': ';
+  t.focus(); t.setSelectionRange(t.value.length, t.value.length); check();
+};
 $('troddlForm').onsubmit = async e => {
   if (e.submitter?.value !== 'save') return;
   e.preventDefault();
@@ -145,7 +195,7 @@ $('troddlForm').onsubmit = async e => {
     try { localStorage.removeItem(draftKey()); } catch {}
     location.hash = 'm=' + editing.mediaId;
     $('troddlDlg').close(); await load();
-  } catch (err) { $('troddlFormMsg').textContent = 'Nicht veröffentlicht: ' + err.message; check(); }
+  } catch (err) { $('troddlFormMsg').textContent = 'Nicht veröffentlicht: ' + err.message; check(false); }
 };
 $('troddlWrite').onclick = () => openWriter();
 $('troddlList').onclick = async e => {
