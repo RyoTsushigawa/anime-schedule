@@ -38,6 +38,9 @@ part, so this section says what runs where and what is still open. Keep it up to
   real data, run `SCREENS=screens node tools/check-site.mjs` in a temporary workflow on a branch and remove
   it again afterwards.
 - A parallel session may edit the same files: fetch `main` before every change.
+- The Patch-Notes show how long ago the newest feature went live (`LAST_FEATURE` in `app-start.js`). When a new
+  feature is merged, set `LAST_FEATURE.at` to its merge time (UTC) and `LAST_FEATURE.name` to its short German name.
+  Bug fixes don't reset it.
 
 **Done on 9–10 Nov 2026** (pull requests #1–#28)
 

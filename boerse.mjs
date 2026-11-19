@@ -245,8 +245,7 @@ setInterval(() => { if (marketOpen() !== wasOpen) { wasOpen = marketOpen(); draw
 $('stockSeason').onchange = loadSeason;
 
 (async () => {
-  const settings = await config().catch(() => ({}));
-  if (typeof settings.previewVotesUrl === 'string' && /^https:\/\//.test(settings.previewVotesUrl)) voteApi = settings.previewVotesUrl.replace(/\/$/, '');
+  voteApi = await votesApi();
   if (!voteApi) { $('stockStatus').textContent = 'Die Börse ist hier nicht eingerichtet.'; return; }
   try { tabs = await guckplanTabs(); } catch { tabs = []; }
   if (!tabs.length) tabs = [FALLBACK_TAB];

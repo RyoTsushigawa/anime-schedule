@@ -62,7 +62,7 @@ return withEmotes((lines.length ? `${when} stehen an:\n\n${lines.join('\n')}\n\n
 }
 // U34: a short format to copy: date, then one line per show with start time, title and episode(s)
 let discordFormat = 'full';
-try { if (localStorage.getItem('discordFormat') === 'short') discordFormat = 'short'; } catch {}
+if (stash.get('discordFormat') === 'short') discordFormat = 'short';
 function discordShort({ date, groups }) {
 const lines = groups.flat().map(r => {
 const time = new Date(r.watchAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -267,7 +267,7 @@ $('discordFormat').addEventListener('click', e => {
 const b = e.target.closest('[data-format]');
 if (!b || !discordOpen) return;
 discordFormat = b.dataset.format;
-try { localStorage.setItem('discordFormat', discordFormat); } catch {}
+stash.set('discordFormat', discordFormat);
 drawDiscordFormat();
 $('discordText').value = readable(currentMessage());
 });

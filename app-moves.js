@@ -164,8 +164,8 @@ if ((range === 'day' || range === 'today') && !searching()) stepDay(dx < 0 ? 1 :
 else $(dx < 0 ? 'next' : 'prev').click();
 }, { passive: true });
 }
-try { localStorage.removeItem('todayFirst'); } catch {}
-try { localStorage.removeItem('others'); } catch {}
+stash.drop('todayFirst');
+stash.drop('others');
 const MOVES_API = 'https://api.github.com/repos/RyoTsushigawa/anime-schedule/contents/moves.json';
 let moves = [];
 // The moves as last seen on the server (loaded, or written by this browser): what a save compares with, so it
@@ -208,15 +208,15 @@ let reasonList = [];
 let delaysUrl = '';
 config().then(c => { if (c.delaysUrl) { delaysUrl = c.delaysUrl; if (lastWeekRender && view === 'week') render(...lastWeekRender); refreshEditor(); } });
 let movesKey = '';
-try { movesKey = localStorage.getItem('movesKey') || ''; } catch {}
+movesKey = stash.get('movesKey') || '';
 // N61 Bearbeiter-Zugang: a trusted member moves shows with their own code instead of the owner's GitHub key.
 // The owner creates the codes (a link "#editor=…"); moves.json "editors" keeps only each code's SHA-256, and
 // the delays helper (v20+) checks it before it saves. Keys, editors and everything else stay owner-only.
 let editorCode = '', editorName = '', editorList = [];
-try { editorCode = localStorage.getItem('editorCode') || ''; } catch {}
+editorCode = stash.get('editorCode') || '';
 if (location.hash.startsWith('#editor=')) {
 editorCode = decodeURIComponent(location.hash.slice(8)).trim();
-try { localStorage.setItem('editorCode', editorCode); } catch {}
+stash.set('editorCode', editorCode);
 history.replaceState(null, '', location.pathname + location.search);
 }
 const canMove = () => !!movesKey || (!!editorName && !!delaysUrl);
@@ -243,7 +243,7 @@ setNote('moves', null);
 } catch {
 setNote('moves', `${unreachable('Die Seite')}: verschobene Serien konnten nicht geladen werden, daher stehen alle Serien in ihren Guckplan-Slots.`);
 }
-try { own = JSON.parse(localStorage.getItem('movesOwn')); } catch {}
+own = stash.json('movesOwn', null);
 const newest = own && (!site || !site.updated || Date.parse(own.updated) > Date.parse(site.updated)) ? own : site;
 moves = newest?.moves || [];
 movesBase = moves;
@@ -424,7 +424,7 @@ if (!later) { moves = file.moves; absentDays = nextAbsent; absentRules = nextRul
 delays = nextDelays;
 reasonList = file.reasons;
 movesSeen = movesStamp();
-try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
+stash.set('movesOwn', JSON.stringify(file));
 return;
 }
 if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
@@ -457,7 +457,7 @@ if (movesPending <= 1) { moves = file.moves || []; absentDays = Array.isArray(fi
 noteWrite(base, file.moves || []);
 delays = file.delays || [];
 movesSeen = movesStamp();
-try { localStorage.setItem('movesOwn', JSON.stringify(file)); } catch {}
+stash.set('movesOwn', JSON.stringify(file));
 }
 const movesStamp = () => JSON.stringify([moves, delays, absentDays, absentRules]);
 let movesSeen = '';
@@ -515,7 +515,7 @@ const next = { ...file, updated: new Date().toISOString(), editors };
 if (!editors.length) delete next.editors;
 const content = btoa(unescape(encodeURIComponent(JSON.stringify(next, null, 1) + '\n')));
 const res = await fetch(MOVES_API, { method: 'PUT', headers, body: JSON.stringify({ message: 'Bearbeiter', content, branch: 'main', ...(meta?.sha && { sha: meta.sha }) }) });
-if (res.ok) { editorList = editors; movesWritten = null; try { localStorage.setItem('movesOwn', JSON.stringify(next)); } catch {} return; }
+if (res.ok) { editorList = editors; movesWritten = null; stash.set('movesOwn', JSON.stringify(next)); return; }
 if (res.status !== 409 && res.status !== 422) throw new Error(res.status === 401 || res.status === 403 ? 'der GitHub-Schlüssel darf hier nicht schreiben' : `GitHub antwortet ${res.status}`);
 }
 throw new Error('gerade gleichzeitig gespeichert, bitte nochmal versuchen');
@@ -548,7 +548,7 @@ catch (err) { $('editorMsg').textContent = 'Nicht entfernt: ' + err.message; b.d
 });
 $('editorLeave').onclick = () => {
 editorCode = ''; editorName = '';
-try { localStorage.removeItem('editorCode'); } catch {}
+stash.drop('editorCode');
 refreshEditor();
 drawEditorBoxes();
 $('keyMsg').textContent = 'Bearbeiter-Zugang aus diesem Browser entfernt.';
@@ -563,7 +563,7 @@ const res = await fetch('https://api.github.com/repos/RyoTsushigawa/anime-schedu
 const repo = res.ok ? await res.json() : null;
 if (!repo?.permissions?.push) throw new Error(res.ok ? "dieser Schlüssel kann die Seite nicht ändern" : `GitHub antwortet ${res.status}`);
 movesKey = key;
-try { localStorage.setItem('movesKey', key); } catch {}
+stash.set('movesKey', key);
 $('movesSetup').hidden = $('moveToggle').hidden = $('repairButton').hidden = $('deliveryButton').hidden = $('adventReviewLink').hidden = false;
 syncMoveEditor();
 drawEditorBoxes();
@@ -576,7 +576,7 @@ movesKey = '';
 $('repairButton').hidden = $('deliveryButton').hidden = $('adventReviewLink').hidden = true;
 refreshEditor();
 drawEditorBoxes();
-try { localStorage.removeItem('movesKey'); } catch {}
+stash.drop('movesKey');
 $('keyMsg').textContent = 'Aus diesem Browser entfernt.';
 load(true);
 };
@@ -890,7 +890,7 @@ let autoPlan = null;
 // time budget per weekday (0 = Mo … 6 = So), remembered in this browser; none = only the episode limit
 const AUTO_BUDGETS = [0, 30, 45, 60, 90, 120, 180];
 let autoBudgets = {};
-try { autoBudgets = JSON.parse(localStorage.getItem('autoPlanBudgets') || '{}') || {}; } catch {}
+autoBudgets = stash.json('autoPlanBudgets', {});
 const budgetWeekday = d => (new Date(d + 'T12:00').getDay() + 6) % 7;
 const planClock = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 // when the evening's own plan ends: the last regular slot (not catch-up) plus one slot
@@ -922,7 +922,7 @@ $('autoPlanPreview').addEventListener('change', e => {
 const pick = e.target.closest('[data-budget-day]');
 if (!pick) return;
 autoBudgets[pick.dataset.budgetDay] = Number(pick.value);
-try { localStorage.setItem('autoPlanBudgets', JSON.stringify(autoBudgets)); } catch {}
+stash.set('autoPlanBudgets', JSON.stringify(autoBudgets));
 drawAutoPlan();
 });
 $('list').addEventListener('click', e => {
@@ -935,7 +935,7 @@ $('autoPlanMsg').textContent = '';
 drawAutoPlan();
 $('autoPlanDlg').showModal();
 });
-$('autoPlanMax').onchange = () => { try { localStorage.setItem('autoPlanMax', $('autoPlanMax').value); } catch {} drawAutoPlan(); };
+$('autoPlanMax').onchange = () => { stash.set('autoPlanMax', $('autoPlanMax').value); drawAutoPlan(); };
 $('autoPlanDays').onchange = drawAutoPlan;
 $('autoPlanSave').onclick = () => {
 if (!autoPlan?.entries.length) return;

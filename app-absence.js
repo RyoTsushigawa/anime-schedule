@@ -139,7 +139,7 @@ if (Array.isArray(body.moves)) { // the whole saved file
 }
 if (body.reasons) reasonList = goodReasons(body.reasons);
 movesSeen = movesStamp();
-try { localStorage.setItem('movesOwn', JSON.stringify(body)); } catch {}
+stash.set('movesOwn', JSON.stringify(body));
 return body;
 }
 async function changeDelays(day, show, add, oldShow = show) {
