@@ -2,6 +2,7 @@
 // chase cards, completion per set, which pack to open, trade partners and trade worth. German and English.
 // Standalone: only files in this folder. Cards: cards.json (tools/build-cards.mjs, daily). Collections: its own
 // Worker (worker/, URL in config.json); you save only your own, with your PIN. Rules: core.mjs. Trades: Discord.
+import { parseZoneCsv, previewZoneImport } from './zone-import.mjs';
 import { MAX_ACCOUNTS, MAX_COPIES, emptyRecord, normalize, counts, onAccounts, tradeable, spares, completion, packOdds, worth, tradeFor, matches, ownMoves, cardMap, diff, applyDiff, isEmptyDiff, packList, packCards, accountWith } from './core.mjs';
 
 const $ = id => document.getElementById(id);
@@ -201,7 +202,81 @@ function fillAccounts() {
   $('pkAccount').disabled = accounts.length < 2;
   $('pkAccounts').hidden = !mine();
   $('pkPackBtn').hidden = !mine();
+  $('pkImportBtn').hidden = !mine();
 }
+
+
+ // Pokémon Zone CSV import is local-only until the user confirms a preview.
+let zoneParsed = null;
+const importText = () => lang === 'de' ? {
+  help: 'CSV aus Pokémon Zone Exporter auswählen. Importiert nur in das ausgewählte Konto; Wunschlisten bleiben unverändert.',
+  replace: 'Vollständige Sammlung ersetzen (nicht aufgeführte Karten entfernen)',
+  apply: 'Änderungen übernehmen', close: 'Schließen', choose: 'Bitte zuerst ein Konto auswählen.',
+  noFile: 'Bitte eine CSV-Datei auswählen.', error: 'CSV konnte nicht gelesen werden: ',
+  unsafe: 'Unbekannte oder ungültige Zeilen gefunden. Bitte die Datei prüfen. Ersetzen ist deaktiviert.',
+  ready: (n, u, bad) => n + ' Änderungen · ' + u + ' unbekannte Karten · ' + bad + ' ungültige Zeilen',
+  done: n => n + ' Karten aktualisiert.'
+} : {
+  help: 'Choose a Pokémon Zone Exporter CSV. Imports into the selected account only; wishlists are preserved.',
+  replace: 'Replace full collection (remove cards absent from CSV)',
+  apply: 'Apply changes', close: 'Close', choose: 'Select one account first.',
+  noFile: 'Choose a CSV file first.', error: 'Could not read CSV: ',
+  unsafe: 'Unknown cards or invalid rows found. Check the file. Replace is disabled.',
+  ready: (n, u, bad) => n + ' changes · ' + u + ' unknown cards · ' + bad + ' invalid rows',
+  done: n => n + ' cards updated.'
+};
+function refreshZonePreview() {
+  const t = importText(), account = scope(), target = record?.owned?.[account];
+  $('pkImportApply').textContent = t.apply;
+  $('pkImportClose').textContent = t.close;
+  $('pkImportHelp').textContent = t.help;
+  $('pkImportModeText').textContent = t.replace;
+  if (!zoneParsed || !target || account === 'all') { $('pkImportApply').disabled = true; return; }
+  const unsafe = zoneParsed.unknown.length || zoneParsed.invalid.length;
+  $('pkImportReplace').disabled = !!unsafe;
+  if (unsafe) $('pkImportReplace').checked = false;
+  const changes = previewZoneImport(target, zoneParsed.owned, $('pkImportReplace').checked);
+  $('pkImportStatus').textContent = t.ready(changes.length, zoneParsed.unknown.length, zoneParsed.invalid.length) + (unsafe ? ' · ' + t.unsafe : '');
+  $('pkImportPreview').textContent = changes.slice(0, 100).map(c => c.id + ': ' + c.before + ' → ' + c.after).join(' · ') + (changes.length > 100 ? ' …' : '');
+  $('pkImportApply').disabled = !changes.length || !mine();
+}
+$('pkImportBtn').onclick = () => {
+  if (!mine()) return;
+  zoneParsed = null;
+  $('pkImportFile').value = '';
+  $('pkImportReplace').checked = false;
+  $('pkImportReplace').disabled = false;
+  $('pkImportPreview').textContent = '';
+  $('pkImportStatus').textContent = '';
+  refreshZonePreview();
+  if (scope() === 'all') { $('pkImportStatus').textContent = importText().choose; $('pkImportApply').disabled = true; }
+  $('pkImportDlg').showModal();
+};
+$('pkImportFile').onchange = async () => {
+  zoneParsed = null;
+  $('pkImportApply').disabled = true;
+  const file = $('pkImportFile').files?.[0];
+  if (!file) { $('pkImportStatus').textContent = importText().noFile; return; }
+  try {
+    if (file.size > 3000000) throw Error('File too large');
+    zoneParsed = parseZoneCsv(await file.text(), new Set(cards.keys()));
+    refreshZonePreview();
+  } catch (err) { $('pkImportStatus').textContent = importText().error + err.message; }
+};
+$('pkImportReplace').onchange = refreshZonePreview;
+$('pkImportApply').onclick = () => {
+  if (!zoneParsed || !mine() || scope() === 'all') return;
+  const account = scope(), target = record.owned[account];
+  const replace = $('pkImportReplace').checked && !zoneParsed.unknown.length && !zoneParsed.invalid.length;
+  const changes = previewZoneImport(target, zoneParsed.owned, replace);
+  if (!changes.length) return;
+  change(r => {
+    const owned = r.owned[account];
+    for (const c of changes) { if (c.after) owned[c.id] = c.after; else delete owned[c.id]; }
+  });
+  $('pkImportDlg').close();
+  $('pkStatus').textContent = importText().done(changes.length);
+};
 
 // ---------- collection ----------
 function filtered() {
