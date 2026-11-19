@@ -201,7 +201,6 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 | `trailer-picks.json` | Optional, by hand: `{"Winter 2027": {"<title as in the list>": "<YouTube video ID>"}}` replaces a wrong pick (`""` = no trailer for that show, `"auto"` = a new show although it looks like a sequel: picked automatically; `{"channel": "Team ONIBE"}` = like "auto", and that channel's videos are searched for and preferred) |
 | `tools/youtube-login.mjs` | **PC only.** One-time YouTube login for the trailer playlists (see "Trailer-Playlist") |
 | `tool-theme.js` | For Higher / Lower and the Masterset Tracker: light/dark (and the accent colour) as chosen on the main page |
-| `pocket/` | Pocket-Sammlung (Pokémon TCG Pocket): standalone, with its own backend and card data; see `pocket/README.md` |
 | `ranker/`, `masterset/` | Higher / Lower and the Masterset Tracker. The separate repository `anime-ranker` only forwards here and keeps the ranker's weekly data (`db.json`) |
 | `wrapped.*`, `wrapped-profiles.json` | Anime Wrapped |
 | `streams-de.json` | Where each Guckplan show streams in Germany (from LiveChart) |
