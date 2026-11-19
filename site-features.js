@@ -56,7 +56,7 @@ const SITE_FEATURES = [
   ['Troddl', ['Reviews mit Wertung von 0 bis 100 (mindestens 300 Zeichen)', 'Eigener Kritiker-Name pro Person, frei wählbar', 'Troddlrating ab zwei Reviews', 'Troddlrating beim Darüberfahren über den Seriennamen', 'Archiv nach Season und Wertung', 'Schreiben in drei Schritten: zuletzt gesehene Anime antippen, Wertung mit Worten, Themen-Knöpfe', 'Serie fertig geschaut: „Auch eine Troddl-Review schreiben“ direkt aus der Bewertung']],
   ['Spiele', ['Spieleseite mit dem heutigen Stand und kurzer Erklärung je Spiel', 'Titel-Rätsel (täglich / endlos, normal / schwer / extrem, Hinweise, Auflösen im Extrem-Modus)', 'Anime Cover Quiz',
     'Inhalts-Rätsel mit Archiv und Statistik', 'Anime-Quiz']],
-  ['Sonstiges', ['Adventskalender mit 24 Anime-Überraschungen', 'Masterset Tracker', 'McRib bestellen']],
+  ['Sonstiges', ['Adventskalender mit 24 Anime-Überraschungen', 'Masterset Tracker', 'Pocket-Sammlung (TCG Pocket)', 'McRib bestellen']],
 ];
 // What's coming: approved in the feature challenge (FEATURE_BACKLOG.md) but not built yet. Move a line up to
 // SITE_FEATURES when it's live.
