@@ -28,6 +28,8 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== SCOPE.origin || !url.pathname.startsWith(SCOPE.pathname)) return;
+  // pocket/ is a standalone page (thousands of card images): left to the browser's own cache
+  if (url.pathname.startsWith(SCOPE.pathname + 'pocket/')) return;
   // Saved without the query, so "?v=2" can't leave an older copy behind and nothing from a login link is kept
   const key = url.origin + url.pathname;
   const pageFile = isPageFile(request, url);

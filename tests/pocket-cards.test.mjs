@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { build, sane, germanName, speciesTranslator } from '../pocket/tools/build-cards.mjs';
 
 const source = {
@@ -34,4 +34,10 @@ test('a broken download never replaces a good card list', () => {
   assert.match(sane({ ...file, cards: file.cards.slice(0, 10) }, file), /too few/);
   assert.match(sane({ ...file, cards: file.cards.slice(0, Math.floor(file.cards.length * 0.9)) }, file), /lost/);
   assert.ok(file.cards.every(c => /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?-\d{1,4}$/.test(c.id)), 'every id fits the Worker\'s card pattern');
+});
+
+test('every card has its picture in pocket/cards', () => {
+  const file = JSON.parse(readFileSync(new URL('../pocket/cards.json', import.meta.url), 'utf8'));
+  const missing = file.cards.filter(c => !existsSync(new URL(`../pocket/cards/${c.s}/${c.n}.webp`, import.meta.url))).map(c => c.id);
+  assert.deepEqual(missing, []);
 });

@@ -9,7 +9,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const stored = { get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} } };
 const JOIN = '\u0001join';
 const PAGE = 120;
-const IMG = c => `https://raw.githubusercontent.com/flibustier/pokemon-tcg-exchange/main/public/images/thumbnails/${encodeURIComponent(c.s)}/${c.n}.webp`;
+const IMG = c => `cards/${encodeURIComponent(c.s)}/${c.n}.webp`;
 const TEXT = {
   de: {
     back: 'Zum Plan', title: 'Pocket-Sammlung', subtitle: 'Pokémon TCG Pocket · Sammlung, Fortschritt und Tausch in der Gruppe',

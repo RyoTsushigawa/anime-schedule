@@ -27,13 +27,14 @@ Cards are identified by set and number (`A1-25`), so the language a card is in d
 | `index.html`, `pocket.css`, `theme.js`, `app.mjs` | The page |
 | `core.mjs` | The rules (completion, pack odds, trades, worth), no page code |
 | `cards.json` | Every card, set, rarity and pull rate. Written by `tools/build-cards.mjs`, daily by `.github/workflows/pocket-cards.yml`, so new sets appear by themselves |
+| `cards/<set>/<number>.webp` | The card art (thumbnails), copied in; new cards' art comes with the daily run |
 | `tools/pokemon-names.json` | English → German Pokémon names, for cards TCGdex has no German name for yet |
 | `config.json` | `api`: the backend's URL. If it changes, change `connect-src` in `index.html` too |
 | `worker/` | The backend: a Cloudflare Worker with its own KV storage |
 
 Card data: [flibustier/pokemon-tcg-pocket-database](https://github.com/flibustier/pokemon-tcg-pocket-database) (MIT),
-German names from [TCGdex](https://github.com/tcgdex/cards-database), card thumbnails linked from
-[flibustier/pokemon-tcg-exchange](https://github.com/flibustier/pokemon-tcg-exchange). Card images belong to
+German names from [TCGdex](https://github.com/tcgdex/cards-database), card thumbnails from
+[flibustier/pokemon-tcg-exchange](https://github.com/flibustier/pokemon-tcg-exchange), copied in for personal use. Card images belong to
 The Pokémon Company, Nintendo, Creatures and GAME FREAK; this is a personal, non-commercial fan project.
 
 ## Backend

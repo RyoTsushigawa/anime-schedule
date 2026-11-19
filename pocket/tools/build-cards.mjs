@@ -6,8 +6,10 @@
 // so a new set appears by itself. The file is only written when the data is complete; a failed download keeps
 // the last good one.
 //   node pocket/tools/build-cards.mjs              (downloads)
+//   THUMBS_DIR=dir: flibustier/pokemon-tcg-exchange's public/images/thumbnails; card art missing in pocket/cards/
+//   (<set>/<number>.webp) is copied from there, so a new set's pictures arrive with it
 //   POCKET_SRC=dir node pocket/tools/build-cards.mjs  (reads sets.json, cards.json, rarities.json, pullRates.json from dir)
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const HERE = new URL('./', import.meta.url), OUT = new URL('../cards.json', import.meta.url);
@@ -86,6 +88,17 @@ export function sane(next, previous) {
   return '';
 }
 
+// copies the picture of every card that has none yet; returns how many were copied and which are still missing
+export function copyArt(cards, from, to) {
+  let copied = 0; const missing = [];
+  for (const c of cards) {
+    const file = c.n + '.webp', target = join(to, c.s, file), source = join(from, c.s, file);
+    if (existsSync(target)) continue;
+    if (from && existsSync(source)) { mkdirSync(join(to, c.s), { recursive: true }); copyFileSync(source, target); copied++; } else missing.push(c.id);
+  }
+  return { copied, missing };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [sets, cards, rarities, pullRates] = await Promise.all(FILES.map(source));
   const german = process.env.TCGDEX_DIR ? tcgdexNames(process.env.TCGDEX_DIR) : new Map();
@@ -93,6 +106,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const out = OUT;
   const previous = existsSync(out) ? JSON.parse(readFileSync(out, 'utf8')) : null;
   const next = build({ sets, cards, rarities, pullRates }, { german, translate });
+  const art = copyArt(next.cards, process.env.THUMBS_DIR || '', new URL('../cards/', import.meta.url).pathname);
+  console.log(`card art: ${art.copied} copied, ${art.missing.length} missing${art.missing.length ? ' (' + art.missing.slice(0, 10).join(', ') + ')' : ''}`);
   const problem = sane(next, previous);
   if (problem) { console.error('cards.json not written: ' + problem); process.exit(1); }
   const { updated, ...before } = previous || {};

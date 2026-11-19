@@ -1,5 +1,6 @@
 # Every day: the Pokémon TCG Pocket card list for the Pocket-Sammlung (pocket/), so a new set appears by itself.
-# Cards, packs, rarities and pull rates from flibustier/pokemon-tcg-pocket-database; German names from TCGdex.
+# Cards, packs, rarities and pull rates from flibustier/pokemon-tcg-pocket-database; German names from TCGdex;
+# the art of new cards from flibustier/pokemon-tcg-exchange.
 name: Pocket cards
 
 on:
@@ -29,14 +30,21 @@ jobs:
         run: |
           git clone --depth 1 --filter=blob:none --sparse https://github.com/tcgdex/cards-database "$RUNNER_TEMP/tcgdex"
           git -C "$RUNNER_TEMP/tcgdex" sparse-checkout set "data/Pokémon TCG Pocket"
+      # Card art for new cards: only the thumbnails folder of flibustier/pokemon-tcg-exchange
+      - name: Card art
+        continue-on-error: true
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/flibustier/pokemon-tcg-exchange "$RUNNER_TEMP/exchange"
+          git -C "$RUNNER_TEMP/exchange" sparse-checkout set public/images/thumbnails
       - run: node pocket/tools/build-cards.mjs
         env:
           TCGDEX_DIR: ${{ runner.temp }}/tcgdex
+          THUMBS_DIR: ${{ runner.temp }}/exchange/public/images/thumbnails
       - name: Save the card list
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add pocket/cards.json
+          git add pocket/cards.json pocket/cards
           git diff --cached --quiet && exit 0
           git commit -m "Daily Pocket card list"
           git pull --rebase --autostash origin main
