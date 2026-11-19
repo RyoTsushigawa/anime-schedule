@@ -104,3 +104,26 @@ a { color: var(--accent); }
 .pk-account-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .pk-account-row input { flex: 1 1 8rem; min-width: 0; }
 @media (max-width: 480px) { .pk-dlg-head { flex-direction: column; } .pk-grid { grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr)); } }
+
+.pk-fab { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 4; padding: 10px 18px; font-size: 15px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.pk-pack-dlg { width: min(46rem, 96vw); }
+.pk-pack-head { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
+.pk-pack-head select { flex: 1 1 12rem; min-width: 0; }
+.pk-tray { display: flex; gap: .35rem; min-height: 4.6rem; margin: .6rem 0 .2rem; padding: .35rem; border: 1px dashed var(--line); border-radius: 10px; overflow-x: auto; }
+.pk-tray button { border: 0; padding: 0; background: none; width: 3.2rem; flex: none; position: relative; }
+.pk-tray img { width: 100%; border-radius: 5px; display: block; }
+.pk-tray .slot { width: 3.2rem; aspect-ratio: 367/512; border-radius: 5px; background: var(--line); flex: none; }
+.pk-pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr)); gap: .35rem; }
+.pk-pack-grid h3 { grid-column: 1 / -1; margin: .5rem 0 0; font-size: 13px; color: var(--muted); }
+.pk-pack-grid button { border: 0; padding: 0; background: none; position: relative; border-radius: 6px; overflow: hidden; }
+.pk-pack-grid img { width: 100%; display: block; aspect-ratio: 367/512; object-fit: cover; }
+.pk-pack-grid button:active { transform: scale(.95); }
+.pk-new { position: absolute; left: 3px; top: 3px; background: var(--accent); color: var(--accent-text); font-size: 9px; font-weight: 800; padding: 0 4px; border-radius: 4px; }
+.pk-have { position: absolute; right: 3px; bottom: 3px; background: rgba(0,0,0,.65); color: #fff; font-size: 10px; padding: 0 4px; border-radius: 4px; }
+.pk-chip.picked { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.pk-chip.picked small { color: inherit; }
+.pk-notice { border: 1px solid var(--accent); border-radius: 10px; padding: .5rem .7rem; margin: 0 0 .8rem; font-size: 13px; display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; }
+.pk-history li { font-size: 12.5px; margin: .25rem 0; }
+.pk-history li.undone { opacity: .5; text-decoration: line-through; }
+.pk-history button { padding: 1px 8px; font-size: 12px; margin-inline-start: .4rem; }
+.pk-traded { margin-top: .4rem; }

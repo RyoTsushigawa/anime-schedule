@@ -22,7 +22,8 @@ export function normalize(record) {
   }
   const ids = list => [...new Set((Array.isArray(list) ? list : []).filter(id => CARD_ID.test(id)))];
   const chase = ids(r.chase), wish = ids(r.wish).filter(id => !chase.includes(id));
-  return { accounts, owned, wish, chase, ...(r.at && { at: r.at }) };
+  const trades = (Array.isArray(r.trades) ? r.trades : []).filter(t => t && typeof t.id === 'string' && CARD_ID.test(t.gave) && CARD_ID.test(t.got)).slice(-50);
+  return { accounts, owned, wish, chase, ...(trades.length && { trades }), ...(r.at && { at: r.at }) };
 }
 
 // copies per card: all accounts together ('all') or one account
@@ -183,4 +184,69 @@ export function ownMoves(data, record) {
     }
   }
   return out.sort((a, b) => a.to.name.localeCompare(b.to.name) || a.id.localeCompare(b.id, undefined, { numeric: true }));
+}
+
+// ---------- changes on top of a newer copy ----------
+// What you changed since the copy you loaded (copies per account as +/-, wishlist/chase in and out, the account
+// list), so it can be put on top of a newer copy from the server (another device, or a friend's trade) instead of
+// overwriting it.
+export function diff(base, next) {
+  const owned = {};
+  for (const a of next.accounts) {
+    const before = base.owned?.[a.id] || {}, after = next.owned[a.id] || {};
+    for (const id of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const d = (after[id] || 0) - (before[id] || 0);
+      if (d) (owned[a.id] ||= {})[id] = d;
+    }
+  }
+  const lists = {};
+  for (const l of ['wish', 'chase']) {
+    const b = new Set(base[l] || []), n = new Set(next[l]);
+    lists[l] = { add: [...n].filter(x => !b.has(x)), remove: [...b].filter(x => !n.has(x)) };
+  }
+  const accounts = JSON.stringify(base.accounts) === JSON.stringify(next.accounts) ? null : next.accounts;
+  return { owned, lists, accounts };
+}
+export function applyDiff(record, change) {
+  const out = normalize(JSON.parse(JSON.stringify(record)));
+  if (change.accounts) {
+    for (const a of change.accounts) out.owned[a.id] ||= {};
+    for (const id of Object.keys(out.owned)) if (!change.accounts.some(a => a.id === id)) delete out.owned[id];
+    out.accounts = change.accounts;
+  }
+  for (const [acc, cards] of Object.entries(change.owned)) {
+    if (!out.owned[acc]) continue;
+    for (const [id, d] of Object.entries(cards)) { const n = Math.max(0, Math.min(MAX_COPIES, (out.owned[acc][id] || 0) + d)); if (n) out.owned[acc][id] = n; else delete out.owned[acc][id]; }
+  }
+  for (const l of ['wish', 'chase']) {
+    const set = new Set(out[l]);
+    for (const x of change.lists[l].add) set.add(x);
+    for (const x of change.lists[l].remove) set.delete(x);
+    out[l] = [...set];
+  }
+  const other = { wish: 'chase', chase: 'wish' };
+  for (const l of ['wish', 'chase']) for (const x of change.lists[l].add) out[other[l]] = out[other[l]].filter(y => y !== x);
+  return normalize({ ...out, trades: record.trades, at: record.at });
+}
+export const isEmptyDiff = change => !change.accounts && !Object.keys(change.owned).length && !['wish', 'chase'].some(l => change.lists[l].add.length || change.lists[l].remove.length);
+
+// ---------- pack opened ----------
+// every pack you can open, newest set first: { key: "C1|Dual Fusion Pikachu", set, pack, size }
+export function packList(data) {
+  const out = [];
+  for (const set of [...data.sets].reverse()) {
+    if (/^PROMO/.test(set.code)) continue;
+    const regular = data.pullRates?.[set.code]?.['Regular Pack'];
+    for (const pack of set.packs) if (data.cards.some(c => c.s === set.code && c.p?.includes(pack))) out.push({ key: set.code + '|' + pack, set: set.code, pack, size: regular?.cards || (/Deluxe/i.test(pack) ? 4 : 5) });
+  }
+  return out;
+}
+// the pack's cards in the order they are revealed: by rarity (◆ first), then number
+export function packCards(data, set, pack) {
+  const order = Object.keys(data.rarities);
+  return data.cards.filter(c => c.s === set && c.p?.includes(pack)).sort((a, b) => order.indexOf(a.r) - order.indexOf(b.r) || a.n - b.n);
+}
+// the account a traded card leaves from: the one holding the most copies of it
+export function accountWith(record, id) {
+  return [...record.accounts].sort((a, b) => (record.owned[b.id]?.[id] || 0) - (record.owned[a.id]?.[id] || 0))[0]?.id || '';
 }

@@ -64,3 +64,26 @@ test('group code and origin', async () => {
   const r = await worker.fetch(new Request('https://pocket.test/pocket', { headers: { Origin: 'https://evil.example' } }), e);
   assert.equal(r.status, 403);
 });
+
+test('a trade logged by one person moves the cards on both sides, keeps the history, and can be undone', async () => {
+  const e = environment(), pin = { 'X-Pocket-Pin': '4711' };
+  await call(e, '/join', { person: 'Ryo' }, pin); await call(e, '/join', { person: 'Terra' }, pin);
+  await call(e, '/pocket', { person: 'Ryo', since: '', record: { accounts: [{ id: 'main', name: 'Main' }, { id: 'alt2', name: 'Alt' }], owned: { main: { 'A1-1': 1 }, alt2: { 'A1-1': 3 } }, wish: [], chase: ['A1-2'] } }, pin);
+  await call(e, '/pocket', { person: 'Terra', since: '', record: { accounts: [{ id: 'main', name: 'Main' }], owned: { main: { 'A1-2': 2 } }, wish: [], chase: [] } }, pin);
+  assert.equal((await call(e, '/trade', { person: 'Ryo', partner: 'Terra', gave: 'A1-9', got: 'A1-2' }, pin)).status, 409);
+  const t = await call(e, '/trade', { person: 'Ryo', partner: 'Terra', gave: 'A1-1', got: 'A1-2' }, pin);
+  assert.equal(t.status, 200);
+  assert.deepEqual(t.record.owned.alt2, { 'A1-1': 2, 'A1-2': 1 });
+  assert.deepEqual(t.partner.owned.main, { 'A1-2': 1, 'A1-1': 1 });
+  assert.equal(t.partner.trades[0].by, 'Ryo');
+  // Terra's page saves an older copy: refused (409), and a newer save keeps the trade history
+  const all = await call(e, '/pocket');
+  const terra = all.people.Terra;
+  const saved = await call(e, '/pocket', { person: 'Terra', since: terra.at, record: { ...terra, trades: [] } }, pin);
+  assert.equal(saved.record.trades.length, 1);
+  const undone = await call(e, '/trade/undo', { person: 'Terra', id: t.trade.id }, pin);
+  assert.equal(undone.status, 200);
+  assert.deepEqual(undone.partner.owned.alt2, { 'A1-1': 3 });
+  assert.deepEqual(undone.record.owned.main, { 'A1-2': 2 });
+  assert.equal((await call(e, '/trade/undo', { person: 'Terra', id: t.trade.id }, pin)).status, 404);
+});

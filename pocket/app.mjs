@@ -2,7 +2,7 @@
 // chase cards, completion per set, which pack to open, trade partners and trade worth. German and English.
 // Standalone: only files in this folder. Cards: cards.json (tools/build-cards.mjs, daily). Collections: its own
 // Worker (worker/, URL in config.json); you save only your own, with your PIN. Rules: core.mjs. Trades: Discord.
-import { MAX_ACCOUNTS, MAX_COPIES, emptyRecord, normalize, counts, onAccounts, tradeable, spares, completion, packOdds, worth, tradeFor, matches, ownMoves, cardMap } from './core.mjs';
+import { MAX_ACCOUNTS, MAX_COPIES, emptyRecord, normalize, counts, onAccounts, tradeable, spares, completion, packOdds, worth, tradeFor, matches, ownMoves, cardMap, diff, applyDiff, isEmptyDiff, packList, packCards, accountWith } from './core.mjs';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,7 +41,14 @@ const TEXT = {
     join: '+ Neu dabei', yourName: 'Dein Name', pin: 'PIN', login: 'Anmelden', joinNow: 'Beitreten', logout: 'Abmelden',
     loggedIn: p => `✓ Angemeldet als ${p}`, needPin: p => `Mit deiner PIN als ${p} anmelden, um zu bearbeiten:`, joinHint: 'Name und PIN (4–32 Zeichen) wählen. Die PIN bleibt auf diesem Gerät gespeichert.',
     groupCode: 'Gruppencode', groupCodeHint: 'Der Gruppencode fehlt auf diesem Gerät:', save: 'Speichern',
-    errors: { 'wrong pin': 'Falsche PIN.', 'pin needed': 'PIN nötig (4–32 Zeichen).', locked: 'Zu viele falsche PINs: in 15 Minuten nochmal.', 'name taken': 'Den Namen gibt es schon.', 'invalid name': 'Ungültiger Name.', 'group full': 'Die Gruppe ist voll.', 'unknown person': 'Unbekannte Person.', 'group code': 'Gruppencode fehlt oder falsch.', 'not set up': 'Der Speicher ist noch nicht eingerichtet.' },
+    packBtn: '＋ Pack geöffnet', packTitle: 'Pack geöffnet', undo: 'Rückgängig', done: 'Fertig', newCard: 'NEU',
+    packHint: (n, acc) => `Tippe die ${n} gezogenen Karten an (Reihenfolge egal). Danach wird sie automatisch auf „${acc}“ gespeichert, und das nächste Pack beginnt. Eine Karte in der Leiste antippen nimmt sie wieder raus.`,
+    packSaved: (n, acc) => `✓ ${n} Karten auf „${acc}“ eingetragen. Nächstes Pack:`,
+    tradePick: 'Getauscht? Deine Karte und die von der anderen Person antippen, dann „Getauscht“: beide Sammlungen werden angepasst.',
+    traded: 'Getauscht', tradeSaved: 'Tausch eingetragen, bei euch beiden.', historyTitle: 'Letzte Tausche',
+    tradeLine: (a, b, gave, got) => `${a} gab ${gave} an ${b} und bekam ${got}`, undone: 'rückgängig gemacht',
+    notice: (by, gave, got) => `${by} hat einen Tausch mit dir eingetragen: du gabst ${got} und bekamst ${gave}. Deine Sammlung ist schon angepasst.`, ok: 'OK',
+    errors: { 'card not owned': 'Eine der Karten ist nicht (mehr) eingetragen.', 'invalid trade': 'Ungültiger Tausch.', 'unknown trade': 'Diesen Tausch gibt es nicht mehr.', 'wrong pin': 'Falsche PIN.', 'pin needed': 'PIN nötig (4–32 Zeichen).', locked: 'Zu viele falsche PINs: in 15 Minuten nochmal.', 'name taken': 'Den Namen gibt es schon.', 'invalid name': 'Ungültiger Name.', 'group full': 'Die Gruppe ist voll.', 'unknown person': 'Unbekannte Person.', 'group code': 'Gruppencode fehlt oder falsch.', 'not set up': 'Der Speicher ist noch nicht eingerichtet.' },
   },
   en: {
     back: 'Back to schedule', title: 'Pocket Collection', subtitle: 'Pokémon TCG Pocket · collection, progress and trading in the group',
@@ -73,12 +80,19 @@ const TEXT = {
     join: '+ New here', yourName: 'Your name', pin: 'PIN', login: 'Log in', joinNow: 'Join', logout: 'Log out',
     loggedIn: p => `✓ Logged in as ${p}`, needPin: p => `Log in with your PIN as ${p} to edit:`, joinHint: 'Choose a name and a PIN (4–32 characters). The PIN stays saved on this device.',
     groupCode: 'Group code', groupCodeHint: 'The group code is missing on this device:', save: 'Save',
-    errors: { 'wrong pin': 'Wrong PIN.', 'pin needed': 'PIN needed (4–32 characters).', locked: 'Too many wrong PINs: try again in 15 minutes.', 'name taken': 'That name is taken.', 'invalid name': 'Invalid name.', 'group full': 'The group is full.', 'unknown person': 'Unknown person.', 'group code': 'Group code missing or wrong.', 'not set up': 'Storage is not set up yet.' },
+    packBtn: '+ Pack opened', packTitle: 'Pack opened', undo: 'Undo', done: 'Done', newCard: 'NEW',
+    packHint: (n, acc) => `Tap the ${n} cards you pulled (any order). Then it saves to “${acc}” by itself and the next pack starts. Tap a card in the tray to take it out.`,
+    packSaved: (n, acc) => `✓ ${n} cards added to “${acc}”. Next pack:`,
+    tradePick: 'Traded? Tap your card and theirs, then “Traded”: both collections are updated.',
+    traded: 'Traded', tradeSaved: 'Trade logged, for both of you.', historyTitle: 'Recent trades',
+    tradeLine: (a, b, gave, got) => `${a} gave ${gave} to ${b} and got ${got}`, undone: 'undone',
+    notice: (by, gave, got) => `${by} logged a trade with you: you gave ${got} and got ${gave}. Your collection is already updated.`, ok: 'OK',
+    errors: { 'card not owned': 'One of the cards is not (or no longer) entered.', 'invalid trade': 'Invalid trade.', 'unknown trade': 'That trade no longer exists.', 'wrong pin': 'Wrong PIN.', 'pin needed': 'PIN needed (4–32 characters).', locked: 'Too many wrong PINs: try again in 15 minutes.', 'name taken': 'That name is taken.', 'invalid name': 'Invalid name.', 'group full': 'The group is full.', 'unknown person': 'Unknown person.', 'group code': 'Group code missing or wrong.', 'not set up': 'Storage is not set up yet.' },
   },
 };
 let lang = (() => { try { const l = localStorage.getItem('pocketLang'); if (l === 'de' || l === 'en') return l; } catch {} return /^de/i.test(navigator.language || 'de') ? 'de' : 'en'; })();
 const T = () => TEXT[lang];
-let api = '', data = null, cards = new Map(), people = {}, record = null, verified = '', tab = 'cards', limit = PAGE, saveTimer = 0, saving = false, again = false, loadTurn = 0;
+let api = '', data = null, cards = new Map(), people = {}, serverCopy = {}, base = null, record = null, verified = '', tab = 'cards', limit = PAGE, saveTimer = 0, saving = false, again = false, loadTurn = 0;
 const person = () => $('pkPerson').value === JOIN ? '' : $('pkPerson').value;
 const viewed = person;
 const mine = () => !!person() && verified === person();
@@ -186,6 +200,7 @@ function fillAccounts() {
   $('pkAccount').value = accounts.some(a => a.id === keep) || (keep === 'all' && accounts.length > 1) ? keep : accounts[0]?.id || 'all';
   $('pkAccount').disabled = accounts.length < 2;
   $('pkAccounts').hidden = !mine();
+  $('pkPackBtn').hidden = !mine();
 }
 
 // ---------- collection ----------
@@ -303,18 +318,68 @@ function drawTrade() {
     Object.values(Object.groupBy(moves, m => m.from.id + '>' + m.to.id)).map(list => `<div class="pk-trade"><span>${esc(T().ownLine(list[0].from.name, list[0].to.name))}</span><div class="pk-chips" style="grid-column:2/-1">${list.slice(0, 60).map(m => chip(m.card, 1)).join('')}</div></div>`).join('')}</div>` : '';
   let found = matches(data, people, me);
   if (only) found = found.map(f => ({ ...f, trades: f.trades.map(t => ({ ...t, give: t.give.filter(x => x.want > 1), get: t.get.filter(x => x.want > 1) })).filter(t => t.give.length && t.get.length) })).filter(f => f.trades.length);
-  $('pkMatches').innerHTML = found.length ? found.map(f => {
+  drawHistory();
+  $('pkMatches').innerHTML = (found.length ? `<p class="pk-hint">${esc(T().tradePick)}</p>` : '') + (found.length ? found.map(f => {
     const ids = f.record.accounts.filter(a => a.friendId).map(a => `${esc(a.name)}: ${esc(a.friendId)}`).join(' · ');
-    return `<div class="pk-friend" data-person="${esc(f.person)}"><div class="pk-friend-head"><b>${esc(f.person)}</b>${ids ? `<span class="pk-hint">${esc(T().friendId)} ${ids}</span>` : ''}<button type="button" class="pill" data-copy>${esc(T().copy)}</button></div>${
-      f.trades.map(t => `<div class="pk-trade"><span>${esc(rarity(t.rarity))}</span><div class="pk-chips"><small>${esc(T().give)}</small>${t.give.slice(0, 24).map(x => chip(x.card, x.want) + (record.accounts.length > 1 ? `<small style="width:auto">${x.accounts.map(a => esc(a.name)).join('/')}</small>` : '')).join('')}${t.give.length > 24 ? `<small>+${t.give.length - 24}</small>` : ''}</div>
-        <div class="pk-chips"><small>${esc(T().get)}</small>${t.get.slice(0, 24).map(x => chip(x.card, x.want)).join('')}${t.get.length > 24 ? `<small>+${t.get.length - 24}</small>` : ''}</div></div>`).join('')}</div>`;
-  }).join('') : `<p class="pk-hint">${esc(T().noMatches)}</p>`;
+    return `<div class="pk-friend" data-person="${esc(f.person)}"><div class="pk-friend-head"><b>${esc(f.person)}</b>${ids ? `<span class="pk-hint">${esc(T().friendId)} ${ids}</span>` : ''}<button type="button" class="pill" data-copy>${esc(T().copy)}</button>${mine() && picked.person === f.person && picked.give && picked.get ? `<button type="button" class="pill primary" data-traded="${esc(f.person)}">✓ ${esc(T().traded)}</button>` : ''}</div>${
+      f.trades.map(t => `<div class="pk-trade"><span>${esc(rarity(t.rarity))}</span><div class="pk-chips"><small>${esc(T().give)}</small>${t.give.slice(0, 24).map(x => pickChip(x.card, x.want, 'give', f.person) + (record.accounts.length > 1 ? `<small style="width:auto">${x.accounts.map(a => esc(a.name)).join('/')}</small>` : '')).join('')}${t.give.length > 24 ? `<small>+${t.give.length - 24}</small>` : ''}</div>
+        <div class="pk-chips"><small>${esc(T().get)}</small>${t.get.slice(0, 24).map(x => pickChip(x.card, x.want, 'get', f.person)).join('')}${t.get.length > 24 ? `<small>+${t.get.length - 24}</small>` : ''}</div></div>`).join('')}</div>`;
+  }).join('') : `<p class="pk-hint">${esc(T().noMatches)}</p>`);
   $('pkMatches').dataset.only = only ? '1' : '';
   lastMatches = found;
 }
-let lastMatches = [];
+let lastMatches = [], picked = { person: '', give: '', get: '' };
+const pickChip = (c, want, side, p) => `<button type="button" class="pk-chip want${want || 1}${picked.person === p && picked[side] === c.id ? ' picked' : ''}" data-pick="${side}" data-card-id="${esc(c.id)}" title="${esc(c.id)}">${want === 3 ? '★ ' : want === 2 ? '♡ ' : ''}${esc(nameOf(c))} <small>${esc(c.id)}</small></button>`;
+function drawHistory() {
+  const me = viewed(), list = [...(record.trades || [])].reverse().slice(0, 8);
+  $('pkHistory').innerHTML = list.length ? `<div class="pk-friend pk-history"><div class="pk-friend-head"><b>${esc(T().historyTitle)}</b></div><ul>${list.map(t => {
+    const gave = cards.get(t.gave), got = cards.get(t.got);
+    return `<li class="${t.undone ? 'undone' : ''}">${esc(T().tradeLine(t.a, t.b, gave ? label(gave) : t.gave, got ? label(got) : t.got))}${t.undone ? ' · ' + esc(T().undone) : mine() && me ? `<button type="button" class="pill" data-undo-trade="${esc(t.id)}">${esc(T().undo)}</button>` : ''}</li>`;
+  }).join('')}</ul></div>` : '';
+}
+async function logTrade(partner) {
+  const who = person(); if (!mine()) return;
+  try {
+    if (saving || saveTimer) { clearTimeout(saveTimer); saveTimer = 0; await save(); }
+    const out = await call('/trade', { person: who, partner, gave: picked.give, got: picked.get }, stored.get(pinKey(who)));
+    serverCopy[who] = out.record; serverCopy[partner] = out.partner; people[partner] = normalize(copy(out.partner));
+    adopt(out.record); picked = { person: '', give: '', get: '' };
+    $('pkSave').className = 'pk-save'; $('pkSave').textContent = T().tradeSaved; draw();
+  } catch (err) { $('pkSave').className = 'pk-save err'; $('pkSave').textContent = err.message; }
+}
+async function undoTrade(id) {
+  const who = person(); if (!mine()) return;
+  try {
+    const out = await call('/trade/undo', { person: who, id }, stored.get(pinKey(who)));
+    const partner = out.trade.a === who ? out.trade.b : out.trade.a;
+    if (out.partner) { serverCopy[partner] = out.partner; people[partner] = normalize(copy(out.partner)); }
+    serverCopy[who] = out.record; adopt(out.record); draw();
+  } catch (err) { $('pkSave').className = 'pk-save err'; $('pkSave').textContent = err.message; }
+}
+// a trade a friend logged with you since you last looked
+function drawNotice() {
+  const who = person(), box = $('pkNotice');
+  const seen = stored.get('pocketSeenTrade:' + who);
+  const fresh = mine() ? (record.trades || []).filter(t => t.by !== who && !t.undone && (!seen || t.at > seen)) : [];
+  box.hidden = !fresh.length;
+  if (!fresh.length) return;
+  box.innerHTML = fresh.map(t => { const gave = cards.get(t.gave), got = cards.get(t.got); return `<span>${esc(T().notice(t.by, gave ? label(gave) : t.gave, got ? label(got) : t.got))}</span>`; }).join('') + `<button type="button" class="pill" id="pkNoticeOk">${esc(T().ok)}</button>`;
+  $('pkNoticeOk').onclick = () => { stored.set('pocketSeenTrade:' + who, fresh.map(t => t.at).sort().pop()); box.hidden = true; };
+}
 $('pkOnlyWanted').onchange = drawTrade;
 $('pkTrade').onclick = async e => {
+  const undo = e.target.closest('[data-undo-trade]'); if (undo) return undoTrade(undo.dataset.undoTrade);
+  const done = e.target.closest('[data-traded]'); if (done) return logTrade(done.dataset.traded);
+  const pick = e.target.closest('[data-pick]');
+  if (pick) {
+    const p = pick.closest('[data-person]').dataset.person, side = pick.dataset.pick, id = pick.dataset.cardId;
+    if (picked.person !== p) picked = { person: p, give: '', get: '' };
+    picked[side] = picked[side] === id ? '' : id;
+    // the other side must be the same rarity
+    const other = side === 'give' ? 'get' : 'give';
+    if (picked[other] && cards.get(picked[other])?.r !== cards.get(id)?.r) picked[other] = '';
+    drawTrade(); return;
+  }
   const c = e.target.closest('[data-card]'); if (c) return openCard(c.dataset.card);
   const copy = e.target.closest('[data-copy]'); if (!copy) return;
   const f = lastMatches.find(m => m.person === copy.closest('[data-person]').dataset.person); if (!f) return;
@@ -370,31 +435,111 @@ $('pkAccountList').onclick = e => {
   fillAccounts(); drawAccountList();
 };
 
+// ---------- pack opened ----------
+// The fewest taps: the last pack and account are preselected, you tap what you pulled, and once the pack is full
+// it saves itself after a moment (a sixth card of a bonus pack still fits in), then the next pack starts.
+let tray = [], trayTimer = 0, lastPack = null;
+const packs = () => data ? packList(data) : [];
+const packOf = key => packs().find(p => p.key === key) || packs()[0];
+function openPack() {
+  if (!mine()) return;
+  const recent = (stored.get('pocketRecentPacks') || '').split('\n').filter(k => packs().some(p => p.key === k));
+  $('pkPackAccount').replaceChildren(...record.accounts.map(a => new Option(a.name, a.id)));
+  $('pkPackAccount').value = record.accounts.some(a => a.id === stored.get('pocketPackAccount')) ? stored.get('pocketPackAccount') : scope() !== 'all' ? scope() : record.accounts[0].id;
+  $('pkPackPick').replaceChildren(...packs().map(p => new Option(`${setName(p.set)} · ${p.pack}`, p.key)));
+  $('pkPackPick').value = packOf(recent[0] || '')?.key || '';
+  tray = []; lastPack = null; $('pkPackUndo').hidden = true;
+  drawPack(); $('pkPackDlg').showModal();
+}
+function drawPack(message = '') {
+  const p = packOf($('pkPackPick').value), owned = counts(record, $('pkPackAccount').value), acc = record.accounts.find(a => a.id === $('pkPackAccount').value);
+  const recent = (stored.get('pocketRecentPacks') || '').split('\n').filter(k => k && k !== p.key && packs().some(x => x.key === k)).slice(0, 4);
+  $('pkPackRecent').innerHTML = recent.map(k => { const x = packOf(k); return `<button type="button" class="pk-chip" data-recent="${esc(k)}">${esc(setName(x.set))} · ${esc(x.pack)}</button>`; }).join('');
+  $('pkTray').innerHTML = tray.map((id, i) => `<button type="button" data-tray="${i}" aria-label="${esc(label(cards.get(id)))}"><img src="${IMG(cards.get(id))}" alt=""></button>`).join('') + '<span class="slot"></span>'.repeat(Math.max(0, p.size - tray.length));
+  $('pkPackHint').textContent = message || T().packHint(p.size, acc?.name || '');
+  let group = '';
+  $('pkPackGrid').innerHTML = packCards(data, p.set, p.pack).map(c => {
+    const head = c.r !== group ? (group = c.r, `<h3>${esc(rarity(c.r))} ${esc(data.rarities[c.r]?.label || '')}</h3>`) : '';
+    const n = owned.get(c.id) || 0;
+    return head + `<button type="button" data-pull="${esc(c.id)}" aria-label="${esc(label(c))}"><img src="${IMG(c)}" alt="" loading="lazy">${n ? `<span class="pk-have">${n}</span>` : `<span class="pk-new">${esc(T().newCard)}</span>`}</button>`;
+  }).join('');
+}
+function commitPack() {
+  clearTimeout(trayTimer); trayTimer = 0;
+  if (!tray.length) return;
+  const account = $('pkPackAccount').value, p = packOf($('pkPackPick').value), pulled = [...tray];
+  change(r => { const o = r.owned[account] ||= {}; for (const id of pulled) o[id] = Math.min(MAX_COPIES, (o[id] || 0) + 1); });
+  lastPack = { account, pulled };
+  stored.set('pocketPackAccount', account);
+  stored.set('pocketRecentPacks', [p.key, ...(stored.get('pocketRecentPacks') || '').split('\n').filter(k => k && k !== p.key)].slice(0, 6).join('\n'));
+  tray = []; $('pkPackUndo').hidden = false;
+  drawPack(T().packSaved(pulled.length, record.accounts.find(a => a.id === account)?.name || ''));
+}
+$('pkPackBtn').onclick = openPack;
+$('pkPackPick').onchange = () => { commitPack(); drawPack(); };
+$('pkPackAccount').onchange = () => { commitPack(); drawPack(); };
+$('pkPackDlg').addEventListener('close', commitPack);
+$('pkPackUndo').onclick = () => {
+  if (!lastPack) return;
+  const { account, pulled } = lastPack; lastPack = null;
+  change(r => { const o = r.owned[account] ||= {}; for (const id of pulled) { o[id] = (o[id] || 0) - 1; if (o[id] <= 0) delete o[id]; } });
+  $('pkPackUndo').hidden = true; drawPack();
+};
+$('pkPackDlg').onclick = e => {
+  const pull = e.target.closest('[data-pull]'), out = e.target.closest('[data-tray]'), recent = e.target.closest('[data-recent]');
+  if (recent) { commitPack(); $('pkPackPick').value = recent.dataset.recent; drawPack(); return; }
+  if (out) { tray.splice(Number(out.dataset.tray), 1); clearTimeout(trayTimer); trayTimer = 0; drawPack(); return; }
+  if (!pull) return;
+  tray.push(pull.dataset.pull);
+  const p = packOf($('pkPackPick').value);
+  clearTimeout(trayTimer);
+  // full: save after a moment, so a bonus sixth card can still be added
+  if (tray.length >= p.size) trayTimer = setTimeout(commitPack, tray.length > p.size ? 600 : 1800);
+  drawPack();
+};
+
 // ---------- saving ----------
+// "base" is the last copy the server confirmed; what you changed since then (diff) is what gets saved, and when the
+// server has a newer copy (another device, or a friend logged a trade with you) your changes go on top of it.
 const pendingKey = () => 'pocketPending:' + person();
+const copy = r => JSON.parse(JSON.stringify(r));
 function queueSave() {
-  try { localStorage.setItem(pendingKey(), JSON.stringify({ since: record.at || '', record })); } catch {}
+  try { localStorage.setItem(pendingKey(), JSON.stringify({ base, record })); } catch {}
   $('pkSave').className = 'pk-save'; $('pkSave').textContent = T().saving;
   clearTimeout(saveTimer); saveTimer = setTimeout(save, 1200);
 }
-async function save() {
+function adopt(server) {
+  // a newer copy from the server, with anything not yet saved put on top
+  const change = base ? diff(base, record) : null;
+  base = normalize(copy(server));
+  record = change && !isEmptyDiff(change) ? applyDiff(base, change) : normalize(copy(server));
+  people[person()] = record;
+  return change && !isEmptyDiff(change);
+}
+async function save(retry = 0) {
   if (saving) { again = true; return; }
   const who = person(); if (!who || !mine()) return;
   saving = true;
+  let more = false;
   try {
-    const { at, ...body } = record;
-    const out = await call('/pocket', { person: who, since: at || '', record: body }, stored.get(pinKey(who)));
+    const sent = copy(record), { at, trades, ...body } = sent;
+    const out = await call('/pocket', { person: who, since: base?.at || '', record: body }, stored.get(pinKey(who)));
     if (out.conflict) {
-      try { localStorage.removeItem(pendingKey()); } catch {}
-      people[who] = record = normalize(out.record);
-      $('pkSave').className = 'pk-save err'; $('pkSave').textContent = T().conflict; fillAccounts(); draw();
+      more = adopt(out.record) && retry < 3;
+      fillAccounts(); draw();
+      if (!more) { try { localStorage.removeItem(pendingKey()); } catch {} }
     } else {
-      record.at = out.record.at; people[who] = record;
-      try { localStorage.removeItem(pendingKey()); } catch {}
+      // edits made while this save was on its way stay, on top of what was saved
+      const later = diff(sent, record);
+      base = normalize(copy(out.record));
+      record = isEmptyDiff(later) ? normalize(copy(out.record)) : applyDiff(base, later);
+      people[who] = record;
+      if (isEmptyDiff(later)) { try { localStorage.removeItem(pendingKey()); } catch {} } else again = true;
       if (!again) { $('pkSave').className = 'pk-save'; $('pkSave').textContent = T().saved; }
     }
   } catch (err) { $('pkSave').className = 'pk-save err'; $('pkSave').textContent = T().saveFailed(err.message); }
   saving = false;
+  if (more) return save(retry + 1);
   if (again) { again = false; save(); }
 }
 
@@ -408,15 +553,24 @@ function showTab(name) {
 document.querySelector('.pk-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); };
 function draw() {
   if (!data || !record) return;
+  drawNotice();
   if (tab === 'cards') drawCards(); else if (tab === 'progress') drawProgress(); else if (tab === 'trade') drawTrade(); else drawWorth();
 }
 function pickRecord() {
   const who = viewed();
-  record = normalize(people[who] || (who ? emptyRecord() : { accounts: [{ id: 'main', name: '—' }] }));
+  const server = normalize(copy(serverCopy[who] || (who ? emptyRecord() : { accounts: [{ id: 'main', name: '—' }] })));
+  base = serverCopy[who] ? server : null;
+  record = normalize(copy(server));
+  if (who) people[who] = record;
   if (who && mine()) {
     try {
+      // changes this device hadn't saved yet (closed too early, offline): on top of the newest copy
       const pending = JSON.parse(localStorage.getItem(pendingKey()) || 'null');
-      if (pending?.record && (pending.since || '') === (people[who]?.at || '')) { record = normalize({ ...pending.record, at: people[who]?.at }); people[who] = record; queueSave(); }
+      if (pending?.record) {
+        const change = diff(normalize(pending.base || emptyRecord()), normalize(pending.record));
+        if (!isEmptyDiff(change)) { record = applyDiff(server, change); people[who] = record; queueSave(); }
+        else localStorage.removeItem(pendingKey());
+      }
     } catch {}
   }
   fillAccounts();
@@ -428,7 +582,8 @@ async function load() {
   try {
     const out = await call('/pocket');
     if (turn !== loadTurn) return;
-    people = Object.fromEntries(Object.entries(out.people || {}).map(([p, r]) => [p, normalize(r?.accounts?.length ? r : emptyRecord())]));
+    serverCopy = Object.fromEntries(Object.entries(out.people || {}).filter(([, r]) => r?.accounts?.length).map(([p, r]) => [p, r]));
+    people = Object.fromEntries(Object.keys(out.people || {}).map(p => [p, normalize(copy(serverCopy[p] || emptyRecord()))]));
     $('pkStatus').textContent = '';
   } catch (err) { if (turn === loadTurn) $('pkStatus').textContent = T().loadFailed(err.message); }
   fillPeople(keep);

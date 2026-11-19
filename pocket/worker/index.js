@@ -6,6 +6,10 @@
 //   POST /join  { person }    a new person, with the PIN in X-Pocket-Pin
 //   POST /login { person }    checks the PIN
 //   POST /pocket { person, since, record }  saves your own; "since" is the "at" you loaded, a newer one answers 409
+//   POST /trade { person, partner, gave, got }  a trade done in the game: you lose "gave" and get "got" on the account
+//        that held "gave"; the partner the other way round on their account that held "got". Both records get an
+//        entry in "trades" (the last 50), so the partner sees it and either can undo it.
+//   POST /trade/undo { person, id }  reverses a trade on both sides (only one you are part of)
 //   POST /pin-reset { person } with X-Admin-Key = the secret ADMIN_KEY: forgets a PIN, the person sets a new one
 const json = (data, status, headers) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
 const fail = (status, error) => { throw Object.assign(new Error(error), { status }); };
@@ -77,6 +81,26 @@ export function cleanRecord(value) {
   return out;
 }
 
+// the account a traded card leaves from: the one holding the most copies
+function holder(record, card) {
+  const best = [...record.accounts].sort((a, b) => (record.owned?.[b.id]?.[card] || 0) - (record.owned?.[a.id]?.[card] || 0))[0];
+  return best && record.owned?.[best.id]?.[card] > 0 ? best.id : '';
+}
+function move(record, account, card, delta) {
+  const owned = record.owned[account] ||= {};
+  const n = Math.max(0, Math.min(99, (owned[card] || 0) + delta));
+  if (n) owned[card] = n; else delete owned[card];
+}
+async function saveTrade(env, me, other, entry, at, who, partner, undo = false) {
+  const log = (record) => { const list = (record.trades || []).filter(t => t.id !== entry.id); return [...list, entry].slice(-50); };
+  for (const [name, record] of [[who, me], [partner, other]]) {
+    if (!record) continue;
+    record.trades = log(record); record.at = at;
+    await store(env).put('person:' + name, JSON.stringify(record));
+  }
+  return { ok: true, trade: entry, record: me, partner: other, undone: undo };
+}
+
 async function route(request, env, path, now) {
   if (request.method === 'GET' && path === '/health') return { ok: true };
   await group(request, env);
@@ -106,9 +130,39 @@ async function route(request, env, path, now) {
     await checkPin(request, env, who);
     const key = 'person:' + who, old = JSON.parse(await store(env).get(key) || 'null');
     if (old?.at && str(body.since) !== old.at) return { status: 409, body: { conflict: true, record: old } };
-    const record = { ...cleanRecord(body.record), at: new Date(now).toISOString() };
+    // the trade history is the server's: a page can't change or drop it
+    const record = { ...cleanRecord(body.record), ...(old?.trades?.length && { trades: old.trades }), at: new Date(now).toISOString() };
     await store(env).put(key, JSON.stringify(record));
     return { ok: true, record };
+  }
+  if (path === '/trade' || path === '/trade/undo') {
+    await checkPin(request, env, who);
+    const at = new Date(now).toISOString(), load = async p => JSON.parse(await store(env).get('person:' + p) || 'null');
+    const me = await load(who);
+    if (!me?.accounts?.length) fail(404, 'unknown person');
+    let partner, entry, undo = false;
+    if (path === '/trade') {
+      partner = person(body.partner);
+      const gave = str(body.gave), got = str(body.got);
+      if (partner === who || !CARD.test(gave) || !CARD.test(got) || gave === got) fail(400, 'invalid trade');
+      const other = await load(partner);
+      if (!other?.accounts?.length) fail(404, 'unknown person');
+      const from = holder(me, gave), to = holder(other, got);
+      if (!from || !to) fail(409, 'card not owned');
+      entry = { id: crypto.randomUUID().slice(0, 12), at, by: who, a: who, b: partner, aAccount: from, bAccount: to, gave, got };
+      move(me, from, gave, -1); move(me, from, got, 1); move(other, to, got, -1); move(other, to, gave, 1);
+      return await saveTrade(env, me, other, entry, at, who, partner);
+    }
+    const id = str(body.id);
+    entry = (me.trades || []).find(t => t.id === id);
+    if (!entry || entry.undone) fail(404, 'unknown trade');
+    partner = entry.a === who ? entry.b : entry.a;
+    const other = await load(partner);
+    const [A, B] = entry.a === who ? [me, other] : [other, me];
+    if (A) { move(A, entry.aAccount, entry.gave, 1); move(A, entry.aAccount, entry.got, -1); }
+    if (B) { move(B, entry.bAccount, entry.got, 1); move(B, entry.bAccount, entry.gave, -1); }
+    undo = true;
+    return await saveTrade(env, me, other, { ...entry, undone: at }, at, who, partner, undo);
   }
   if (path === '/pin-reset') {
     const admin = str(env.ADMIN_KEY);

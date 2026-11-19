@@ -18,6 +18,15 @@ in this folder (page, styles, theme, card data, settings, backend). The schedule
 - **Trade worth**: how much the group wants a card (chase 3, wishlist 2, missing 1) divided by the others' spare
   copies + 1. Within a rarity, a card gets you any card with a lower worth, and *Dafür bekommst du* lists them.
 
+- **Pack geöffnet** (the floating button): the last pack and account are preselected, you tap the cards you
+  pulled and it saves by itself once the pack is full; the next pack starts right away, with *Rückgängig* to undo.
+- **Getauscht**: in *Tausch*, tap your card and the friend's, then *Getauscht*. The server updates **both**
+  collections (on the accounts holding the cards), the friend sees a notice, and either of you can undo it.
+- Saving merges: your unsaved changes go on top of a newer copy (another device, or a friend's trade), so nothing is lost.
+
+The game has no way to hand a collection to another site. (Pokémon Zone's sync logs into the player's Nintendo
+account through an unofficial connection; that is deliberately not done here.)
+
 Cards are identified by set and number (`A1-25`), so the language a card is in doesn't matter.
 
 ## Files

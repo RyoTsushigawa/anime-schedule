@@ -24,6 +24,7 @@
 </section>
 <div id="pkLogin" class="pk-login" role="status"></div>
 <p id="pkStatus" class="pk-hint" role="status"></p>
+<div id="pkNotice" class="pk-notice" role="status" hidden></div>
 <nav class="pk-tabs segmented" aria-label="Bereiche">
 <button type="button" data-tab="cards" data-t="tabCards">Sammlung</button>
 <button type="button" data-tab="progress" data-t="tabProgress">Fortschritt</button>
@@ -55,6 +56,7 @@
 <p class="pk-hint" data-t="tradeHint"></p>
 <label class="pk-check"><input type="checkbox" id="pkOnlyWanted"> <span data-t="onlyWanted">Nur Wunschliste und Chase</span></label>
 <div id="pkOwn"></div>
+<div id="pkHistory"></div>
 <div id="pkMatches"></div>
 </section>
 
@@ -70,6 +72,19 @@
 <div id="pkCardAccounts" class="pk-steppers"></div>
 <div id="pkCardGroup"></div>
 <div class="dlg-row dlg-foot"><button value="cancel" class="pill primary">OK</button></div>
+</form>
+</dialog>
+
+<button type="button" id="pkPackBtn" class="pill primary pk-fab" data-t="packBtn" hidden>＋ Pack geöffnet</button>
+<dialog id="pkPackDlg" class="dlg pk-dlg pk-pack-dlg" aria-labelledby="pkPackTitle">
+<form method="dialog">
+<h2 id="pkPackTitle" data-t="packTitle">Pack geöffnet</h2>
+<div class="pk-pack-head"><select id="pkPackAccount" class="pill" aria-label="Konto"></select><select id="pkPackPick" class="pill" aria-label="Pack"></select></div>
+<div id="pkPackRecent" class="pk-chips"></div>
+<div id="pkTray" class="pk-tray" aria-live="polite"></div>
+<p id="pkPackHint" class="pk-hint"></p>
+<div id="pkPackGrid" class="pk-pack-grid"></div>
+<div class="dlg-foot"><button type="button" id="pkPackUndo" class="pill" data-t="undo" hidden>Rückgängig</button><button value="cancel" class="pill primary" data-t="done">Fertig</button></div>
 </form>
 </dialog>
 

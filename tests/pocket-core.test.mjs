@@ -104,3 +104,21 @@ test('a set without pull rates borrows the newest rates and says so; promos are 
   const odds = packOdds(next, new Map());
   assert.deepEqual(odds.map(o => o.set + ':' + !!o.estimated).sort(), ['T1:false', 'T2:true']);
 });
+
+import { diff, applyDiff, isEmptyDiff, packList, packCards, accountWith } from '../pocket/core.mjs';
+test('your changes go on top of a newer copy instead of overwriting it', () => {
+  const base = rec({ main: { 'T1-1': 1 } }, { wish: ['T1-5'] });
+  const mineNow = rec({ main: { 'T1-1': 3, 'T1-2': 1 } }, { chase: ['T1-5'] });
+  const server = rec({ main: { 'T1-1': 0, 'T1-3': 1 } }, { wish: ['T1-5', 'T1-4'] }); // a trade took T1-1, gave T1-3
+  const change = diff(base, mineNow);
+  assert.equal(isEmptyDiff(diff(base, base)), true);
+  const merged = applyDiff(server, change);
+  assert.deepEqual(merged.owned.main, { 'T1-1': 2, 'T1-2': 1, 'T1-3': 1 });
+  assert.deepEqual(merged.chase, ['T1-5']);
+  assert.deepEqual(merged.wish, ['T1-4']);
+});
+test('packs newest first with their size; cards in reveal order; a traded card leaves the fullest account', () => {
+  assert.deepEqual(packList(data).map(p => p.key + ':' + p.size), ['T1|Alpha:5']);
+  assert.deepEqual(packCards(data, 'T1', 'Alpha').map(c => c.r), ['C', 'C', 'U', 'U', 'SR', 'UR']);
+  assert.equal(accountWith(rec({ main: { 'T1-1': 1 }, alt: { 'T1-1': 4 } }), 'T1-1'), 'alt');
+});
