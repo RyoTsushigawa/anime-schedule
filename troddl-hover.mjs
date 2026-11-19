@@ -18,7 +18,6 @@ async function load() {
 }
 const ensure = () => loading ??= load().catch(() => new Map()).then(m => (shows = m));
 const mediaOf = a => Number(a?.href?.match(/anilist\.co\/anime\/(\d+)/)?.[1]) || 0;
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function hide() {
   clearTimeout(showTimer);
