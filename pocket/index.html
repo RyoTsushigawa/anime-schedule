@@ -32,7 +32,7 @@
 <button type="button" data-tab="worth" data-t="tabWorth">Tauschwert</button>
 </nav>
 
-<section id="pkCards" data-panel="cards">
+<section id="pkCards" data-panel="cards">\n<div class="pk-import-action"><button type="button" id="pkImportBtn" class="pill" hidden>CSV importieren / Import CSV</button></div>
 <div class="pk-filters">
 <select id="pkSet" class="pill" aria-label="Set"></select>
 <select id="pkRarity" class="pill" aria-label="Rarity"></select>
@@ -75,6 +75,17 @@
 </form>
 </dialog>
 
+<dialog id="pkImportDlg" class="dlg pk-dlg" aria-labelledby="pkImportTitle">
+<form method="dialog">
+<h2 id="pkImportTitle">Pokémon Zone CSV</h2>
+<p id="pkImportHelp" class="pk-hint"></p>
+<label id="pkImportFileLabel">CSV <input id="pkImportFile" type="file" accept=".csv,text/csv"></label>
+<label id="pkImportModeLabel"><input type="checkbox" id="pkImportReplace"> <span id="pkImportModeText"></span></label>
+<p id="pkImportStatus" class="pk-hint" role="status"></p>
+<div id="pkImportPreview" class="pk-import-preview"></div>
+<div class="dlg-foot"><button type="button" id="pkImportApply" class="pill primary" disabled></button><button value="cancel" class="pill" id="pkImportClose"></button></div>
+</form>
+</dialog>
 <button type="button" id="pkPackBtn" class="pill primary pk-fab" data-t="packBtn" hidden>＋ Pack geöffnet</button>
 <dialog id="pkPackDlg" class="dlg pk-dlg pk-pack-dlg" aria-labelledby="pkPackTitle">
 <form method="dialog">
