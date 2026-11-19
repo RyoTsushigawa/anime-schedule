@@ -25,7 +25,7 @@ return out;
 // "Später": a sleeping show out of Catch-up for two weeks (this browser)
 const IDLE_WEEKS = 3, LATER_MS = 14 * 86400000;
 const catchupLater = () => { try { const all = JSON.parse(localStorage.getItem('catchupLater')) || {}; return Object.fromEntries(Object.entries(all).filter(([, until]) => until > Date.now())); } catch { return {}; } };
-const saveCatchupLater = all => { try { localStorage.setItem('catchupLater', JSON.stringify(all)); } catch {} };
+const saveCatchupLater = all => { stash.set('catchupLater', JSON.stringify(all)); };
 const idleTag = r => r.idleWeeks >= IDLE_WEEKS ? `<span class="idle-tag" title="Zuletzt auf der Liste weitergeschaut vor ${r.idleWeeks} Wochen">seit ${r.idleWeeks} Wochen nicht weitergeschaut</span>` : '';
 // U25: pinned shows stay at the top of Catch-up (own list, this browser)
 const catchupPinned = () => { try { return new Set(JSON.parse(localStorage.getItem('catchupPinned') || '[]')); } catch { return new Set(); } };
@@ -367,11 +367,11 @@ $('list').innerHTML = rows.length ? top + seasonGroups.map(seasonSection).join('
 : '<div class="status happy"><img src="icon-192.png" alt="">Alles aufgeholt.<button class="pill" data-back-to-week>Zum Zeitplan</button></div>';
 $('list').querySelectorAll('.catchup-season').forEach(section => {
  section.addEventListener('toggle', () => {
-  try { localStorage.setItem('catchupSeasonOpen:' + section.dataset.catchupSeason, section.open ? '1' : '0'); } catch {}
+  stash.set('catchupSeasonOpen:' + section.dataset.catchupSeason, section.open ? '1' : '0');
  });
 });
 $('list').querySelectorAll('.not-listed > summary').forEach(summary => summary.addEventListener('click', e => {
- try { localStorage.setItem('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1'); } catch {}
+ stash.set('notListedOpen', e.currentTarget.parentElement.open ? '0' : '1');
 }));
 const unscored = mine ? toScore.filter(t => !knownEntries.get(t.media.id)?.score) : [];
 if (unscored.length) $('list').insertAdjacentHTML('beforeend', `<section class="day toscore"><h2 title="Beendet, noch nicht bewertet">Bewerten</h2>${unscored.map(({ media: m, completed }) => `
@@ -471,7 +471,7 @@ const pin = e.target.closest('[data-pin]');
 if (!pin) return;
 const all = catchupPinned(), id = Number(pin.dataset.pin);
 all.has(id) ? all.delete(id) : all.add(id);
-try { localStorage.setItem('catchupPinned', JSON.stringify([...all])); } catch {}
+stash.set('catchupPinned', JSON.stringify([...all]));
 notice(all.has(id) ? 'Oben angeheftet' : 'Nicht mehr angeheftet');
 loadCatchupContent();
 });

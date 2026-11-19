@@ -371,8 +371,7 @@ rows[4][1] = await catalog; draw();
 rows[5][1] = await trailers; draw();
 }
 function drawSyncHistory() {
-let list = [];
-try { list = JSON.parse(localStorage.getItem(SYNC_LOG) || '[]'); } catch {}
+let list = stash.json(SYNC_LOG, []);
 const what = e => e.removed ? 'Von der Liste genommen (Listen-Check)' : e.ok
   ? [e.score !== undefined ? `Wertung ${e.score}` : e.status === 'DROPPED' ? 'gedroppt' : e.from !== e.to ? `Folge ${e.from ?? 0} → ${e.to}` : `Folge ${e.to}`, e.note].filter(Boolean).join(' · ')
   : `Nicht gespeichert${e.to != null ? ` (Folge ${e.to})` : ''}: ${e.error}`;
@@ -483,11 +482,11 @@ $('list').addEventListener('click', event => {
     const show = shows[showPick.selectedIndex], link = show.links[linkPick.selectedIndex];
     const suggestion = $('linkReportSuggestion').value.trim(), status = $('linkReportStatus');
     if (suggestion && !/^https:\/\/\S+$/.test(suggestion)) { status.textContent = 'Der richtige Link muss mit https:// beginnen.'; return; }
-    const api = (await config()).previewVotesUrl;
-    if (!/^https:\/\//.test(api || '')) { status.textContent = 'Melden ist hier noch nicht eingerichtet.'; return; }
+    const api = await votesApi();
+    if (!api) { status.textContent = 'Melden ist hier noch nicht eingerichtet.'; return; }
     $('linkReportSend').disabled = true; status.textContent = 'Wird gesendet …';
     try {
-      const res = await fetch(api.replace(/\/$/, '') + '/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(api + '/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ anilistId: show.aniList, title: show.title, service: link.label, url: link.url, suggestion, note: $('linkReportNote').value.trim() }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Fehler ' + res.status);
@@ -512,13 +511,12 @@ function checkSuggestion(report) {
   if (!site) return { ok: true, text: 'Dienst unbekannt, Seite ' + host + ' bitte selbst prüfen' };
   return site[1].test(host) ? { ok: true, text: 'Passt zu ' + report.service + ' (' + host + ')' } : { ok: false, text: 'Andere Seite als ' + report.service + ': ' + host };
 }
-const reportsApi = async () => { const api = (await config()).previewVotesUrl; return /^https:\/\//.test(api || '') ? api.replace(/\/$/, '') : ''; };
 const groupHeaders = () => { const code = savedGroupCode(); return code ? { 'X-Group-Code': code } : {}; };
 let repairReports = [];
 async function loadRepairQueue() {
   const list = $('repairList');
   list.innerHTML = '<li class="muted">Wird geladen …</li>';
-  const api = await reportsApi();
+  const api = await votesApi();
   if (!api) { list.innerHTML = '<li class="muted">Meldungen sind hier nicht eingerichtet.</li>'; return; }
   try {
     const res = await fetch(api + '/reports?status=pending', { headers: groupHeaders(), cache: 'no-store' });
@@ -558,7 +556,7 @@ async function saveLinkFix(report) {
   throw new Error('GitHub: die Datei wurde gleichzeitig geändert, bitte erneut versuchen');
 }
 async function resolveReports(reports, status, resolution) {
-  const api = await reportsApi();
+  const api = await votesApi();
   for (const r of reports) {
     const res = await fetch(api + '/reports/resolve', { method: 'POST', headers: { 'Content-Type': 'application/json', ...groupHeaders() }, body: JSON.stringify({ id: r.id, status, resolution }) });
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Fehler ' + res.status);
@@ -667,7 +665,7 @@ $('transferCopy').onclick = async () => {
 $('transferButton').onclick = () => { showSettings(false); $('transferDlg').showModal(); drawTransfer(); };
 $('healthButton').onclick = () => { showSettings(false); $('healthDlg').showModal(); drawHealth(); };
 $('syncButton').onclick = () => { showSettings(false); drawSyncHistory(); $('syncDlg').showModal(); };
-$('syncClear').onclick = () => { try { localStorage.removeItem(SYNC_LOG); } catch {} drawSyncHistory(); };
+$('syncClear').onclick = () => { stash.drop(SYNC_LOG); drawSyncHistory(); };
 function drawEpisodeCrosswalk() {
   const show = $('episodeCrosswalkShow').value;
   const input = $('episodeCrosswalkNumber');
@@ -717,7 +715,7 @@ document.body.classList.toggle('solo', mode === 'solo');
 document.body.classList.toggle('group', mode === 'group');
 $('modeSolo').setAttribute('aria-pressed', mode === 'solo');
 $('modeGroup').setAttribute('aria-pressed', mode === 'group');
-try { localStorage.setItem('mode', mode); } catch {}
+stash.set('mode', mode);
 }
 setMode(mode);
 function listView() { return view === 'catchup' || view === 'pace'; }
@@ -734,27 +732,26 @@ document.body.classList.toggle('pace', view === 'pace');
 $('viewWeek').setAttribute('aria-pressed', view === 'week');
 $('viewCatchup').setAttribute('aria-pressed', view === 'catchup');
 $('viewPace').setAttribute('aria-pressed', view === 'pace');
-try { localStorage.setItem('view', view); } catch {}
+stash.set('view', view);
 if (view === 'week') refreshPaceNav();
 }
 setView(view);
 $('viewWeek').onclick = () => { setView('week'); enter = { y: 4 }; load(); };
 $('viewCatchup').onclick = () => { setView('catchup'); enter = { y: 4 }; load(); };
 $('viewPace').onclick = () => { setView('pace'); enter = { y: 4 }; load(); };
-let singleEpisodes = false;
-try { singleEpisodes = localStorage.getItem('singleEpisodes') === '1'; } catch {}
+let singleEpisodes = stash.get('singleEpisodes') === '1';
 function setSingleEpisodes(on) {
 singleEpisodes = on;
 $('perShow').setAttribute('aria-pressed', String(!on));
 $('perEpisode').setAttribute('aria-pressed', String(on));
-try { localStorage.setItem('singleEpisodes', on ? '1' : '0'); } catch {}
+stash.set('singleEpisodes', on ? '1' : '0');
 }
 setSingleEpisodes(singleEpisodes);
 $('perShow').onclick = () => { setSingleEpisodes(false); load(true); };
 $('perEpisode').onclick = () => { setSingleEpisodes(true); load(true); };
 $('anilistUser').onchange = () => {
 friendList.value = '';
-try { localStorage.setItem('anilistUser', $('anilistUser').value.trim()); } catch {}
+stash.set('anilistUser', $('anilistUser').value.trim());
 load();
 };
 friendList.onchange = () => {
@@ -801,7 +798,7 @@ soloPerson = $('soloPerson').value;
 syncListToSolo();
 refreshPaceNav();
 colorSolo();
-try { localStorage.setItem('soloPerson', soloPerson); } catch {}
+stash.set('soloPerson', soloPerson);
 redraw();
 };
 function colorSolo() {
@@ -835,7 +832,7 @@ all.setAttribute('aria-label', 'Alle Personen auswählen');
 const saveSelection = () => {
 for (const b of chips()) b.setAttribute('aria-pressed', selectedPeople.has(b.dataset.name));
 all.setAttribute('aria-pressed', people.every(name => selectedPeople.has(name)));
-try { localStorage.setItem('people', JSON.stringify([...selectedPeople])); } catch {}
+stash.set('people', JSON.stringify([...selectedPeople]));
 updateGroupButton();
 redraw();
 };
@@ -886,14 +883,14 @@ function openWelcome() {
   $('welcomeDlg').showModal();
 }
 $('welcomePerson').onchange = () => { $('soloPerson').value = $('welcomePerson').value; $('soloPerson').onchange(); if (mode !== 'solo') setMode('solo'); };
-$('welcomeDlg').addEventListener('close', () => { try { localStorage.setItem('welcomeSeen', '1'); } catch {} });
+$('welcomeDlg').addEventListener('close', () => { stash.set('welcomeSeen', '1'); });
 $('helpWelcome').onclick = () => { $('helpDialog').close(); openWelcome(); };
 $('welcomeDone').onclick = e => { e.preventDefault(); $('welcomeDlg').close(); };
 ready.then(() => {
   let seen = true;
   try { seen = !!localStorage.getItem('welcomeSeen'); } catch {}
   if (!seen && !returningVisitor && !navigator.webdriver && !document.querySelector('dialog[open]')) openWelcome();
-  else try { localStorage.setItem('welcomeSeen', '1'); } catch {}
+  else stash.set('welcomeSeen', '1');
 });
 $('helpClose').onclick = () => $('helpDialog').close();
 const helpTopics = [...$('helpDialog').querySelectorAll('[data-help-topic]')];
@@ -979,8 +976,8 @@ const bounds = row.getBoundingClientRect();
 if (bounds.bottom <= document.querySelector('header').getBoundingClientRect().bottom || bounds.top >= innerHeight)
 row.scrollIntoView?.({ block: 'center' });
 }
-try { $('markOnOpen').checked = localStorage.getItem('markOnOpen') === '1'; } catch {}
-$('markOnOpen').onchange = () => { try { localStorage.setItem('markOnOpen', $('markOnOpen').checked ? '1' : '0'); } catch {} };
+$('markOnOpen').checked = stash.get('markOnOpen') === '1';
+$('markOnOpen').onchange = () => { stash.set('markOnOpen', $('markOnOpen').checked ? '1' : '0'); };
 document.addEventListener('click', event => {
 const row = event.target.closest?.('#list .row .links a')?.closest('.row');
 if (!row) return;

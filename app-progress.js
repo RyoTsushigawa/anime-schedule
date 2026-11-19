@@ -29,7 +29,7 @@ auth.avatar = Viewer.avatar?.medium || '';
 accounts = accounts.filter(a => a === auth || a.provider === 'mal' || a.name !== auth.name);
 saveAccounts();
 $('anilistUser').value = auth.name;
-try { localStorage.setItem('anilistUser', auth.name); } catch {}
+stash.set('anilistUser', auth.name);
 updateConnect();
 }
 const ownEntries = await anilistList(auth.name);
@@ -101,7 +101,7 @@ const saveForAccount = async (account, mediaId, vars, autoComplete = false) => a
 : (await anilist(SAVE_PROGRESS, { mediaId, ...vars }, account.token, { retries:0 })).SaveMediaListEntry;
 function invalidateAccount(account) {
 if (account.provider === 'mal') MAL.invalidate(account);
-else try { localStorage.removeItem('list:' + account.name.toLowerCase()); } catch {}
+else stash.drop('list:' + account.name.toLowerCase());
 }
 async function convertSyncScore(score, source, target) {
 if (!score) return 0;
@@ -156,10 +156,9 @@ $('syncBoth').disabled = bulkSaving || pendingChanges.size > 0 || !$('syncTarget
 const SYNC_LOG = 'syncHistoryV1';
 const syncTitle = mediaId => document.querySelector(`[data-media="${mediaId}"]`)?.closest('.row, .shared')?.querySelector('.title')?.textContent.trim() || `Serie ${mediaId}`;
 function logSync(entry) {
-let list = [];
-try { list = JSON.parse(localStorage.getItem(SYNC_LOG) || '[]'); } catch {}
+let list = stash.json(SYNC_LOG, []);
 list.unshift({ at: Date.now(), ...entry });
-try { localStorage.setItem(SYNC_LOG, JSON.stringify(list.slice(0, 60))); } catch {}
+stash.set(SYNC_LOG, JSON.stringify(list.slice(0, 60)));
 }
 async function change(mediaId, vars) {
 const title = syncTitle(mediaId), account = auth ? `${auth.provider === 'mal' ? 'MyAnimeList' : 'AniList'} ${auth.name}` : '';

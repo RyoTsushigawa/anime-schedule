@@ -224,9 +224,9 @@ function defaultPerson() {
   return mine.find(p => people.includes(p)) || '';
 }
 (async () => {
-  const [settings, profiles] = await Promise.all([config().catch(() => ({})),
+  const [url, profiles] = await Promise.all([votesApi(),
     fetch('wrapped-profiles.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({})), Identity.ready]);
-  if (typeof settings.previewVotesUrl === 'string' && /^https:\/\//.test(settings.previewVotesUrl)) api = settings.previewVotesUrl.replace(/\/$/, '');
+  api = url;
   if (!api) { $('troddlStatus').textContent = 'Troddl ist hier nicht eingerichtet.'; return; }
   people = Object.keys(profiles).flatMap(p => SHARED[p] || [p]).sort((a, b) => a.localeCompare(b, 'de'));
   $('troddlPerson').replaceChildren(new Option('Nur lesen', ''), ...people.map(p => new Option(p, p)));

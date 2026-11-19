@@ -15,7 +15,7 @@ for (const k of ['title','status','episodes','duration','siteUrl','synonyms','co
 if (media[k] !== undefined) clean[k] = media[k];
 if (JSON.stringify(before) === JSON.stringify(clean)) return;
 metadata.set(media.idMal, clean);
-try { localStorage.setItem('malMediaMap', JSON.stringify([...metadata.values()].slice(-3000))); } catch {}
+stash.set('malMediaMap', JSON.stringify([...metadata.values()].slice(-3000)));
 }
 function seed(index) {
 for (const [id, value] of Object.entries(index?.byAnilist || {})) if (value.malId > 0 && !metadata.has(value.malId))
@@ -96,7 +96,7 @@ offset = next;
 await enrich(rows.map(r => r.node));
 const snapshot = { time: Date.now(), rows };
 rowsCache.set(key, snapshot);
-try { localStorage.setItem(key, JSON.stringify(snapshot)); } catch {}
+stash.set(key, JSON.stringify(snapshot));
 return convert(rows, null);
 } catch (error) {
 if (!saved || error.status === 401) throw error;
@@ -135,7 +135,7 @@ return normalizedEntry(node.my_list_status);
 function invalidate(account) {
 const key = cacheKey(account);
 rowsCache.delete(key);
-try { localStorage.removeItem(key); } catch {}
+stash.drop(key);
 }
 async function save(account, id, vars, autoComplete = false) {
 const malId = await resolve(id), data = {};

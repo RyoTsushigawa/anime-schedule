@@ -15,7 +15,7 @@ if (!fresh && Array.isArray(saved?.entries) && Number.isFinite(saved.time) && Da
 }
 try {
 const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
-try { localStorage.setItem(key, JSON.stringify({ time: Date.now(), entries })); } catch {}
+stash.set(key, JSON.stringify({ time: Date.now(), entries }));
 setNote(key, null);
 return entries;
 } catch (e) {
@@ -134,7 +134,7 @@ knownEntries.clear(); notOnList.clear(); toScore = []; planShowsCache.time = 0; 
 saveAccounts();
 if (auth?.name) {
 $('anilistUser').value = auth.name;
-try { localStorage.setItem('anilistUser', auth.name); } catch {}
+stash.set('anilistUser', auth.name);
 }
 updateConnect();
 if (auth) {
@@ -272,10 +272,10 @@ else document.documentElement.dataset.theme = theme;
 const dark = theme === 'dark' || (theme === 'auto' && systemDark.matches);
 document.documentElement.toggleAttribute('data-dark', dark);
 document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#121216' : '#f6f6f8');
-try { localStorage.setItem('theme', theme); } catch {}
+stash.set('theme', theme);
 for (const b of document.querySelectorAll('[data-theme-choice]')) b.setAttribute('aria-pressed', b.dataset.themeChoice === theme);
 }
-try { theme = localStorage.getItem('theme') || 'auto'; } catch {}
+theme = stash.get('theme') || 'auto';
 setTheme(theme);
 systemDark.addEventListener('change', () => setTheme(theme));
 for (const b of document.querySelectorAll('[data-theme-choice]')) b.onclick = () => setTheme(b.dataset.themeChoice);
@@ -294,7 +294,7 @@ function setChoice(name, value) {
 choices[name] = value;
 for (const b of document.querySelectorAll(`[data-set="${name}"]`))
 b.setAttribute('aria-pressed', b.dataset.value === value);
-try { localStorage.setItem(name, value); } catch {}
+stash.set(name, value);
 if (name === 'accent') applyAccent();
 // N85 Lesbarkeit: text size and contrast, also read by tool-theme.js on the other pages
 if (name === 'textsize') value === 'normal' ? delete document.documentElement.dataset.textsize : document.documentElement.dataset.textsize = value;
@@ -321,10 +321,10 @@ if (b.dataset.set === 'time') redraw();
 else if (!['accent', 'density', 'textsize', 'contrast'].includes(b.dataset.set)) load(true);
 };
 for (const [id, cls] of [['dropButtons', 'no-drop'], ['moveButtons', 'no-move']]) {
-try { $(id).checked = id === 'moveButtons' ? localStorage.getItem(id) === '1' : localStorage.getItem(id) !== '0'; } catch { $(id).checked = id !== 'moveButtons'; }
+$(id).checked = id === 'moveButtons' ? stash.get(id) === '1' : stash.get(id) !== '0';
 document.body.classList.toggle(cls, !$(id).checked);
 $(id).onchange = () => {
-try { localStorage.setItem(id, $(id).checked ? '1' : '0'); } catch {}
+stash.set(id, $(id).checked ? '1' : '0');
 document.body.classList.toggle(cls, !$(id).checked);
 if (id === 'moveButtons') syncMoveEditor();
 };
@@ -337,7 +337,7 @@ const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'dens
   const select = $('servicePriority');
   select.replaceChildren(...SERVICES.filter(sv => sv.main).map(sv => new Option(sv.label, sv.label)));
   select.value = preferredService();
-  select.onchange = () => { try { localStorage.setItem('servicePriority', select.value); } catch {} load(true); };
+  select.onchange = () => { stash.set('servicePriority', select.value); load(true); };
 }
 $('settingsExport').onclick = () => {
   const settings = {};
@@ -366,7 +366,7 @@ $('list').addEventListener('click', e => {
   const button = e.target.closest('[data-pause-shift]');
   if (!button) return;
   const date = button.dataset.pauseShift;
-  try { localStorage.setItem('pauseShift:' + date, pauseShiftEnabled(date) ? '0' : '1'); } catch {}
+  stash.set('pauseShift:' + date, pauseShiftEnabled(date) ? '0' : '1');
   load(true);
 });
 let editScope = 'week';
@@ -394,19 +394,19 @@ $('moveButtons').dispatchEvent(new Event('change'));
     if (inBar) picker.before(select); else $('personSlot').append(select);
     document.body.classList.toggle('person-in-bar', inBar);
   };
-  try { $('personInBar').checked = localStorage.getItem('personInBar') === '1'; } catch {}
-  $('personInBar').onchange = () => { try { localStorage.setItem('personInBar', $('personInBar').checked ? '1' : '0'); } catch {} place(); };
+  $('personInBar').checked = stash.get('personInBar') === '1';
+  $('personInBar').onchange = () => { stash.set('personInBar', $('personInBar').checked ? '1' : '0'); place(); };
   place();
 }
 // U43 Gesehene ausblenden (own Solo view) and U53 Leere Tage ausblenden: body classes, the CSS hides the rows / days
 for (const [id, cls] of [['hideWatched', 'hide-watched'], ['hideEmptyDays', 'hide-empty-days'], ['dropAlways', 'drop-always']]) {
-  try { $(id).checked = localStorage.getItem(id) === '1'; } catch {}
+  $(id).checked = stash.get(id) === '1';
   document.body.classList.toggle(cls, $(id).checked);
-  $(id).onchange = () => { try { localStorage.setItem(id, $(id).checked ? '1' : '0'); } catch {} document.body.classList.toggle(cls, $(id).checked); };
+  $(id).onchange = () => { stash.set(id, $(id).checked ? '1' : '0'); document.body.classList.toggle(cls, $(id).checked); };
 }
-try { $('behind').checked = localStorage.getItem('behind') === '1'; } catch {}
+$('behind').checked = stash.get('behind') === '1';
 $('behind').onchange = () => {
-try { localStorage.setItem('behind', $('behind').checked ? '1' : '0'); } catch {}
+stash.set('behind', $('behind').checked ? '1' : '0');
 redraw();
 };
 function behindTag(m, episode) {
@@ -421,9 +421,9 @@ $('search').value = jumpSearch = b.dataset.behind;
 openSearch(true);
 $('viewCatchup').click();
 });
-try { $('who').checked = localStorage.getItem('who') !== '0'; } catch { $('who').checked = true; }
+$('who').checked = stash.get('who') !== '0';
 $('who').onchange = () => {
-try { localStorage.setItem('who', $('who').checked ? '1' : '0'); } catch {}
+stash.set('who', $('who').checked ? '1' : '0');
 redraw();
 };
 const hiddenAnchorSelector = '.hidden-by-search, [hidden], details:not([open])';

@@ -294,6 +294,16 @@ await new Promise(r => setTimeout(r, RETRY_WAITS[attempt]));
 const WEEKDAYS = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'];
 const NIGHT_UNTIL = 6;
 const parseTime = time => (time || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).map(Number);
+// the votes helper's address (config.json previewVotesUrl); '' when it isn't set up
+const votesApi = async () => { const url = (await config().catch(() => ({}))).previewVotesUrl; return typeof url === 'string' && /^https:\/\//.test(url) ? url.replace(/\/$/, '') : ''; };
+// This browser's storage: private windows or blocked storage throw, and then nothing is kept
+const stash = {
+  get: key => { try { return localStorage.getItem(key); } catch { return null; } },
+  // a saved JSON value; broken or missing data gives the fallback
+  json: (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; } },
+  set: (key, value) => { try { localStorage.setItem(key, value); } catch {} },
+  drop: key => { try { localStorage.removeItem(key); } catch {} },
+};
 // The group code of the votes helper (Season Preview, Awards, Börse): entered once, remembered on this device,
 // so pages opened in a new tab have it too. Kept in this browser only, never in scripts or URLs.
 const savedGroupCode = () => { try { return sessionStorage.getItem('previewGroupCode') || localStorage.getItem('previewGroupCode') || ''; } catch { return ''; } };
