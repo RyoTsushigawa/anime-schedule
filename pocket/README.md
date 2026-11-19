@@ -80,3 +80,7 @@ Set up once:
    `connect-src` in `index.html`.
 
 Tests: `node --test tests/pocket-*.test.mjs`.
+
+## Mobile / friends without Pokémon Zone
+
+The collection import dialog also offers **Text / Bulk entry**. On a phone, paste one card ID per line (`A1-1`), set a quantity (`A1-1 2` or `A1-2=3`), or add a contiguous set range (`A1: 1-50`). All entries are checked against the card database and previewed before saving. Text mode always merges rather than replacing the whole collection. This is a fallback for friends without a third-party tracker, **not** automatic collection discovery. It cannot infer owned cards from the game. A fully automatic import requires a permitted game/third-party export or API, neither of which has been verified.
