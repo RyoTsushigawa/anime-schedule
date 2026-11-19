@@ -3,6 +3,7 @@
 // Standalone: only files in this folder. Cards: cards.json (tools/build-cards.mjs, daily). Collections: its own
 // Worker (worker/, URL in config.json); you save only your own, with your PIN. Rules: core.mjs. Trades: Discord.
 import { parseZoneCsv, previewZoneImport } from './zone-import.mjs';
+import { parseBulkCards } from './bulk-import.mjs';
 import { MAX_ACCOUNTS, MAX_COPIES, emptyRecord, normalize, counts, onAccounts, tradeable, spares, completion, packOdds, worth, tradeFor, matches, ownMoves, cardMap, diff, applyDiff, isEmptyDiff, packList, packCards, accountWith } from './core.mjs';
 
 const $ = id => document.getElementById(id);
@@ -229,11 +230,11 @@ function refreshZonePreview() {
   const t = importText(), account = scope(), target = record?.owned?.[account];
   $('pkImportApply').textContent = t.apply;
   $('pkImportClose').textContent = t.close;
-  $('pkImportHelp').textContent = t.help;
+  $('pkImportHelp').textContent = $('pkImportSource').value === 'bulk' ? (lang === 'de' ? 'Karten-IDs und Anzahl pro Zeile, z.B. A1-1 2 oder A1: 1-50. Fehlende Karten bleiben erhalten.' : 'Card IDs and counts per line, e.g. A1-1 2 or A1: 1-50. Absent cards are preserved.') : t.help;
   $('pkImportModeText').textContent = t.replace;
   if (!zoneParsed || !target || account === 'all') { $('pkImportApply').disabled = true; return; }
   const unsafe = zoneParsed.unknown.length || zoneParsed.invalid.length;
-  $('pkImportReplace').disabled = !!unsafe;
+  $('pkImportReplace').disabled = !!unsafe || $('pkImportSource').value === 'bulk';
   if (unsafe) $('pkImportReplace').checked = false;
   const changes = previewZoneImport(target, zoneParsed.owned, $('pkImportReplace').checked);
   $('pkImportStatus').textContent = t.ready(changes.length, zoneParsed.unknown.length, zoneParsed.invalid.length) + (unsafe ? ' · ' + t.unsafe : '');
@@ -244,6 +245,10 @@ $('pkImportBtn').onclick = () => {
   if (!mine()) return;
   zoneParsed = null;
   $('pkImportFile').value = '';
+  $('pkImportBulk').value = '';
+  $('pkImportSource').value = 'csv';
+  $('pkImportFileLabel').hidden = false;
+  $('pkImportBulkLabel').hidden = true;
   $('pkImportReplace').checked = false;
   $('pkImportReplace').disabled = false;
   $('pkImportPreview').textContent = '';
@@ -263,11 +268,26 @@ $('pkImportFile').onchange = async () => {
     refreshZonePreview();
   } catch (err) { $('pkImportStatus').textContent = importText().error + err.message; }
 };
+$('pkImportSource').onchange = () => {
+  zoneParsed = null;
+  const bulk = $('pkImportSource').value === 'bulk';
+  $('pkImportBulkLabel').hidden = !bulk;
+  $('pkImportFileLabel').hidden = bulk;
+  $('pkImportReplace').checked = false;
+  $('pkImportReplace').disabled = bulk;
+  $('pkImportStatus').textContent = '';
+  $('pkImportPreview').textContent = '';
+  refreshZonePreview();
+};
+$('pkImportBulk').oninput = () => {
+  try { zoneParsed = parseBulkCards($('pkImportBulk').value, new Set(cards.keys())); refreshZonePreview(); }
+  catch (err) { zoneParsed = null; $('pkImportApply').disabled = true; $('pkImportStatus').textContent = err.message; }
+};
 $('pkImportReplace').onchange = refreshZonePreview;
 $('pkImportApply').onclick = () => {
   if (!zoneParsed || !mine() || scope() === 'all') return;
   const account = scope(), target = record.owned[account];
-  const replace = $('pkImportReplace').checked && !zoneParsed.unknown.length && !zoneParsed.invalid.length;
+  const replace = $('pkImportSource').value === 'csv' && $('pkImportReplace').checked && !zoneParsed.unknown.length && !zoneParsed.invalid.length;
   const changes = previewZoneImport(target, zoneParsed.owned, replace);
   if (!changes.length) return;
   change(r => {
