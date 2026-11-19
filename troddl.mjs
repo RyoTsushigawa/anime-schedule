@@ -232,5 +232,14 @@ function defaultPerson() {
   $('troddlPerson').replaceChildren(new Option('Nur lesen', ''), ...people.map(p => new Option(p, p)));
   $('troddlPerson').value = defaultPerson();
   $('troddlPerson').disabled = false;
-  load();
+  await load();
+  // from the plan's score dialog ("Auch eine Troddl-Review schreiben"): the writer opens with that show picked
+  const write = Number(location.hash.match(/^#write=(\d+)$/)?.[1]);
+  if (write) {
+    history.replaceState(null, '', location.pathname);
+    try {
+      const d = await anilist('query($id:Int){Media(id:$id,type:ANIME){id title{romaji english} coverImage{medium} season seasonYear}}', { id: write });
+      if (d?.Media) openWriter(showFrom(d.Media));
+    } catch {}
+  }
 })();
