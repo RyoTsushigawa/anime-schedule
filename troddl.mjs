@@ -212,19 +212,25 @@ $('troddlList').onclick = async e => {
 };
 $('troddlSeason').onchange = drawList;
 $('troddlSort').onchange = drawList;
-$('troddlPerson').onchange = () => { try { localStorage.setItem('troddlPerson', person()); } catch {} load(); };
+$('troddlPerson').onchange = () => load();
 
+// who you are: the person picked in Solo on the plan, like the other pages (MaRyo: whichever of Ryo and Marvin
+// is logged in here); without one, the AniList login on this device
+function defaultPerson() {
+  let solo = ''; try { solo = localStorage.getItem('soloPerson') || ''; } catch {}
+  const mine = Identity.myPeople();
+  if (SHARED[solo]) return SHARED[solo].find(p => mine.includes(p)) || SHARED[solo].find(p => people.includes(p)) || '';
+  if (people.includes(solo)) return solo;
+  return mine.find(p => people.includes(p)) || '';
+}
 (async () => {
-  const settings = await config().catch(() => ({}));
+  const [settings, profiles] = await Promise.all([config().catch(() => ({})),
+    fetch('wrapped-profiles.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({})), Identity.ready]);
   if (typeof settings.previewVotesUrl === 'string' && /^https:\/\//.test(settings.previewVotesUrl)) api = settings.previewVotesUrl.replace(/\/$/, '');
   if (!api) { $('troddlStatus').textContent = 'Troddl ist hier nicht eingerichtet.'; return; }
-  const profiles = await fetch('wrapped-profiles.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
   people = Object.keys(profiles).flatMap(p => SHARED[p] || [p]).sort((a, b) => a.localeCompare(b, 'de'));
-  await Identity.ready;
-  let saved = ''; try { saved = localStorage.getItem('troddlPerson') || ''; } catch {}
-  const me = people.includes(saved) ? saved : Identity.myPeople().find(p => people.includes(p)) || '';
   $('troddlPerson').replaceChildren(new Option('Nur lesen', ''), ...people.map(p => new Option(p, p)));
-  $('troddlPerson').value = me;
+  $('troddlPerson').value = defaultPerson();
   $('troddlPerson').disabled = false;
   load();
 })();
