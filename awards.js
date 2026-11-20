@@ -46,6 +46,7 @@ const drawIdentity = () => { if (ID && $('awardsIdentity')) ID.draw($('awardsIde
 let shared = null; // the helper's answer for this season: { revealed, voters, ballots? } or { error }
 let showInfo = new Map(); // title → { genres, sequel, chars: [{ name, role }] } from AniList, when reachable
 let ceddl = []; // Ceddl of the Year candidates: [{ id, name, anime, by }]
+let myScores = new Map(); // title → this person's own Troddl score (0–100), when they're confirmed: a hint while voting
 let themes = new Map(); // title → [{ type: 'OP' | 'ED', slug, song, artists, audio }] from AnimeThemes, when reachable
 
 function ballotKey() {
@@ -176,7 +177,7 @@ function choiceField(kind, empty, value) {
       select.append(group);
     }
     if (plain.length) { const group = document.createElement('optgroup'); group.label = themes.size ? 'Ohne Songdaten' : 'Serien'; group.append(...plain.map(t => new Option(t, t))); select.append(group); }
-  } else select.append(...optionsFor(kind).map(t => new Option(t, t)));
+  } else select.append(...optionsFor(kind).map(t => new Option(myScores.has(t) ? `${t} (du: ${myScores.get(t)})` : t, t)));
   // a saved pick that is no longer on the list stays visible (marked by the check), so nothing vanishes silently
   if (value && ![...select.options].some(o => o.value === value)) select.append(new Option(value + ' (nicht mehr in der Auswahl)', value));
   select.value = value;
@@ -308,6 +309,18 @@ async function loadThemes() {
   }));
   if (found.size) try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), themes: [...found] })); } catch {}
   return found;
+}
+
+// Your own Troddl reviews as a hint in the dropdowns ("Blue Box (du: 88)"): only for yourself, once confirmed
+async function loadMyScores() {
+  const person = personSelect.value;
+  myScores = new Map();
+  if (!voteApi || !person || !ID?.canAct(person)) return;
+  try {
+    const [{ reviews = [] }, { wanted }] = await Promise.all([awardsCall('/troddl?person=' + encodeURIComponent(person), null, person), seasonIds()]);
+    if (person !== personSelect.value) return;
+    for (const r of reviews) if (r.mine && wanted.has(r.mediaId)) myScores.set(wanted.get(r.mediaId), r.score);
+  } catch {}
 }
 
 // Listening before voting: the season's openings or endings as a playlist, one after another
@@ -581,7 +594,7 @@ async function loadAwardsSeason(tab) {
     drawShared();
     loadShared();
     // characters, genres and the Ceddl candidates fill in when they arrive
-    Promise.allSettled([loadShowInfo(request).then(info => { if (request === seasonRequest) showInfo = info; }), loadCeddl(),
+    Promise.allSettled([loadShowInfo(request).then(info => { if (request === seasonRequest) showInfo = info; }), loadCeddl(), loadMyScores(),
       loadThemes().then(found => { if (request === seasonRequest) themes = found; })]).then(() => {
       if (request !== seasonRequest) return;
       drawCeddl();
@@ -598,6 +611,7 @@ personSelect.onchange = () => {
   drawIdentity();
   renderBallot();
   drawShared();
+  loadMyScores().then(() => { if (myScores.size && !revealed()) renderBallot(); });
 };
 
 copyButton.onclick = async () => {

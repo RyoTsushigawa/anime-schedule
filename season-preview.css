@@ -182,3 +182,9 @@
 .preview-next[hidden]{display:none}
 .preview-item.preview-flash{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
 .preview-side .preview-draft{border-style:solid;border-color:#b45555;color:var(--text)}
+
+/* Troddl: the season before's Troddlrating on a sequel */
+.preview-troddl { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 2px; color: var(--muted); font-size: 12px; text-decoration: none; }
+.preview-troddl:hover { color: var(--text); }
+.preview-troddl .troddl-score { display: inline-grid; place-items: center; min-width: 26px; height: 20px; padding: 0 4px; border-radius: 5px; font-size: 11px; font-weight: 800; color: #fff; }
+.preview-troddl .troddl-score.tbd { font-size: 10px; }
