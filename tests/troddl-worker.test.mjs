@@ -45,3 +45,32 @@ test('pen names are unique, only your own can be set, edits keep the date and de
   assert.equal((await call(e, '/troddl', null)).reviews.length, 0);
   assert.equal((await call(e, '/troddl', null, '', { 'X-Group-Code': '' })).status, 401);
 });
+
+test('reactions: counts for everyone, your own for you, a second tap takes it back; not on your own review', async () => {
+  const e = environment();
+  await call(e, '/troddl/pen', { person: 'Ryo', pen: 'Drachenhort Review' });
+  await call(e, '/troddl/review', review);
+  const id = (await call(e, '/troddl', null)).reviews[0].id;
+  assert.match(id, /^[0-9a-f]{16}$/);
+  assert.equal((await call(e, '/troddl/react', { person: 'Ryo', id, emoji: '👍' })).status, 400); // own review
+  assert.equal((await call(e, '/troddl/react', { person: 'Marvin', id, emoji: '🍕' }, 'tok-MilkyWay95')).status, 400);
+  const r = await call(e, '/troddl/react', { person: 'Marvin', id, emoji: '👍' }, 'tok-MilkyWay95');
+  assert.deepEqual([r.reactions, r.myReactions], [{ '👍': 1 }, ['👍']]);
+  const anon = await call(e, '/troddl', null, '');
+  assert.deepEqual(anon.reviews[0].reactions, { '👍': 1 });
+  assert.equal(anon.reviews[0].myReactions, undefined);
+  assert.equal(JSON.stringify(anon).includes('Marvin'), false, 'who reacted is never sent');
+  // editing keeps the id and the reactions
+  await call(e, '/troddl/review', { ...review, score: 70 });
+  const after = (await call(e, '/troddl?person=Marvin', null, 'tok-MilkyWay95')).reviews[0];
+  assert.deepEqual([after.id, after.reactions, after.myReactions], [id, { '👍': 1 }, ['👍']]);
+  const back = await call(e, '/troddl/react', { person: 'Marvin', id, emoji: '👍' }, 'tok-MilkyWay95');
+  assert.deepEqual([back.reactions, back.myReactions], [{}, undefined]);
+});
+test('reviews saved before reactions existed get an id on the next read', async () => {
+  const e = environment();
+  e.data.set('troddl:Terra', JSON.stringify({ person: 'Terra', pen: 'Terra Times', reviews: [{ mediaId: 5, title: 'X', score: 60, text: 'x', at: '2026-11-01' }] }));
+  const id = (await call(e, '/troddl', null)).reviews[0].id;
+  assert.match(id, /^[0-9a-f]{16}$/);
+  assert.equal((await call(e, '/troddl', null)).reviews[0].id, id, 'the id stays');
+});

@@ -357,6 +357,28 @@ function troddlChip(s){
  const cls=h.rating==null?'tbd':h.rating>=75?'good':h.rating>=50?'mixed':'bad';
  return '<a class="preview-troddl" href="troddl.html#m='+h.id+'" target="_blank" rel="noopener" title="Troddlrating der Staffel davor ('+h.count+(h.count===1?' Review':' Reviews')+(h.rating==null?', ab 2 Reviews':'')+')">Staffel davor · Troddl <span class="troddl-score '+cls+'">'+(h.rating??'tbd')+'</span></a>';
 }
+// Season start check: from two weeks before the season until two weeks into it, the shows with at least two "Ja"
+// that have no day and time in the season's Guckplan yet, so none is forgotten.
+const SLOT_WINDOW=14*864e5;
+async function loadSlotCheck(){
+ const tab=current,box=pv('previewSlots'),m=tab?.name.match(PV_SEASONS);
+ box.hidden=true;
+ if(!m||!shows.length)return;
+ const begins=new Date(+m[2],PV_MONTHS[m[1].toLowerCase()],1).getTime(),now=Date.now();
+ if(now<begins-SLOT_WINDOW||now>begins+SLOT_WINDOW)return;
+ try{
+  const plan=(await guckplanTabs()).find(t=>t.name.replace(/^Guckplan\s+/i,'').toLowerCase()===tab.name.toLowerCase());
+  const planned=plan?(await loadPlan(plan)).shows:[];
+  if(current!==tab)return;
+  const slots=new Map(planned.flatMap(p=>[[norm(p.romaji),p],...(p.english?[[norm(p.english),p]]:[])]));
+  const yes=s=>s.votes.filter(v=>/^ja$/i.test(v.value)).length;
+  const open=shows.map(s=>({s,ja:yes(s)})).filter(({s,ja})=>{const p=slots.get(norm(s.title))||(s.english&&slots.get(norm(s.english)));return ja>=2&&!(p?.tag&&p?.time);})
+   .sort((a,b)=>b.ja-a.ja||(a.s.english||a.s.title).localeCompare(b.s.english||b.s.title,'de'));
+  if(!open.length)return;
+  box.innerHTML='<b>Noch ohne Platz im Guckplan</b> ('+safeText(plan?plan.name:'Guckplan '+tab.name+' fehlt noch')+'): '+open.map(({s,ja})=>safeText(s.english||s.title)+' <small>'+ja+'× Ja</small>').join(' · ');
+  box.hidden=false;
+ }catch(error){console.warn('Guckplan-Abgleich nicht verfügbar:',error);}
+}
 function draftButton(s,voter){
  const draft=voter&&!saving.has(s.key)?voteDraft(current.gid,s.key,voter):'';
  if(!draft||voteValue(s,voter)===draft){if(draft)setDraft(current.gid,s.key,voter,'');return '';}
@@ -674,6 +696,7 @@ async function selectSeason(gid){
   loadCovers(next,latest).then(()=>{if(current?.gid===gid)render();});
   loadSequelSuggestions();
   loadTroddlHints();
+  loadSlotCheck();
  }catch(e){
   if(request!==seasonRequest)return;
   shows=[];pv('previewList').replaceChildren();
