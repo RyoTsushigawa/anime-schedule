@@ -42,6 +42,12 @@ function drawPen() {
   else box.append(Object.assign(document.createElement('span'), { textContent: 'Wähle deinen Kritiker-Namen (die anderen sehen nur ihn):' }), field, save);
 }
 
+// reactions under a review: counts for everyone; your own are highlighted; not on your own review
+const REACTIONS = ['👍', '😂', '🤔'];
+const reactBar = r => !r.id ? '' : `<div class="troddl-react">${REACTIONS.map(e => {
+  const n = r.reactions?.[e] || 0, on = !!r.myReactions?.includes(e);
+  return `<button type="button" class="troddl-react-btn${on ? ' on' : ''}" data-react="${e}" data-review="${r.id}" aria-pressed="${on}"${r.mine ? ' disabled title="Deine eigene Review"' : ''} aria-label="${e}: ${n}">${e}${n ? `<span>${n}</span>` : ''}</button>`;
+}).join('')}</div>`;
 function drawList() {
   const season = $('troddlSeason').value, sort = $('troddlSort').value;
   const shows = [...summarize(data.reviews).values()];
@@ -61,7 +67,7 @@ function drawList() {
       ${s.reviews.map(r => `<article class="troddl-review${r.mine ? ' mine' : ''}">
         <div class="troddl-review-head">${badge(r.score)}<b>${esc(r.pen)}</b><small>${date(r.at)}${r.editedAt ? ' · bearbeitet' : ''}</small>
         ${r.mine ? `<span class="troddl-own"><button type="button" class="pill" data-edit="${s.mediaId}">Bearbeiten</button><button type="button" class="pill" data-delete="${s.mediaId}">Löschen</button></span>` : ''}</div>
-        <p>${esc(r.text)}</p></article>`).join('')}
+        <p>${esc(r.text)}</p>${reactBar(r)}</article>`).join('')}
       ${data.me?.pen && !s.reviews.some(r => r.mine) ? `<button type="button" class="pill troddl-add" data-add="${s.mediaId}">Eigene Review schreiben</button>` : ''}
     </details>`).join('') || '<p class="troddl-hint">Noch keine Reviews. Die erste schreibst vielleicht du?</p>';
   if (wanted) { document.getElementById('m' + wanted)?.scrollIntoView({ block: 'start' }); history.replaceState(null, '', location.pathname); }
@@ -76,7 +82,29 @@ async function load() {
     data = r;
     $('troddlStatus').textContent = can ? (r.me ? '' : 'Nicht bestätigt: lade die Seite neu oder prüf die PIN.') : who ? `Bestätige oben, dass du ${who} bist, um Reviews zu schreiben.` : '';
   } catch (e) { if (mine === turn) $('troddlStatus').textContent = 'Troddl ist gerade nicht erreichbar: ' + e.message; }
-  drawPen(); drawList();
+  drawPen(); drawList(); drawTodo();
+}
+
+// "Noch zu bewerten": what you finished on AniList lately (four months) and haven't reviewed, only for you
+let todo = { who: '', shows: [] };
+async function drawTodo() {
+  const box = $('troddlTodo'), who = person(), account = who && Identity.accountsOf(who)[0];
+  if (!account || !data.me?.pen) { box.hidden = true; return; }
+  if (todo.who !== who) {
+    try {
+      const d = await anilist('query($u:String){Page(perPage:30){mediaList(userName:$u,type:ANIME,status:COMPLETED,sort:FINISHED_ON_DESC){completedAt{year month day} media{id title{romaji english} coverImage{medium} season seasonYear}}}}', { u: account });
+      const since = Date.now() - 120 * 864e5;
+      todo = { who, shows: (d?.Page?.mediaList || []).filter(e => e.completedAt?.year && Date.UTC(e.completedAt.year, (e.completedAt.month || 1) - 1, e.completedAt.day || 1) >= since).map(e => showFrom(e.media)) };
+    } catch { todo = { who, shows: [] }; }
+  }
+  if (person() !== who) return;
+  const open = todo.shows.filter(s => !data.reviews.some(r => r.mine && r.mediaId === s.mediaId)).slice(0, 8);
+  box.hidden = !open.length;
+  $('troddlTodoList').replaceChildren(...open.map(s => {
+    const b = tile(s, 'troddl-tile');
+    b.onclick = () => openWriter(s);
+    return b;
+  }));
 }
 
 // writing, in three steps: which anime (your recent list or a search), how good, and the text.
@@ -199,6 +227,19 @@ $('troddlForm').onsubmit = async e => {
 };
 $('troddlWrite').onclick = () => openWriter();
 $('troddlList').onclick = async e => {
+  const react = e.target.closest('[data-react]');
+  if (react) {
+    const who = person();
+    if (!who || !Identity.canAct(who) || !data.me) { $('troddlStatus').textContent = who ? `Bestätige oben, dass du ${who} bist, um zu reagieren.` : 'Wähl oben aus, wer du bist, um zu reagieren.'; return; }
+    react.disabled = true;
+    try {
+      const r = await call('/troddl/react', { person: who, id: react.dataset.review, emoji: react.dataset.react }, who);
+      const review = data.reviews.find(x => x.id === r.id);
+      if (review) { review.reactions = r.reactions; review.myReactions = r.myReactions; }
+      drawList();
+    } catch (err) { $('troddlStatus').textContent = 'Nicht gespeichert: ' + err.message; react.disabled = false; }
+    return;
+  }
   const id = Number(e.target.closest('[data-edit],[data-add],[data-delete]')?.dataset.edit || e.target.closest('[data-add]')?.dataset.add || e.target.closest('[data-delete]')?.dataset.delete);
   if (!id) return;
   const show = summarize(data.reviews).get(id);

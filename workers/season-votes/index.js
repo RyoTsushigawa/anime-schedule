@@ -628,14 +628,39 @@ async function troddlAll(env){
  return out;
 }
 const troddlRecord=async(env,person)=>JSON.parse(await awardsStore(env).get('troddl:'+person)||'null')||{person,pen:'',reviews:[]};
+// Reactions on a review (👍 😂 🤔): counts for everyone, your own for you; who reacted is never sent out.
+// A review is named by a random id (never by its author): reviews from before get one on the next read.
+const REACTIONS=['👍','😂','🤔'];
+const newReviewId=()=>crypto.randomUUID().replace(/-/g,'').slice(0,16);
+async function giveIds(env,all){
+ for(const r of all)if((r.reviews||[]).some(v=>!v.id)){r.reviews=r.reviews.map(v=>v.id?v:{...v,id:newReviewId()});await awardsStore(env).put('troddl:'+r.person,JSON.stringify(r));}
+}
+const reactionsOut=(v,me)=>{const out={},mine=[];for(const e of REACTIONS){const who=v.reactions?.[e]||[];if(who.length)out[e]=who.length;if(me&&who.includes(me))mine.push(e);}return {reactions:out,...(mine.length&&{myReactions:mine})};};
 async function troddlGet(url,env,request){
  const all=await troddlAll(env);let me='';
+ await giveIds(env,all);
  const claimed=str(url.searchParams.get('person'));
  if(claimed){try{me=await verifiedPerson(request,env,claimed);}catch{me='';}}
  const reviews=[];
- for(const r of all)if(r.pen)for(const v of r.reviews||[])reviews.push({...v,pen:r.pen,...(r.person===me&&{mine:true})});
+ for(const r of all)if(r.pen)for(const {reactions,...v} of r.reviews||[])reviews.push({...v,...reactionsOut({reactions},me),pen:r.pen,...(r.person===me&&{mine:true})});
  const mine=me?all.find(r=>r.person===me):null;
  return {reviews:reviews.sort((a,b)=>String(b.at).localeCompare(String(a.at))),...(me&&{me:{person:me,pen:mine?.pen||''}})};
+}
+async function troddlReact(body,env,request){
+ const person=await verifiedPerson(request,env,body.person),id=str(body.id),emoji=str(body.emoji);
+ if(!/^[0-9a-f]{16}$/.test(id))fail(400,'Ungültige Review.');
+ if(!REACTIONS.includes(emoji))fail(400,'Ungültige Reaktion.');
+ const all=await troddlAll(env);
+ const record=all.find(r=>(r.reviews||[]).some(v=>v.id===id));
+ if(!record)fail(404,'Die Review gibt es nicht mehr.');
+ if(record.person===person)fail(400,'Auf die eigene Review kannst du nicht reagieren.');
+ const review=record.reviews.find(v=>v.id===id),who=new Set(review.reactions?.[emoji]||[]);
+ if(who.has(person))who.delete(person);else who.add(person);
+ review.reactions={...review.reactions,[emoji]:[...who]};
+ if(!who.size)delete review.reactions[emoji];
+ if(!Object.keys(review.reactions).length)delete review.reactions;
+ await awardsStore(env).put('troddl:'+record.person,JSON.stringify(record));
+ return {ok:true,id,...reactionsOut(review,person)};
 }
 async function troddlPen(body,env,request){
  const person=await verifiedPerson(request,env,body.person),pen=str(body.pen).replace(/\s+/g,' ');
@@ -659,9 +684,10 @@ async function troddlSave(body,env,request,now,remove){
  if(!title)fail(400,'Titel fehlt.');
  const cover=/^https:\/\/s4\.anilist\.co\/[\w./-]+$/.test(str(body.cover))?str(body.cover):'';
  const old=(record.reviews||[]).find(r=>r.mediaId===mediaId),at=new Date(now).toISOString();
- const review={mediaId,title,cover,season,score,text,at:old?.at||at,...(old&&{editedAt:at})};
+ const review={id:old?.id||newReviewId(),mediaId,title,cover,season,score,text,at:old?.at||at,...(old&&{editedAt:at}),...(old?.reactions&&{reactions:old.reactions})};
  await awardsStore(env).put('troddl:'+person,JSON.stringify({...record,reviews:[...reviews,review]}));
- return {ok:true,review:{...review,pen:record.pen,mine:true}};
+ const {reactions,...shown}=review;
+ return {ok:true,review:{...shown,...reactionsOut(review,person),pen:record.pen,mine:true}};
 }
 
 export default {
@@ -738,13 +764,13 @@ export default {
     await authorized(request,env);
     return json(await troddlGet(new URL(request.url),env,request),200,cors);
    }
-   if(request.method==='POST'&&(path==='/troddl/pen'||path==='/troddl/review'||path==='/troddl/review/delete')){
+   if(request.method==='POST'&&(path==='/troddl/pen'||path==='/troddl/review'||path==='/troddl/review/delete'||path==='/troddl/react')){
     const raw=await request.text();if(raw.length>16384)fail(413,'Anfrage zu groß.');
     await authorized(request,env);
     let body;try{body=JSON.parse(raw);}catch{fail(400,'Ungültige Anfrage.');}
     if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'Ungültige Anfrage.');
     const now=Number(env.TEST_NOW)||Date.now();
-    return json(path==='/troddl/pen'?await troddlPen(body,env,request):await troddlSave(body,env,request,now,path==='/troddl/review/delete'),200,cors);
+    return json(path==='/troddl/pen'?await troddlPen(body,env,request):path==='/troddl/react'?await troddlReact(body,env,request):await troddlSave(body,env,request,now,path==='/troddl/review/delete'),200,cors);
    }
    if(request.method==='GET'&&path==='/stocks/flow'){
     await authorized(request,env);

@@ -79,3 +79,11 @@
 .troddl-step, #troddlSearchBox, #troddlRecentBox { min-width: 0; }
 @media (max-width: 560px) { .troddl-dlg .troddl-prompts .pill { min-height: 30px !important; } .troddl-prompts { gap: .3rem; } .troddl-prompts > .troddl-hint { display: none; } }
 .troddl-brand > div { min-width: 0; }
+.troddl-todo { margin: 0 0 1rem; padding: .7rem .8rem; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.troddl-todo h2 { margin: 0; font-size: 14px; }
+.troddl-todo .troddl-recent { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 78px; overflow-x: auto; max-height: none; padding-bottom: 4px; margin-top: .4rem; }
+.troddl-react { display: flex; gap: .35rem; }
+.troddl-react-btn { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border: 1px solid var(--line); border-radius: 99px; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.troddl-react-btn span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.troddl-react-btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.troddl-react-btn:disabled { cursor: default; opacity: .6; }

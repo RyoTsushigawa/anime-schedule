@@ -188,3 +188,7 @@
 .preview-troddl:hover { color: var(--text); }
 .preview-troddl .troddl-score { display: inline-grid; place-items: center; min-width: 26px; height: 20px; padding: 0 4px; border-radius: 5px; font-size: 11px; font-weight: 800; color: #fff; }
 .preview-troddl .troddl-score.tbd { font-size: 10px; }
+/* season start check: shows with enough "Ja" but no day/time in the Guckplan yet */
+.preview-slots { margin: 0 0 12px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 11px; background: var(--card); font-size: 13px; line-height: 1.5; }
+.preview-slots[hidden] { display: none; }
+.preview-slots small { color: var(--muted); }
