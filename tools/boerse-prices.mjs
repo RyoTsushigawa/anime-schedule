@@ -75,7 +75,7 @@ async function anilistIds(shows) {
   return ids;
 }
 
-export async function updateSeason(entry, shows, today, { media, ratings, flow = {} }) {
+export async function updateSeason(entry, shows, today, { media, ratings, flow = {}, troddl = new Map() }) {
   const season = { days: [], shows: {}, ...entry };
   // the Sheet's "Amount" count was once read as a show ("60", "65"): such entries go
   for (const title of Object.keys(season.shows)) if (/^\d+$/.test(title)) delete season.shows[title];
@@ -92,12 +92,13 @@ export async function updateSeason(entry, shows, today, { media, ratings, flow =
     const newDrops = list.filter(r => r.status === 'DROPPED' && s.droppedBy[r.user] === today);
     const g = groupScore(list);
     const prev = index ? s.closes[index - 1] : PRICE;
-    const close = index ? nextClose({ prev, fair: fairValue({ community: m.averageScore, group: g.score, groupCount: g.count }),
+    const t = troddl.get(show.title) ?? null;
+    const close = index ? nextClose({ prev, fair: fairValue({ community: m.averageScore, group: g.score, groupCount: g.count, troddl: t }),
       popNow: m.popularity || 0, popBefore: s.pops[index - 1] || 0, trending: m.trending || 0, newDrops, seed: today + ':' + show.title, flow: flow[show.title] || 0 }) : PRICE;
     s.closes[index] = close; s.pops[index] = m.popularity || 0;
     s.closes.length = s.pops.length = index + 1;
     // a big fall at the close halts the show for the next trading day
-    Object.assign(s, { id: m.id || s.id, score: m.averageScore ?? null, members: m.popularity ?? null, ratings: g.count, group: g.count ? Math.round(g.score) : null,
+    Object.assign(s, { id: m.id || s.id, score: m.averageScore ?? null, members: m.popularity ?? null, ratings: g.count, group: g.count ? Math.round(g.score) : null, troddl: t,
       drops: Object.keys(s.droppedBy).length, halted: halted(close, prev) ? nextDay(today) : undefined });
     if (!s.halted) delete s.halted;
   }
@@ -125,6 +126,24 @@ async function dayFlow(season, day) {
   } catch (e) { console.log(`${season}: Nachfrage nicht verfügbar (${e.message}); Schlusskurs ohne Nachfrage.`); return {}; }
 }
 
+// The Troddlrating per show (the group's reviews, from two reviews), by AniList id → title. Same group code as
+// the demand; without it the close is computed without Troddl, as before.
+export function troddlRatings(reviews, byId) {
+  const scores = new Map();
+  for (const r of reviews || []) if (byId.has(r.mediaId) && Number.isFinite(r.score)) scores.set(byId.get(r.mediaId), [...(scores.get(byId.get(r.mediaId)) || []), r.score]);
+  return new Map([...scores].filter(([, l]) => l.length >= 2).map(([t, l]) => [t, Math.round(l.reduce((a, b) => a + b, 0) / l.length)]));
+}
+async function troddlReviews() {
+  try {
+    const config = JSON.parse(await readFile(path('config.json'), 'utf8'));
+    const api = String(config.previewVotesUrl || 'https://anime-season-preview-votes.shigeruhagano.workers.dev').replace(/\/$/, '');
+    const code = process.env.GROUP_CODE || '';
+    const res = await fetch(`${api}/troddl`, { headers: { Origin: 'https://ryotsushigawa.github.io', ...(code && { 'X-Group-Code': code }) } });
+    if (!res.ok) throw new Error('Antwort ' + res.status);
+    return (await res.json()).reviews || [];
+  } catch (e) { console.log(`Troddl nicht verfügbar (${e.message}); Schlusskurs ohne Troddlrating.`); return []; }
+}
+
 // Midnight belongs to the new calendar day; the close always belongs to the previous day.
 export const closingDay = (now = Date.now()) => prevDay(berlinDay(now));
 
@@ -140,6 +159,7 @@ async function main() {
   try { file = JSON.parse(await readFile(path('boerse-prices.json'), 'utf8')); } catch {}
   const profiles = JSON.parse(await readFile(path('wrapped-profiles.json'), 'utf8'));
   const accounts = [...new Set(Object.values(profiles).flat().filter(a => a?.provider === 'anilist' && /^[\w-]{2,40}$/.test(a.name)).map(a => a.name))];
+  const reviews = tabs.length ? await troddlReviews() : [];
   for (const tab of tabs) {
     if (file.seasons[tab.season]?.days?.includes(today)) { console.log(`${tab.season}: ${today} already closed; prices stay during trading hours.`); continue; }
     const shows = seasonShows(await readFile(path('backup/sheet/' + tab.file), 'utf8'), tab.hiddenRows);
@@ -157,7 +177,9 @@ async function main() {
       }
     }
     const flow = await dayFlow(tab.season, today);
-    file.seasons[tab.season] = await updateSeason(file.seasons[tab.season], shows, today, { media, ratings, flow });
+    const troddl = troddlRatings(reviews, byId);
+    if (troddl.size) console.log(`${tab.season}: Troddl ${[...troddl].map(([t, r]) => `${t} ${r}`).join(' · ')}`);
+    file.seasons[tab.season] = await updateSeason(file.seasons[tab.season], shows, today, { media, ratings, flow, troddl });
     console.log(`${tab.season} · ${today}: ` + shows.map(s => `${s.title} ${file.seasons[tab.season].shows[s.title].closes.at(-1)}`).join(' · '));
   }
   file.updated = new Date(now).toISOString();

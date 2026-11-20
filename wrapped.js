@@ -211,9 +211,26 @@ function wrappedAwardWinners(ballots){
   }
   return won;
 }
+// Troddl (the group's reviews) for one season: the best and worst rated shows (from two reviews), the most
+// generous and the strictest critic (pen names only, from two reviews) and the show the critics disagreed on most.
+function wrappedTroddl(reviews,season){
+  const mine=(reviews||[]).filter(r=>r.season===season&&Number.isFinite(r.score));
+  const avg=list=>list.reduce((a,b)=>a+b,0)/list.length;
+  const shows=new Map(),pens=new Map();
+  for(const r of mine){
+    shows.set(r.mediaId,{title:r.title,scores:[...(shows.get(r.mediaId)?.scores||[]),r.score]});
+    pens.set(r.pen,[...(pens.get(r.pen)||[]),r.score]);
+  }
+  const rated=[...shows.values()].filter(s=>s.scores.length>=2).map(s=>({title:s.title,rating:Math.round(avg(s.scores)),count:s.scores.length,gap:Math.max(...s.scores)-Math.min(...s.scores)}))
+    .sort((a,b)=>b.rating-a.rating||a.title.localeCompare(b.title,'de'));
+  const critics=[...pens].filter(([,l])=>l.length>=2).map(([pen,l])=>({pen,mean:Math.round(avg(l)),count:l.length})).sort((a,b)=>b.mean-a.mean||a.pen.localeCompare(b.pen,'de'));
+  const debate=[...rated].sort((a,b)=>b.gap-a.gap||a.title.localeCompare(b.title,'de'))[0];
+  return {reviews:mine.length,rated,critics,debate:debate&&debate.gap>=15?debate:null};
+}
 async function wrappedGroupCards(season,person,shared){
   const who=person?(WRAPPED_SPLIT[person]||[person]):null,cards=[];
-  const [stocks,awards]=await Promise.all([wrappedHelper('/stocks?season='+encodeURIComponent(season)).catch(()=>null),wrappedHelper('/awards?season='+encodeURIComponent(season)).catch(()=>null)]);
+  const [stocks,awards,troddl]=await Promise.all([wrappedHelper('/stocks?season='+encodeURIComponent(season)).catch(()=>null),wrappedHelper('/awards?season='+encodeURIComponent(season)).catch(()=>null),
+    who?null:wrappedHelper('/troddl').catch(()=>null)]);
   const board=stocks?.ranking||[];
   if(board.length){
     const gain=v=>(v>=1000?'+':'−')+Math.abs(Math.round((v/1000-1)*1000)/10).toLocaleString('de-DE')+' %';
@@ -235,6 +252,23 @@ async function wrappedGroupCards(season,person,shared){
         html:'<div class="big">'+hits+'</div><p>von '+tops.length+' '+(shared?'euren':'deinen')+' 12-Punkte-Tipps '+(hits===1?'hat':'haben')+' die Kategorie gewonnen.'+(best?' Anime der Season wurde '+wrappedSafe(best.title)+'.':'')+'</p>',note:'Aus den aufgelösten Awards. Gezählt wird, ob die Serie mit '+(shared?'euren':'deinen')+' 12 Punkten die Kategorie gewonnen hat.'});
     }
   }
+  // Troddl: only in the group view (a person's own reviews would give away whose pen name it is)
+  const t=wrappedTroddl(troddl?.reviews,season);
+  if(t.rated.length){
+    const top=t.rated[0],low=t.rated.at(-1);
+    cards.push({kicker:season+' · Troddl',title:top.title,color:'#ff9f1c',
+      html:'<div class="big">'+top.rating+'</div><p>ist euer bestes Troddlrating der Season ('+top.count+' Reviews).</p>'+wrappedRank(t.rated.slice(0,3).map(s=>[s.title,'Troddl '+s.rating]))+(t.rated.length>3?'<p>Und ganz unten: '+wrappedSafe(low.title)+' mit '+low.rating+'.</p>':''),
+      note:'Das Troddlrating ist der Schnitt eurer Reviews, ab zwei Reviews pro Serie. '+t.reviews+' Reviews in dieser Season.'});
+  }
+  if(t.critics.length>=2){
+    const soft=t.critics[0],hard=t.critics.at(-1);
+    cards.push({kicker:season+' · Die Kritiker',title:soft.pen+' war am großzügigsten.',color:'#ffc764',
+      html:wrappedRank([[soft.pen,'Schnitt '+soft.mean],[hard.pen,'Schnitt '+hard.mean]])+'<p>Am strengsten bewertete '+wrappedSafe(hard.pen)+'. Wer hinter den Namen steckt, bleibt euer Geheimnis.</p>',
+      note:'Durchschnitt der eigenen Reviews in dieser Season, ab zwei Reviews pro Kritiker-Name.'});
+  }
+  if(t.debate)cards.push({kicker:season+' · Troddl-Streitfall',title:t.debate.title,color:'#f4a9d1',
+    html:'<div class="big">'+t.debate.gap+'</div><p>Punkte lagen zwischen der besten und der schlechtesten Review. Hier wart ihr euch wirklich nicht einig.</p>',
+    note:'Größter Abstand zwischen zwei Troddl-Wertungen derselben Serie in dieser Season.'});
   return cards;
 }
 async function wrappedRender(fresh=false) {

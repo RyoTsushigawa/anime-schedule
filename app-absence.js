@@ -333,6 +333,13 @@ $('awayMsg').textContent = '';
 if (awayCal.tab === 'calendar') drawAway(); else if (awayCal.tab === 'recurring') drawRepeat(); else drawAwayWeek();
 }
 // N38: the whole group's week at a glance: who is there, away all day, only partly (ab/bis) or spontan da
+// Schichtplan (tools/shift-plan.mjs): the absences the daily job entered from someone's work plan are marked,
+// so nobody wonders why they're there (or removes them by mistake). shift-plan.json says which ones.
+const shiftMarks = new Map(); // "person|day" → until
+fetch('shift-plan.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(file => {
+  for (const plan of file?.plans || []) for (const [day, until] of Object.entries(plan.applied || {})) shiftMarks.set(plan.person + '|' + day, until);
+}).catch(() => {});
+const fromShift = (p, day, until) => !!until && shiftMarks.get(p + '|' + day) === until;
 function drawAwayWeek() {
 const monday = isoDay(weekStart(awayCal.weekOffset || 0));
 const days = Array.from({ length: 7 }, (_, i) => addDay(monday, i)), today = isoDay(new Date());
@@ -344,7 +351,8 @@ const cell = (p, d) => {
   if (!x) return '<td class="aw-free" title="da">✓</td>';
   if (x.maybe) return `<td class="aw-maybe" title="spontan da${rec}">?</td>`;
   if (x.from) return `<td class="aw-part" title="ab ${esc(x.from)} weg${rec}">ab ${esc(x.from)}</td>`;
-  if (x.until) return `<td class="aw-part" title="erst ab ${esc(x.until)} da${rec}">bis ${esc(x.until)}</td>`;
+  if (x.until) return fromShift(p, d, x.until) ? `<td class="aw-part aw-shift" title="erst ab ${esc(x.until)} da · aus dem Schichtplan">bis ${esc(x.until)}<small>Schicht</small></td>`
+    : `<td class="aw-part" title="erst ab ${esc(x.until)} da${rec}">bis ${esc(x.until)}</td>`;
   return `<td class="aw-off" title="ganzer Tag weg${rec}">✕</td>`;
 };
 $('awayWeek').innerHTML = `<thead><tr><th></th>${days.map(d => `<th${d === today ? ' class="aw-today"' : ''}>${esc(AWAY_WEEKDAYS[weekdayOf(d)])}<small>${dayOf(d).getDate()}.</small></th>`).join('')}</tr></thead>`
@@ -424,7 +432,8 @@ function drawAwayList() {
 const runs = mergedRuns(false).filter(r => shownFor(r.people || [r.p]));
 const shown = awayCal.allOnce ? runs : runs.slice(0, AWAY_SHOWN);
 $('awayListCount').textContent = runs.length ? String(runs.length) : '';
-$('awayList').innerHTML = shown.map(r => runRow(r, `${r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`} · ${r.cond}`)).join('')
+const shift = r => !r.weekly && r.days.every(d => (r.people || [r.p]).every(p => shiftMarks.has(p + '|' + d)));
+$('awayList').innerHTML = shown.map(r => runRow(r, `${r.from === r.to ? shortDate(r.from) : `${shortDate(r.from)} – ${shortDate(r.to)}`} · ${r.cond}${shift(r) ? ' · aus dem Schichtplan' : ''}`)).join('')
   || '<li class="muted">Nichts eingetragen.</li>';
 $('awayMore').hidden = runs.length <= AWAY_SHOWN;
 $('awayMore').textContent = awayCal.allOnce ? 'Weniger anzeigen' : `Alle ${runs.length} anzeigen`;

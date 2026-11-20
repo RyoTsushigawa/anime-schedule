@@ -1809,3 +1809,6 @@ header .header-primary .header-games { margin-right: -2px; }
  header .brand h1 + div { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
  header .brand { min-width: 0; }
 }
+
+/* an absence entered from someone's Schichtplan (tools/shift-plan.mjs) */
+.aw-shift small { display: block; font-size: 9px; font-weight: 600; letter-spacing: .03em; opacity: .75; }
