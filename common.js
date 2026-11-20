@@ -157,7 +157,7 @@ return { people, columns, shows };
 }
 // Personal, untimed entries are opt-in; group planning and Discord keep using picks().
 function alonePicks(sheet, person) {
-return new Map(sheet.shows.filter(show => /^allein$/i.test(String(show.votes?.[person] || '').trim()))
+return new Map(sheet.shows.filter(show => !show.hidden && /^allein$/i.test(String(show.votes?.[person] || '').trim()))
   .map(show => [show, { tag: show.tag, time: '', alone: true }]));
 }
 function picks(sheet, person) {
