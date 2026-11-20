@@ -1,0 +1,33 @@
+# Tells the Discord bot that the plan changed, so it doesn't have to keep asking: on every change to
+# moves.json (moves, skips, delays, absences), nicknames.json or streams-de.json, one short line goes to a
+# hidden channel the bot watches (the bot's README, "Signal from the site"). Needs the repository secret
+# DISCORD_WEBHOOK_BOT_SIGNAL (that channel's webhook); without it this does nothing.
+name: Bot signal
+
+on:
+  push:
+    branches: [main]
+    paths: [moves.json, nicknames.json, streams-de.json]
+
+permissions: {}
+
+concurrency:
+  group: bot-signal
+  cancel-in-progress: false
+
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Tell the bot
+        env:
+          HOOK: ${{ secrets.DISCORD_WEBHOOK_BOT_SIGNAL }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "No DISCORD_WEBHOOK_BOT_SIGNAL secret: nothing to send."; exit 0; fi
+          body=$(printf '{"content":"plan %s","allowed_mentions":{"parse":[]}}' "${GITHUB_SHA::7}")
+          for attempt in 1 2 3; do
+            if curl -sS --fail --max-time 20 -o /dev/null -H 'Content-Type: application/json' -d "$body" "$HOOK"; then echo "Signal sent."; exit 0; fi
+            sleep $((attempt * 10))
+          done
+          echo "::warning::The bot signal could not be sent; the bot still checks the site hourly."
