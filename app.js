@@ -982,6 +982,8 @@ hiddenAt = 0;
 const FIRST_SLOT = [19, 0];
 const SLOT_MINUTES = 30;
 function assignWatchTimes(day) {
+const personal = day.rows.filter(r => r.slot?.alone);
+day.rows = day.rows.filter(r => !r.slot?.alone);
 const at = (h, m) => new Date(day.date).setHours(h < NIGHT_UNTIL ? h + 24 : h, m, 0, 0);
 const taken = new Set();
 for (const r of day.rows) {
@@ -995,6 +997,7 @@ do r.watchAt = at(FIRST_SLOT[0], FIRST_SLOT[1] + SLOT_MINUTES * i++); while (tak
 taken.add(r.watchAt);
 }
 day.rows.sort((a, b) => a.watchAt - b.watchAt || a.when - b.when);
+day.rows.push(...personal);
 }
 function delayClock(date, clock) {
 const hm = parseTime(clock);
@@ -1015,7 +1018,7 @@ const startOf = x => x.show[0] === '@' ? delayClock(day.date, x.show.slice(1))
 day.delayStarts = list.map(x => ({ ...x, at: startOf(x) })).filter(x => x.at != null);
 const planned = r => r.plannedAt ?? r.watchAt;
 const slots = new Map();
-for (const r of timeline.rows) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
+for (const r of timeline.rows.filter(r => !r.slot?.alone)) slots.set(planned(r), [...slots.get(planned(r)) || [], r]);
 // Automatic breaks may free a slot just like a manually skipped show.
 // A Keep Time row is an anchor: never move it or pull later shows past it.
 const autoMovePauses = pauseShiftEnabled(isoDay(day.date));
@@ -1027,6 +1030,7 @@ const twoEpisodes = r => (r.slot?.double || r.double) && r.episodes?.length > 1;
 const extraSlots = r => !r.pause && !r.extra && (twoEpisodes(r) || r.long) ? 1 : 0;
 const longs = [...slots].map(([at, rs]) => [at, Math.max(0, ...rs.map(extraSlots))]).filter(([, n]) => n);
 for (const r of day.rows) {
+if (r.slot?.alone) continue;
 const shared = timeline.rows.find(other => keyOf(other) === keyOf(r));
 if (shared && timeline !== day) r.watchAt = planned(shared);
 const minutes = day.delayStarts.filter(x => r.watchAt >= x.at).reduce((n, x) => n + x.minutes, 0);
@@ -1206,6 +1210,14 @@ if (mv?.skip) merged.set(show, { ...slot, ...(mv.tag && { tag: mv.tag, time: mv.
 else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot, ...(mv.double && { double: true }), ...(mv.long && { long: true }) });
 }
 whoBySheet.set(s, who);
+// Only the selected person's Solo view includes their private, untimed plan.
+// Add after group moves so those moves cannot schedule a personal entry.
+if (!everyone && mode === 'solo' && people.length === 1) {
+  for (const [show, slot] of alonePicks(s, people[0])) {
+    merged.set(show, slot);
+    who.set(show, [people[0]]);
+  }
+}
 return [s, merged];
 }));
 const showWho = $('who').checked;
@@ -1298,7 +1310,7 @@ for (const day of days) {
 assignWatchTimes(day);
 const dayStart = new Date(day.date).setHours(0, 0, 0, 0);
 day.rows = day.rows.map(r => {
-if (r.pause || !r.episodes) return r;
+if (r.slot?.alone || r.pause || !r.episodes) return r;
 if (r.slot?.double) { const first = Math.min(...r.episodes); if (first > 1 && !r.episodes.includes(first - 1)) r.episodes.unshift(first - 1); }
 const at = finalAt?.get(showKey(day, r)) ?? r.watchAt;
 const minute = at == null ? null : Math.round((at - dayStart) / 60000);
@@ -1442,7 +1454,7 @@ const weekDiagnostics = [];
 let html = ordered.map(({ date, rows }) => {
 const fullDate = `${dayName(date)}, ${germanDate(date)}`;
 const heading = `<b>${esc(nearDayName(date) || dayName(date))}</b>, ${esc(germanDate(date))}`;
-const hasAutoPause = rows.some(r => r.pause && !r.skipped && !r.slot?.keepTime);
+const hasAutoPause = rows.some(r => !r.slot?.alone && r.pause && !r.skipped && !r.slot?.keepTime);
 const pauseOn = pauseShiftEnabled(isoDay(date));
 const pauseShiftButton = hasAutoPause ? `<button type="button" class="pill pause-shift${pauseOn ? ' on' : ''}" data-pause-shift="${isoDay(date)}" aria-pressed="${pauseOn}" aria-label="Pause überspringen" title="Pause überspringen: ${pauseOn ? 'an · spätere Serien rücken in den freien Slot vor (feste Uhrzeiten bleiben)' : 'aus · alle behalten ihre geplante Zeit'}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '';
 const checkSpace = auth ? '<div class="drop-space"></div><div class="watch-space"></div>' : '';
@@ -1529,19 +1541,35 @@ const episodeRow = ({ it, m, links, when, watchAt, episodes, who, slot, show, ex
 const groups = [];
 // Pauses retain their own original slot, even if another show moves into it.
 // Never present a pause and an active episode as a parallel watch slot.
-const displayRows = [...rows].sort((a, b) => a.watchAt - b.watchAt || Number(!!b.pause) - Number(!!a.pause));
+const displayRows = rows.filter(r => !r.slot?.alone).sort((a, b) => a.watchAt - b.watchAt || Number(!!b.pause) - Number(!!a.pause));
 for (const r of displayRows) {
 const previous = groups.at(-1)?.[0];
 if (!r.pause && !r.skipped && previous && !previous.pause && !previous.skipped && previous.watchAt === r.watchAt) groups.at(-1).push(r);
 else groups.push([r]);
 }
 const ordered = choices.time === 'release' ? releaseOrder(groups) : groups;
-const body = ordered.length
+let body = ordered.length
 ? ordered.map(g => delayNote(g) + (g.length > 1
 ? `<div class="shared parallel-slot${choices.time === 'watch' ? ' parallel-plan' : ''}">${choices.time !== 'release' && parseTime(g[0].slot?.time) ? `<div class="parallel-heading"><b>${hm(new Date(g[0].watchAt))}</b><span>Parallel</span></div>` : ''}${g.map(row).join('')}</div>`
 : row(g[0]))).join('')
 : range === 'today' && !searching() ? '<div class="ep empty-day"><button class="pill" data-rest-of-week>Rest der Woche anzeigen</button></div>' : '';
 const isToday = date.toDateString() === today;
+const personalRows = rows.filter(r => r.slot?.alone);
+if (personalRows.length) {
+  if (!ordered.length) body = '';
+  const personal = r => {
+    const m = r.m, id = m?.id || r.alId;
+    const title = r.show?.english || r.show?.romaji || m?.title?.english || m?.title?.romaji || '';
+    const episodes = r.episodes || (r.episode ? [r.episode] : []);
+    const label = r.pause ? 'Pause' : r.rewatch ? 'Rewatch' : episodes.length ? (episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`) : 'Allein';
+    return `<div class="row alone-row" ${m ? artStyle(m) : ''} ${searchKey(title, r.show?.romaji)}>
+      ${m?.coverImage?.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
+      <div class="info"><div class="title">${m?.siteUrl ? `<a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(title)}</a>` : esc(title)}</div><div class="ep">${label}${r.pause && r.when ? ` · ${backLine(r.when, r.note, r.news || [])}` : ''}</div></div>
+      <div class="links">${linkButtons(r.links || [], id, r.who)}</div>
+      ${!r.pause && id && episodes.length && ownShow(id, r.who) ? watchButton(id, Math.max(...episodes)) : ''}</div>`;
+  };
+  body += `<section class="alone-plan" aria-label="Allein ohne feste Uhrzeit"><h3>Allein <span>· ohne feste Uhrzeit</span></h3>${personalRows.map(personal).join('')}</section>`;
+}
 // today, with a connected list: one button ticks every episode of the day that isn't ticked yet
 // (only shows this account's person watches, or that are on its list: see ownShow)
 const openToday = !auth || !isToday ? 0 : new Set(ordered.flat(Infinity).filter(r => r?.m?.id && r.episodes?.length && !r.pause && ownShow(r.m.id, r.who) && (myProgress.get(r.m.id) || 0) < Math.max(...r.episodes)).map(r => r.m.id)).size;
@@ -1567,7 +1595,7 @@ const reportButton = reportRows.length
   : '';
 weekDiagnostics.push(...diagnosticRows);
 const watchedButton = openToday ? `<button type="button" class="pill day-absent-button day-watched" data-day-watched title="Alle ${openToday} heutigen Folgen als gesehen markieren" aria-label="Alle heutigen Folgen gesehen"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M2 13l4 4 9-10M11 16l2 1.5L22 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : '';
-return `<section class="day${isToday ? ' is-today' : ''}${ordered.length ? '' : ' empty'}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${ordered.length ? daySpan(rows) : '<span class="day-none">· keine Folgen</span>'}${awayText(isoDay(date)).length ? `<button type="button" class="away-note" data-day-absent title="Abwesenheiten bearbeiten">· Abwesend: ${esc(awayText(isoDay(date)).join(', '))}</button>` : ''}${pauseShiftButton}${(movesKey || delaysUrl) && ((isToday && ordered.length) || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${canMove() && ordered.length && isoDay(date) >= isoDay(new Date()) ? `<button type="button" class="pill day-skip" data-day-skip title="Folgen skippen: an jeder Folge erscheint ein Skip-Knopf" aria-label="Folgen skippen" aria-pressed="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 6l7 6-7 6zM12 6l7 6-7 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>` : ''}${watchedButton}${isToday && !awayText(isoDay(date)).length ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend">${AWAY_ICON}</button>` : ''}${dayMenu(`${copyLinksButton}${reportButton}${movesKey && isoDay(date) >= isoDay(new Date()) ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht kopieren" aria-label="Discord"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button>' : ''}${!isToday && isoDay(date) > isoDay(new Date()) ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend">${AWAY_ICON}</button>` : ''}${canMove() && isoDay(date) >= isoDay(new Date()) ? '<button class="pill day-edit day-pencil" data-day-edit title="Tag als Liste bearbeiten" aria-label="Bearbeiten"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : ''}`)}</h2>${body}</section>`;
+return `<section class="day${isToday ? ' is-today' : ''}${ordered.length || personalRows.length ? '' : ' empty'}" data-date="${isoDay(date)}" data-move-day="${['So.','Mo.','Di.','Mi.','Do.','Fr.','Sa.'][date.getDay()]}"><h2${isToday ? ' aria-current="date"' : ''}${nearDayName(date) ? ` title="${esc(fullDate)}"` : ''}><span>${heading}</span>${ordered.length ? daySpan(rows) : `<span class="day-none">${personalRows.length ? '· ohne Gruppentermin' : '· keine Folgen'}</span>`}${awayText(isoDay(date)).length ? `<button type="button" class="away-note" data-day-absent title="Abwesenheiten bearbeiten">· Abwesend: ${esc(awayText(isoDay(date)).join(', '))}</button>` : ''}${pauseShiftButton}${(movesKey || delaysUrl) && ((isToday && ordered.length) || delays.some(x => x.day === isoDay(date))) ? `<button class="pill day-delay${delays.some(x => x.day === isoDay(date)) ? ' on' : ''}" data-day-delay title="Verspätung" aria-label="Verspätung"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ''}${canMove() && ordered.length && isoDay(date) >= isoDay(new Date()) ? `<button type="button" class="pill day-skip" data-day-skip title="Folgen skippen: an jeder Folge erscheint ein Skip-Knopf" aria-label="Folgen skippen" aria-pressed="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 6l7 6-7 6zM12 6l7 6-7 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>` : ''}${watchedButton}${isToday && !awayText(isoDay(date)).length ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend">${AWAY_ICON}</button>` : ''}${dayMenu(`${copyLinksButton}${reportButton}${movesKey && isoDay(date) >= isoDay(new Date()) ? '<button class="pill day-edit day-discord" data-day-discord title="Als Discord-Nachricht kopieren" aria-label="Discord"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></button>' : ''}${!isToday && isoDay(date) > isoDay(new Date()) ? `<button class="pill day-absent-button${awayText(isoDay(date)).length ? ' on' : ''}" data-day-absent title="${awayText(isoDay(date)).length ? esc('Abwesend: ' + awayText(isoDay(date)).join(', ')) : 'Abwesend'}" aria-label="Abwesend">${AWAY_ICON}</button>` : ''}${canMove() && isoDay(date) >= isoDay(new Date()) ? '<button class="pill day-edit day-pencil" data-day-edit title="Tag als Liste bearbeiten" aria-label="Bearbeiten"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' : ''}`)}</h2>${body}</section>`;
 }).join('');
 // A day's less frequent actions (all ✓, Discord, edit, absences) sit behind one "⋯" instead of a row of icons
 function dayMenu(items) {
@@ -1650,3 +1678,4 @@ const listUser = () => friendList.value || $('anilistUser').value.trim();
 // The person selected in Solo is also the default person in Catch-up and Non-seasonal.
 const listProfiles = new Map();
 let localPlanPeople = [];
+

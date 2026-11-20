@@ -1812,3 +1812,8 @@ header .header-primary .header-games { margin-right: -2px; }
 
 /* an absence entered from someone's Schichtplan (tools/shift-plan.mjs) */
 .aw-shift small { display: block; font-size: 9px; font-weight: 600; letter-spacing: .03em; opacity: .75; }
+
+.alone-plan { margin-top: 14px; }
+.alone-plan > h3 { margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.alone-plan > h3 span { font-weight: 400; }
+.alone-row { border-style: dashed; }

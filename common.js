@@ -155,6 +155,11 @@ else if (shows[twin].hidden && !show.hidden) shows[twin] = show;
 }
 return { people, columns, shows };
 }
+// Personal, untimed entries are opt-in; group planning and Discord keep using picks().
+function alonePicks(sheet, person) {
+return new Map(sheet.shows.filter(show => !show.hidden && /^allein$/i.test(String(show.votes?.[person] || '').trim()))
+  .map(show => [show, { tag: show.tag, time: '', alone: true }]));
+}
 function picks(sheet, person) {
 const result = new Map();
 const add = (show, slot) => { if (!result.get(show)?.time) result.set(show, slot); };
@@ -316,4 +321,5 @@ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe
 const last=new Date(Date.UTC(parts.year,parts.month,0)).getUTCDate();
 return parts.month%3===0 && parts.day>last-7;
 }
+
 
