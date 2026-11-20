@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-20T17:32:10.844Z",
+ "updated": "2026-11-20T18:11:30.939Z",
  "moves": [
   {
    "show": "fxsenshikurumichan",
@@ -416,6 +416,19 @@
    "people": [
     "Rei"
    ]
+  }
+ ],
+ "absentRules": [
+  {
+   "id": "38j7jlop",
+   "person": "Marius",
+   "weekdays": [
+    0,
+    2
+   ],
+   "start": "2026-11-20",
+   "end": "2027-09-13",
+   "from": "21:00"
   }
  ],
  "reasons": [
