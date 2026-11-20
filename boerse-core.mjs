@@ -44,11 +44,14 @@ export const priceOf = ratings => { const g = groupScore(ratings); return g.coun
 
 // What a share "should" be worth today: AniList's community score (70 counts as par) blended with the group's
 // own ratings (60 counts as par), the group weighing more the more of you rated it (up to 75 %)
-export function fairValue({ community = null, group = null, groupCount = 0 }) {
+// The Troddlrating (the group's reviews, from two reviews) nudges it: 70 is neutral, every 4 points above or below
+// move it by 1 %, at most ±5 % (90 → +5 %, 50 → −5 %).
+export const troddlEffect = rating => Number.isFinite(rating) ? Math.max(-0.05, Math.min(0.05, (rating - 70) / 400)) : 0;
+export function fairValue({ community = null, group = null, groupCount = 0, troddl = null }) {
   const c = community ? community / 70 : 1;
   const g = groupCount ? group / 60 : c;
   const w = Math.min(0.75, 0.25 + 0.1 * groupCount);
-  return PRICE * ((1 - w) * c + w * g);
+  return PRICE * ((1 - w) * c + w * g) * (1 + troddlEffect(troddl));
 }
 // the same small noise for everyone: ±1.5 % from the day and the show
 export function noise(seed) {

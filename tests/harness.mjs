@@ -160,6 +160,8 @@ export async function openPage(opts = {}) {
     if (url.includes('streams-de.json')) return down('streams') || down('site') || json(opts.streams || STREAMS);
     // opts.profiles: a different "Wer ist wer" list (person → accounts) instead of the real wrapped-profiles.json
     if (url.includes('wrapped-profiles.json')) return json(opts.profiles || JSON.parse(read('wrapped-profiles.json')));
+    // opts.shiftPlan: shift-plan.json (absences entered from someone's Schichtplan); none by default
+    if (url.includes('shift-plan.json')) return opts.shiftPlan ? json(opts.shiftPlan) : json({}, 404);
     if (url.includes('fallback-links.json')) return down('site') || json({ byAnilist: {} });
     // N55: opts.linkFixes as the site's link-fixes.json; a PUT to GitHub is kept (decoded) in state.linkFixesSaved
     if (url.includes('api.github.com') && url.includes('link-fixes.json')) {
