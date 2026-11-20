@@ -1,0 +1,61 @@
+# Work plans (Schichtpläne) from Discord as absences on the site (tools/shift-plan.mjs, shift-plan.json).
+# Reads the messages with the bot's token (secret DISCORD_BOT_TOKEN, the one that pins the daily post; needs
+# the bot's "Message Content Intent") and enters late days as "abwesend bis …" in moves.json.
+name: Schichtplan
+
+on:
+  # The Cloudflare helper starts the daily Discord post with this event every morning (07:50 and 08:50
+  # German time): the plan is current before the 9:00 post. GitHub's own timer is only a fallback.
+  repository_dispatch:
+    types: [discord-daily]
+  schedule:
+    - cron: '23 4 * * *'
+  # a change to shift-plan.json (a new message to follow) is read at once
+  push:
+    branches: [main]
+    paths: [shift-plan.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # moves.json, shift-plan.json
+
+concurrency:
+  group: shift-plan
+  cancel-in-progress: false
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Read the Schichtpläne and enter them
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          # moves.json is also written by the site and the helper: on a clash, start over from the newest
+          for attempt in 1 2 3; do
+            node tools/shift-plan.mjs
+            git add moves.json shift-plan.json
+            if git diff --cached --quiet; then echo "Nothing to change."; exit 0; fi
+            git commit -qm "Schichtplan"
+            if git pull --rebase origin main && git push; then echo "changed=1" >> "$GITHUB_ENV"; exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            git fetch -q origin main && git reset -q --hard origin/main
+            sleep $((attempt * 15))
+          done
+          echo "::error::moves.json kept changing meanwhile; tomorrow's run tries again."
+          exit 1
+      # this run's own push doesn't start other runs, so the bot is told here (see bot-signal.yml)
+      - name: Tell the bot
+        if: env.changed == '1'
+        env:
+          HOOK: ${{ secrets.DISCORD_WEBHOOK_BOT_SIGNAL }}
+        run: |
+          [ -z "$HOOK" ] && exit 0
+          curl -sS --max-time 20 -o /dev/null -H 'Content-Type: application/json' -d "{\"content\":\"plan ${GITHUB_SHA::7}\",\"allowed_mentions\":{\"parse\":[]}}" "$HOOK" || true

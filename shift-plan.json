@@ -1,0 +1,11 @@
+{
+ "about": "Work plans (Schichtpläne) the daily job reads from Discord and enters as absences (tools/shift-plan.mjs). channelId/messageId: the message; person: the name on the site; applied: what the job itself entered (it only ever changes those)",
+ "plans": [
+  {
+   "channelId": "1003259718313193562",
+   "messageId": "1323008801187561584",
+   "person": "Marius",
+   "applied": {}
+  }
+ ]
+}
