@@ -36,9 +36,19 @@ test('personal entries consume no free slot and are unaffected by delays',async(
   assert.equal(new Date(group.at).getHours(),19);assert.equal(new Date(group.at).getMinutes(),30);
  }finally{p.close();}
 });
-test('hidden entries are excluded and Allein matching tolerates case and whitespace',async()=>{
+test('explicit Allein votes include hidden rows, while other votes remain excluded',async()=>{
  const p=await open();try{
   const result=p.run(`alonePicks({shows:[{tag:'Fr.',time:'21:00',votes:{Rei:' ALLEIN '}},{hidden:true,votes:{Rei:'Allein'}},{votes:{Rei:'Nein'}}]},'Rei')`);
-  assert.equal(result.size,1);assert.equal([...result.values()][0].time,'');
+  assert.equal(result.size,2);assert.equal([...result.values()][0].time,'');
  }finally{p.close();}
 });
+test('MaRyo hidden Tetsuryo entry remains visible even with no episode match',async()=>{
+ const p=await open();try{
+   p.run(`for(const sheet of lastWeekRender[2].values()) sheet.shows.push({romaji:'TETSURYO! meet with Tetsudou Musume',english:'Tetsuryo! Meet with Railroad Girls',wo:'',tag:'Do.',time:'',hidden:true,votes:{MaRyo:'Allein',Belly:'Nein'}}); render(...lastWeekRender);`);
+   const row=[...p.document.querySelectorAll('.alone-row')].find(r=>r.textContent.includes('Tetsuryo!'));
+   assert.ok(row);assert.equal(row.closest('.day').dataset.date,'2026-10-29');
+   assert.match(row.textContent,/Folgendaten nicht verfügbar/);assert.equal(row.querySelector('.watch'),null);
+   assert.equal(p.run(`render(...lastWeekRender,true).flatMap(d=>d.rows).some(r=>r.show?.romaji.startsWith('TETSURYO'))`),false);
+ }finally{p.close();}
+});
+

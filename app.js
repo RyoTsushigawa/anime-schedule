@@ -1404,6 +1404,17 @@ found.add(show);
 : media?.status === 'RELEASING' ? 'Läuft noch; kein Folgentermin für diese Woche bestätigt'
 : 'Serie nicht gefunden oder Ausstrahlung nicht bestätigt' });
 }
+// An explicit personal entry still belongs on its day when episode matching fails.
+// Never invent an episode number or let these rows enter the group timeline.
+for (const selected of chosen.values()) for (const [show, slot] of selected) {
+  if (!slot.alone || days.some(d => d.rows.some(r => r.show === show))) continue;
+  const day = days.find(d => WEEKDAYS.indexOf(norm(slot.tag).slice(0, 2)) === (d.date.getDay() + 6) % 7);
+  if (!day) continue;
+  const [id] = Object.entries(streamsDe?.status || {}).find(([, s]) => titleMatches([show.romaji, show.english], s.titles)) || [];
+  const m = { id: Number(id) || 0, title: { romaji: show.romaji, english: show.english }, externalLinks: [], coverImage: { medium: coverFor(id) } };
+  day.rows.push({ personalUnconfirmed: true, show, slot, m, when: day.date, links: streamLinks(m, show.wo, show.english || show.romaji), who: people });
+  for (let i = unknown.length - 1; i >= 0; i--) if (unknown[i].show === show) unknown.splice(i, 1);
+}
 // A recap week can also come out as a break: AniList doesn't count the recap as an episode, so the
 // show has none this week. LiveChart still has the recap (or its note) for this week: it's a recap.
 const recapThisWeek = r => {
@@ -1561,7 +1572,7 @@ if (personalRows.length) {
     const m = r.m, id = m?.id || r.alId;
     const title = r.show?.english || r.show?.romaji || m?.title?.english || m?.title?.romaji || '';
     const episodes = r.episodes || (r.episode ? [r.episode] : []);
-    const label = r.pause ? 'Pause' : r.rewatch ? 'Rewatch' : episodes.length ? (episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`) : 'Allein';
+    const label = r.personalUnconfirmed ? 'Folgendaten nicht verfügbar' : r.pause ? 'Pause' : r.rewatch ? 'Rewatch' : episodes.length ? (episodes.length > 1 ? `Folgen ${Math.min(...episodes)}–${Math.max(...episodes)}` : `Folge ${episodes[0]}`) : 'Allein';
     return `<div class="row alone-row" ${m ? artStyle(m) : ''} ${searchKey(title, r.show?.romaji)}>
       ${m?.coverImage?.medium ? `<img src="${safeUrl(m.coverImage.medium)}" alt="" loading="lazy">` : ''}
       <div class="info"><div class="title">${m?.siteUrl ? `<a href="${safeUrl(m.siteUrl)}" target="_blank" rel="noopener">${esc(title)}</a>` : esc(title)}</div><div class="ep">${label}${r.pause && r.when ? ` · ${backLine(r.when, r.note, r.news || [])}` : ''}</div></div>
@@ -1678,4 +1689,5 @@ const listUser = () => friendList.value || $('anilistUser').value.trim();
 // The person selected in Solo is also the default person in Catch-up and Non-seasonal.
 const listProfiles = new Map();
 let localPlanPeople = [];
+
 
