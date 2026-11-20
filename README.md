@@ -186,7 +186,7 @@ Rows marked **PC only** are not in this repository: they exist only in the owner
 
 | File | What it is |
 |---|---|
-| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml`, `trailers.yml` (trailer playlists), `season-livechart-refresh.yml`, `season-votes-*.yml` (votes helper: tests, deploy), `sheet-backup.yml` (nightly Sheet copy), `check.yml` (every pull request: the site check and all tests), `visual.yml` (screenshots of the views), `cache-version.yml` (raises the `CACHE` name in `sw.js` by itself), `bot-signal.yml` (tells the Discord bot that the plan changed; secret `DISCORD_WEBHOOK_BOT_SIGNAL`, see the bot's README "Signal from the site") |
+| `.github/workflows/` | GitHub runs: `discord-daily.yml` (daily Discord post), `daily-status.yml` (LiveChart status and alternative links), `source-health.yml` (AniWorld reachable?), `masterset-prices.yml`, `trailers.yml` (trailer playlists), `season-livechart-refresh.yml`, `season-votes-*.yml` (votes helper: tests, deploy), `sheet-backup.yml` (nightly Sheet copy), `check.yml` (every pull request: the site check and all tests), `visual.yml` (screenshots of the views), `cache-version.yml` (raises the `CACHE` name in `sw.js` by itself), `bot-signal.yml` (tells the Discord bot that the plan changed; secret `DISCORD_WEBHOOK_BOT_SIGNAL`, see the bot's README "Signal from the site"), `shift-plan.yml` (Schichtpläne from Discord as absences, see "Schichtplan" below) |
 | `tools/check-site.mjs` | The pull-request check: loads the live site with the changed files, fails on page errors, views or dialogs that don't open, or a Discord message that doesn't build; `SCREENS=dir` also saves screenshots |
 | `index.html`, `style.css` | The page and its look |
 | `app.js` + `app-*.js`, `common.js`, `mal.js`, `early.js`, `drag-moves.js` | The page's scripts. `app.js` and its parts load in this order and share one scope: `app.js` (loading and drawing the week), `app-local` (local list), `app-accounts` (accounts, menus, settings), `app-progress` (✓, scores, sync), `app-catchup`, `app-moves` (moves, Nachholen, catch-up planner), `app-discord`, `app-absence` (delays, absences), `app-dayedit` (Wochenübersicht, editing a day), `app-start` (start-up, views, help). Plus shared helpers, MyAnimeList, first paint, dragging |
@@ -423,3 +423,22 @@ Use **Karte speichern** to download the visible card as a PNG; nothing is posted
 Shared Wrapped identities live in wrapped-profiles.json, using the owner-provided
 AniList names. MaRyo links RyoTsushigawa and MilkyWay95. Personal browser overrides
 remain possible; no accounts are fetched for Herbst 2026.
+
+## Schichtplan (work plans from Discord)
+
+Someone who keeps their work plan in one Discord message that they edit (e.g. Marius: "Woche 1: 16.11-21.11 /
+Dienstag 22:00 Uhr, Mittwoch frei …", the times are when he's available from) gets it entered as absences:
+every morning before the 9:00 post (and on a change to `shift-plan.json`), the GitHub run `shift-plan.yml`
+(`tools/shift-plan.mjs`, reading with `tools/shift-text.mjs`) reads the message with the bot's token and
+enters each day he's only there from 19:00 on as "abwesend bis …" in `moves.json`. Earlier times, "frei"
+and time spans ("17:30-20:45 Abendschule") mean nothing to enter; recurring things ("montags und mittwochs
+erst ab 21 Uhr") are entered once on the site (Abwesend › Wiederkehrend). The run only changes absences it
+entered itself (`applied` in `shift-plan.json`); anything entered by hand stays.
+
+- Which messages: `shift-plan.json` › `plans`: `channelId`, `messageId` (both from the message link
+  `https://discord.com/channels/<server>/<channel>/<message>`), `person` (the name on the site).
+- Needs the secret `DISCORD_BOT_TOKEN` (already there for pinning the daily post) and the bot's
+  **Message Content Intent** (Discord Developer Portal › the bot › Bot); without it the run's log says so.
+- Started like the daily post by the Cloudflare helper's morning event; "Run workflow" under Actions ›
+  Schichtplan reads it right away.
+
