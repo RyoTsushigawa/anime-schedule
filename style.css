@@ -1754,7 +1754,8 @@ header .header-primary .header-games { margin-right: -2px; }
 .troddl-card-head span:not(.troddl-score) { display: grid; flex: 1; min-width: 0; }
 .troddl-card-head small, .troddl-card q + small { color: var(--muted); }
 .troddl-card q { display: block; color: var(--text); line-height: 1.4; quotes: "„" "“"; }
-.troddl-card a { color: var(--accent); font-weight: 650; text-decoration: none; justify-self: end; }
+.troddl-card a { color: var(--accent); font-weight: 650; text-decoration: none; }
+.troddl-card-links { display: flex; justify-content: flex-end; gap: 16px; }
 .troddl-card .troddl-score { display: inline-grid; place-items: center; min-width: 34px; height: 34px; border-radius: 7px; font-weight: 800; font-size: 15px; color: #fff; }
 /* the score colours (Troddl page and the hover card), like Metacritic */
 .troddl-score.good { background: #2f9e5a; }

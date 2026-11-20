@@ -1,5 +1,6 @@
 // The Troddlrating on the plan: hovering (or focusing) a show's name shows the group's review score in a small card,
-// so the lists stay as they are. Data: the votes helper (/troddl), only with the group code on this device.
+// so the lists stay as they are. On a phone (no hover) the first tap on a reviewed show's name opens the card,
+// a second tap goes to AniList as before. Data: the votes helper (/troddl), only with the group code on this device.
 import { scoreClass, summarize, reviewCount } from './troddl-core.mjs';
 
 const CACHE = 'troddlCache', FRESH = 5 * 60 * 1000;
@@ -41,7 +42,7 @@ function show(a, s) {
   card.innerHTML = `<div class="troddl-card-head"><span class="troddl-score ${scoreClass(s.rating)}">${s.rating ?? 'tbd'}</span>
     <span><b>${s.rating == null ? 'Noch kein Troddlrating' : 'Troddlrating'}</b><small>${reviewCount(s.count)}${s.rating == null ? ' · ab 2 Reviews' : ''}</small></span><img src="troddl-icon.png" alt=""></div>
     <q>${esc(text)}</q><small>${esc(r.pen)} · ${r.score}</small>
-    <a href="troddl.html#m=${s.mediaId}" target="_blank" rel="noopener">Alle Reviews →</a>`;
+    <span class="troddl-card-links">${touch() ? `<a href="${esc(a.href)}" target="_blank" rel="noopener">Auf AniList</a>` : ''}<a href="troddl.html#m=${s.mediaId}" target="_blank" rel="noopener">Alle Reviews →</a></span>`;
   card.hidden = false;
   const box = a.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
   const left = Math.max(12, Math.min(box.left, innerWidth - w - 12));
@@ -49,6 +50,7 @@ function show(a, s) {
   card.style.left = left + 'px'; card.style.top = Math.max(8, top) + 'px';
 }
 function over(e) {
+  if (touch()) return; // phones: taps decide (see below), not the emulated hover
   const a = e.target.closest?.('#list a[href*="anilist.co/anime/"]');
   if (!a) return;
   clearTimeout(hideTimer); clearTimeout(showTimer);
@@ -59,11 +61,25 @@ function over(e) {
   }, 250);
 }
 function out(e) {
+  if (touch()) return;
   const a = e.target.closest?.('#list a[href*="anilist.co/anime/"]');
   if (!a || a.contains(e.relatedTarget)) return;
   clearTimeout(showTimer);
   hideTimer = setTimeout(hide, 200);
 }
+// phones: no hover, so a tap opens the card first (the reviews are loaded ahead, a tap must decide at once)
+const touch = () => matchMedia('(hover: none)').matches;
+document.addEventListener('click', e => {
+  if (!touch()) return;
+  const a = e.target.closest?.('#list a[href*="anilist.co/anime/"]');
+  if (!a) { if (card && !card.hidden && !card.contains(e.target)) hide(); return; }
+  if (a === current && card && !card.hidden) return; // second tap: on to AniList
+  const s = shows?.get(mediaOf(a));
+  if (!s) return;
+  e.preventDefault();
+  show(a, s);
+}, true);
+if (touch()) setTimeout(ensure, 1500);
 document.addEventListener('mouseover', over);
 document.addEventListener('mouseout', out);
 document.addEventListener('focusin', over);

@@ -326,6 +326,37 @@ async function loadSequelSuggestions(){
   render();
  }catch(error){console.warn('Sequel-Vorschläge nicht verfügbar:',error);}
 }
+// Troddl (the group's reviews): a sequel shows the Troddlrating of the season before it, from the same AniList
+// prequel links as the vote suggestion, with the group code. A link to those reviews.
+let troddlHints=new Map(),troddlRequest=0;
+async function loadTroddlHints(){
+ const tab=current,request=++troddlRequest,code=storedGroupCode();
+ if(!tab||!voteApi||!code)return;
+ try{
+  const [graph,res]=await Promise.all([sequelGraph(tab,shows),fetch(voteApi+'/troddl',{cache:'no-store',headers:{'X-Group-Code':code}})]);
+  if(!res.ok)return;
+  const scores=new Map();
+  for(const r of (await res.json()).reviews||[])if(Number.isSafeInteger(r.mediaId)&&Number.isFinite(r.score))scores.set(r.mediaId,[...(scores.get(r.mediaId)||[]),r.score]);
+  if(request!==troddlRequest||current?.gid!==tab.gid)return;
+  const hints=new Map();
+  for(const show of shows){
+   const ids=catalogIds(tab,show);
+   if(ids.length!==1)continue;
+   const id=(graph.get(Number(ids[0]))||[]).find(p=>scores.has(p));
+   if(!id)continue;
+   const list=scores.get(id);
+   hints.set(show.key,{id,count:list.length,rating:list.length>=2?Math.round(list.reduce((a,b)=>a+b,0)/list.length):null});
+  }
+  troddlHints=hints;
+  if(hints.size)render();
+ }catch(error){console.warn('Troddl nicht verfügbar:',error);}
+}
+function troddlChip(s){
+ const h=troddlHints.get(s.key);
+ if(!h)return '';
+ const cls=h.rating==null?'tbd':h.rating>=75?'good':h.rating>=50?'mixed':'bad';
+ return '<a class="preview-troddl" href="troddl.html#m='+h.id+'" target="_blank" rel="noopener" title="Troddlrating der Staffel davor ('+h.count+(h.count===1?' Review':' Reviews')+(h.rating==null?', ab 2 Reviews':'')+')">Staffel davor · Troddl <span class="troddl-score '+cls+'">'+(h.rating??'tbd')+'</span></a>';
+}
 function draftButton(s,voter){
  const draft=voter&&!saving.has(s.key)?voteDraft(current.gid,s.key,voter):'';
  if(!draft||voteValue(s,voter)===draft){if(draft)setDraft(current.gid,s.key,voter,'');return '';}
@@ -602,7 +633,7 @@ function render(){
   const start=s.start?'ab '+shortDate(s.start,{weekday:'short',day:'numeric',month:'short'}):'';
   const note=trailer&&!start?'':'<span class="preview-none">'+[trailer?'':(sequel?'Sequel':'Noch kein Trailer'),start].filter(Boolean).join(' · ')+'</span>';
   const cover=covers.get(s.key);
-  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+voteSummary(s)+'</div><div class="preview-side">'+(draftButton(s,voter)||autoVote(s,voter))+votingControls(s)+'</div>';
+  article.innerHTML=(cover?'<div class="preview-order has-cover"><img src="'+safeText(cover)+'" alt="" loading="lazy"><span>'+s.order+'</span></div>':'<div class="preview-order">'+s.order+'</div>')+'<div>'+note+'<h2><a class="preview-title-link" href="'+safeText(mal.url)+'" target="_blank" rel="noopener noreferrer" title="'+(mal.label==='MyAnimeList'?'MyAnimeList-Seite öffnen':'Auf MyAnimeList nach diesem Anime suchen')+'">'+safeText(s.english||s.title)+'</a></h2>'+(s.english&&s.english!==s.title?'<p class="preview-eng">'+safeText(s.title)+'</p>':'')+troddlChip(s)+voteSummary(s)+'</div><div class="preview-side">'+(draftButton(s,voter)||autoVote(s,voter))+votingControls(s)+'</div>';
   article.dataset.show=s.key;
   parent.append(article);
  }
@@ -642,6 +673,7 @@ async function selectSeason(gid){
   render();
   loadCovers(next,latest).then(()=>{if(current?.gid===gid)render();});
   loadSequelSuggestions();
+  loadTroddlHints();
  }catch(e){
   if(request!==seasonRequest)return;
   shows=[];pv('previewList').replaceChildren();
@@ -664,6 +696,7 @@ async function start(){
   const chosen=future.length?future.at(-1):tabs[0];sel.value=chosen.gid;await selectSeason(chosen.gid);
   await configureVoting();
   loadSequelSuggestions();
+  loadTroddlHints();
   sel.addEventListener('change',()=>selectSeason(sel.value));
  }catch(e){state('Season-Listen sind gerade nicht verfügbar: '+e.message);}
 }
