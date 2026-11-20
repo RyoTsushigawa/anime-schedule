@@ -81,7 +81,8 @@ function verifiedTrailer(entry) {
   seconds:Number.isInteger(entry.seconds)&&entry.seconds>0&&entry.seconds<3600?entry.seconds:0
  }:null;
 }
-// Covers (idea 87): from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
+// Covers (idea 87): from seasons.json (looked up once a week by tools/season-covers.mjs); the few it lacks
+// from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
 let covers=new Map();
 // A blank URL does not count as successfully cached: retries must be allowed.
 const hasCover=(key)=>typeof covers.get(key)==='string' && /^https:\/\//.test(covers.get(key));
@@ -93,6 +94,7 @@ async function loadCovers(tab,list){
   if(saved && Date.now()-saved.time<7*86400000 && Array.isArray(saved.covers))
    covers=new Map(saved.covers.filter(x=>Array.isArray(x)&&typeof x[0]==='string'&&typeof x[1]==='string'&&/^https:\/\//.test(x[1])));
  }catch{}
+ for(const s of list){const url=indexEntry(s)?.cover;if(/^https:\/\//.test(url||''))covers.set(s.key,url);}
  const want=list.filter(s=>!hasCover(s.key));
  if(!want.length)return;
  const malId=s=>malLink(s).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
@@ -148,13 +150,15 @@ async function jikanCovers(missing){
   await new Promise(r=>setTimeout(r,400));
  }
 }
-function malLink(show){
+// the show's LiveChart entry in seasons.json (MyAnimeList link, cover picture)
+function indexEntry(show){
  const key=seasonKey(current).replace(/^herbst-/,'fall-').replace(/^frühling-/,'spring-').replace(/^sommer-/,'summer-');
- const entries=animeIndex.seasons?.[key]||[];
  const normTitle=title=>clean(title).toLocaleLowerCase().normalize('NFKC');
  const title=normTitle(show.title),english=normTitle(show.english);
- const matched=entries.find(e=>normTitle(e.romaji)===title || (english && normTitle(e.english)===english));
- const direct=matched?.mal;
+ return (animeIndex.seasons?.[key]||[]).find(e=>normTitle(e.romaji)===title || (english && normTitle(e.english)===english));
+}
+function malLink(show){
+ const direct=indexEntry(show)?.mal;
  if(typeof direct==='string' && /^https:\/\/myanimelist\.net\/anime\/\d+(?:\/[^?#]*)?$/.test(direct))return {url:direct,label:'MyAnimeList'};
  return {url:'https://myanimelist.net/anime.php?q='+encodeURIComponent(show.english||show.title)+'&cat=anime',label:'Auf MyAnimeList suchen'};
 }
@@ -371,7 +375,7 @@ async function loadSlotCheck(){
   const planned=plan?(await loadPlan(plan)).shows:[];
   if(current!==tab)return;
   const slots=new Map(planned.flatMap(p=>[[norm(p.romaji),p],...(p.english?[[norm(p.english),p]]:[])]));
-  const yes=s=>s.votes.filter(v=>/^ja$/i.test(v.value)).length;
+  const yes=s=>s.votes.filter(v=>/^ja$/i.test(v.value)).reduce((n,v)=>n+(v.name==='MaRyo'?2:1),0); // MaRyo: two people, one column
   const open=shows.map(s=>({s,ja:yes(s)})).filter(({s,ja})=>{const p=slots.get(norm(s.title))||(s.english&&slots.get(norm(s.english)));return ja>=2&&!(p?.tag&&p?.time);})
    .sort((a,b)=>b.ja-a.ja||(a.s.english||a.s.title).localeCompare(b.s.english||b.s.title,'de'));
   if(!open.length)return;
@@ -704,6 +708,12 @@ async function selectSeason(gid){
  }
 }
 async function start(){
+ // a cover that doesn't load (gone, blocked): the plain number instead of a broken picture
+ pv('previewList').addEventListener('error',e=>{
+  const img=e.target;if(img.tagName!=='IMG'||!img.closest('.has-cover'))return;
+  for(const [key,url] of covers)if(url===img.getAttribute('src'))covers.delete(key);
+  img.parentElement.classList.remove('has-cover');img.remove();
+ },true);
  try{
   const [tabs,metadata,animeData]=await Promise.all([
    listSeasonTabs(),

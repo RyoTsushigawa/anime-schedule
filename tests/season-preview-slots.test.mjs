@@ -21,6 +21,7 @@ function page({ today = '2026-12-25', tabs = [{ name: 'Guckplan Winter 2027' }] 
       { key: 'b', title: 'Beta', votes: ja('Rei', 'Ryo') },
       { key: 'c', title: 'Gamma', votes: ja('Rei', 'Ryo') },
       { key: 'd', title: 'Delta', votes: [...ja('Rei'), { name: 'Ryo', value: 'Vielleicht' }] },
+      { key: 'e', title: 'Epsilon', votes: ja('MaRyo') },
     ],
     guckplanTabs: async () => tabs,
     loadPlan: async () => ({ shows: [{ romaji: 'Beta', tag: 'Mo', time: '20:00' }, { romaji: 'Gamma', tag: '', time: '' }] }) };
@@ -30,7 +31,7 @@ test('lists shows with enough Ja and no slot, most votes first', async () => {
   const p = page();
   await p.run();
   assert.equal(p.box.hidden, false);
-  assert.match(p.box.innerHTML, /Guckplan Winter 2027\): Alpha EN <small>3× Ja<\/small> · Gamma <small>2× Ja<\/small>$/);
+  assert.match(p.box.innerHTML, /Guckplan Winter 2027\): Alpha EN <small>3× Ja<\/small> · Epsilon <small>2× Ja<\/small> · Gamma <small>2× Ja<\/small>$/);
   assert.doesNotMatch(p.box.innerHTML, /Beta|Delta/);
 });
 test('outside the two weeks around the start nothing shows', async () => {
