@@ -398,9 +398,73 @@ $('noticeStop').onclick = () => {
 const rowTitle = el => el.closest('.shared, .row')?.querySelector('.title')?.textContent.trim() || 'Serie';
 const failedTicks = new Map();
 const tickKey = (mediaId, episode) => JSON.stringify([accountKey(auth), mediaId, episode]);
-const watchButton = (mediaId, episode, add = false) => !auth ? '' :
-`<button class="watch${failedTicks.has(tickKey(mediaId, episode)) ? ' save-failed' : (myProgress.get(mediaId) || 0) >= episode ? ' done' : ''}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
-    title="${failedTicks.has(tickKey(mediaId, episode)) ? 'Nicht gespeichert · Nochmal versuchen' : `Folge ${episode} gesehen (${listService()})`}">${failedTicks.has(tickKey(mediaId, episode)) ? '↻' : '✓'}</button>`;
+// Ticks AniList / MyAnimeList couldn't take right now (offline, busy, rate limit): kept in this browser and sent
+// on their own once the list answers again (back online, every minute, on the next visit). Per account and show,
+// the newest wins; before sending, the list is read: changed elsewhere meanwhile → left alone, already there → done.
+const TICK_QUEUE = 'tickQueueV1';
+const queuedTicks = () => stash.json(TICK_QUEUE, []).filter(q => q && Number.isInteger(q.mediaId) && Number.isInteger(q.progress));
+const queuedTick = mediaId => auth && queuedTicks().find(q => q.account === accountKey(auth) && q.mediaId === mediaId);
+const saveTickQueue = list => list.length ? stash.set(TICK_QUEUE, JSON.stringify(list)) : stash.drop(TICK_QUEUE);
+// a failure that may pass on its own: no answer, rate limit, server trouble (not: login expired, a refused change)
+const temporary = err => !err?.status ? !/Anmeldung|ID|geändert|noch gespeichert/i.test(err?.message || '') : err.status === 429 || err.status >= 500;
+function queueTick(mediaId, progress, base, add) {
+const account = accountKey(auth);
+saveTickQueue([...queuedTicks().filter(q => !(q.account === account && q.mediaId === mediaId)), { account, mediaId, progress, base, add: !!add, at: Date.now() }]);
+startTickRetries();
+}
+let tickRetryTimer = null, flushingTicks = false;
+function startTickRetries() { if (!tickRetryTimer && queuedTicks().length) tickRetryTimer = setInterval(flushTickQueue, 60000); }
+async function flushTickQueue() {
+if (!auth || flushingTicks || bulkSaving || undoing || navigator.onLine === false) return;
+const mine = queuedTicks().filter(q => q.account === accountKey(auth));
+if (!mine.length) { if (!queuedTicks().length) { clearInterval(tickRetryTimer); tickRetryTimer = null; } return; }
+flushingTicks = true;
+const sent = [], dropped = [];
+try {
+for (const q of mine) {
+  try {
+    const now = await entryForAccount(auth, q.mediaId);
+    const at = now.onList ? now.progress || 0 : 0;
+    if (at >= q.progress && q.progress >= q.base) { sent.push(q); continue; } // already there
+    if (at !== q.base) { dropped.push(q); continue; } // changed elsewhere meanwhile: not overwritten
+    await change(q.mediaId, { progress: q.progress, status: q.add ? 'CURRENT' : undefined });
+    sent.push(q);
+  } catch (err) {
+    if (temporary(err)) break; // still unreachable: next try later
+    dropped.push(q);
+  }
+}
+} finally {
+const id = q => `${q.account}|${q.mediaId}|${q.at}`, done = new Set([...sent, ...dropped].map(id));
+saveTickQueue(queuedTicks().filter(q => !done.has(id(q)))); // a newer tick queued meanwhile stays
+flushingTicks = false;
+}
+if (sent.length || dropped.length) {
+notice([sent.length ? `${sent.length === 1 ? 'Ein Haken wurde' : sent.length + ' Haken wurden'} nachgetragen.` : '',
+  dropped.length ? `${dropped.length === 1 ? 'Ein Haken wurde' : dropped.length + ' Haken wurden'} nicht nachgetragen: die Liste wurde inzwischen woanders geändert.` : ''].filter(Boolean).join(' '));
+load(true);
+}
+}
+addEventListener('online', () => flushTickQueue());
+setTimeout(() => { startTickRetries(); flushTickQueue(); }, 4000);
+// right after a tick, an ↩ next to it for a few seconds takes it back (the same as "Rückgängig" in the notice)
+const TICK_UNDO_MS = 10000;
+let lastTick = null;
+const tickUndo = mediaId => lastTick?.mediaId === mediaId && Date.now() < lastTick.until && undoSteps.at(-1) === lastTick.step
+? '<button type="button" class="tick-undo" data-tick-undo title="Haken zurücknehmen" aria-label="Haken zurücknehmen">↩</button>' : '';
+$('list').addEventListener('click', e => {
+if (!e.target.closest('[data-tick-undo]')) return;
+e.stopPropagation();
+if (undoSteps.at(-1) === lastTick?.step) { lastTick = null; document.querySelectorAll('#list .tick-undo, #list .tick-gone').forEach(x => x.remove()); undo(); }
+});
+const watchButton = (mediaId, episode, add = false) => {
+if (!auth) return '';
+const failed = failedTicks.has(tickKey(mediaId, episode)), queued = queuedTick(mediaId);
+const state = queued ? ' queued' : failed ? ' save-failed' : (myProgress.get(mediaId) || 0) >= episode ? ' done' : '';
+const title = queued ? `Wird gesendet, sobald ${listService()} wieder erreichbar ist` : failed ? 'Nicht gespeichert · Nochmal versuchen' : `Folge ${episode} gesehen (${listService()})`;
+return `${tickUndo(mediaId)}<button class="watch${state}" data-media="${mediaId}" data-ep="${episode}"${add ? ' data-add="1"' : ''}
+    title="${title}">${queued ? '⏳' : failed ? '↻' : '✓'}</button>`;
+};
 const before = new Map();
 $('list').addEventListener('click', e => {
 const step = e.target.closest('[data-step]');
@@ -423,6 +487,7 @@ const b = e.target.closest('.watch');
 if (!b || b.dataset.localWatch || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
 if (Date.now() < tickSettledAt) { e.preventDefault(); return; }
 const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
+if (b.classList.contains('queued')) { flushTickQueue(); return; }
 const key = tickKey(mediaId, episode);
 const current = myProgress.get(mediaId) || 0;
 const retry = failedTicks.get(key);
@@ -458,12 +523,28 @@ row.classList.add('just-saved');
 row.insertAdjacentHTML('beforeend', `<span class="saved-tag" role="status">✓ ${progress >= first ? 'Gespeichert' : 'Zurückgesetzt'}</span>`);
 await new Promise(r => setTimeout(r, TICK_HOLD_MS));
 }
+lastTick = { mediaId, step: undoSteps.at(-1), until: Date.now() + TICK_UNDO_MS, title, result, at: [...document.querySelectorAll('#list .row')].indexOf(row) };
+const step = lastTick.step;
+setTimeout(() => { if (lastTick?.step === step) lastTick = null; document.querySelectorAll('#list .tick-undo, #list .tick-gone').forEach(x => x.remove()); }, TICK_UNDO_MS);
 } catch (err) {
+if (temporary(err)) {
+queueTick(mediaId, progress, current, b.dataset.add);
+notice(`${title}: ${listService()} ist gerade nicht erreichbar. Der Haken wird automatisch gesendet, sobald es wieder geht.`);
+} else {
 failedTicks.set(key, { current, progress });
-b.title = `Nicht gespeichert: ${err.message}`;
-notice(`${title} nicht gespeichert: ${err.message}. Du kannst es nochmal versuchen.`);
+b.title = 'Nicht gespeichert · Nochmal versuchen';
+notice(err.status === 401 ? `${title}: nicht gespeichert, die Anmeldung ist abgelaufen. Bitte neu verbinden.` : `${title}: nicht gespeichert. Versuchs in einer Minute nochmal.`);
+}
 }
 await load(true);
+// the show left the list (all caught up, or hidden as watched): a slim line in its place keeps ↩ at hand
+if (lastTick?.mediaId === mediaId && tickUndo(mediaId) && !document.querySelector(`#list .watch[data-media="${mediaId}"]`)) {
+const line = document.createElement('div');
+line.className = 'tick-gone';
+line.innerHTML = `<span>✓ ${esc(lastTick.title)}: ${esc(lastTick.result)}</span><button type="button" class="pill" data-tick-undo>↩ Rückgängig</button>`;
+const spot = document.querySelectorAll('#list .row')[lastTick.at];
+spot ? (spot.closest('.shared') || spot).before(line) : $('list').append(line);
+}
 tickSettledAt = Date.now() + TICK_SETTLE_MS;
 });
 const SMILEYS = ['🙁', '😐', '🙂'];
@@ -510,7 +591,7 @@ $('scoreDlg').close();
 toScore = toScore.filter(t => t.media.id !== mediaId || !score);
 remember([record], score ? `${title}: mit ${showScore(record.after.score)} bewertet` : `${title}: Bewertung entfernt`);
 load(true);
-} catch (e) { $('scoreMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+} catch (e) { $('scoreMsg').textContent = notSaved(e); }
 }
 $('list').addEventListener('click', e => {
 const b = e.target.closest('[data-score-media]');

@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-21T12:30:00Z', name: 'Leere Tage erklärt, Abhaken mit Bestätigung' };
+const LAST_FEATURE = { at: '2026-11-21T13:30:00Z', name: 'Haken zurücknehmen und automatisch nachtragen' };
 const PATCH_NOTES = [
 { id: '2026-11-18', title: 'Troddl: your own reviews, Metacritic style', items: [
 'New in Mehr › Spaß: Troddl. Everyone picks a pen name of their own (the others only ever see it) and writes real reviews: a score from 0 to 100 and at least 300 characters.',

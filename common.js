@@ -302,6 +302,11 @@ const parseTime = time => (time || '').match(/^(\d{1,2})[:.](\d{2})/)?.slice(1).
 // the votes helper's address (config.json previewVotesUrl); '' when it isn't set up
 const votesApi = async () => { const url = (await config().catch(() => ({}))).previewVotesUrl; return typeof url === 'string' && /^https:\/\//.test(url) ? url.replace(/\/$/, '') : ''; };
 // This browser's storage: private windows or blocked storage throw, and then nothing is kept
+// "Nicht gespeichert …" for a save that failed: a passing problem (no connection, the service busy or down,
+// saved at the same moment) says to try again in a minute; anything else keeps its own explanation
+const passing = e => e?.name === 'TypeError' || e?.name === 'TimeoutError' || e?.name === 'AbortError' ||
+  /failed to fetch|networkerror|load failed|antwortet (gerade nicht|5\d\d|429)|gleichzeitig gespeichert|nicht erreichbar/i.test(e?.message || '');
+const notSaved = (e, what = 'Nicht gespeichert') => passing(e) ? `${what}. Versuchs in einer Minute nochmal.` : `${what}: ${String(e?.message || e).replace(/\.$/, '')}.`;
 const stash = {
   get: key => { try { return localStorage.getItem(key); } catch { return null; } },
   // a saved JSON value; broken or missing data gives the fallback

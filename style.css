@@ -1833,3 +1833,8 @@ body.solo.hide-watched #list .day.all-seen .day-all-seen { display: block; }
 .alone-row:has(.watch.done)::before { opacity: calc(var(--art-strength) * .35) !important; }
 .alone-row:has(.watch.done) .title, .alone-row:has(.watch.done) .title a, .alone-row:has(.watch.done) .ep { color: var(--muted); }
 .alone-row:has(.watch.done) img { opacity: .7; }
+/* a tick waiting for AniList / MyAnimeList (sent on its own later), and ↩ right after a tick */
+.watch.queued { color: var(--muted); border-style: dashed; border-color: var(--muted); background: transparent; font-size: 13px; }
+.tick-undo { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 9px; color: var(--muted); background: transparent; border-color: var(--line); font-size: 15px; line-height: 1; animation: ghost-in .12s ease-out; }
+.tick-undo:hover { color: var(--text); border-color: var(--muted); }
+.tick-gone { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; padding: 6px 8px 6px 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 13px; animation: ghost-in .12s ease-out; }
