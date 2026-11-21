@@ -1444,6 +1444,8 @@ body.catchup #list .catchup-overflow > :last-child { margin-bottom: 9px; }
 .season-match { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 5px 0; font-size: 13.5px; border-top: 1px solid var(--line); }
 .season-match:first-of-type { border-top: 0; }
 .season-match > span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.starting-soon .season-match { align-items: center; }
+.soon-cover { width: 22px; height: 31px; object-fit: cover; border-radius: 4px; flex: none; }
 
 /* U34: Normal / Kurz for the Discord message */
 .discord-format { margin-left: auto; }

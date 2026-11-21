@@ -111,3 +111,5 @@
 .awards-tracks button.playing { box-shadow: inset 3px 0 0 var(--accent); background: var(--today); }
 .awards-tracks b { font-size: 13px; }
 .awards-tracks small { color: var(--muted); font-size: 12px; }
+.awards-thumb { width: 24px; height: 34px; object-fit: cover; border-radius: 4px; flex: none; }
+.awards-thumb[hidden] { display: none; }
