@@ -149,7 +149,10 @@ async function writeSeasons(bySeason) {
   try { old = JSON.parse(await readFile(SEASONS_OUT, 'utf8')).seasons || {}; } catch {}
   const seasons = {};
   const known = Object.fromEntries(Object.values(old).flat().filter(x => x?.cover).map(x => [x.livechartId, x.cover]));
-  await addCovers(Object.values(bySeason).flat(), known);
+  const all = Object.values(bySeason).flat();
+  await addCovers(all, known);
+  const bare = all.filter(c => !c.list.cover).map(c => c.list.english || c.list.romaji);
+  console.log(`Covers: ${all.length - bare.length}/${all.length}${bare.length ? ' (none for ' + bare.join(', ') + ')' : ''}`);
   for (const [season, cards] of Object.entries(bySeason)) {
     const before = old[season]?.length || 0;
     if (cards.length * 2 < before) {
