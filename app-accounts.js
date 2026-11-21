@@ -331,7 +331,7 @@ if (id === 'moveButtons') syncMoveEditor();
 }
 // Settings export/import: only display choices travel, never logins, the GitHub key or cached data.
 const EXPORTED_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'textsize', 'contrast', 'servicePriority', 'view', 'mode', 'soloPerson', 'ownPerson', 'people',
-  'who', 'behind', 'hideWatched', 'hideEmptyDays', 'personInBar', 'markOnOpen', 'dropButtons', 'dropAlways', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
+  'who', 'personalShows', 'behind', 'hideWatched', 'hideEmptyDays', 'personInBar', 'markOnOpen', 'dropButtons', 'dropAlways', 'moveButtons', 'singleEpisodes', 'primeChoices', 'fallbackSources', 'covers',
   'notListedOpen', 'listProvider', 'anilistUser', 'recentSearches'];
 {
   const select = $('servicePriority');
@@ -422,6 +422,11 @@ openSearch(true);
 $('viewCatchup').click();
 });
 $('who').checked = stash.get('who') !== '0';
+$('personalShows').checked = stash.get('personalShows') !== '0';
+$('personalShows').onchange = () => {
+  stash.set('personalShows', $('personalShows').checked ? '1' : '0');
+  if (view === 'week') load(true);
+};
 $('who').onchange = () => {
 stash.set('who', $('who').checked ? '1' : '0');
 redraw();
@@ -481,3 +486,4 @@ if (rows.length) selectRow(rows[Math.min(focusedRow, rows.length - 1)]);
 restoreAnchor(anchor);
 };
 }
+

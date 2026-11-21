@@ -356,6 +356,7 @@ const covered = activeTabs(tabs, new Date());
 if (!activeTabs(tabs, start).every(t => covered.includes(t))) return null;
 }
 const ids = new Set(Object.keys(streamsDe.status).filter(id => /^\d+$/.test(id)).map(Number));
+for (const id of personalWatching()) ids.add(id);
 for (const m of rewatchMedia.values()) if (m?.id && m.status !== 'FINISHED') ids.add(m.id);
 return ids.size ? [...ids].sort((a, b) => a - b) : null;
 }
@@ -1212,7 +1213,7 @@ else if (mv) merged.set(show, { ...slot, tag: mv.tag, time: mv.time, from: slot,
 whoBySheet.set(s, who);
 // Only the selected person's Solo view includes their private, untimed plan.
 // Add after group moves so those moves cannot schedule a personal entry.
-if (!everyone && mode === 'solo' && people.length === 1) {
+if (!everyone && $('personalShows')?.checked && mode === 'solo' && people.length === 1) {
   for (const [show, slot] of alonePicks(s, people[0])) {
     merged.set(show, slot);
     who.set(show, [people[0]]);
@@ -1259,7 +1260,23 @@ show = matches.find(s => chosen.get(sheet).has(s)) || matches[0];
 if (show) break;
 }
 const slot = show && chosen.get(sheet).get(show);
-if (!slot) continue;
+if (!slot) {
+  // Currently watching on the connected list, but not in this person's group plan.
+  // Use real episode dates; no weekly estimates, shifts, or shared editor actions.
+  if (!everyone && personalWatching().has(m.id) && !show?.hidden) {
+    const day = days.find(d => d.date.toDateString() === when.toDateString());
+    if (day) {
+      const existing = day.rows.find(r => r.slot?.alone && r.m?.id === m.id);
+      if (existing) { if (!existing.episodes.includes(episode)) existing.episodes.push(episode); }
+      else day.rows.push({ it, m, when, episodes: [episode],
+        show: show || { romaji: m.title.romaji, english: m.title.english },
+        slot: { alone: true, time: '', tag: DAY_TAGS[(day.date.getDay() + 6) % 7] },
+        links: streamLinks(m, show?.wo, m.title.english || m.title.romaji), who: [soloPerson] });
+      if (show) found.add(show);
+    }
+  }
+  continue;
+}
 rememberCover(m);
 const links = streamLinks(m, show.wo, m.title.english || m.title.romaji);
 const day = days.find(d => d.date.toDateString() === watchDay(when, slot.tag, slot.time).toDateString());
@@ -1689,5 +1706,6 @@ const listUser = () => friendList.value || $('anilistUser').value.trim();
 // The person selected in Solo is also the default person in Catch-up and Non-seasonal.
 const listProfiles = new Map();
 let localPlanPeople = [];
+
 
 

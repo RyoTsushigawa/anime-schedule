@@ -1,4 +1,14 @@
 // Main page, part 4: watched episodes and scores (✓, undo, sync between lists).
+let personalListOwner = null;
+let personalWatchingIds = new Set();
+function rememberPersonalWatching(account, entries) {
+personalListOwner = account;
+personalWatchingIds = new Set(entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status)).map(e => Number(e.media.id)));
+}
+function personalWatching() {
+if (!$('personalShows')?.checked || !auth || personalListOwner !== auth || mode !== 'solo' || soloPerson !== ownPerson()) return new Set();
+return new Set([...personalWatchingIds].filter(id => ['CURRENT', 'REPEATING'].includes(knownEntries.get(id)?.status)));
+}
 async function loadMe() {
 if (!auth) return;
 const loadedFor = auth;
@@ -12,6 +22,7 @@ saveAccounts(); $('anilistUser').value = account.name; updateConnect();
 const { entries } = await MAL.list(account);
 if (auth !== account) return;
 for (const e of entries) { myProgress.set(e.media.id, e.progress); knownEntries.set(e.media.id, { progress:e.progress, status:e.status, score:e.score }); }
+rememberPersonalWatching(account, entries);
 await loadToScore();
 return;
 }
@@ -38,6 +49,7 @@ for (const { progress, status, media } of ownEntries) {
 myProgress.set(media.id, progress);
 knownEntries.set(media.id, { progress, status });
 }
+rememberPersonalWatching(loadedFor, ownEntries);
 try {
 const dropped = await anilist(`query ($user: String) { MediaListCollection(userName: $user, type: ANIME, status: DROPPED) {
       lists { entries { progress status media { id } } } } }`, { user: auth.name });
@@ -632,3 +644,4 @@ const cancelled = endBulkSave();
 finishBulkSave(records, all.length, 'heutigen Serien', stopped, cancelled);
 load(true);
 });
+
