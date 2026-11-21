@@ -4,6 +4,13 @@ const SHEET = 'https://docs.google.com/spreadsheets/d/' +
 const FALLBACK_TAB = { name: 'Guckplan Herbst 2026', gid: '488548700' };
 const SEASON_MONTH = { winter: 0, frühling: 3, fruehling: 3, frühjahr: 3, sommer: 6, herbst: 9 };
 const DEFAULT_PERSON = 'MaRyo';
+// the Sheet's tab list (names and gids): one request shared by everything that asks within a minute
+let sheetIndexCache = null;
+function sheetIndex() {
+if (!sheetIndexCache || Date.now() - sheetIndexCache.at > 60000)
+sheetIndexCache = { at: Date.now(), text: fetch(SHEET + '/htmlview', { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error('Google Sheet antwortet ' + r.status); return r.text(); }).catch(e => { sheetIndexCache = null; throw e; }) };
+return sheetIndexCache.text;
+}
 const $ = id => document.getElementById(id);
 function parseCsv(text) {
 const rows = [[]];
@@ -37,7 +44,7 @@ fresh.catch(e => { console.warn(`${key}: kept the saved copy,`, e); onFresh(e); 
 return Promise.resolve(JSON.parse(saved));
 }
 async function guckplanTabs() {
-const html = await (await fetch(SHEET + '/htmlview')).text();
+const html = await sheetIndex();
 const all = new Map([...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].map(([, name, gid]) => [name.trim(), gid]));
 const tabs = [];
 for (const [name, gid] of all) {

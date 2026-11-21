@@ -418,6 +418,17 @@ for (const [id, cls] of [['hideWatched', 'hide-watched'], ['hideEmptyDays', 'hid
   document.body.classList.toggle(cls, $(id).checked);
   $(id).onchange = () => { stash.set(id, $(id).checked ? '1' : '0'); document.body.classList.toggle(cls, $(id).checked); };
 }
+// Drop-Button: one choice (off / on hover / always) over the two stored switches dropButtons and dropAlways
+{
+  const mode = () => !$('dropButtons').checked ? 'off' : $('dropAlways').checked ? 'always' : 'hover';
+  const show = () => { for (const b of document.querySelectorAll('[data-drop-mode]')) b.setAttribute('aria-pressed', b.dataset.dropMode === mode()); };
+  for (const b of document.querySelectorAll('[data-drop-mode]')) b.onclick = () => {
+    for (const [id, on] of [['dropButtons', b.dataset.dropMode !== 'off'], ['dropAlways', b.dataset.dropMode === 'always']])
+      if ($(id).checked !== on) { $(id).checked = on; $(id).dispatchEvent(new Event('change')); }
+    show();
+  };
+  show();
+}
 $('behind').checked = stash.get('behind') === '1';
 $('behind').onchange = () => {
 stash.set('behind', $('behind').checked ? '1' : '0');

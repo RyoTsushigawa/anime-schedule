@@ -1659,7 +1659,6 @@ body.hide-empty-days #list .day.empty:not(.is-today) { display: none; }
 /* "Drop-Button immer sichtbar": the drop button looks like a button all the time, not only on hover;
    the switch itself only shows while the drop button is on */
 body.drop-always .drop:not(.dropped), body.drop-always .row .drop { opacity: 1; border-color: var(--line); color: var(--text); }
-#settingsMenu .settings-options:has(#dropButtons:not(:checked)) .drop-always-toggle { display: none; }
 /* optional reason for an absence (picked from a short list) */
 .away-reason { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
 .away-reason small { color: var(--muted); font-size: 12px; }
@@ -1838,3 +1837,10 @@ body.solo.hide-watched #list .day.all-seen .day-all-seen { display: block; }
 .tick-undo { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 9px; color: var(--muted); background: transparent; border-color: var(--line); font-size: 15px; line-height: 1; animation: ghost-in .12s ease-out; }
 .tick-undo:hover { color: var(--text); border-color: var(--muted); }
 .tick-gone { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; padding: 6px 8px 6px 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 13px; animation: ghost-in .12s ease-out; }
+/* the open search bar holds everything about search, also clearing the recent searches */
+.search-history-clear { display: none; flex: none; color: var(--muted); }
+.search.open .search-history-clear:not([hidden]) { display: inline-grid; place-items: center; }
+#settingsMenu .settings-options .toggle:last-of-type:nth-of-type(odd) { grid-column: 1 / -1; }
+.season-end { margin: -2px 0 12px; color: var(--muted); font-size: 13px; }
+.season-end a { color: var(--text); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
+.season-end a:hover { color: var(--accent); }

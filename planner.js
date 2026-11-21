@@ -60,7 +60,7 @@ clearTimeout(noticeTimer);
 noticeTimer = setTimeout(() => { $('notice').hidden = true; }, 3000);
 }
 async function seasonListTabs() {
-const html = await (await fetch(SHEET + '/htmlview')).text();
+const html = await sheetIndex();
 return [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)]
 .map(([, name, gid]) => ({ name: JSON.parse(`"${name}"`).trim(), gid }))
 .map(t => ({ ...t, season: t.name.match(/^(Winter|Frühling|Sommer|Herbst)\s+(\d{4})$/i) }))
@@ -177,7 +177,7 @@ for (const i of batch) result[i] = data[`s${i}`]?.media?.[0] || null;
 return result;
 }
 async function seasonplanBusy(data) {
-const html = await (await fetch(SHEET + '/htmlview')).text();
+const html = await sheetIndex();
 const gid = html.match(/\{name: "Seasonpl(?:ä|\\u00e4)ne", pageUrl: "[^"]*gid=(\d+)/)?.[1];
 if (!gid) return [];
 const res = await fetch(`${SHEET}/export?format=csv&gid=${gid}`);

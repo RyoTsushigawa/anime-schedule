@@ -6,7 +6,7 @@ import { APP_SOURCE } from './app-source.mjs';
 const html = readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const css = readFileSync(new URL('../style.css',import.meta.url),'utf8');
 const menu = html.match(/<div id="settingsMenu"[^>]*>([\s\S]*?)\n<\/div>\n<\/div>\n<div class="settings">/)?.[1] || '';
-const quick = menu.match(/<div class="settings-primary"[^>]*>([\s\S]*?)<section class="settings-shown">/)?.[1] || '';
+const quick = menu.match(/<div class="settings-primary"[^>]*>([\s\S]*?)<section class="settings-shown[^"]*">/)?.[1] || '';
 
 test('Settings shows only Time, Density and Design before the extra options',()=>{
  assert.ok(menu,'settings menu found');
@@ -20,9 +20,9 @@ test('Settings shows only Time, Density and Design before the extra options',()=
 
 test('Less-used settings live in native disclosure panels by topic; help, patch notes and feedback stay at the bottom',()=>{
  const summary=[...menu.matchAll(/<details class="settings-fold"><summary>([^<]+)/g)].map(m=>m[1]);
- assert.deepEqual(summary,['Streaming','Lesbarkeit','Einstellungen sichern']);
+ assert.deepEqual(summary,['Weitere Optionen','Streaming','Lesbarkeit','Einstellungen sichern']);
  // the on/off options are visible right away, not folded
- assert.match(menu,/<section class="settings-shown">\n<div class="menu-label">Anzeigen<\/div>/);
+ assert.match(menu,/<section class="settings-shown week-only">\n<div class="menu-label">Anzeigen<\/div>/);
  assert.match(menu,/<div class="settings-footer"><button id="helpButton"[\s\S]*id="notesButton"[\s\S]*id="feedbackLink"/);
  // the old global "details" margin must not reach the menu, and a fold with no visible tools is not shown
  assert.match(css,/#settingsMenu details \{ margin: 0;/);
