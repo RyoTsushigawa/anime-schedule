@@ -81,8 +81,8 @@ function verifiedTrailer(entry) {
   seconds:Number.isInteger(entry.seconds)&&entry.seconds>0&&entry.seconds<3600?entry.seconds:0
  }:null;
 }
-// Covers (idea 87): from seasons.json (looked up once a week by tools/season-covers.mjs); the few it lacks
-// from AniList, by the show's MyAnimeList ID where known, else by title; kept for a week
+// Covers (idea 87): from seasons.json (looked up once a week by tools/season-covers.mjs, which also asks
+// MyAnimeList); a show the Sheet names differently from LiveChart from AniList, by MAL ID or title; kept for a week
 let covers=new Map();
 // A blank URL does not count as successfully cached: retries must be allowed.
 const hasCover=(key)=>typeof covers.get(key)==='string' && /^https:\/\//.test(covers.get(key));
@@ -129,26 +129,7 @@ async function loadCovers(tab,list){
    }
   }catch{} // A later visit can retry only the missing covers.
  }
- // still missing (no AniList entry yet): MyAnimeList through Jikan, see jikanCovers
- if(typeof jikanCovers==='function')await jikanCovers(list.filter(s=>!hasCover(s.key)));
  try{localStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),covers:[...covers].filter(([,url])=>/^https:\/\//.test(url))}));}catch{}
-}
-// Covers AniList doesn't have (e.g. "Peropero★Sparkles"): MyAnimeList's, through the public Jikan API (no login);
-// by MAL number when the season data has one, else by title. One request at a time (Jikan allows ~3 per second).
-async function jikanCovers(missing){
- const term=show=>String(show.english||show.title||'').trim().replace(/\s*\((?:TV|ONA|OVA|Movie|\d{4})\)\s*$/i,'');
- for(const show of missing.slice(0,10)){
-  const id=malLink(show).url.match(/myanimelist\.net\/anime\/(\d+)/)?.[1];
-  try{
-   const response=await fetch(id?'https://api.jikan.moe/v4/anime/'+id:'https://api.jikan.moe/v4/anime?limit=1&q='+encodeURIComponent(term(show)),{signal:AbortSignal.timeout(8000)});
-   if(response.ok){
-    const data=(await response.json()).data;
-    const url=(Array.isArray(data)?data[0]:data)?.images?.jpg?.image_url;
-    if(/^https:\/\/cdn\.myanimelist\.net\//.test(url||''))covers.set(show.key,url);
-   }
-  }catch{}
-  await new Promise(r=>setTimeout(r,400));
- }
 }
 // the show's LiveChart entry in seasons.json (MyAnimeList link, cover picture)
 function indexEntry(show){

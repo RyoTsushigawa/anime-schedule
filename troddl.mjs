@@ -1,6 +1,6 @@
 // Troddl (troddl.html): the group's reviews, Metacritic style. Everyone writes under a pen name they choose;
 // the page shows pen names only. Storage: the votes helper (workers/season-votes, /troddl). Rules: troddl-core.mjs.
-import { MIN_TEXT, MAX_TEXT, scoreClass, seasonLabel, seasonKey, summarize, reviewCount } from './troddl-core.mjs';
+import { MIN_TEXT, MAX_TEXT, scoreClass, seasonLabel, seasonKey, summarize, reviewCount, critic, leanText } from './troddl-core.mjs';
 
 const SHARED = { MaRyo: ['Marvin', 'Ryo'] };
 let api = '', data = { reviews: [] }, people = [], editing = null, turn = 0;
@@ -65,7 +65,7 @@ function drawList() {
       <summary>${s.cover ? `<img src="${esc(s.cover)}" alt="" loading="lazy">` : '<span class="troddl-nocover"></span>'}
         <span class="troddl-show-text"><b>${esc(s.title)}</b><small>${esc(s.season || '')}${s.season ? ' · ' : ''}${reviewCount(s.count)}</small></span>${badge(s.rating, true)}</summary>
       ${s.reviews.map(r => `<article class="troddl-review${r.mine ? ' mine' : ''}">
-        <div class="troddl-review-head">${badge(r.score)}<b>${esc(r.pen)}</b><small>${date(r.at)}${r.editedAt ? ' · bearbeitet' : ''}</small>
+        <div class="troddl-review-head">${badge(r.score)}<button type="button" class="troddl-critic" data-critic="${esc(r.pen)}" title="Alle Reviews von ${esc(r.pen)}">${esc(r.pen)}</button><small>${date(r.at)}${r.editedAt ? ' · bearbeitet' : ''}</small>
         ${r.mine ? `<span class="troddl-own"><button type="button" class="pill" data-edit="${s.mediaId}">Bearbeiten</button><button type="button" class="pill" data-delete="${s.mediaId}">Löschen</button></span>` : ''}</div>
         <p>${esc(r.text)}</p>${reactBar(r)}</article>`).join('')}
       ${data.me?.pen && !s.reviews.some(r => r.mine) ? `<button type="button" class="pill troddl-add" data-add="${s.mediaId}">Eigene Review schreiben</button>` : ''}
@@ -226,7 +226,25 @@ $('troddlForm').onsubmit = async e => {
   } catch (err) { $('troddlFormMsg').textContent = 'Nicht veröffentlicht: ' + err.message; check(false); }
 };
 $('troddlWrite').onclick = () => openWriter();
+// a critic's profile: average, how strict next to the others, all their reviews
+function openCritic(pen) {
+  const c = critic(data.reviews, pen);
+  $('troddlCriticBody').innerHTML = `<h2>${esc(pen)}</h2>
+    <p class="troddl-critic-stats">${badge(c.average)}<span>${reviewCount(c.count)} · Ø ${c.average ?? '–'}<br><small>${esc(leanText(c))}</small></span></p>
+    <ul class="troddl-critic-list">${c.reviews.map(r => `<li><button type="button" data-show="${r.mediaId}">${r.cover ? `<img src="${esc(r.cover)}" alt="" loading="lazy">` : '<span class="troddl-nocover"></span>'}<span class="troddl-critic-text"><b>${esc(r.title)}</b><small>${esc(r.season || '')}</small></span>${badge(r.score)}</button></li>`).join('')}</ul>`;
+  $('troddlCriticDlg').showModal();
+}
+$('troddlCriticBody').onclick = e => {
+  const id = e.target.closest('[data-show]')?.dataset.show;
+  if (!id) return;
+  $('troddlCriticDlg').close();
+  $('troddlSeason').value = ''; drawList();
+  const show = document.getElementById('m' + id);
+  if (show) { show.open = true; show.scrollIntoView({ block: 'start' }); }
+};
 $('troddlList').onclick = async e => {
+  const pen = e.target.closest('[data-critic]')?.dataset.critic;
+  if (pen) { openCritic(pen); return; }
   const react = e.target.closest('[data-react]');
   if (react) {
     const who = person();

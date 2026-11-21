@@ -87,3 +87,15 @@
 .troddl-react-btn span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .troddl-react-btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .troddl-react-btn:disabled { cursor: default; opacity: .6; }
+/* critic profiles: the pen name opens all their reviews */
+.troddl-critic { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.troddl-critic:hover, .troddl-critic:focus-visible { color: var(--accent); text-decoration: underline; }
+#troddlCriticBody h2 { margin: 0 0 .5rem; font-size: 20px; }
+.troddl-critic-stats { display: flex; align-items: center; gap: .7rem; margin: 0 0 .8rem; }
+.troddl-critic-stats small { color: var(--muted); font-size: 12.5px; }
+.troddl-critic-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; max-height: 55vh; overflow: auto; }
+.troddl-critic-list button { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.troddl-critic-list button:hover { border-color: var(--accent); }
+.troddl-critic-list img, .troddl-critic-list .troddl-nocover { width: 32px; height: 45px; object-fit: cover; border-radius: 5px; flex: none; }
+.troddl-critic-text { flex: 1; min-width: 0; display: grid; }
+.troddl-critic-list small { color: var(--muted); font-size: 12px; }

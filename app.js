@@ -788,7 +788,13 @@ const name = nextSeasonName();
 const html = await (await fetch(SHEET + '/htmlview', { cache: 'no-cache' })).text();
 const gid = [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].find(([, n]) => n.trim() === name)?.[2];
 if (!gid) return { name, shows: [] };
-const rows = parseCsv(await (await fetch(`${SHEET}/export?format=csv&gid=${gid}`)).text()).map(r => r.map(c => c.trim()));
+const [csv, catalog] = await Promise.all([fetch(`${SHEET}/export?format=csv&gid=${gid}`).then(r => r.text()),
+  fetch('seasons.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({}))]);
+const rows = parseCsv(csv).map(r => r.map(c => c.trim()));
+// covers from seasons.json (the weekly LiveChart job), by romaji or English title
+const [season, year] = name.split(' ');
+const covers = new Map((catalog.seasons?.[`${({ Winter: 'winter', Frühling: 'spring', Sommer: 'summer', Herbst: 'fall' })[season]}-${year}`] || [])
+  .flatMap(e => e.cover ? [e.romaji, e.english].filter(Boolean).map(t => [norm(t), e.cover]) : []));
 const h = rows.findIndex(r => r.includes('Anime Titel'));
 if (h < 0) return { name, shows: [] };
 const cols = rows[h], title = cols.indexOf('Anime Titel'), english = cols.indexOf('Eng Anime Titel'), startCol = cols.indexOf('Startdatum');
@@ -797,7 +803,7 @@ const voters = cols.map((n, i) => [n, i]).filter(([n, i]) => i > cols.indexOf('U
 const shows = rows.slice(h + 1).flatMap(r => {
   const m = (r[startCol] || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   const yes = voters.filter(([, i]) => /^ja,?$/i.test(r[i] || '')).map(([n]) => n);
-  return r[title] && m && yes.length ? [{ title: r[english] || r[title], date: `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`, yes }] : [];
+  return r[title] && m && yes.length ? [{ title: r[english] || r[title], cover: covers.get(norm(r[title])) || covers.get(norm(r[english] || '')) || '', date: `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`, yes }] : [];
 });
 return { name, shows };
 }
@@ -813,7 +819,7 @@ if (!soon.length || view !== 'week' || document.getElementById('startingSoon')) 
 const box = document.createElement('section');
 box.id = 'startingSoon';
 box.className = 'season-matches starting-soon';
-box.innerHTML = `<h3>Startet bald · ${esc(data.name)}</h3>${soon.map(s => `<div class="season-match"><b>${esc(s.title)}</b><span>${esc(shortDayDate(new Date(s.date + 'T12:00:00')))}</span><span class="who" title="${esc(s.yes.join(', '))}">${s.yes.length}× Ja</span></div>`).join('')}`;
+box.innerHTML = `<h3>Startet bald · ${esc(data.name)}</h3>${soon.map(s => `<div class="season-match">${s.cover ? `<img class="soon-cover" src="${esc(s.cover)}" alt="" loading="lazy">` : ''}<b>${esc(s.title)}</b><span>${esc(shortDayDate(new Date(s.date + 'T12:00:00')))}</span><span class="who" title="${esc(s.yes.join(', '))}">${s.yes.length}× Ja</span></div>`).join('')}`;
 $('list').querySelector('.weekline')?.after(box);
 }
 // Suche über die ganze Season (idea 132): in the Zeitplan, shows of the shown week's Guckplan that match but

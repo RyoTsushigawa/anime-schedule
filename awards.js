@@ -44,7 +44,7 @@ let voteApi = '';
 const ID = typeof Identity === 'undefined' ? null : Identity;
 const drawIdentity = () => { if (ID && $('awardsIdentity')) ID.draw($('awardsIdentity'), revealed() ? '' : personSelect.value, () => drawShared()); };
 let shared = null; // the helper's answer for this season: { revealed, voters, ballots? } or { error }
-let showInfo = new Map(); // title → { genres, sequel, chars: [{ name, role }] } from AniList, when reachable
+let showInfo = new Map(); // title → { genres, sequel, chars: [{ name, role }], cover } from AniList, when reachable
 let ceddl = []; // Ceddl of the Year candidates: [{ id, name, anime, by }]
 let myScores = new Map(); // title → this person's own Troddl score (0–100), when they're confirmed: a hint while voting
 let themes = new Map(); // title → [{ type: 'OP' | 'ED', slug, song, artists, audio }] from AnimeThemes, when reachable
@@ -236,9 +236,14 @@ function renderBallot() {
           if (next.some(Boolean)) ballot[id] = next.slice(0, next.findLastIndex(Boolean) + 1); else delete ballot[id];
           saveDraft();
         };
-        inputs.forEach(i => { i.onchange = update; });
+        // a show pick gets its cover next to it (characters and songs are picked from their show's group already)
+        const thumb = !kind || kind === 'new' || kind === 'sequel' || kind.startsWith('genre:') ? document.createElement('img') : null;
+        const showCover = () => { const url = showInfo.get(inputs[0].value)?.cover; if (thumb) { thumb.hidden = !url; if (url) thumb.src = url; } };
+        if (thumb) { thumb.className = 'awards-thumb'; thumb.alt = ''; thumb.loading = 'lazy'; thumb.onerror = () => { thumb.hidden = true; }; showCover(); }
+        inputs.forEach(i => { i.onchange = () => { update(); showCover(); }; });
         if (kind === 'couple') { const x = document.createElement('span'); x.className = 'awards-x'; x.textContent = '×'; row.append(inputs[0], x, inputs[1]); }
         else row.append(inputs[0]);
+        if (thumb) row.append(thumb);
         box.append(row);
       });
       markSkipped();
@@ -262,14 +267,14 @@ async function seasonIds() {
   return { streams, wanted };
 }
 async function loadShowInfo(request) {
-  const key = 'awardsInfo2:' + seasonSelect.value;
+  const key = 'awardsInfo3:' + seasonSelect.value;
   try {
     const kept = JSON.parse(localStorage.getItem(key) || 'null');
     if (kept && Date.now() - kept.at < 864e5) return new Map(kept.info);
   } catch {}
   const { streams, wanted } = await seasonIds();
   if (!wanted.size) return new Map();
-  const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id genres relations { edges { relationType } } characters(sort: [ROLE, RELEVANCE], perPage: 10) { edges { role node { name { full } } } } } } }';
+  const query = 'query ($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { id coverImage { medium } genres relations { edges { relationType } } characters(sort: [ROLE, RELEVANCE], perPage: 10) { edges { role node { name { full } } } } } } }';
   const res = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query, variables: { ids: [...wanted.keys()].slice(0, 50) } }) });
   if (!res.ok) throw new Error('AniList ' + res.status);
   const info = new Map();
@@ -277,6 +282,7 @@ async function loadShowInfo(request) {
     // AniList's PREQUEL link, or the title says so ("Blue Box Season 2"): new entries often lack the link
     genres: m.genres || [], sequel: (m.relations?.edges || []).some(e => e.relationType === 'PREQUEL') || SEQUEL_TITLE.test([wanted.get(m.id), ...(streams.status?.[m.id]?.titles || [])].join(' ')),
     chars: (m.characters?.edges || []).map(e => ({ name: e.node?.name?.full, role: e.role })).filter(c => c.name),
+    cover: m.coverImage?.medium || '',
   });
   try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), info: [...info] })); } catch {}
   return info;
