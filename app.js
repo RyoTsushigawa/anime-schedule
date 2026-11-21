@@ -783,6 +783,13 @@ const days = Math.ceil((start - now) / 864e5);
 if (days < 1 || days > 14) return '';
 return `<a class="pill preview-call" href="season-preview.html" title="Trailer ansehen und abstimmen, welche Serien wir schauen">Season Preview ${esc(nextSeasonName(now))} · ${days === 1 ? 'morgen' : `noch ${days} Tage`}</a>`;
 }
+// the last two weeks of a season: what belongs to its end, in one quiet line (no countdown)
+function seasonEndLine(now = new Date()) {
+const end = new Date(now.getFullYear(), (Math.floor(now.getMonth() / 3) + 1) * 3, 1);
+if ((end - now) / 864e5 > 14) return '';
+const name = `${SOON_SEASONS[Math.floor(now.getMonth() / 3)]} ${now.getFullYear()}`;
+return `<p class="season-end">Season-Ende ${esc(name)} · <a href="awards.html">Awards abstimmen</a> · <a href="wrapped.html">Wrapped</a> · <a href="troddl.html">Troddl-Reviews</a></p>`;
+}
 async function loadStartingSoon() {
 const name = nextSeasonName();
 const html = await sheetIndex();
@@ -1679,7 +1686,7 @@ const preview = previewCall();
 $('miscMenu').querySelector('a[href="season-preview.html"]')?.toggleAttribute('hidden', !!preview);
 // U: the week arrows sit at both ends of the day strip, not in the controls row
 const stepPrev = '<button type="button" class="icon strip-step" data-week-step="-1" aria-label="Vorherige Woche" title="Vorherige Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>', stepNext = '<button type="button" class="icon strip-step" data-week-step="1" aria-label="Nächste Woche" title="Nächste Woche"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
-html = `${staleNotice}<div class="weekline">${stepPrev}${strip}${stepNext}${alerts}${preview}${alertsBody}</div>` + html;
+html = `${staleNotice}<div class="weekline">${stepPrev}${strip}${stepNext}${alerts}${preview}${alertsBody}</div>${seasonEndLine()}` + html;
 const lastWeek = new Date(start); lastWeek.setDate(lastWeek.getDate() - 7);
 html = notesHtml(['week:' + lastWeek.getTime(), 'week:' + start.getTime()]) + html;
 document.body.style.removeProperty('--time-width');
