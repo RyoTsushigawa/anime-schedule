@@ -208,7 +208,11 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <option value="Mo.">Mo</option><option value="Di.">Di</option><option value="Mi.">Mi</option><option value="Do.">Do</option>
 <option value="Fr.">Fr</option><option value="Sa.">Sa</option><option value="So.">So</option>
 </select>
-<input id="moveTime" placeholder="Uhrzeit, z. B. 21:00" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (leer = nächster freier Slot)">
+<div class="move-time-stepper" role="group" aria-label="Uhrzeit anpassen">
+<button type="button" id="moveEarlier" class="pill" aria-label="30 Minuten früher" title="30 Minuten früher">−30</button>
+<input id="moveTime" placeholder="z. B. 1930" inputmode="numeric" maxlength="5" aria-label="Uhrzeit (auch 1930 oder 19; leer = nächster freier Slot)">
+<button type="button" id="moveLater" class="pill" aria-label="30 Minuten später" title="30 Minuten später">+30</button>
+</div>
 </div>
 <div class="dlg-row">
 <div class="segmented" role="group" aria-label="Für">
@@ -221,7 +225,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="move-warn" id="moveWarn" role="status"></div>
 <div class="muted" id="moveMsg"></div>
 <div class="dlg-row move-actions">
-<button type="button" id="moveSave" class="pill primary">Verschieben</button>
+<button type="button" id="moveSave" class="pill primary" title="Verschieben (Ctrl/⌘ + Enter)" aria-keyshortcuts="Control+Enter Meta+Enter">Verschieben</button>
 <button type="button" id="moveBoth" class="pill" hidden>Beide verschieben</button>
 </div>
 <div class="dlg-row move-actions move-skip">
@@ -401,7 +405,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 </div>
 <div class="muted" id="dayMsg"></div>
 <div class="dlg-row">
-<button type="button" id="daySave" class="pill primary">Speichern</button>
+<button type="button" id="daySave" class="pill primary" title="Speichern (Ctrl/⌘ + Enter)" aria-keyshortcuts="Control+Enter Meta+Enter">Speichern</button>
 <button value="cancel" class="pill">Abbrechen</button>
 </div>
 </form>
@@ -608,7 +612,8 @@ Dateien der Seite ändern darf: einen Fine-grained Token für <b>anime-schedule<
 <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Zeitplan / Catch-up / Other</dd></div>
 <div><dt><kbd>G</kbd></dt><dd>Solo / Gruppe</dd></div>
 <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Nächste / vorherige Serie</dd></div>
-<div><dt><kbd>Enter</kbd></dt><dd>Stream der gewählten Serie öffnen</dd></div>
+<div><dt><kbd>Enter</kbd></dt><dd>In der Suche: zum ersten Treffer. Bei gewählter Serie: Stream öffnen</dd></div>
+<div><dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Enter</kbd></dt><dd>Verschieben- oder Tageseditor speichern</dd></div>
 <div><dt><kbd>W</kbd></dt><dd>Folge der gewählten Serie als gesehen markieren</dd></div>
 <div><dt><kbd>/</kbd></dt><dd>Serien suchen</dd></div>
 <div><dt><kbd>Esc</kbd></dt><dd>Suche oder Menü schließen, oder Serie abwählen</dd></div>

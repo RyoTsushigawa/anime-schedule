@@ -12,6 +12,8 @@ test('Nachschlagen lists AniList matches, marks Guckplan shows and links MAL onl
     await p.click(p.$('viewWeek'));
     p.$('search').value = 'alpha';
     p.$('search').dispatchEvent(new p.window.Event('input'));
+    await p.settle();
+    await p.click(p.$('lookupMore'));
     await p.settle(1200);
     const box = p.$('titleLookup');
     assert.ok(box, 'lookup shown');

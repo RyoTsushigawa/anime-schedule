@@ -682,10 +682,14 @@ return (first ? button(first) : '') + more + alternatives.map(alternativeButton)
 }
 const preferredService = () => stash.get('servicePriority') || 'Crunchyroll';
 const searchKey = (...titles) => `data-search="${esc(titles.filter(Boolean).map(norm).join(' '))}"`;
+function matchesSearch(key, query = $('search').value) {
+const whole = norm(query), words = query.trim().split(/\s+/).map(norm).filter(Boolean);
+return !whole || key.includes(whole) || (words.length > 1 && words.every(word => key.includes(word)));
+}
 function applySearch() {
 const q = norm($('search').value);
 const items = [...document.querySelectorAll('#list [data-search]')];
-for (const el of items) el.classList.toggle('hidden-by-search', !!q && !el.dataset.search.includes(q));
+for (const el of items) el.classList.toggle('hidden-by-search', !!q && !matchesSearch(el.dataset.search));
 for (const day of document.querySelectorAll('#list .day'))
 day.classList.toggle('hidden-by-search', !!q && !day.querySelector('[data-search]:not(.hidden-by-search)'));
 for (const box of document.querySelectorAll('#list .shared:not([data-search])'))
@@ -734,12 +738,21 @@ titleLookup(q);
 const LOOKUP_FIELDS = 'id idMal siteUrl format seasonYear title { english romaji native }';
 const lookupCache = new Map();
 let lookupTimer = null, lookupTurn = 0;
-function titleLookup(q) {
+function titleLookup(q, requested = false) {
 document.getElementById('titleLookup')?.remove();
+document.getElementById('lookupMore')?.remove();
 clearTimeout(lookupTimer);
+const turn = ++lookupTurn;
 if (q.length < 3 || !['week', 'catchup'].includes(view)) return;
+if (!requested && document.querySelector('#list [data-search]:not(.hidden-by-search)')) {
+const button = document.createElement('button'); button.id = 'lookupMore'; button.className = 'pill'; button.type = 'button';
+button.textContent = 'Weitere Titel suchen'; button.title = 'Zusätzlich auf AniList suchen';
+button.onclick = () => titleLookup(q, true);
+$('matchCount')?.append(button);
+return;
+}
 if (lookupCache.has(q)) { drawLookup(q, lookupCache.get(q)); return; }
-const turn = ++lookupTurn, raw = $('search').value.trim();
+const raw = $('search').value.trim();
 lookupTimer = setTimeout(async () => {
   const nickIds = Object.entries(nicknames).filter(([k, v]) => /^\d+$/.test(k) && norm(v).includes(q)).map(([k]) => Number(k)).slice(0, 5);
   try {
@@ -840,7 +853,7 @@ for (const sheet of lastWeekRender[2].values()) {
 if (!sheet?.people) continue;
 for (const person of sheet.people) for (const [show, slot] of picks(sheet, person)) {
 const key = [show.romaji, show.english].filter(Boolean).map(norm).join(' ');
-if (!key.includes(q) || weekKeys.some(k => k === key || (norm(show.romaji) && k.includes(norm(show.romaji))))) continue;
+if (!matchesSearch(key) || weekKeys.some(k => k === key || (norm(show.romaji) && k.includes(norm(show.romaji))))) continue;
 const entry = found.get(key) || { show, slot, who: [] };
 if (!entry.slot?.tag && slot?.tag) entry.slot = slot;
 entry.who.push(person);
@@ -885,7 +898,12 @@ function rememberSearch() {
 }
 drawRecentSearches();
 $('search').addEventListener('input', () => { clearTimeout(recentTimer); recentTimer = setTimeout(rememberSearch, 1500); });
-$('search').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(recentTimer); rememberSearch(); } });
+$('search').addEventListener('keydown', e => {
+if (e.key !== 'Enter' || e.isComposing || e.repeat) return;
+clearTimeout(recentTimer); rememberSearch();
+const row = keyRows().find(r => !r.hidden && getComputedStyle(r).display !== 'none');
+if (row && searching()) { e.preventDefault(); selectRow(row); row.scrollIntoView?.({block:'center',behavior:'auto'}); }
+});
 // U: on a phone the day's buttons can wrap to the start of a line; the menu then opens to the right of ⋯
 // instead of off the screen's left edge, and is never wider than the screen
 function keepMenuInView(menu) {

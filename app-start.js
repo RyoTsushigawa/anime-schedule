@@ -166,6 +166,15 @@ if (fresh.length && !document.querySelector('dialog[open]')) showNotes(fresh);
 }
 // N39 Datenstand: when each source was last updated, and whether a saved copy is in use
 const ago = time => { if (!time) return 'unbekannt'; const d = new Date(time); return `${d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; };
+// Save only these explicit editors; the shortcut never marks episodes or submits other dialogs.
+document.addEventListener('keydown', event => {
+if (event.defaultPrevented || event.repeat || event.isComposing || event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+const dialog = event.target.closest?.('#moveDlg[open], #dayDlg[open]');
+if (!dialog || dialog.saveToken || dialog.getAttribute('aria-busy') === 'true') return;
+const button = $(dialog.id === 'moveDlg' ? 'moveSave' : 'daySave');
+if (!button || button.disabled) return;
+event.preventDefault(); button.click();
+});
 document.addEventListener('click', event => {
   const button = event.target.closest('[data-plan-diagnostic]');
   if (button?.disabled) return;

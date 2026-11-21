@@ -608,12 +608,41 @@ function weekRows() {
   for (let i = 0; i < 7; i++) { const d = weekStart(weekOffset); d.setDate(d.getDate() + i); const day = typeof discordDay === 'function' ? discordDay(isoDay(d)) : null; if (day) out.push(...day.groups.flat().map(r => ({ ...r, date: day.date }))); }
   return out;
 }
+function normalizeMoveTime(raw) {
+const value = String(raw || '').trim();
+if (!value) return '';
+const match = value.match(/^(\d{1,2})[:.](\d{2})$/) || value.match(/^(\d{1,2})(\d{2})$/) || value.match(/^(\d{1,2})$/);
+if (!match) return null;
+const hour = Number(match[1]), minute = Number(match[2] || 0);
+if (hour > 29 || minute > 59) return null;
+return `${String(hour % 24).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+}
+function shiftedMoveTime(by) {
+const value = normalizeMoveTime($('moveTime').value);
+if (!value) return null;
+const [h,m] = value.split(':').map(Number), at = (h < NIGHT_UNTIL ? h + 24 : h) * 60 + m + by;
+if (at < NIGHT_UNTIL * 60 || at >= (24 + NIGHT_UNTIL) * 60) return null;
+return `${String(Math.floor(at / 60) % 24).padStart(2,'0')}:${String(at % 60).padStart(2,'0')}`;
+}
+function syncMoveTimeSteps() {
+for (const [id, by] of [['moveEarlier',-30],['moveLater',30]]) $(id).disabled = shiftedMoveTime(by) === null || !!$('moveDlg').saveToken;
+}
+for (const [id, by] of [['moveEarlier',-30],['moveLater',30]]) $(id).onclick = () => {
+const value = shiftedMoveTime(by); if (value === null || $('moveDlg').saveToken) return;
+$('moveTime').value = value; syncMoveTimeSteps(); drawMoveWarnings();
+};
+$('moveTime').addEventListener('input', syncMoveTimeSteps);
+$('moveTime').addEventListener('blur', () => {
+const value = normalizeMoveTime($('moveTime').value);
+if (value !== null) $('moveTime').value = value;
+syncMoveTimeSteps(); drawMoveWarnings();
+});
 function moveWarnings() {
   if (!moving || !lastWeekRender) return '';
   const rows = weekRows(), key = moving.key;
   const mine = rows.find(r => r.show && norm(r.show.romaji || r.show.english) === key);
   const day = weekStart(weekOffset); day.setDate(day.getDate() + DAY_TAGS.indexOf($('moveTag').value));
-  const hm = parseTime($('moveTime').value.trim());
+  const hm = parseTime(normalizeMoveTime($('moveTime').value));
   const out = [];
   if (hm) {
     const at = new Date(day); at.setHours(hm[0] < NIGHT_UNTIL ? hm[0] + 24 : hm[0], hm[1], 0, 0);
@@ -676,6 +705,7 @@ setMoveScope('week');
 $('moveMsg').textContent = destination.parallel ? 'Sie teilt sich dann den Slot mit der Zielserie.' : '';
 }
 drawMoveWarnings();
+syncMoveTimeSteps();
 $('moveDlg').showModal();
 }
 let movesUndo = null, delayUndo = null;
@@ -768,8 +798,9 @@ out.push(next);
 const moveShows = shows => {
 const double = $('moveDouble').getAttribute('aria-pressed') === 'true';
 const long = $('moveLong').getAttribute('aria-pressed') === 'true';
-const time = $('moveTime').value.trim();
-if (time && !parseTime(time)) { $('moveMsg').textContent = 'Uhrzeit wie 21:00, oder leer für den nächsten freien Slot.'; return; }
+const time = normalizeMoveTime($('moveTime').value);
+if (time === null) { $('moveMsg').textContent = 'Gültige Uhrzeit wie 1930 oder 19:30, oder leer für den nächsten freien Slot.'; $('moveTime').focus(); return; }
+$('moveTime').value = time;
 const keys = shows.map(s => s.key);
 // "Bis …": one move per week up to the chosen one; afterwards the Guckplan slot counts again by itself
 if (moveScope === 'until' && !double && !long) {
