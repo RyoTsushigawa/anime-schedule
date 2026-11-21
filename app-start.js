@@ -67,7 +67,7 @@ try { sessionStorage.setItem('resumePlace', JSON.stringify({ weekOffset, range, 
 reloadPage();
 };
 // When the newest feature went live: set it with each new feature (the Patch-Notes show the time since)
-const LAST_FEATURE = { at: '2026-11-21T12:00:00Z', name: 'Troddl-Kritikerprofile' };
+const LAST_FEATURE = { at: '2026-11-21T12:30:00Z', name: 'Leere Tage erklärt, Abhaken mit Bestätigung' };
 const PATCH_NOTES = [
 { id: '2026-11-18', title: 'Troddl: your own reviews, Metacritic style', items: [
 'New in Mehr › Spaß: Troddl. Everyone picks a pen name of their own (the others only ever see it) and writes real reviews: a score from 0 to 100 and at least 300 characters.',
@@ -736,9 +736,15 @@ stash.set('view', view);
 if (view === 'week') refreshPaceNav();
 }
 setView(view);
-$('viewWeek').onclick = () => { setView('week'); enter = { y: 4 }; load(); };
-$('viewCatchup').onclick = () => { setView('catchup'); enter = { y: 4 }; load(); };
-$('viewPace').onclick = () => { setView('pace'); enter = { y: 4 }; load(); };
+// each view keeps its place: back from Catch-up, the Zeitplan is where you left it (and the other way round)
+const viewPlaces = {};
+function switchView(next) {
+if (next !== view) { viewPlaces[view] = scrollY; resumeY = viewPlaces[next] ?? null; }
+setView(next); enter = { y: 4 }; load();
+}
+$('viewWeek').onclick = () => switchView('week');
+$('viewCatchup').onclick = () => switchView('catchup');
+$('viewPace').onclick = () => switchView('pace');
 let singleEpisodes = stash.get('singleEpisodes') === '1';
 function setSingleEpisodes(on) {
 singleEpisodes = on;
@@ -770,6 +776,29 @@ friendList.focus();
 });
 $('modeSolo').onclick = () => { setMode('solo'); redraw(); };
 $('modeGroup').onclick = () => { setMode('group'); redraw(); };
+// an empty day the group does have shows on: one click shows those people's shows too (in the group view)
+$('list').addEventListener('click', e => {
+const reveal = e.target.closest('[data-reveal-group]');
+if (!reveal) return;
+for (const name of reveal.dataset.revealGroup.split(',').filter(Boolean)) selectedPeople.add(name);
+if (mode === 'solo') selectedPeople.add(soloPerson);
+stash.set('people', JSON.stringify([...selectedPeople]));
+document.querySelectorAll('.chip[data-name]').forEach(b => b.setAttribute('aria-pressed', selectedPeople.has(b.dataset.name)));
+updateGroupButton();
+if (mode === 'solo') $('modeGroup').click(); else redraw();
+});
+// "Gesehene ausblenden" emptied a whole day: say so there, with a way to show them again
+function markAllSeen() {
+if (!globalThis.document?.documentElement) return; // the page is gone (tests)
+for (const day of document.querySelectorAll('#list .day[data-date]')) {
+  const rows = [...day.querySelectorAll('.row')], seen = rows.length > 0 && rows.every(r => r.querySelector('.watch.done'));
+  day.classList.toggle('all-seen', seen);
+  if (seen && !day.querySelector('.day-all-seen')) day.querySelector('h2')?.insertAdjacentHTML('afterend', '<p class="day-all-seen">Alles gesehen. <button type="button" class="pill" data-show-watched>Gesehene zeigen</button></p>');
+}
+}
+new MutationObserver(markAllSeen).observe($('list'), { childList: true });
+markAllSeen();
+$('list').addEventListener('click', e => { if (e.target.closest('[data-show-watched]')) { $('hideWatched').checked = false; $('hideWatched').dispatchEvent(new Event('change')); } });
 // U: a short label, so switching to Gruppe doesn't push the week onto a new line; the names are in the tooltip
 function updateGroupButton() {
 const names = [...selectedPeople];

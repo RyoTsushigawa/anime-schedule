@@ -414,9 +414,14 @@ box.querySelector('[data-step="1"]').disabled = count >= out - first + 1;
 const watch = box.nextElementSibling;
 if (watch?.classList.contains('watch')) { watch.dataset.ep = first + count - 1; watch.title = `Bis Folge ${first + count - 1} gesehen (${listService()})`; watch.setAttribute('aria-label', watch.title); }
 });
+// after a tick the card stays a moment with "✓ Gespeichert" before the list changes, and right after it changed
+// a click is ignored briefly: the next show may just have slid under the pointer
+const TICK_HOLD_MS = 900, TICK_SETTLE_MS = 500;
+let tickSettledAt = 0;
 $('list').addEventListener('click', async e => {
 const b = e.target.closest('.watch');
 if (!b || b.dataset.localWatch || !auth || b.disabled || bulkSaving || pendingChanges.has(Number(b.dataset.media)) || b.dataset.select) return;
+if (Date.now() < tickSettledAt) { e.preventDefault(); return; }
 const mediaId = Number(b.dataset.media), episode = Number(b.dataset.ep);
 const key = tickKey(mediaId, episode);
 const current = myProgress.get(mediaId) || 0;
@@ -447,12 +452,19 @@ if (record.after.status === 'COMPLETED' && record.before.status !== 'COMPLETED' 
 openScore(mediaId, title);
 loadToScore().then(() => load(true));
 }
+const row = b.closest('.row');
+if (row) {
+row.classList.add('just-saved');
+row.insertAdjacentHTML('beforeend', `<span class="saved-tag" role="status">✓ ${progress >= first ? 'Gespeichert' : 'Zurückgesetzt'}</span>`);
+await new Promise(r => setTimeout(r, TICK_HOLD_MS));
+}
 } catch (err) {
 failedTicks.set(key, { current, progress });
 b.title = `Nicht gespeichert: ${err.message}`;
 notice(`${title} nicht gespeichert: ${err.message}. Du kannst es nochmal versuchen.`);
 }
-load(true);
+await load(true);
+tickSettledAt = Date.now() + TICK_SETTLE_MS;
 });
 const SMILEYS = ['🙁', '😐', '🙂'];
 const scoreFormat = () => auth?.scoreFormat || 'POINT_10_DECIMAL';

@@ -409,9 +409,19 @@ document.body.style.setProperty('--time-width', Math.max(0, ...times.map(t => t.
 applySearch();
 syncSavingButtons();
 restore();
+showListAge(local ? null : listLoadedAt.get(String(user || '').toLowerCase()));
 resumeScroll();
 if (revealMarkBar) { revealMarkBar = false; window.scrollTo({ top: 0 }); }
 playEnter();
+}
+// "Stand 10:42" next to the refresh button: whether AniList changes made since then can be here yet
+function showListAge(time) {
+const age = $('listAge');
+age.hidden = !time;
+if (!time) return;
+const d = new Date(time), today = d.toDateString() === new Date().toDateString();
+age.textContent = 'Stand ' + (today ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : savedAt(time));
+age.title = `Liste zuletzt von ${listService()} geladen: ${d.toLocaleString('de-DE')}. Änderungen danach kommen mit ↻.`;
 }
 let planShowsCache = { key: '', time: 0, media: [] };
 async function missingPlanShows(plan, entries, localMode = false) {

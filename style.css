@@ -1821,3 +1821,15 @@ header .header-primary .header-games { margin-right: -2px; }
 .alone-plan > h3 { margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .alone-plan > h3 span { font-weight: 400; }
 .alone-row { border-style: dashed; }
+.list-age { align-self: center; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row.just-saved { border-color: color-mix(in srgb, var(--green) 70%, var(--line)); }
+.saved-tag { position: absolute; right: 10px; bottom: 4px; padding: 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--green) 22%, var(--card)); color: var(--text); font-size: 11px; font-weight: 650; pointer-events: none; animation: ghost-in .12s ease-out; }
+.day-all-seen { display: none; margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+body.solo.hide-watched #list .day.all-seen .day-all-seen { display: block; }
+.day h2 .day-reveal { margin-left: 6px; padding: 2px 9px; font-size: 12px; }
+#settingsReset { justify-self: start; }
+/* "Allein" rows have no time to pass: once ticked they're dimmed like an aired group show */
+.alone-row:has(.watch.done) { background: transparent; box-shadow: none; }
+.alone-row:has(.watch.done)::before { opacity: calc(var(--art-strength) * .35) !important; }
+.alone-row:has(.watch.done) .title, .alone-row:has(.watch.done) .title a, .alone-row:has(.watch.done) .ep { color: var(--muted); }
+.alone-row:has(.watch.done) img { opacity: .7; }

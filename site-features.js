@@ -7,7 +7,7 @@ const SITE_FEATURES = [
     'Guckplan live aus dem Google Sheet der Gruppe', 'Sendezeiten von AniList', 'Release-Zeit, Guck-Zeit oder beide',
     'Deutsche Stream-Links pro Serie', 'Alternative Quellen (AniWorld, SubsPlease, Nyaa, 0neko)', 'Bevorzugter Dienst und Prime-Link-Auswahl',
     'Wochen blättern und „Heute“', 'Angezeigte Tage wählen', 'Eigene Ansicht („Für“: nur die Serien einer Person)',
-    'Wer schaut mit (Zuschauer)', 'Offene Folgen', 'Gesehene ausblenden (eigene Ansicht)', 'Leere Tage ausblenden', 'Stream-Links eines Tages kopieren', 'Folge abhaken (AniList)', 'MyAnimeList-Verbindung', 'Auto-Abhaken beim Öffnen',
+    'Wer schaut mit (Zuschauer)', 'Offene Folgen', 'Gesehene ausblenden (eigene Ansicht)', 'Leere Tage ausblenden', 'Leere Tage sagen warum: nichts geplant, nur für andere (mit „Gruppe ansehen“) oder alles gesehen', 'Abgehakte Folge bleibt kurz mit „✓ Gespeichert“ stehen', 'Allein-Serien werden nach dem Abhaken abgedunkelt', 'Stream-Links eines Tages kopieren', 'Folge abhaken (AniList)', 'MyAnimeList-Verbindung', 'Auto-Abhaken beim Öffnen',
     'Drop-Button (auf Wunsch immer sichtbar)', 'Bewerten', 'Hinweise zu Pausen und unbestätigten Zeiten', 'Ersatz bei AniList-Ausfall (letzte gespeicherte Woche)',
     'Als App auf dem Startbildschirm, mit Offline-Kopie und „Neu laden“ bei Updates', 'Nachschlagen (auch mit Spitznamen), letzte Suchen löschbar',
     'Wochenübersicht pro Person', 'Startet bald (Premieren der nächsten Season, mit Cover)', 'Finale- und „Fortsetzung angekündigt“-Hinweise',
@@ -27,13 +27,13 @@ const SITE_FEATURES = [
     'Nach Person filtern', 'Wirkung auf den Plan (überspringen, aufrücken, Namen durchgestrichen)', 'Warum jemand fehlt', 'Vor dem Speichern: welche Serien dadurch ausfallen', 'Überlappende Wiederholungen markiert', 'Gelöschte Abwesenheit rückgängig machen',
   ]],
   ['Catch-up & Other', [
-    'Catch-up-Ansicht', 'Catch-up sortieren', 'Anpinnen', '„Später“ für einzelne Serien, einzeln zurückholen', 'Mehrere auf einmal ändern und Folgen-Stepper', 'Ältere Serien (eigenes Tempo)',
+    'Catch-up-Ansicht', 'Zeitplan und Catch-up merken sich beim Wechseln, wo du warst', '„Stand“ neben dem Aktualisieren-Knopf', 'Catch-up sortieren', 'Anpinnen', '„Später“ für einzelne Serien, einzeln zurückholen', 'Mehrere auf einmal ändern und Folgen-Stepper', 'Ältere Serien (eigenes Tempo)',
     'Allein schauen', 'Lokale Liste mit Backup (Export und Import)',
   ]],
   ['Einstellungen & Werkzeuge', [
     'Wartung: alle Prüfungen an einem Ort', 'Person schnell wechseln (Person in der Leiste)',
     'Hell / dunkel', 'Akzentfarben, auch die eigene Guckplan-Farbe', 'Dichte (bequem, kompakt, nur Text)', 'Schriftgröße', 'Hoher Kontrast',
-    'Einstellungen exportieren und importieren', 'Datenstand', 'Sync-Verlauf', 'Listen-Check (auch Fremdeinträge aus dem Guckplan entfernen)', 'Kontoverbindung prüfen',
+    'Einstellungen exportieren und importieren', 'Anzeige mit einem Klick zurücksetzen', 'Datenstand', 'Sync-Verlauf', 'Listen-Check (auch Fremdeinträge aus dem Guckplan entfernen)', 'Kontoverbindung prüfen',
     'AniList ↔ MAL vergleichen', 'Ausgewählte Einträge von AniList auf MyAnimeList übernehmen', 'Hilfe mit Themen und Tastenkürzeln, immer erreichbar über das ? neben dem Namen', 'Willkommen beim ersten Besuch: drei kurze Schritte', 'Patch-Notes mit „Letztes neues Feature“', 'Feedback-Link',
   ]],
   ['Season Preview', [
