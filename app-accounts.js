@@ -1,9 +1,12 @@
 // Main page, part 3: AniList/MAL lists and accounts, the menus, theme, accent and settings.
+// when each list was last loaded from AniList / MyAnimeList (shown next to Catch-up's refresh button)
+const listLoadedAt = new Map();
 async function anilistList(user, fresh = false, publicOnly = false) {
 if (!publicOnly && auth?.provider === 'mal' && user.toLowerCase() === auth.name.toLowerCase()) {
 const result = await MAL.list(auth, fresh);
 if (fresh && result.stale) throw new Error('MyAnimeList ist gerade nicht erreichbar; die gespeicherte Liste bleibt erhalten.');
 setNote('list:' + user.toLowerCase(), result.stale ? `MyAnimeList antwortet nicht: Liste vom ${savedAt(result.stale)}.` : null);
+listLoadedAt.set(user.toLowerCase(), result.stale || result.time || listLoadedAt.get(user.toLowerCase()) || Date.now());
 return result.entries.filter(e => ['CURRENT', 'REPEATING'].includes(e.status));
 }
 const key = 'list:' + user.toLowerCase();
@@ -11,16 +14,19 @@ let saved = null;
 try { saved = JSON.parse(localStorage.getItem(key)); } catch {}
 if (!fresh && Array.isArray(saved?.entries) && Number.isFinite(saved.time) && Date.now() - saved.time >= 0 && Date.now() - saved.time < LIST_CACHE_MS) {
   setNote(key, null);
+  listLoadedAt.set(user.toLowerCase(), saved.time);
   return fixTitles(saved.entries);
 }
 try {
 const entries = (await anilist(LIST_QUERY, { user })).MediaListCollection.lists.flatMap(l => l.entries);
 stash.set(key, JSON.stringify({ time: Date.now(), entries }));
 setNote(key, null);
+listLoadedAt.set(user.toLowerCase(), Date.now());
 return entries;
 } catch (e) {
 if (fresh || !Array.isArray(saved?.entries)) throw e;
 setNote(key, `${unreachable('AniList')}: Liste von ${user} vom ${savedAt(saved.time)}.`);
+listLoadedAt.set(user.toLowerCase(), saved.time);
 return fixTitles(saved.entries);
 }
 }
@@ -346,6 +352,14 @@ $('settingsExport').onclick = () => {
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'anime-schedule-einstellungen.json' });
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   notice('Einstellungen exportiert.');
+};
+// one click back to the default look: only how things are shown, never accounts, progress, people or plan edits
+const DISPLAY_SETTINGS = ['theme', 'accent', 'accentNow', 'time', 'sort', 'density', 'textsize', 'contrast', 'who', 'behind', 'hideWatched', 'hideEmptyDays',
+  'personInBar', 'dropButtons', 'dropAlways', 'moveButtons', 'singleEpisodes', 'covers', 'notListedOpen', 'personalShows'];
+$('settingsReset').onclick = () => {
+  if (!confirm('Anzeige auf den Anfang zurücksetzen? Konten, Fortschritt, Personen und Planänderungen bleiben.')) return;
+  for (const key of DISPLAY_SETTINGS) stash.drop(key);
+  location.reload();
 };
 $('settingsImport').onclick = () => $('settingsFile').click();
 $('settingsFile').onchange = async () => {

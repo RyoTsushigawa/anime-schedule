@@ -123,6 +123,8 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <details class="settings-fold"><summary>Einstellungen sichern<span class="settings-fold-arrow" aria-hidden="true"></span></summary><div class="settings-fold-content"><section>
 <div class="settings-caption">Anzeige-Einstellungen als Datei, z. B. für ein anderes Gerät (ohne Logins und Schlüssel)</div>
 <div class="settings-pair"><button id="settingsExport" class="pill" type="button" title="Deine Anzeige-Einstellungen als Datei speichern (ohne Logins und Schlüssel)">Exportieren</button><button id="settingsImport" class="pill" type="button" title="Einstellungen aus einer exportierten Datei übernehmen">Importieren</button></div><input id="settingsFile" type="file" accept="application/json,.json" hidden>
+<div class="settings-caption">Aussehen und Anzeige wie am Anfang. Konten, Fortschritt, Personen und Planänderungen bleiben.</div>
+<button id="settingsReset" class="pill" type="button">Anzeige zurücksetzen</button>
 </section></div></details>
 </div>
 <div class="settings-footer"><button id="helpButton" class="menu-item" aria-haspopup="dialog" title="Anleitung und Tastenkürzel">Hilfe<kbd>?</kbd></button><button id="notesButton" class="menu-item" aria-haspopup="dialog" title="Was sich zuletzt geändert hat">Patch-Notes<small id="notesAge" class="notes-age"></small></button><a id="feedbackLink" class="menu-item" target="_blank" rel="noopener" title="Feedback oder Wünsche im Discord" hidden>Feedback<span aria-hidden="true">↗</span></a></div>
@@ -170,6 +172,7 @@ object-src 'none'; base-uri 'none'; form-action 'none'">
 <div class="catchup-only list-controls" role="group" aria-label="Aufhol-Liste">
 <select id="friendList" class="pill" aria-label="Aufhol-Liste auswählen"><option value="">Eigene Liste</option></select>
 <button id="refreshCatchup" type="button" class="pill" title="Liste jetzt von AniList / MyAnimeList aktualisieren" aria-label="Liste jetzt aktualisieren"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<span id="listAge" class="list-age" hidden></span>
 </div>
 <button id="markAllStart" class="pill catchup-only seasonal-only" title="Alle als gesehen markieren" aria-label="Alle als gesehen markieren" hidden>Alle gesehen</button>
 <select id="soloPerson" class="pill" aria-label="Person"></select>
