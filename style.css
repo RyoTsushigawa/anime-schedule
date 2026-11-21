@@ -1841,3 +1841,7 @@ body.solo.hide-watched #list .day.all-seen .day-all-seen { display: block; }
 .season-end { margin: -2px 0 12px; color: var(--muted); font-size: 13px; }
 .season-end a { color: var(--text); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
 .season-end a:hover { color: var(--accent); }
+/* new features since the last look at the list: a dot on "Mehr" and on "N Funktionen", "Neu" in the list */
+#miscButton.has-new, #siteFeatureCount.has-new { position: relative; }
+#miscButton.has-new::after, #siteFeatureCount.has-new::after { content: ''; position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.feature-new { display: inline-block; padding: 0 6px; border-radius: 99px; background: var(--accent); color: var(--accent-text); font-size: 10.5px; font-weight: 700; vertical-align: 1px; }

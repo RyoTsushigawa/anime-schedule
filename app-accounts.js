@@ -240,6 +240,20 @@ featureCount.hidden = false;
 const plannedTotal = SITE_PLANNED.reduce((n, [, items]) => n + items.length, 0);
 $('featuresTabNow').textContent = `Vorhanden · ${featureTotal}`;
 $('featuresTabPlanned').textContent = `Geplant · ${plannedTotal}`;
+// New since your last look: the list's entries you haven't seen yet (short hashes in this browser) get "Neu",
+// and a dot on "Mehr" and on "N Funktionen" until the list is opened. A first visit marks nothing.
+const SEEN_FEATURES = 'featuresSeen';
+const featureId = text => { let h = 5381; for (const c of text) h = (h * 33 ^ c.codePointAt(0)) >>> 0; return h.toString(36); };
+const allFeatureIds = () => SITE_FEATURES.flatMap(([, items]) => items.map(featureId));
+let seenFeatures = new Set(stash.json(SEEN_FEATURES, null) || []);
+if (!stash.get(SEEN_FEATURES)) { seenFeatures = new Set(allFeatureIds()); stash.set(SEEN_FEATURES, JSON.stringify([...seenFeatures])); }
+const unseenFeatures = () => allFeatureIds().filter(id => !seenFeatures.has(id)).length;
+function markNewFeatures() {
+  const n = unseenFeatures();
+  for (const el of [$('miscButton'), featureCount]) el.classList.toggle('has-new', n > 0);
+  featureCount.textContent = featureTotal + ' Funktionen · ' + (n ? `${n} neu` : 'alle ansehen');
+}
+markNewFeatures();
 // "Vorhanden": everything live; "Geplant": approved features and updates still to come
 function drawFeatures(planned) {
   const list = planned ? SITE_PLANNED : SITE_FEATURES;
@@ -247,12 +261,19 @@ function drawFeatures(planned) {
   $('featuresTabPlanned').setAttribute('aria-selected', planned);
   $('featuresIntro').textContent = planned ? (plannedTotal ? `${plannedTotal} Funktionen und Updates sind beschlossen und kommen als Nächstes.` : 'Gerade ist alles Beschlossene gebaut. Neue Ideen gern über den Feedback-Link.')
     : `${featureTotal} Funktionen in ${SITE_FEATURES.length} Bereichen.`;
-  $('featuresList').innerHTML = list.map(([area, items]) => `<section><h3>${esc(area)} <span>${items.length}</span></h3><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></section>`).join('');
+  const fresh = i => !planned && !seenFeatures.has(featureId(i));
+  // areas with something new come first, and the new entries first within them
+  const areas = planned ? list : [...list].sort(([, a], [, b]) => Number(b.some(fresh)) - Number(a.some(fresh)));
+  $('featuresList').innerHTML = areas.map(([area, items]) => `<section><h3>${esc(area)} <span>${items.length}</span></h3><ul>${[...items].sort((a, b) => Number(fresh(b)) - Number(fresh(a))).map(i => `<li>${fresh(i) ? '<span class="feature-new">Neu</span> ' : ''}${esc(i)}</li>`).join('')}</ul></section>`).join('');
   $('featuresDlg').scrollTop = 0;
 }
 $('featuresTabNow').onclick = () => drawFeatures(false);
 $('featuresTabPlanned').onclick = () => drawFeatures(true);
-featureCount.onclick = () => { drawFeatures(false); $('featuresDlg').showModal(); $('featuresDlg').scrollTop = 0; };
+featureCount.onclick = () => {
+  drawFeatures(false); $('featuresDlg').showModal(); $('featuresDlg').scrollTop = 0;
+  // seen now: the dot goes, the "Neu" marks stay while the list is open
+  seenFeatures = new Set(allFeatureIds()); stash.set(SEEN_FEATURES, JSON.stringify([...seenFeatures])); markNewFeatures();
+};
 
 $('miscButton').onclick = () => showMenu('miscMenu','miscButton',$('miscMenu').hidden);
 $('miscMenu').addEventListener('click',e=>{ if(e.target.closest('a,button')) showMenu('miscMenu','miscButton',false); });
