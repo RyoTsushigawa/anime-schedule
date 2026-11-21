@@ -2,14 +2,24 @@
 let source = null, target = null, dragWeek = null, touch = null;
 let cardTouch = null, holdTimer = null;
 const hint = $('dragHint');
-const line = document.createElement('div');
-line.className = 'drop-line'; line.hidden = true; line.setAttribute('aria-hidden', 'true');
-document.body.append(line);
-function showLine(day, y, time) {
-const box = day.getBoundingClientRect();
-line.style.top = `${Math.round(y)}px`; line.style.left = `${Math.round(box.left)}px`; line.style.width = `${Math.round(box.width)}px`;
-line.dataset.time = time || 'frei';
-line.hidden = false;
+// live preview: a card where the show would land, so the shows after it visibly make room (with the time that
+// will be saved); beside a show when they'd share the slot. Removed on drop or cancel.
+const ghost = document.createElement('div');
+ghost.className = 'drop-ghost'; ghost.setAttribute('aria-hidden', 'true');
+let ghostAt = '';
+function placeGhost(to) {
+if (!to) { ghost.remove(); ghostAt = ''; return; }
+const key = [to.tag, to.mark, to.time, to.row ? [...to.day.querySelectorAll('.row')].indexOf(to.row) : -1].join('|');
+if (key === ghostAt && ghost.isConnected) return;
+ghostAt = key;
+const beside = to.mark === 'drop-slot';
+ghost.classList.toggle('beside', beside);
+ghost.innerHTML = `<span class="drop-ghost-time">${esc(to.time || 'frei')}${to.parallel ? ' · daneben' : ''}</span><b>${esc(source?.dataset.moveTitle || '')}</b>`;
+// before/after a show of a shared slot: before/after the whole group; "daneben": inside it, after that show
+const anchor = to.row && !beside ? to.row.closest('.shared') || to.row : to.row;
+if (to.mark === 'drop-before') anchor.before(ghost);
+else if (anchor) anchor.after(ghost);
+else { const rows = [...to.day.querySelectorAll('.row')].filter(r => !r.contains(source)), last = rows.at(-1); last ? (last.closest('.shared') || last).after(ghost) : to.day.querySelector('h2').after(ghost); }
 }
 const allowed = () => canMove() && view === 'week' && !document.body.classList.contains('no-move');
 function prepareCards() {
@@ -29,8 +39,9 @@ return element?.closest?.('#list .row')?.querySelector('button.move:not([data-ex
 }
 function clean(suppress = false) {
 clearTimeout(holdTimer); holdTimer = null; cardTouch = null;
+ghost.remove(); ghostAt = '';
 document.querySelectorAll('.drop-day,.drop-slot,.drop-before,.drop-after,.move-dragging').forEach(el=>el.classList.remove('drop-day','drop-slot','drop-before','drop-after','move-dragging'));
-document.body.classList.remove('dnd-moving'); hint.hidden = true; line.hidden = true;
+document.body.classList.remove('dnd-moving'); hint.hidden = true;
 source = null; target = null; touch = null;
 if (suppress) { document.body.dataset.suppressMoveClick = '1'; setTimeout(()=>delete document.body.dataset.suppressMoveClick,400); }
 }
@@ -63,21 +74,11 @@ const times = rows.map(minutes).filter(n=>n!==null);
 return {day,row:null,tag,time:clock(between(times.length ? Math.max(...times) : null, null, false)),parallel:false,mark:'drop-day'};
 }
 function hover(element, y) {
+if (element?.closest?.('.drop-ghost')) return; // over the preview itself: where it is stays the target
 document.querySelectorAll('.drop-day,.drop-slot,.drop-before,.drop-after').forEach(el=>el.classList.remove('drop-day','drop-slot','drop-before','drop-after'));
 target = destination(element, y);
-line.hidden = true;
-if (!target) return;
-line.classList.toggle('beside', target.parallel);
-if (target.parallel && target.mark === 'drop-slot') {
-target.row.classList.add('drop-slot');
-showLine(target.row, target.row.getBoundingClientRect().top, `${target.time} · daneben`);
-} else {
-const rows = [...target.day.querySelectorAll('.row')].filter(r=>!r.contains(source));
-const last = rows.at(-1)?.getBoundingClientRect(), head = target.day.querySelector('h2').getBoundingClientRect();
-const box = target.row?.getBoundingClientRect();
-const at = target.mark === 'drop-before' ? box.top - 5 : target.mark === 'drop-after' ? box.bottom + 4 : (last ? last.bottom + 4 : head.bottom + 4);
-showLine(target.day, at, target.parallel ? target.time + ' · daneben' : target.time);
-}
+if (target?.mark === 'drop-slot') target.row.classList.add('drop-slot');
+placeGhost(target);
 }
 function drop() {
 const button = source, to = target;

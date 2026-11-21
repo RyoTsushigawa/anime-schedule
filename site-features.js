@@ -18,7 +18,7 @@ const SITE_FEATURES = [
   ]],
   ['Plan bearbeiten', [
     '„Speichert… / Gespeichert“ mit „Erneut versuchen“', 'Konflikte beim gleichzeitigen Bearbeiten werden erklärt', 'Mehrere Folgen skippen mit Zeitvorschau und Rückgängig',
-    'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig, bis zu einer Woche oder dauerhaft), auch per Ziehen', 'Warnungen beim Verschieben: Überschneidung, vor der Ausstrahlung', 'Tag bearbeiten',
+    'Bearbeitungszugang (GitHub-Schlüssel)', 'Serien verschieben (einmalig, bis zu einer Woche oder dauerhaft), auch per Ziehen, mit Vorschau, wo die Serie landet', 'Warnungen beim Verschieben: Überschneidung, vor der Ausstrahlung', 'Tag bearbeiten',
     'Serie überspringen, mit „Zeiten beibehalten“', 'Verspätungen für alle, mit Gründe-Liste', 'Nachholen: Folgen in den Plan legen',
     'Automatisch einplanen', 'Zeit pro Abend beim Nachholen', 'Pause überspringen, spätere Serien rücken auf', 'Link-Meldungen prüfen und korrigieren', 'Bearbeiter-Zugang für vertraute Leute (ohne den GitHub-Schlüssel)', 'Discord-Zustellung',
   ]],
