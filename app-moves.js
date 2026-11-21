@@ -687,7 +687,7 @@ const was = week ? moves.find(m => m.show === key && m.week === thisWeek) : null
 const double = !!(was?.double || was?.long);
 let next = moves.filter(m => !(m.show === key && (m.week === week || (!week && m.week === thisWeek))));
 if (!home || double || (week && next.some(m => m.show === key && !m.week))) next = next.concat({ show: key, title: b.dataset.moveTitle, tag: to.tag, time: to.time, week, ...(was?.double && { double: true }), ...(was?.long && { long: true }) });
-try { await saveMoves(next); } catch (e) { notice(`Nicht verschoben: ${e.message}`); return; }
+try { await saveMoves(next); } catch (e) { notice(notSaved(e, 'Nicht verschoben')); return; }
 notice(`${b.dataset.moveName}: ${slotLabel(to)}${to.parallel ? ' (daneben)' : ''}, ${week ? 'diese Woche' : 'ab jetzt'}.`, true);
 movesUndo = before;
 load(true);
@@ -720,7 +720,7 @@ function beginEditorSave(dialogId, messageId) {
  };
  dialog.addEventListener('close', finish, { once: true });
  return { active: () => dialog.saveToken === token && dialog.open, finish,
-  failed: error => { if (dialog.saveToken === token) message.textContent = 'Nicht gespeichert: ' + error.message + '. Deine Eingaben bleiben erhalten. Bitte erneut speichern.'; } };
+  failed: error => { if (dialog.saveToken === token) message.textContent = notSaved(error) + ' Deine Eingaben bleiben erhalten.'; } };
 }
 let refreshingViews = 0;
 async function withRefreshFeedback(refresh, action) {

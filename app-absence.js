@@ -112,7 +112,7 @@ const picked = $('delayReason').value;
 fillReasons();
 $('delayReason').value = reasonPool().includes(picked) ? picked : randomReason();
 $('delayMsg').textContent = `Liste gespeichert: ${list.length} Gründe.`;
-} catch (e) { $('reasonsMsg').textContent = `Nicht gespeichert: ${e.message}`; }
+} catch (e) { $('reasonsMsg').textContent = notSaved(e); }
 finally { $('reasonsSave').disabled = false; }
 };
 async function postDelay(op) {
@@ -557,7 +557,7 @@ $('awayMsg').textContent = 'Speichert…';
 for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = true;
 try {
 await saveAway(next, days);
-} catch (e) { $('awayMsg').textContent = `Nicht gespeichert: ${e.message}.`; return false; }
+} catch (e) { $('awayMsg').textContent = notSaved(e); return false; }
 finally { for (const b of $('awayDlg').querySelectorAll('button')) b.disabled = false; }
 // saveMoves/postDelay already installed the authoritative, merged response.
 if (awayCal.tab === 'recurring') { resetRepeat(); drawRepeat(); } else if (awayCal.tab === 'week') drawAwayWeek(); else drawAway();

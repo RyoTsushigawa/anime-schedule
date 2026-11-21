@@ -355,7 +355,7 @@ save.onclick = async () => {
       after: () => { if (view !== 'week' || isoDay(weekStart(weekOffset)) !== week) return; if (!$('moveButtons')?.checked) skipMode = true; selectedWeek = week; selected = new Map(shows.map(s => [s.key, s])); keepBox.checked = keep; previewFor = ''; sync(); },
     });
     await load(true);
-  } catch (e) { error.textContent = `Nicht gespeichert: ${e.message}`; }
+  } catch (e) { error.textContent = notSaved(e); }
   finally { busy = false; for (const el of bar.querySelectorAll('input, button')) el.disabled = false; sync(); }
 };
 let scheduled = false;
