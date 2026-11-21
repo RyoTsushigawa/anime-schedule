@@ -50,5 +50,11 @@ jobs:
           git add seasons.json
           if ! git diff --cached --quiet; then
             git commit -m "Refresh LiveChart season metadata and direct anime links"
-            git push
+            # other runs push to main too: put this commit on top of theirs (this run's seasons.json wins)
+            for attempt in 1 2 3; do
+              git pull --rebase -X theirs origin main && git push && exit 0
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt * 10))
+            done
+            exit 1
           fi
