@@ -227,6 +227,9 @@ body.searching .top-actions, .search.open { flex: 1; min-width: 0; }
 }
 main { padding: 16px; max-width: 1032px; margin: 0 auto; }
 .day { margin-bottom: 24px; }
+/* a day with nothing on it takes less room, so the days with shows move up */
+.day.empty { margin-bottom: 6px; }
+.day.empty h2 { margin-bottom: 0; }
 .day h2 { position: sticky; top: var(--head, 0); z-index: 1; display: flex; align-items: center; margin: 0 0 8px; padding: 9px 2px 7px; font-size: 14px; font-weight: 500; color: var(--muted); background: var(--bg); transition: top .2s ease; }
 .day h2 b { font-weight: 700; color: var(--text); }
 .day h2::after { content: ''; flex: 1; height: 1px; background: var(--line); }
@@ -765,6 +768,8 @@ header .bar .tool-back { display: inline-flex; align-items: center; gap: 6px; mi
 .list-controls { display: inline-flex; align-items: center; min-width: 0; gap: 6px; }
 .list-controls > select { min-width: 0; max-width: min(42vw, 215px); }
 .list-controls > button { flex: none; }
+/* on a phone the list picker has the row to itself: it uses the width instead of cutting the name off */
+@media (max-width: 560px) { .list-controls { display: flex; width: 100%; } .list-controls > select { flex: 1; max-width: none; } }
 .day .row:not(.pause) > .info > .ep { line-height: 1.45; }
 .day .row > .links > .cr { min-height: 34px; }
 .day .row > .watch { flex: none; }
@@ -1796,7 +1801,9 @@ header .header-primary .header-games { margin-right: -2px; }
 /* U: on a phone a day's absence note goes on its own line under the date, so the day's buttons stay together */
 @media (max-width: 560px) {
  .day h2 > span:first-child { margin-inline-end: auto; }
- .day h2 .away-note { order: 8; flex-basis: 100%; white-space: normal; margin-top: -4px; }
+ .day h2 .away-note { order: 10; flex-basis: 100%; white-space: normal; margin-top: -4px; }
+ /* lines of their own (absences) or at the end of the date line: no "·" in front */
+ .day h2 :is(.away-note, .day-none) > .sep { display: none; }
 }
 
 /* finished a show: the score dialog also offers a Troddl review (opens the writer with the show picked) */
