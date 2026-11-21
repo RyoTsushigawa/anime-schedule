@@ -867,7 +867,7 @@ function drawRecentSearches() {
   $('recentSearches').replaceChildren(...recentSearches().map(term => Object.assign(document.createElement('option'), { value: term })));
   $('clearSearches').hidden = !recentSearches().length;
 }
-// U48: clear them from the settings
+// U48: clear them, from the open search bar
 $('clearSearches').onclick = () => { stash.drop('recentSearches'); drawRecentSearches(); notice('Letzte Suchen gelöscht.'); };
 function rememberSearch() {
   const term = $('search').value.trim();
