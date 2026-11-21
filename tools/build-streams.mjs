@@ -11,6 +11,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseSubsPlease, matchSubsPlease, parseAniWorld, matchAniWorld } from './fallback-links.mjs';
+import { addCovers } from './season-covers.mjs';
 import { parseSeason, parseStreams, parseSchedules, parseHeadlines, parseTimetableNotes, norm, titleScore, searchVariants, pickCard, parseYouTube, episodeStem, newestEpisode } from './livechart-pages.mjs';
 
 const SHEET = 'https://docs.google.com/spreadsheets/d/1cbkuLjyLfHpYDor5A1LvIskEOUB9Ij2Nm2TYch62-hQ';
@@ -147,6 +148,8 @@ async function writeSeasons(bySeason) {
   let old = {};
   try { old = JSON.parse(await readFile(SEASONS_OUT, 'utf8')).seasons || {}; } catch {}
   const seasons = {};
+  const known = Object.fromEntries(Object.values(old).flat().filter(x => x?.cover).map(x => [x.livechartId, x.cover]));
+  await addCovers(Object.values(bySeason).flat(), known);
   for (const [season, cards] of Object.entries(bySeason)) {
     const before = old[season]?.length || 0;
     if (cards.length * 2 < before) {

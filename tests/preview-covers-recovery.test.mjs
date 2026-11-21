@@ -4,11 +4,11 @@ import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../season-preview.js',import.meta.url),'utf8');
 const begin=source.indexOf('let covers=new Map();');
-const end=source.indexOf('function malLink(show){',begin);
+const end=source.indexOf('function indexEntry(show){',begin);
 assert.ok(begin>=0&&end>begin,'covers module exists');
 const logic=source.slice(begin,end);
 
-function harness({cached=null,answer,malLinks={}}={}) {
+function harness({cached=null,answer,malLinks={},indexCovers={}}={}) {
   const storage=new Map();
   if(cached)storage.set('previewCovers:123',JSON.stringify(cached));
   const calls=[];
@@ -18,7 +18,8 @@ function harness({cached=null,answer,malLinks={}}={}) {
     return answer(query,vars,calls.length);
   };
   const malLink=show=>({url:malLinks[show.key]||'https://myanimelist.net/anime.php?q='+encodeURIComponent(show.english||show.title)});
-  const api=new Function('localStorage','anilist','malLink',logic+'\nreturn {loadCovers, getCovers:()=>new Map(covers)};')(localStorage,anilist,malLink);
+  const indexEntry=show=>indexCovers[show.key]?{cover:indexCovers[show.key]}:undefined;
+  const api=new Function('localStorage','anilist','malLink','indexEntry',logic+'\nreturn {loadCovers, getCovers:()=>new Map(covers)};')(localStorage,anilist,malLink,indexEntry);
   return {api,calls,storage};
 }
 const show=(key,english='Anime Title')=>({key,title:english,english});
@@ -73,4 +74,14 @@ test('different seasons cannot inherit an unrelated season cover map',async()=>{
   await h.api.loadCovers({gid:'other'},[show('elsewhere')]);
   assert.equal(h.api.getCovers().has('same'),false);
   assert.equal(h.api.getCovers().has('elsewhere'),true);
+});
+
+test('covers from seasons.json come first; AniList is only asked for the rest',async()=>{
+  const h=harness({
+    indexCovers:{a:'https://s4.anilist.co/a.jpg'},
+    answer:(query,vars)=>{assert.deepEqual(Object.values(vars),['B']);return {s0:{media:[{coverImage:{medium:'https://images.test/b.jpg'}}]}};}
+  });
+  await h.api.loadCovers(tab,[show('a','A'),show('b','B')]);
+  assert.equal(h.calls.length,1);
+  assert.deepEqual([...h.api.getCovers()],[['a','https://s4.anilist.co/a.jpg'],['b','https://images.test/b.jpg']]);
 });

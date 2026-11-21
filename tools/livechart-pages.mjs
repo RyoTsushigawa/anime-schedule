@@ -65,6 +65,7 @@ export function parseSeason(html) {
     cards.push({
       id: attr('anime-id'),
       anilist: (body.match(/anilist\.co\/anime\/(\d+)/) || [])[1],
+      poster: decode(body.match(/https:\/\/u\.livechart\.me\/anime\/\d+\/poster_image\/[^"'\s,)]+/)?.[0] || ''),
       titles: [romaji, english, ...alternate],
       list: {
         romaji, english, livechartId: attr('anime-id'),
