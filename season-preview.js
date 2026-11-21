@@ -60,9 +60,7 @@ function drawStarts(){
  }).join('')+(none?pill('none','ohne Termin',none,none+' Serien ohne Startdatum in der Liste'):'');
 }
 async function listSeasonTabs(){
- const response=await fetch(SHEET+'/htmlview',{cache:'no-cache'});
- if(!response.ok)throw Error('Season-Listen konnten nicht geladen werden.');
- const html=await response.text();
+ const html=await sheetIndex().catch(()=>{throw Error('Season-Listen konnten nicht geladen werden.');});
  const raw=[...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)];
  return raw.map(([,name,gid])=>({name:clean(name),gid})).filter(x=>PV_SEASONS.test(x.name))
  .sort((a,b)=>{const ma=a.name.match(PV_SEASONS),mb=b.name.match(PV_SEASONS);return (+mb[2]*12+PV_MONTHS[mb[1].toLowerCase()])-(+ma[2]*12+PV_MONTHS[ma[1].toLowerCase()]);});

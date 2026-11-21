@@ -163,7 +163,7 @@ let fallbackLinks = { byAnilist: {} };
 // N55: link fixes taken over from reports (link-fixes.json), applied on top of the generated links
 let linkFixes = [];
 let sourceHealth = null;
-fetch('source-health.json', {cache:'no-cache'}).then(r => r.ok ? r.json() : null).then(data => {
+fetch('source-health.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(data => {
 sourceHealth = data;
 if (aniWorldDown()) load(true);
 }).catch(() => {});
@@ -785,7 +785,7 @@ return `<a class="pill preview-call" href="season-preview.html" title="Trailer a
 }
 async function loadStartingSoon() {
 const name = nextSeasonName();
-const html = await (await fetch(SHEET + '/htmlview', { cache: 'no-cache' })).text();
+const html = await sheetIndex();
 const gid = [...html.matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*gid=(\d+)/g)].find(([, n]) => n.trim() === name)?.[2];
 if (!gid) return { name, shows: [] };
 const [csv, catalog] = await Promise.all([fetch(`${SHEET}/export?format=csv&gid=${gid}`).then(r => r.text()),
